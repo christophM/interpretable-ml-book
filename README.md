@@ -7,10 +7,10 @@ This book is written in R Markdown using the bookdown package for compilation.
 
 ## Render book
 Make sure bookdown is installed:
-```
+```{r}
 install.packages('bookdown')
 ```
 
-```
+```{r}
 bookdown::render_book("index.Rmd", "bookdown::pdf_book")
 ```
