@@ -1,5 +1,6 @@
 # Keep it simple {#simple}
 
+
 The most straight forward way to achieve explainable machine learning algorithms is to use only a subset algorithms that yield an understandable model structure.
 
 These are:
@@ -9,11 +10,21 @@ These are:
 * rules
 
 In the following chapters these we will talk about the algorithm with it's variants. Not in detail, only the basics, because there are already a ton of books, videos, tutorials, papers and so on about them. We will focus on how to interpret the models and why they are explainable.
-The chapter covers linear models, decision trees, decision rules, neighbour methods and graphical models. 
+The chapter covers linear models, decision trees, decision rules, neighbour methods and graphical models.
 
+## Overview
+
+| Algorithm |Linear |Monotonicity |Interaction built-in |
+|:--------------|:----|:----|:------|
+| Linear models | Yes | Yes | No |
+| Decision trees | No | Not by default | Yes |
+| Decision rules | No | Not by default | Yes |
+| Naive bayes | Yes | Yes | No |
+| Nearest neighbours | No | No | No |
 ## Linear models
 
-Linear models have been and are still used by statistician, computer scientists and other people with quantitative problems.  
+Linear models have been and are still used by statistician, computer scientists and other people with quantitative problems. They learn straightforward linear (and monotonic) relationships between the target and the features. The target changes by a learned weight depending on the feature. Monotonicity makes the interpretation easy.
+
 
 Linear models can be used to model the dependency of a regression variable (here Y) on K covariates. As the name says, the learned relationships are linear in the form of
 
@@ -31,9 +42,34 @@ The interpretation of the coefficients:
 - Categorial variables with many levels: One solution to deal with many variables is to one-hot-encode them, meaning each level gets it's own column. From a categorial variable with L levels, you only need L-1 columsn, otherwise it is over parameterized. The interpretation for each level is then according to the binary variables. Some language like R allow to
 - Intercept $\beta_{0}$: The interpretation is: Given all continuous variables are zero and the categorial variables are on the reference level, the estimated outcome of $y_{i}$ is $\beta_{0}$. The interpretation of $\beta_{0}$ is usually not relevant.
 
+### Interpretation example
+
+```{r}
+library('mlbench')
+library('knitr')
+data('BostonHousing')
+lm_summary = summary(lm(medv ~ ., data = BostonHousing))$coefficients[,c('Estimate', 'Std. Error')]
+
+name_matches = c('crim'='per capita crime rate',
+                 'zn'='proportion of residential land zoned for lots over 25,000 sq.ft',
+                 'indus'='proportion of non-retail business acres per town',
+                 'chas1'='Charles River dummy variable (= 1 if tract bounds river; 0 otherwise',
+                 'nox'='nitric oxides concentration (parts per 10 million)',
+                 'rm'='average number of rooms per dwelling',
+                 'age'='proportion of owner-occupied units built prior to 1940',
+                 'dis'='weighted distances to five Boston employment centres',
+                 'rad'='index of accessibility to radial highways',
+                 'tax'='full-value property-tax rate per USD 10,000',
+                 'ptratio'='pupil-teacher ratio by town',
+                 'b'='1000(B - 0.63)^2 where B is the proportion of blacks by town',
+                 'lstat'='percentage of lower status of the population',
+                 'medv'='median value of owner-occupied homes in USD 1000', '(Intercept)'='(Intercept)')
+rownames(lm_summary) = name_matches[rownames(lm_summary)]
+kable(lm_summary)
+```
 
 
-#### Coding categorial variables:
+### Coding categorial variables:
 There are several ways to represent a categorial variable, which has an influence on the interpretation: http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/ and
 http://heidiseibold.github.io/page7/
 
@@ -50,6 +86,7 @@ An overview:
 
 
 
+
 ### Explaining a single observation:
 
 Let's look at a concrete example:
@@ -61,14 +98,29 @@ The fitted linear model for the prize comes down to the following equation:
 EQUATION
 
 
+### The disadvantages of linear models
+They can only represent linear relationships as the name suggests. Each non-linearity or interaction has to be hand-crafted and explicitly given to the model as an input feature.
+Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both variables into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.  
+### Towards complexer relationships within linear model class
+- Adding interactions
+- Adding non-linear terms like polynomials
+- Stratifying data by variable and fitting linear models on subsets
 
 ### Linear models beyond gaussian regression
+- Logistic regression
+- Lasso, Ridge, elasticnet
+- GAMs
+- Quantile regression
 
 
 ## Decision trees
+### Explaining: Treeinterpreter
+https://github.com/andosa/treeinterpreter
+## RuleFit
 ## Decision rules
 ## Decision tables
 ## Nearest neighbours
+### Learning deep k-nearest neighbour representations
 ## Bayesian network classifiers
 ## Naive Bayes Classifier and other graphical models
 ### Naive bayes
@@ -77,3 +129,10 @@ Good in case you want interpretation of all features. Bad: No interaction, but e
 ### More general bayesian network approache(s)
 #### Bayesian Network-Augmented Naïve Bayes (BAN) illustrated
 #### General Bayesian Network
+
+
+
+## Interpretation overview
+INSERT HERE: One example of classification task and one for regression task plus for each a table with the interpretations per model (maybe only example for one variable). Plus verbal template for each interpretation.
+
+## Monotonicity constraints between features
