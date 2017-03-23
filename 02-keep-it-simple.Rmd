@@ -44,7 +44,7 @@ The interpretation of the coefficients:
 
 ### Interpretation example
 
-```{r}
+```{r echo=FALSE,  message=FALSE}
 library('mlbench')
 library('knitr')
 data('BostonHousing')
@@ -53,7 +53,7 @@ lm_summary = summary(lm(medv ~ ., data = BostonHousing))$coefficients[,c('Estima
 name_matches = c('crim'='per capita crime rate',
                  'zn'='proportion of residential land zoned for lots over 25,000 sq.ft',
                  'indus'='proportion of non-retail business acres per town',
-                 'chas1'='Charles River dummy variable (= 1 if tract bounds river; 0 otherwise',
+                 'chas1'='Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)',
                  'nox'='nitric oxides concentration (parts per 10 million)',
                  'rm'='average number of rooms per dwelling',
                  'age'='proportion of owner-occupied units built prior to 1940',
@@ -68,21 +68,65 @@ rownames(lm_summary) = name_matches[rownames(lm_summary)]
 kable(lm_summary)
 ```
 
+Interpretation of a numerical variable ('average number of rooms per dwelling'): An increase of the average number of rooms by 1 increases the median value of houses in this suburb by $3800\$ (= 3.8 \cdot 1000)$, given all other features stay the same.
+
+Interpretation of a categorial variable ('Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)'): The median value of houses in suburbs that  bound the Charles River is $2690\$ (= 2.69 \cdot 1000\$)$ compared to houses that do not, given all other features stay the same.
+
+As you can see in the interpretation examples, the interpretations are always coming with the clause that 'all other features stay the same'.
+That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature, for example the average number of rooms. But this might not reflect the structure of the data, because the features are often correlated. It might not be meaningful to see the effect of turning up average room sizes because it might be strongly correlated with the proportion of owner-occupied units built prior to 1940.
+
+### Interpretation templates
+
+**Interpretation of a numerical feature**:
+
+An increase of $x_{k}$ by one unit increases the expectation for $y$ by $\beta_x{k}$ units if all other features X stay the same.
+
+**Interpretation of a categorial feature**:
+
+The category coded with 1 of $x_{k}$ increases the expectation for $y$ by $\beta_{k}$ compared to the reference category (coded with 0).
+
 
 ### Coding categorial variables:
 There are several ways to represent a categorial variable, which has an influence on the interpretation: http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/ and
 http://heidiseibold.github.io/page7/
 
-Described above is the dummy coding, which is usually sufficient.
-Using different codings boils down to creating different matrices from your one column with the categorial variable.
-An overview:
+Described above is the treatment coding, which is usually sufficient.
+Using different codings boils down to creating different matrices from your one column with the categorial feature.
+I present three different codings, but there are many more. The example has six instances and one categorial feature with 3 levels. The first two instances are in category A, instances three and four are in category B and the last two instances are in category C.
 
-- Dummy coding compares each level to the reference level. The intercept is the mean of the reference group
-- Simple coding also compares each level to the reference, but the intercept is the overall mean.
-- Deviation coding: Intercept is overall mean, and levels are compared to the mean
-- Split coding: compare each level to the previous level. Usually used when there is an order in the levels.
-- Helmert coding: ...
-
+- **Treatment coding** compares each level to the reference level. The intercept is the mean of the reference group. The first column is the intercept, which is always 1. Column two is an indicator whether instance $i$ is in category B, columns three is an indicator for category C. There is no need for a column for category A, because than the system would be over specified. Knowing that an instance is neither in category B or C is enough.
+$$
+\begin{pmatrix}
+1 & 0 & 0 \\
+1 & 0 & 0 \\
+1 & 1 & 0 \\
+1 & 1 & 0 \\
+1 & 0 & 1 \\
+1 & 0 & 1 \\
+\end{pmatrix}
+$$
+- **Effect coding** compares each level to the overall mean of $y$. The first column is again the intercept. The weight $\beta_{0}$ which is associated to the intercept represents the overall mean and $\beta_{1}$, the weight for column two is the difference between the overall mean and category B. The overall effect of category B is $\beta_{0}$ + \beta_{1}$. Interpretation for category C is equivalent. For the reference category A, $-(\beta_{1} + \beta_{2})$ is the difference of the category C to the overall mean and $\beta_{0} -(\beta_{1} + \beta_{2})$ the overall effect of category C.
+$$
+\begin{pmatrix}
+1 & -1 & -1 \\
+1 & -1 & -1 \\
+1 & 1 & 0 \\
+1 & 1 & 0 \\
+1 & 0 & 1 \\
+1 & 0 & 1 \\
+\end{pmatrix}
+$$
+- **Dummy coding** compares each level to the level mean of $y$. If all level are have the same frequency the resulting coefficients will be the same as in effect coding. Note that the intercept was dropped here.
+$$
+\begin{pmatrix}
+1 & 0 & 0 \\
+1 & 0 & 0 \\
+0 & 1 & 0 \\
+0 & 1 & 0 \\
+0 & 0 & 1 \\
+0 & 0 & 1 \\
+\end{pmatrix}
+$$
 
 
 
@@ -101,6 +145,8 @@ EQUATION
 ### The disadvantages of linear models
 They can only represent linear relationships as the name suggests. Each non-linearity or interaction has to be hand-crafted and explicitly given to the model as an input feature.
 Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both variables into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.  
+
+
 ### Towards complexer relationships within linear model class
 - Adding interactions
 - Adding non-linear terms like polynomials
