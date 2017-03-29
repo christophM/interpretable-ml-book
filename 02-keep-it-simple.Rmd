@@ -1,13 +1,11 @@
 # Keep it simple {#simple}
-
-
 The most straight forward way to achieve explainable machine learning algorithms is to use only a subset algorithms that yield an understandable model structure.
 
 These are:
 
-* linear models
-* trees
-* rules
+* Linear models
+* Decision trees
+* Decision rules
 
 In the following chapters these we will talk about the algorithm with it's variants. Not in detail, only the basics, because there are already a ton of books, videos, tutorials, papers and so on about them. We will focus on how to interpret the models and why they are explainable.
 The chapter covers linear models, decision trees, decision rules, neighbour methods and graphical models.
@@ -38,18 +36,26 @@ The biggest advantage is the linearity: It makes the estimation procedure straig
 The interpretation of the coefficients:
 
 - Continuous regression variable: For an increase of one point of the variable $x_{j}$ the estimated outcome changes by $\beta_{j}$
-- Binary categorial variables: One of the variables is the reference level (in some languages the one that was coded in 0). A change of the variable $x_{i}$ the reference level to the other category changes the estimated outcome by $\beta_{i}$
-- Categorial variables with many levels: One solution to deal with many variables is to one-hot-encode them, meaning each level gets it's own column. From a categorial variable with L levels, you only need L-1 columsn, otherwise it is over parameterized. The interpretation for each level is then according to the binary variables. Some language like R allow to
-- Intercept $\beta_{0}$: The interpretation is: Given all continuous variables are zero and the categorial variables are on the reference level, the estimated outcome of $y_{i}$ is $\beta_{0}$. The interpretation of $\beta_{0}$ is usually not relevant.
+- Binary categorical variables: One of the variables is the reference level (in some languages the one that was coded in 0). A change of the variable $x_{i}$ the reference level to the other category changes the estimated outcome by $\beta_{i}$
+- categorical variables with many levels: One solution to deal with many variables is to one-hot-encode them, meaning each level gets it's own column. From a categorical variable with L levels, you only need L-1 columsn, otherwise it is over parameterized. The interpretation for each level is then according to the binary variables. Some language like R allow to
+- Intercept $\beta_{0}$: The interpretation is: Given all continuous variables are zero and the categorical variables are on the reference level, the estimated outcome of $y_{i}$ is $\beta_{0}$. The interpretation of $\beta_{0}$ is usually not relevant.
 
 ### Interpretation example
 
 ```{r echo=FALSE,  message=FALSE}
 library('mlbench')
 library('knitr')
-data('BostonHousing')
-lm_summary = summary(lm(medv ~ ., data = BostonHousing))$coefficients[,c('Estimate', 'Std. Error')]
+library('ggplot2')
+library('dplyr')
+library('tidyr')
+my_theme = theme_bw()
 
+
+
+
+data('BostonHousing')
+mod = lm(medv ~ ., data = BostonHousing, x=TRUE)
+lm_summary = summary(mod)$coefficients
 name_matches = c('crim'='per capita crime rate',
                  'zn'='proportion of residential land zoned for lots over 25,000 sq.ft',
                  'indus'='proportion of non-retail business acres per town',
@@ -64,16 +70,101 @@ name_matches = c('crim'='per capita crime rate',
                  'b'='1000(B - 0.63)^2 where B is the proportion of blacks by town',
                  'lstat'='percentage of lower status of the population',
                  'medv'='median value of owner-occupied homes in USD 1000', '(Intercept)'='(Intercept)')
-rownames(lm_summary) = name_matches[rownames(lm_summary)]
-kable(lm_summary)
+lm_summary_print = lm_summary
+rownames(lm_summary_print) = name_matches[rownames(lm_summary_print)]
+
+kable(lm_summary_print[,c('Estimate', 'Std. Error')])
 ```
 
 Interpretation of a numerical variable ('average number of rooms per dwelling'): An increase of the average number of rooms by 1 increases the median value of houses in this suburb by $3800\$ (= 3.8 \cdot 1000)$, given all other features stay the same.
 
-Interpretation of a categorial variable ('Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)'): The median value of houses in suburbs that  bound the Charles River is $2690\$ (= 2.69 \cdot 1000\$)$ compared to houses that do not, given all other features stay the same.
+Interpretation of a categorical variable ('Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)'): The median value of houses in suburbs that  bound the Charles River is $2690\$ (= 2.69 \cdot 1000\$)$ compared to houses that do not, given all other features stay the same.
 
 As you can see in the interpretation examples, the interpretations are always coming with the clause that 'all other features stay the same'.
 That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature, for example the average number of rooms. But this might not reflect the structure of the data, because the features are often correlated. It might not be meaningful to see the effect of turning up average room sizes because it might be strongly correlated with the proportion of owner-occupied units built prior to 1940.
+
+
+### Visual parameter interpretation
+
+#### Weight plot
+The information of the coefficient table can also be put into a visualization, which makes the weights and the uncertainty about them can be made understandable on one glance. The weight is displayed as a point and the 95% confidence interval around the point with a line. The 95% confidence interval means that if the linear model was repeated 100 times on 
+```{r}
+coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
+  lm_summary = summary(mod)$coefficients
+  
+  df = data.frame(Features = rownames(lm_summary), 
+                  Estimate = lm_summary[,'Estimate'], 
+                  std_error = lm_summary[,'Std. Error'])
+  df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
+  df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
+  
+  
+  if(remove_intercept){
+    df = df[!(df$Features == '(Intercept)'),]
+  }
+  ggplot(df) + 
+    geom_point(aes(x=Estimate, y=Features)) +  
+    geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) + 
+    my_theme
+}
+
+coef_plot(mod)
+
+```
+TODO: Add interpetation
+
+#### Effect plot
+The weights of the linear model only have meaning, when combined with the actual features. The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. The weight will change, but the actual relationships in your data will not. Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data. 
+Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. The resulting effects are visualized with boxplots: The box contains the effect range for half of your data (25% to 75% effect quantiles). The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). The points are outlier to the whiskers. 
+
+```{r}
+
+get_effects = function(mod){
+  X = model.matrix(mod)
+  X = data.frame(predict(mod, type = 'terms')) 
+  
+  means = apply(mod$x, 2, mean) * mod$coefficients
+  means = means[names(means)  != "(Intercept)"]
+  # predict with type='terms' centers the results, so we have to add the mean again
+  means_X = matrix(rep(means, times = nrow(X)), nrow=nrow(X), byrow=TRUE)
+  X = X + means_X
+  X  
+}
+
+effect_plot = function(mod, feature_names=NULL){
+  X = get_effects(mod)
+  if(!missing(feature_names)){
+    rownames(X) = feature_names
+  }
+  X = gather(X)
+  ggplot(X) + 
+    geom_boxplot(aes(x=key, y=value, group=key)) + 
+    coord_flip() + my_theme
+}
+
+effect_plot(mod)
+```
+TODO: Add interpetation
+
+### Explaining single predictions
+Why did a certain instance get the prediction it got from the linear model? 
+This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. 
+```{r}
+i = 1
+effects = get_effects(mod)
+effects_i = gather(effects[i, ])
+predictions = predict(mod)
+predictions_mean = mean(predictions)
+pred_i = predictions[i]
+
+effect_plot(mod) + 
+  geom_point(aes(x=key, y=value), color = 'red', data = effects_i) + 
+  ggtitle(sprintf('Predicted value for instance: %.2f\n Average predicted value: %.2f', predictions_mean, pred_i))
+```
+
+TODO: Add interpetation
+
+
 
 ### Interpretation templates
 
@@ -81,18 +172,18 @@ That's because of the nature of linear models: All features are input linearly i
 
 An increase of $x_{k}$ by one unit increases the expectation for $y$ by $\beta_x{k}$ units if all other features X stay the same.
 
-**Interpretation of a categorial feature**:
+**Interpretation of a categorical feature**:
 
 The category coded with 1 of $x_{k}$ increases the expectation for $y$ by $\beta_{k}$ compared to the reference category (coded with 0).
 
 
-### Coding categorial variables:
-There are several ways to represent a categorial variable, which has an influence on the interpretation: http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/ and
+### Coding categorical variables:
+There are several ways to represent a categorical variable, which has an influence on the interpretation: http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/ and
 http://heidiseibold.github.io/page7/
 
 Described above is the treatment coding, which is usually sufficient.
-Using different codings boils down to creating different matrices from your one column with the categorial feature.
-I present three different codings, but there are many more. The example has six instances and one categorial feature with 3 levels. The first two instances are in category A, instances three and four are in category B and the last two instances are in category C.
+Using different codings boils down to creating different matrices from your one column with the categorical feature.
+I present three different codings, but there are many more. The example has six instances and one categorical feature with 3 levels. The first two instances are in category A, instances three and four are in category B and the last two instances are in category C.
 
 - **Treatment coding** compares each level to the reference level. The intercept is the mean of the reference group. The first column is the intercept, which is always 1. Column two is an indicator whether instance $i$ is in category B, columns three is an indicator for category C. There is no need for a column for category A, because than the system would be over specified. Knowing that an instance is neither in category B or C is enough.
 $$
@@ -131,15 +222,16 @@ $$
 
 
 
-### Explaining a single observation:
+### Explaining a single observation: 
+TODO
 
-Let's look at a concrete example:
+<!-- Let's look at a concrete example: -->
 
-You are trying to predict the house price using the notorious Boston house prize data set. So y is the prize of the house and your X are: ...
+<!-- You are trying to predict the house price using the notorious Boston house prize data set. So y is the prize of the house and your X are: ... -->
 
-The fitted linear model for the prize comes down to the following equation:
+<!-- The fitted linear model for the prize comes down to the following equation: -->
 
-EQUATION
+<!-- EQUATION -->
 
 
 ### The disadvantages of linear models
