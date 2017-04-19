@@ -87,24 +87,24 @@ That's because of the nature of linear models: All features are input linearly i
 ### Visual parameter interpretation
 
 #### Weight plot
-The information of the coefficient table can also be put into a visualization, which makes the weights and the uncertainty about them can be made understandable on one glance. The weight is displayed as a point and the 95% confidence interval around the point with a line. The 95% confidence interval means that if the linear model was repeated 100 times on 
+The information of the coefficient table can also be put into a visualization, which makes the weights and the uncertainty about them can be made understandable on one glance. The weight is displayed as a point and the 95% confidence interval around the point with a line. The 95% confidence interval means that if the linear model was repeated 100 times on
 ```{r}
 coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   lm_summary = summary(mod)$coefficients
-  
-  df = data.frame(Features = rownames(lm_summary), 
-                  Estimate = lm_summary[,'Estimate'], 
+
+  df = data.frame(Features = rownames(lm_summary),
+                  Estimate = lm_summary[,'Estimate'],
                   std_error = lm_summary[,'Std. Error'])
   df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
   df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
-  
-  
+
+
   if(remove_intercept){
     df = df[!(df$Features == '(Intercept)'),]
   }
-  ggplot(df) + 
+  ggplot(df) +
     geom_point(aes(x=Estimate, y=Features)) +  
-    geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) + 
+    geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) +
     my_theme
 }
 
@@ -114,15 +114,15 @@ coef_plot(mod)
 TODO: Add interpetation
 
 #### Effect plot
-The weights of the linear model only have meaning, when combined with the actual features. The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. The weight will change, but the actual relationships in your data will not. Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data. 
-Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. The resulting effects are visualized with boxplots: The box contains the effect range for half of your data (25% to 75% effect quantiles). The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). The points are outlier to the whiskers. 
+The weights of the linear model only have meaning, when combined with the actual features. The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. The weight will change, but the actual relationships in your data will not. Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
+Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. The resulting effects are visualized with boxplots: The box contains the effect range for half of your data (25% to 75% effect quantiles). The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). The points are outlier to the whiskers.
 
 ```{r}
 
 get_effects = function(mod){
   X = model.matrix(mod)
-  X = data.frame(predict(mod, type = 'terms')) 
-  
+  X = data.frame(predict(mod, type = 'terms'))
+
   means = apply(mod$x, 2, mean) * mod$coefficients
   means = means[names(means)  != "(Intercept)"]
   # predict with type='terms' centers the results, so we have to add the mean again
@@ -137,8 +137,8 @@ effect_plot = function(mod, feature_names=NULL){
     rownames(X) = feature_names
   }
   X = gather(X)
-  ggplot(X) + 
-    geom_boxplot(aes(x=key, y=value, group=key)) + 
+  ggplot(X) +
+    geom_boxplot(aes(x=key, y=value, group=key)) +
     coord_flip() + my_theme
 }
 
@@ -147,8 +147,8 @@ effect_plot(mod)
 TODO: Add interpetation
 
 ### Explaining single predictions
-Why did a certain instance get the prediction it got from the linear model? 
-This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. See also the chapter about 'Justification Narratives'. 
+Why did a certain instance get the prediction it got from the linear model?
+This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. See also the chapter about 'Justification Narratives'.
 ```{r}
 i = 1
 effects = get_effects(mod)
@@ -157,12 +157,12 @@ predictions = predict(mod)
 predictions_mean = mean(predictions)
 pred_i = predictions[i]
 
-effect_plot(mod) + 
-  geom_point(aes(x=key, y=value), color = 'red', data = effects_i) + 
+effect_plot(mod) +
+  geom_point(aes(x=key, y=value), color = 'red', data = effects_i) +
   ggtitle(sprintf('Predicted value for instance: %.2f\n Average predicted value: %.2f', predictions_mean, pred_i))
 ```
 
-TODO: Add interpetation
+<!-- TODO: Add interpetation -->
 
 
 
