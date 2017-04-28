@@ -6,6 +6,7 @@ set -e # Exit with nonzero exit code if anything fails
 
 SOURCE_BRANCH="master"
 TARGET_BRANCH="master"
+
 BUILD_COMMIT_MSG="Build book"
 
 if [ "$TRAVIS_COMMIT_MESSAGE" = "$BUILD_COMMIT_MSG" ]; then
@@ -36,8 +37,7 @@ git add --all *
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 git config credential.helper "store --file=.git/credentials"
 echo "https://${GH_TOKEN}:@github.com" > .git/credentials
-git commit -m ${BUILD_COMMIT_MSG}
-
+git commit -m "${BUILD_COMMIT_MSG}"
 
 # Now that we're all set up, we can push.
 git push origin $TARGET_BRANCH
