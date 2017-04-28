@@ -28,7 +28,7 @@ git add --all *
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 git config credential.helper "store --file=.git/credentials"
 echo "https://${GH_TOKEN}:@github.com" > .git/credentials
-git commit -m "Update book: ${SHA}"
+git commit -m "Update book"
 
 
 # Now that we're all set up, we can push.
