@@ -6,6 +6,14 @@ set -e # Exit with nonzero exit code if anything fails
 
 SOURCE_BRANCH="master"
 TARGET_BRANCH="master"
+BUILD_COMMIT_MSG="Build book"
+
+if [ "$TRAVIS_COMMIT_MESSAGE" = "$BUILD_COMMIT_MSG" ]; then
+  echo "Skipping build; last commit was a build commit."
+  exit 0
+fi
+
+
 
 # Pull requests and commits to other branches shouldn't try to deploy, just build to verify
 if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "$SOURCE_BRANCH" ]; then
@@ -28,7 +36,7 @@ git add --all *
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 git config credential.helper "store --file=.git/credentials"
 echo "https://${GH_TOKEN}:@github.com" > .git/credentials
-git commit -m "Update book"
+git commit -m ${BUILD_COMMIT_MSG}
 
 
 # Now that we're all set up, we can push.
