@@ -20,6 +20,7 @@ fi
 git clone -b $TARGET_BRANCH https://${GITHUB_PAT}@github.com/${TRAVIS_REPO_SLUG}.git out
 cd out
 # Run our compile script
+chmod +x ./_build.sh
 ./_build.sh
 
 
