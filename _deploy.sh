@@ -33,6 +33,3 @@ git commit -m "Update book: ${SHA}"
 
 # Now that we're all set up, we can push.
 git push origin $TARGET_BRANCH
-echo "https://${GH_TOKEN}:@github.com" > .git/credentials
-
-travis encrypt GH_TOKEN="2692d16f1a9a2c1fd1f8ea9b6764cfd4ba9681b9" --add
