@@ -28,7 +28,8 @@ git config user.email "christoph.molnar@gmail.com"
 git config user.name "Christoph Molnar"
 
 git add --all *
-git commit -m "Update book: ${SHA}"# Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
+git commit -m "Update book: ${SHA}"
+# Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 
 # Now that we're all set up, we can push.
 git push origin $TARGET_BRANCH
