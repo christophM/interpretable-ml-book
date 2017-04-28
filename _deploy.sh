@@ -17,7 +17,7 @@ fi
 
 # Clone the existing gh-pages for this repo into out/
 # Create a new empty branch if gh-pages doesn't exist yet (should only happen on first deply)
-git clone -b $TARGET_BRANCH https://${GITHUB_PAT}@github.com/${TRAVIS_REPO_SLUG}.git out
+git clone -b $TARGET_BRANCH https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git out
 cd out
 # Run our compile script
 chmod +x ./_build.sh
@@ -25,8 +25,6 @@ chmod +x ./_build.sh
 
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
-git config user.email "christoph.molnar@gmail.com"
-git config user.name "Christoph Molnar"
 git config credential.helper "store --file=.git/credentials"
 echo "https://${GH_TOKEN}:@github.com" > .git/credentials
 
