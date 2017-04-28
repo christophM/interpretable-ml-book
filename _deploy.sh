@@ -24,12 +24,19 @@ chmod +x ./_build.sh
 ./_build.sh
 
 
-git config user.email "christoph.molnar@gmail.com"
-git config user.name "Christoph Molnar"
+
 
 git add --all *
 git commit -m "Update book: ${SHA}"
+
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
+git config credential.helper "store --file=.git/credentials"
+echo "https://${GH_TOKEN}:@github.com" > .git/credentials
+git config user.email "christoph.molnar@gmail.com"
+git config user.name "Christoph Molnar"
 
 # Now that we're all set up, we can push.
 git push origin $TARGET_BRANCH
+echo "https://${GH_TOKEN}:@github.com" > .git/credentials
+
+travis encrypt GH_TOKEN="2692d16f1a9a2c1fd1f8ea9b6764cfd4ba9681b9" --add
