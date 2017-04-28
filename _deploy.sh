@@ -22,13 +22,12 @@ cd out
 # Run our compile script
 chmod +x ./_build.sh
 ./_build.sh
+git add --all *
 
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 git config credential.helper "store --file=.git/credentials"
 echo "https://${GH_TOKEN}:@github.com" > .git/credentials
-
-git add --all *
 git commit -m "Update book: ${SHA}"
 
 
