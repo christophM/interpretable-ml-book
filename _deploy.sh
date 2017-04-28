@@ -1,20 +1,16 @@
 #!/bin/sh
+set -e # Exit with nonzero exit code if anything fails
 
 
 # Copied from here: https://gist.github.com/domenic/ec8b0fc8ab45f39403dd
-set -e # Exit with nonzero exit code if anything fails
 
 SOURCE_BRANCH="master"
 TARGET_BRANCH="master"
 
-function doCompile {
-  ./_build.sh
-}
-
 # Pull requests and commits to other branches shouldn't try to deploy, just build to verify
 if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "$SOURCE_BRANCH" ]; then
     echo "Skipping deploy; just doing a build."
-    doCompile
+    ./_build.sh
     exit 0
 fi
 
@@ -30,7 +26,8 @@ git clone $REPO out
 cd out
 git checkout $TARGET_BRANCH || git checkout --orphan $TARGET_BRANCH
 # Run our compile script
-doCompile
+./_build.sh
+
 
 git config user.email "christoph.molnar@gmail.com"
 git config user.name "Christoph Molnar"
