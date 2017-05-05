@@ -10,6 +10,16 @@ These are:
 In the following chapters these we will talk about the algorithm with it's variants. Not in detail, only the basics, because there are already a ton of books, videos, tutorials, papers and so on about them. We will focus on how to interpret the models and why they are explainable.
 The chapter covers linear models, decision trees, decision rules, neighbour methods and graphical models.
 
+## The dataset: speed dating
+For illustration purposes we will be using speed dating data in this book. 
+Missing values were imputed using the mean for numerical features and the mode (most common value) for categorial features. I don't recommend doing this in practice, but for illustratory purposes, I guess I will not get arrested by the statistics police. 
+
+The data was gathered in a study (between 2002 and 2004) with candidates doing speed dating. Partners were randomly matched. Each first date lasted 4 minutes. After the speed date, the participants were asked if they would go on a date with this person again. They were also asked to estimate attractiveness, sincerity, intelligence, fun, ambition, and shared interests of the partner. 
+
+Data Source: http://www.stat.columbia.edu/~gelman/arm/examples/speed.dating/
+Paper: http://faculty.chicagobooth.edu/emir.kamenica/documents/genderDifferences.pdf
+
+
 ## Overview
 
 | Algorithm |Linear |Monotonicity |Interaction built-in |
@@ -49,57 +59,97 @@ library('knitr')
 library('ggplot2')
 library('dplyr')
 library('tidyr')
+library('rpart')
+library('partykit')
+library('party')
+
 my_theme = theme_bw()
 
+library('mlr')
+speed_dating = read.csv('./data/speed_dating_data.csv')
+speed_dating$gender = factor(speed_dating$gender, levels = c(0,1), labels=c('Female', 'Male'))
+speed_dating$samerace = factor(speed_dating$samerace, levels = c(0,1), labels = c('no', 'yes'))
+speed_dating$dec_o = factor(speed_dating$dec_o, levels = c(0,1), labels = c('no', 'yes'))
+speed_dating$match = factor(speed_dating$match, levels = c(0,1), labels = c('no', 'yes'))
+speed_dating$field_cd = as.factor(speed_dating$field_cd)
+speed_dating$race = factor(speed_dating$race, levels = 1:6, labels=c('Black/African American', 'European/Caucasian-American', 'Latino/Hispanic American', 'Asian/Pacific Islander/Asian-American', 'Native American', 'Other'))
 
+speed_dating$goal = factor(speed_dating$goal, levels = 1:6, labels = c('Seemed like a fun night out', 'To meet new people', 'To get a date', 
+                                                                       'Looking for a serious relationship', 'To say I did it', 'Other'))
+speed_dating$date = factor(speed_dating$date, levels = 1:7, labels = c('Several times a week','Twice a week', 'Once a week',
+                                                                       'Twice a month', 'Once a month', 'Several times a year', 'Almost never'))
 
+# Do mean imputation
+speed_dating = mlr::impute(speed_dating, classes = list(integer = imputeMean(), factor = imputeMode()),
+                           dummy.classes = "integer")$data
 
-data('BostonHousing')
-mod = lm(medv ~ ., data = BostonHousing, x=TRUE)
+## Select columns
+features_of_interest = c('gender', 'round', 'order', 'age_o', 'race_o', 'int_corr', 'samerace', 'dec_o', 'imprelig', 'imprace', 'race', 'goal', 'date')
+target_var_class = 'match'
+target_var_regress = 'like'
+
+X = speed_dating[features_of_interest]
+speed_dating_names_matches = c('(Intercept)' = 'Intercept', 
+                               'gender' = 'Gender',
+                               'round' = 'Number of people in wave', 
+                               'order' = 'Number of date', 
+                               'age_o' = 'Age of partner', 
+                               'race_o' = 'Race of partner', 
+                               'int_corr' = 'Correlation of interests', 
+                               'samerace' = 'Partners same race', 
+                               'dec_o' = 'Decision of partner', 
+                               'field_cd' = 'Field of study', 
+                               'imprelig' = 'Importance of same religion', 
+                               'imprace' = 'Importance of same race', 
+                               'race' = 'Race', 
+                               'goal' = 'Goal of date', 
+                               'date' = 'Dating frequency', 
+                               'like' = 'Liked partner (1-10)')
+colnames(X) = speed_dating_names_matches[colnames(X)]
+
+y = speed_dating[,target_var_regress]
+dat = cbind(X, y)
+colnames(dat) = c(colnames(X), target_var_regress)
+mod = lm(like ~ ., data = dat, x = TRUE)
 lm_summary = summary(mod)$coefficients
-name_matches = c('crim'='per capita crime rate',
-                 'zn'='proportion of residential land zoned for lots over 25,000 sq.ft',
-                 'indus'='proportion of non-retail business acres per town',
-                 'chas1'='Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)',
-                 'nox'='nitric oxides concentration (parts per 10 million)',
-                 'rm'='average number of rooms per dwelling',
-                 'age'='proportion of owner-occupied units built prior to 1940',
-                 'dis'='weighted distances to five Boston employment centres',
-                 'rad'='index of accessibility to radial highways',
-                 'tax'='full-value property-tax rate per USD 10,000',
-                 'ptratio'='pupil-teacher ratio by town',
-                 'b'='1000(B - 0.63)^2 where B is the proportion of blacks by town',
-                 'lstat'='percentage of lower status of the population',
-                 'medv'='median value of owner-occupied homes in USD 1000', '(Intercept)'='(Intercept)')
+
+
+pretty_rownames = function(rnames){
+  rnames = gsub('^`', '', rnames)
+  rnames = gsub('`$', '', rnames)
+  rnames = gsub('`', ':', rnames)
+  rnames
+}
+
 lm_summary_print = lm_summary
-rownames(lm_summary_print) = name_matches[rownames(lm_summary_print)]
+rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 
 kable(lm_summary_print[,c('Estimate', 'Std. Error')])
 ```
 
-Interpretation of a numerical variable ('average number of rooms per dwelling'): An increase of the average number of rooms by 1 increases the median value of houses in this suburb by $3800\$ (= 3.8 \cdot 1000)$, given all other features stay the same.
+Interpretation of a numerical variable ('Age of partner'): An increase of the age of the partner of 1 year increases the Likeness rating by `r sprintf('%.2f', lm_summary_print['Age of partner', 'Estimate'])` given all other features stay the same.
 
-Interpretation of a categorical variable ('Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)'): The median value of houses in suburbs that  bound the Charles River is $2690\$ (= 2.69 \cdot 1000\$)$ compared to houses that do not, given all other features stay the same.
+Interpretation of a categorical variable ('Goal of date' (reference category: 'Seemed like a fun night out')): The Likeness rating for a partner is `r sprintf('%.2f', lm_summary_print['Goal of date:To get a date', 'Estimate'])` higher if the goal is to get a date, compared to if the participants goal was to have a fun night out. Also if participants were 'Looking for a serious relationship', the Likeness rating for the partner was `r sprintf('%.2f', lm_summary_print['Goal of date:Looking for a serious relationship', 'Estimate'])` higher, compared to participants who wanted a fun night out, given all features stay the same. 
 
 As you can see in the interpretation examples, the interpretations are always coming with the clause that 'all other features stay the same'.
-That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature, for example the average number of rooms. But this might not reflect the structure of the data, because the features are often correlated. It might not be meaningful to see the effect of turning up average room sizes because it might be strongly correlated with the proportion of owner-occupied units built prior to 1940.
-
+That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature.
 
 ### Visual parameter interpretation
 
 #### Weight plot
 The information of the coefficient table can also be put into a visualization, which makes the weights and the uncertainty about them can be made understandable on one glance. The weight is displayed as a point and the 95% confidence interval around the point with a line. The 95% confidence interval means that if the linear model was repeated 100 times on
-```{r}
+```{r echo=FALSE}
 coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   lm_summary = summary(mod)$coefficients
-
+  rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
+  
   df = data.frame(Features = rownames(lm_summary),
                   Estimate = lm_summary[,'Estimate'],
                   std_error = lm_summary[,'Std. Error'])
   df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
   df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
-
-
+  
+  
   if(remove_intercept){
     df = df[!(df$Features == '(Intercept)'),]
   }
@@ -118,12 +168,16 @@ TODO: Add interpetation
 The weights of the linear model only have meaning, when combined with the actual features. The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. The weight will change, but the actual relationships in your data will not. Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
 Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. The resulting effects are visualized with boxplots: The box contains the effect range for half of your data (25% to 75% effect quantiles). The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). The points are outlier to the whiskers.
 
-```{r}
+```{r echo=FALSE}
 
 get_effects = function(mod){
   X = model.matrix(mod)
   X = data.frame(predict(mod, type = 'terms'))
-
+  
+  # Nicer colnames
+  colnames(X) = gsub('^X\\.', '', colnames(X))
+  colnames(X) = gsub('\\.', ' ', colnames(X))
+  
   means = apply(mod$x, 2, mean) * mod$coefficients
   means = means[names(means)  != "(Intercept)"]
   # predict with type='terms' centers the results, so we have to add the mean again
@@ -149,21 +203,24 @@ TODO: Add interpetation
 
 ### Explaining single predictions
 Why did a certain instance get the prediction it got from the linear model?
-This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. See also the chapter about 'Justification Narratives'.
-```{r}
-i = 1
+This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. See also the chapter about Justification Narratives [#justificationNarrative].
+```{r echo=FALSE}
+i = 3434
 effects = get_effects(mod)
-effects_i = gather(effects[i, ])
 predictions = predict(mod)
+
+effects_i = gather(effects[i, ])
 predictions_mean = mean(predictions)
+# For proper indexing, names have to be removed
+names(predictions) = NULL
 pred_i = predictions[i]
 
 effect_plot(mod) +
   geom_point(aes(x=key, y=value), color = 'red', data = effects_i) +
-  ggtitle(sprintf('Predicted value for instance: %.2f\n Average predicted value: %.2f', predictions_mean, pred_i))
+  ggtitle(sprintf('Predicted value for instance: %.2f\n Average predicted value: %.2f\nActual value: %.2f', pred_i, predictions_mean, y[i]))
 ```
 
-<!-- TODO: Add interpetation -->
+Let's have a look at the effect realization for the Likeness rating of one observation (= a date of a participant with a partner). Some features contribute unusually much to the degree to which the participant rates the Likeness towards the dating partner: Goal of date (`r X[i, 'Goal of date ']`) and Correlation of interests (value = `r  X[i, 'Correlation of interests ']`) and Dating frequency  (value = `r  X[i, 'Dating frequency ']`)
 
 
 
@@ -248,13 +305,12 @@ There are a lot of different tree algorithms. They differ in structure (number o
 
 Each of these rectangles is associated with a simple model of the outcome of the interest. This is usually estimated by taking the mean of outcomes from all training instances that fall into a rectangle. I recommend the book 'The elements of statistical learning' [@Hastie2009] for a more detailed introduction.
 ```{r message=FALSE}
-library('party')
 set.seed(42)
 n = 100
-dat = data.frame(feature_x1 = rep(c(1,1,2,2), times = n), feature_x2 = rep(c(2,3,3,3), times = n), y = rep(c(1, 2, 3, 4), times = n))
-dat = dat[sample(1:nrow(dat), size = 0.9 * nrow(dat)), ]
-dat$y = dat$y + rnorm(nrow(dat), sd = 0.2)
-ct = ctree(y ~ feature_x1 + feature_x2, dat)
+dat_sim = data.frame(feature_x1 = rep(c(1,1,2,2), times = n), feature_x2 = rep(c(2,3,3,3), times = n), y = rep(c(1, 2, 3, 4), times = n))
+dat_sim = dat_sim[sample(1:nrow(dat_sim), size = 0.9 * nrow(dat_sim)), ]
+dat_sim$y = dat_sim$y + rnorm(nrow(dat_sim), sd = 0.2)
+ct = ctree(y ~ feature_x1 + feature_x2, dat_sim)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE))
 ```
 
@@ -273,7 +329,13 @@ Template: If feature x is [smaller/bigger] than threshold c AND ..., then the pr
 
 
 ### Interpretation example
-TODO
+```{r echo=FALSE}
+x = rpart(like ~ ., data = na.omit(dat), method = 'anova', control = rpart.control(cp = 0, maxdepth = 2))
+
+xp = as.party(x)
+
+plot(xp)
+```
 
 ### Advantages
 The tree structure is perfectly suited to **cover interactions** between features in the data. The interpretation is pretty straight forward.
@@ -325,7 +387,7 @@ Concepts:
 ### Rule induction
 
 #### The Bayesian Machine List
-[BML]
+
 
 Target: Multi-class classification with labels 1, ..., L and training data ${(x_i, y_i)}_{i=1}^n$, where $x_i \in \R$ are the features for observation $i$ and $y_i \in {1, ..., L}$ are the labels.  
 Algorithm:
@@ -341,17 +403,19 @@ $n_{\tilde{r}_i 1}, ..., $n_{\tilde{r}_i L}$ for rule $\tilde{r}_i$ chosen in th
 ### Other algorithms
 - Decision tables
 - Nearest neighbours  
-  - Learning deep k-nearest neighbour representations
+- Learning deep k-nearest neighbour representations
 - Bayesian network classifiers
 - Naive Bayes Classifier and other graphical models
-  - Naive bayes
-  Good in case you want interpretation of all features. Bad: No interaction, but even strong assumption of independence of features given the class. But if you indeed have independent features, then it might be the best model.
-  - More general bayesian network approache(s)
-    - Bayesian Network-Augmented Naïve Bayes (BAN) illustrated
-    - General Bayesian Network
+- Naive bayes
+Good in case you want interpretation of all features. Bad: No interaction, but even strong assumption of independence of features given the class. But if you indeed have independent features, then it might be the best model.
+- More general bayesian network approache(s)
+- Bayesian Network-Augmented Naïve Bayes (BAN) illustrated
+- General Bayesian Network
 - Prototypes
 
+<!--
 ## Interpretation overview
 INSERT HERE: One example of classification task and one for regression task plus for each a table with the interpretations per model (maybe only example for one variable). Plus verbal template for each interpretation.
 
 ## Monotonicity constraints between features
+-->
