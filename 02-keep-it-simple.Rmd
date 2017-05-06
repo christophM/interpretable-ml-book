@@ -11,12 +11,13 @@ In the following chapters these we will talk about the algorithm with it's varia
 The chapter covers linear models, decision trees, decision rules, neighbour methods and graphical models.
 
 ## The dataset: speed dating
-For illustration purposes we will be using speed dating data in this book. 
-Missing values were imputed using the mean for numerical features and the mode (most common value) for categorial features. I don't recommend doing this in practice, but for illustratory purposes, I guess I will not get arrested by the statistics police. 
+For illustration purposes we will be using speed dating data in this book.
+Missing values were imputed using the mean for numerical features and the mode (most common value) for categorial features. I don't recommend doing this in practice, but for illustratory purposes, I guess I will not get arrested by the statistics police.
 
-The data was gathered in a study (between 2002 and 2004) with candidates doing speed dating. Partners were randomly matched. Each first date lasted 4 minutes. After the speed date, the participants were asked if they would go on a date with this person again. They were also asked to estimate attractiveness, sincerity, intelligence, fun, ambition, and shared interests of the partner. 
+The data was gathered in a study (between 2002 and 2004) with candidates doing speed dating. Partners were randomly matched. Each first date lasted 4 minutes. After the speed date, the participants were asked if they would go on a date with this person again. They were also asked to estimate attractiveness, sincerity, intelligence, fun, ambition, and shared interests of the partner.
 
 Data Source: http://www.stat.columbia.edu/~gelman/arm/examples/speed.dating/
+
 Paper: http://faculty.chicagobooth.edu/emir.kamenica/documents/genderDifferences.pdf
 
 
@@ -53,57 +54,30 @@ The interpretation of the coefficients:
 
 ### Interpretation example
 
-```{r echo=FALSE,  message=FALSE}
-library('mlbench')
-library('knitr')
-library('ggplot2')
-library('dplyr')
-library('tidyr')
-library('rpart')
-library('partykit')
-library('party')
+```{r linear_model}
 
-my_theme = theme_bw()
-
-library('mlr')
-speed_dating = read.csv('./data/speed_dating_data.csv')
-speed_dating$gender = factor(speed_dating$gender, levels = c(0,1), labels=c('Female', 'Male'))
-speed_dating$samerace = factor(speed_dating$samerace, levels = c(0,1), labels = c('no', 'yes'))
-speed_dating$dec_o = factor(speed_dating$dec_o, levels = c(0,1), labels = c('no', 'yes'))
-speed_dating$match = factor(speed_dating$match, levels = c(0,1), labels = c('no', 'yes'))
-speed_dating$field_cd = as.factor(speed_dating$field_cd)
-speed_dating$race = factor(speed_dating$race, levels = 1:6, labels=c('Black/African American', 'European/Caucasian-American', 'Latino/Hispanic American', 'Asian/Pacific Islander/Asian-American', 'Native American', 'Other'))
-
-speed_dating$goal = factor(speed_dating$goal, levels = 1:6, labels = c('Seemed like a fun night out', 'To meet new people', 'To get a date', 
-                                                                       'Looking for a serious relationship', 'To say I did it', 'Other'))
-speed_dating$date = factor(speed_dating$date, levels = 1:7, labels = c('Several times a week','Twice a week', 'Once a week',
-                                                                       'Twice a month', 'Once a month', 'Several times a year', 'Almost never'))
-
-# Do mean imputation
-speed_dating = mlr::impute(speed_dating, classes = list(integer = imputeMean(), factor = imputeMode()),
-                           dummy.classes = "integer")$data
-
+source(sprintf('%s/load_speed_dating_data.R', src_dir))
 ## Select columns
 features_of_interest = c('gender', 'round', 'order', 'age_o', 'race_o', 'int_corr', 'samerace', 'dec_o', 'imprelig', 'imprace', 'race', 'goal', 'date')
 target_var_class = 'match'
 target_var_regress = 'like'
 
 X = speed_dating[features_of_interest]
-speed_dating_names_matches = c('(Intercept)' = 'Intercept', 
+speed_dating_names_matches = c('(Intercept)' = 'Intercept',
                                'gender' = 'Gender',
-                               'round' = 'Number of people in wave', 
-                               'order' = 'Number of date', 
-                               'age_o' = 'Age of partner', 
-                               'race_o' = 'Race of partner', 
-                               'int_corr' = 'Correlation of interests', 
-                               'samerace' = 'Partners same race', 
-                               'dec_o' = 'Decision of partner', 
-                               'field_cd' = 'Field of study', 
-                               'imprelig' = 'Importance of same religion', 
-                               'imprace' = 'Importance of same race', 
-                               'race' = 'Race', 
-                               'goal' = 'Goal of date', 
-                               'date' = 'Dating frequency', 
+                               'round' = 'Number of people in wave',
+                               'order' = 'Number of date',
+                               'age_o' = 'Age of partner',
+                               'race_o' = 'Race of partner',
+                               'int_corr' = 'Correlation of interests',
+                               'samerace' = 'Partners same race',
+                               'dec_o' = 'Decision of partner',
+                               'field_cd' = 'Field of study',
+                               'imprelig' = 'Importance of same religion',
+                               'imprace' = 'Importance of same race',
+                               'race' = 'Race',
+                               'goal' = 'Goal of date',
+                               'date' = 'Dating frequency',
                                'like' = 'Liked partner (1-10)')
 colnames(X) = speed_dating_names_matches[colnames(X)]
 
@@ -129,7 +103,7 @@ kable(lm_summary_print[,c('Estimate', 'Std. Error')])
 
 Interpretation of a numerical variable ('Age of partner'): An increase of the age of the partner of 1 year increases the Likeness rating by `r sprintf('%.2f', lm_summary_print['Age of partner', 'Estimate'])` given all other features stay the same.
 
-Interpretation of a categorical variable ('Goal of date' (reference category: 'Seemed like a fun night out')): The Likeness rating for a partner is `r sprintf('%.2f', lm_summary_print['Goal of date:To get a date', 'Estimate'])` higher if the goal is to get a date, compared to if the participants goal was to have a fun night out. Also if participants were 'Looking for a serious relationship', the Likeness rating for the partner was `r sprintf('%.2f', lm_summary_print['Goal of date:Looking for a serious relationship', 'Estimate'])` higher, compared to participants who wanted a fun night out, given all features stay the same. 
+Interpretation of a categorical variable ('Goal of date' (reference category: 'Seemed like a fun night out')): The Likeness rating for a partner is `r sprintf('%.2f', lm_summary_print['Goal of date:To get a date', 'Estimate'])` higher if the goal is to get a date, compared to if the participants goal was to have a fun night out. Also if participants were 'Looking for a serious relationship', the Likeness rating for the partner was `r sprintf('%.2f', lm_summary_print['Goal of date:Looking for a serious relationship', 'Estimate'])` higher, compared to participants who wanted a fun night out, given all features stay the same.
 
 As you can see in the interpretation examples, the interpretations are always coming with the clause that 'all other features stay the same'.
 That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature.
@@ -138,23 +112,23 @@ That's because of the nature of linear models: All features are input linearly i
 
 #### Weight plot
 The information of the coefficient table can also be put into a visualization, which makes the weights and the uncertainty about them can be made understandable on one glance. The weight is displayed as a point and the 95% confidence interval around the point with a line. The 95% confidence interval means that if the linear model was repeated 100 times on
-```{r echo=FALSE}
+```{r linear_weights}
 coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   lm_summary = summary(mod)$coefficients
   rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
-  
+
   df = data.frame(Features = rownames(lm_summary),
                   Estimate = lm_summary[,'Estimate'],
                   std_error = lm_summary[,'Std. Error'])
   df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
   df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
-  
-  
+
+
   if(remove_intercept){
     df = df[!(df$Features == '(Intercept)'),]
   }
   ggplot(df) +
-    geom_point(aes(x=Estimate, y=Features)) +  
+    geom_point(aes(x=Estimate, y=Features)) +
     geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) +
     my_theme
 }
@@ -168,22 +142,22 @@ TODO: Add interpetation
 The weights of the linear model only have meaning, when combined with the actual features. The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. The weight will change, but the actual relationships in your data will not. Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
 Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. The resulting effects are visualized with boxplots: The box contains the effect range for half of your data (25% to 75% effect quantiles). The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). The points are outlier to the whiskers.
 
-```{r echo=FALSE}
+```{r linear_effects}
 
 get_effects = function(mod){
   X = model.matrix(mod)
   X = data.frame(predict(mod, type = 'terms'))
-  
+
   # Nicer colnames
   colnames(X) = gsub('^X\\.', '', colnames(X))
   colnames(X) = gsub('\\.', ' ', colnames(X))
-  
+
   means = apply(mod$x, 2, mean) * mod$coefficients
   means = means[names(means)  != "(Intercept)"]
   # predict with type='terms' centers the results, so we have to add the mean again
   means_X = matrix(rep(means, times = nrow(X)), nrow=nrow(X), byrow=TRUE)
   X = X + means_X
-  X  
+  X
 }
 
 effect_plot = function(mod, feature_names=NULL){
@@ -204,7 +178,7 @@ TODO: Add interpetation
 ### Explaining single predictions
 Why did a certain instance get the prediction it got from the linear model?
 This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. See also the chapter about Justification Narratives [#justificationNarrative].
-```{r echo=FALSE}
+```{r linear_effects_single}
 i = 3434
 effects = get_effects(mod)
 predictions = predict(mod)
@@ -283,7 +257,7 @@ UNDER CONSTRUCTION
 
 ### The disadvantages of linear models
 They can only represent linear relationships as the name suggests. Each non-linearity or interaction has to be hand-crafted and explicitly given to the model as an input feature.
-Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both variables into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.  
+Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both variables into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.
 
 
 ### Towards complexer relationships within linear model class
@@ -304,7 +278,7 @@ Tree-based models partition the data along the features into rectangles. For pre
 There are a lot of different tree algorithms. They differ in structure (number of splits per node), criteria for how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes. Classification and regression trees (CART) is one of the more popular. This book will only talk about CART, because in the interpretation they are all the same. If you know of some tree algorithm with a different interpretation, I would welcome your feedback.
 
 Each of these rectangles is associated with a simple model of the outcome of the interest. This is usually estimated by taking the mean of outcomes from all training instances that fall into a rectangle. I recommend the book 'The elements of statistical learning' [@Hastie2009] for a more detailed introduction.
-```{r message=FALSE}
+```{r tree_artificial}
 set.seed(42)
 n = 100
 dat_sim = data.frame(feature_x1 = rep(c(1,1,2,2), times = n), feature_x2 = rep(c(2,3,3,3), times = n), y = rep(c(1, 2, 3, 4), times = n))
@@ -329,7 +303,7 @@ Template: If feature x is [smaller/bigger] than threshold c AND ..., then the pr
 
 
 ### Interpretation example
-```{r echo=FALSE}
+```{r tree_example}
 x = rpart(like ~ ., data = na.omit(dat), method = 'anova', control = rpart.control(cp = 0, maxdepth = 2))
 
 xp = as.party(x)
@@ -389,20 +363,20 @@ Concepts:
 #### The Bayesian Machine List
 
 
-Target: Multi-class classification with labels 1, ..., L and training data ${(x_i, y_i)}_{i=1}^n$, where $x_i \in \R$ are the features for observation $i$ and $y_i \in {1, ..., L}$ are the labels.  
+Target: Multi-class classification with labels 1, ..., L and training data ${(x_i, y_i)}_{i=1}^n$, where $x_i \in \R$ are the features for observation $i$ and $y_i \in {1, ..., L}$ are the labels.
 Algorithm:
 1. Generate a list of rules $ r = 1, ..., R$ with a rule-mining Algorithm
 2. Sample permutation of rules using $\pi$ from prior $P(p, C)$
 3. Using this ordering, select the first rule that applies, in that it matches the observed feature $x_i$. Call the rule $\tilde{r}_i$
 4. Draw a label $y_i$ from a Dirichlet-Multinomial distribution $\Theta^{\tilde{r}_i}$, with Dirichlet parameters $\alpha_1, ..., \alpha_L$ and counts
-$n_{\tilde{r}_i 1}, ..., $n_{\tilde{r}_i L}$ for rule $\tilde{r}_i$ chosen in the previous step.  
+$n_{\tilde{r}_i 1}, ..., $n_{\tilde{r}_i L}$ for rule $\tilde{r}_i$ chosen in the previous step.
 
 
 [BML] Letham, B., Rudin, C., Mccormick, T. H., & Madigan, D. (2010). An Interpretable Stroke Prediction Model Using Rules and Bayesian Analysis. AAAI Technical Report WS-13-17, (609), 65–67.
 
 ### Other algorithms
 - Decision tables
-- Nearest neighbours  
+- Nearest neighbours
 - Learning deep k-nearest neighbour representations
 - Bayesian network classifiers
 - Naive Bayes Classifier and other graphical models
