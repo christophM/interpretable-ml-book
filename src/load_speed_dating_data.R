@@ -9,8 +9,12 @@ speed_dating$match = factor(speed_dating$match, levels = c(0,1), labels = c('no'
 speed_dating$field_cd = as.factor(speed_dating$field_cd)
 speed_dating$race = factor(speed_dating$race, levels = 1:6,
 labels=c('Black/African American', 'European/Caucasian-American', 'Latino/Hispanic American', 'Asian/Pacific Islander/Asian-American', 'Native American', 'Other'))
-speed_dating$goal = factor(speed_dating$goal, levels = 1:6, labels = c('Seemed like a fun night out', 'To meet new people', 'To get a date',
-                                                                       'Looking for a serious relationship', 'To say I did it', 'Other'))
+#speed_dating$goal = factor(speed_dating$goal, levels = 1:6, labels = c('Seemed like a fun night out', 'To meet new people', 'To get a date',
+#                                                                       'Looking for a serious relationship', 'To say I did it', 'Other'))
+
+ speed_dating$goal = factor(speed_dating$goal, levels = 1:6, labels = c('for fun', 'meet new people', 'date',
+                                                                            'relationship', 'experience', 'other'))
+
 speed_dating$date = factor(speed_dating$date, levels = 1:7, labels = c('Several times a week','Twice a week', 'Once a week',
                                                                        'Twice a month', 'Once a month', 'Several times a year', 'Almost never'))
 
