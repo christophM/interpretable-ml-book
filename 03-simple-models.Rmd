@@ -1,4 +1,4 @@
-# Keep it simple {#simple}
+# Simple, interpretable models {#simple}
 The most straight forward way to achieve explainable machine learning algorithms is to use only a subset algorithms that yield an understandable model structure.
 
 These are:
@@ -9,6 +9,14 @@ These are:
 
 In the following chapters these we will talk about the algorithm with it's variants. Not in detail, only the basics, because there are already a ton of books, videos, tutorials, papers and so on about them. We will focus on how to interpret the models and why they are explainable.
 The chapter covers linear models, decision trees, decision rules, neighbour methods and graphical models.
+
+## Terminology
+
+- Y is the target variable in supervised settings.
+- X are the features or covariates.
+- w are the weights.
+- $\beta$ are regression weights.
+
 
 ## The dataset: speed dating
 For illustration purposes we will be using speed dating data in this book.
@@ -92,6 +100,17 @@ Interpretation of a categorical variable ('Goal of date' (reference category: 'S
 As you can see in the interpretation examples, the interpretations are always coming with the clause that 'all other features stay the same'.
 That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature.
 
+### Interpretation templates
+
+**Interpretation of a numerical feature**:
+
+An increase of $x_{k}$ by one unit increases the expectation for $y$ by $\beta_x{k}$ units if all other features X stay the same.
+
+**Interpretation of a categorical feature**:
+
+The category coded with 1 of $x_{k}$ increases the expectation for $y$ by $\beta_{k}$ compared to the reference category (coded with 0).
+
+
 ### Visual parameter interpretation
 
 #### Weight plot
@@ -161,7 +180,7 @@ TODO: Add interpetation
 
 ### Explaining single predictions
 Why did a certain instance get the prediction it got from the linear model?
-This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects. See also the chapter about Justification Narratives [#justificationNarrative].
+This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects.
 ```{r linear_effects_single}
 i = 3434
 effects = get_effects(mod)
@@ -179,18 +198,6 @@ effect_plot(mod) +
 ```
 
 Let's have a look at the effect realization for the Likeness rating of one observation (= a date of a participant with a partner). Some features contribute unusually much to the degree to which the participant rates the Likeness towards the dating partner: Goal of date (`r X[i, 'Goal of date ']`) and Correlation of interests (value = `r  X[i, 'Correlation of interests ']`) and Dating frequency  (value = `r  X[i, 'Dating frequency ']`)
-
-
-
-### Interpretation templates
-
-**Interpretation of a numerical feature**:
-
-An increase of $x_{k}$ by one unit increases the expectation for $y$ by $\beta_x{k}$ units if all other features X stay the same.
-
-**Interpretation of a categorical feature**:
-
-The category coded with 1 of $x_{k}$ increases the expectation for $y$ by $\beta_{k}$ compared to the reference category (coded with 0).
 
 
 ### Coding categorical variables:
@@ -314,75 +321,13 @@ The tree structure is perfectly suited to **cover interactions** between feature
 Trees are also quite **unstable**, so a few changes in the training data set might create a completely different tree. That's because each splits depends on the parent split. It does not generate trust if the structure flips so easily.
 
 
-### Explaining: Treeinterpreter
-https://github.com/andosa/treeinterpreter
 
 
-## RuleFit
-## Decision rules
-Decision rules are a class of machine learning model that consists of if X then Y statements. Within the if statement there are sets of features and conditions on them (like X > 4) and Y is a statement about the outcome of interest.
-One decision rule from a model predicting rents could be:
-
-If a flat is bigger than 100 square meters and has a garden the average rent is 2000 Euro per month.
-
-Let's split that up:
-- 'Flat is bigger than 100 square meters' is the first part of the IF statement
-- 'Flat has a garden' is a second conditions in the IF.
-- Both are connected with an 'AND', so both have to be true for the rule to apply
-- Predicted outcome (THEN) is that the average rent is 2000 Euro per month.
-
-RULE: IF CONDITIONS THEN TARGET
-
-Arguably decision rules are the most simple classifier in terms of understandability. They are very close to natural language and the way we think. Of course it relies on using sensible, understandable features and the number of conditions within the if statement.
-
-Usually there is more then one rule to describe the associations of the features with the outcome. In our example we only have one rule covering big appartments with flats, but what about a smaller apartment?
-
-Rules can be induced from trees. Each path through the tree is one rule. Rules made of trees have the nice
-
-There are many ways how to induce those kind of rules from a training dataset.
-The induction algorithms differ in how they create the rules:
-- Do they allow overlapping rules and how are conflicts handled?
-- Do they cover the whole training set?
-
-### Association rule mining
-
-Concepts:
-- ***Support***
-- ***Confidence***
-- ***Lift***
-
-### Rule induction
-
-#### The Bayesian Machine List
-
-
-Target: Multi-class classification with labels 1, ..., L and training data ${(x_i, y_i)}_{i=1}^n$, where $x_i \in \R$ are the features for observation $i$ and $y_i \in {1, ..., L}$ are the labels.
-Algorithm:
-1. Generate a list of rules $ r = 1, ..., R$ with a rule-mining Algorithm
-2. Sample permutation of rules using $\pi$ from prior $P(p, C)$
-3. Using this ordering, select the first rule that applies, in that it matches the observed feature $x_i$. Call the rule $\tilde{r}_i$
-4. Draw a label $y_i$ from a Dirichlet-Multinomial distribution $\Theta^{\tilde{r}_i}$, with Dirichlet parameters $\alpha_1, ..., \alpha_L$ and counts
-$n_{\tilde{r}_i 1}, ..., $n_{\tilde{r}_i L}$ for rule $\tilde{r}_i$ chosen in the previous step.
-
-
-[BML] Letham, B., Rudin, C., Mccormick, T. H., & Madigan, D. (2010). An Interpretable Stroke Prediction Model Using Rules and Bayesian Analysis. AAAI Technical Report WS-13-17, (609), 65–67.
-
-### Other algorithms
+## Other simple, explainable models
+- Decision rules
 - Decision tables
+- Association rules
+- RuleFit
 - Nearest neighbours
-- Learning deep k-nearest neighbour representations
-- Bayesian network classifiers
-- Naive Bayes Classifier and other graphical models
-- Naive bayes
-Good in case you want interpretation of all features. Bad: No interaction, but even strong assumption of independence of features given the class. But if you indeed have independent features, then it might be the best model.
-- More general bayesian network approache(s)
-- Bayesian Network-Augmented Naïve Bayes (BAN) illustrated
-- General Bayesian Network
 - Prototypes
-
-<!--
-## Interpretation overview
-INSERT HERE: One example of classification task and one for regression task plus for each a table with the interpretations per model (maybe only example for one variable). Plus verbal template for each interpretation.
-
-## Monotonicity constraints between features
--->
+- Naive bayes
