@@ -8,10 +8,16 @@ library('tidyr')
 library('rpart')
 library('partykit')
 library('party')
+library('randomForest')
+
+#library('gridExtra')
 # library('mlr')
 
 # define graphics theme
-my_theme = theme_bw()
+my_theme = function(legend.position='right'){
+  theme_bw() %+replace%
+    theme(legend.position=legend.position)
+}
 
 
 # set paths
