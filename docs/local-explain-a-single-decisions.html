@@ -26,7 +26,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2017-05-08">
+<meta name="date" content="2017-05-12">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -49,6 +49,11 @@
 
 
 
+<script src="libs/htmlwidgets-0.8/htmlwidgets.js"></script>
+<script src="libs/datatables-binding-0.2/datatables.js"></script>
+<link href="libs/dt-core-1.10.12/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="libs/dt-core-1.10.12/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="libs/dt-core-1.10.12/js/jquery.dataTables.min.js"></script>
 
 
 
@@ -145,10 +150,37 @@
             <section class="normal" id="section-">
 <div id="local-explain-a-single-decisions" class="section level2">
 <h2><span class="header-section-number">4.2</span> Local: Explain a single decisions</h2>
+<p>Instead of trying to explain predictions or mechanisms of the model globally, local methods focus on explaining single predictions.</p>
 <div id="local-surrogate-models-lime" class="section level3">
 <h3><span class="header-section-number">4.2.1</span> Local surrogate models (LIME)</h3>
-<p>LIME is also a surrogate model, but it is a local one.</p>
-<p>UNDER CONSTRUCTION</p>
+<p>Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it’s outcome.</p>
+<p>The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model’s predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model’s outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should be a good approximation of the machine learning model locally, but it does not have to be so globally.</p>
+<p>The recipe:</p>
+<ul>
+<li>Choose your instance of interest for which you want to have an explanation of it’s black box outcome</li>
+<li>Make some variations of the instances and check what the black box predicts in the neighbourhood of the instance of interest.</li>
+<li>Fit a local, interpretable model on the dataset with the variations</li>
+<li>Explain prediction by interpreting the local simple model.</li>
+</ul>
+<p>As always, the devil is in the details. In a high-dimensional space, defining a neighbourhood is not trivial. Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all. How big should the neighbourhood be you look into? If it is too small, then there might be no difference in the predictions of the machine learning model at all. The other question is: How do you get the variations of the data? This differs depending on the type of data, which can be either text, an image or tabular data. For text and image the solution is turning off and on single words or superpixels. In the case of tabular data LIME creates new samples by pertubing each feature individually, by drawing from a normal distribution with mean and standard deviation from the feature.</p>
+<div id="lime-for-tabular-data" class="section level4">
+<h4><span class="header-section-number">4.2.1.1</span> LIME for tabular data</h4>
+<p>Tabular data means any data that comes in tables, where each row represents an instance and each column a feature. Sampling is not done around the point, but from the training data’s mass center. Has it’s problems. But it increases the likelihood that the outcome for some of the sampled points predictions differ from the data point of interest and that LIME can learn at least some explanation.</p>
+<p>Figure <a href="local-explain-a-single-decisions.html#fig:lime-fitting">4.1</a> explains how the sampling and local model fitting works.</p>
+<div class="figure"><span id="fig:lime-fitting"></span>
+<img src="_main_files/figure-html/lime-fitting-1.png" alt="How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes." width="864" />
+<p class="caption">
+Figure 4.1: How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes.
+</p>
+</div>
+</div>
+<div id="lime-for-images" class="section level4">
+<h4><span class="header-section-number">4.2.1.2</span> LIME for images</h4>
+<p>For images the sampling procedure works differently. Instead of sampling single pixels, LIME create variations of the image by turning off superpixel.</p>
+</div>
+<div id="lime-for-text" class="section level4">
+<h4><span class="header-section-number">4.2.1.3</span> LIME for text</h4>
+</div>
 </div>
 </div>
             </section>
