@@ -34,6 +34,7 @@ git clone -b $TARGET_BRANCH https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.g
 cd out
 git rm -rf *
 cp -r ../_book/* ./
+touch .nojekyll
 git add --all *
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
