@@ -32,6 +32,7 @@ cd out
 chmod +x ./_build.sh
 ./_build.sh
 git add --all *
+git add docs
 
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
