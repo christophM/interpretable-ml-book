@@ -7,7 +7,7 @@ set -e # Exit with nonzero exit code if anything fails
 SOURCE_BRANCH="master"
 TARGET_BRANCH="gh-pages"
 
-BUILD_COMMIT_MSG="Build book"
+BUILD_COMMIT_MSG="Update book (travis build ${TRAVIS_BUILD_NUMBER})"
 
 if [ "$TRAVIS_COMMIT_MESSAGE" = "$BUILD_COMMIT_MSG" ]; then
   echo "Skipping build; last commit was a build commit."
@@ -35,7 +35,6 @@ cd out
 git rm -rf *
 cp -r ../_book/* ./
 git add --all *
-
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
 git config credential.helper "store --file=.git/credentials"
