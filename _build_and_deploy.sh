@@ -5,7 +5,7 @@ set -e # Exit with nonzero exit code if anything fails
 # Copied from here: https://gist.github.com/domenic/ec8b0fc8ab45f39403dd
 
 SOURCE_BRANCH="master"
-TARGET_BRANCH="master"
+TARGET_BRANCH="gh-pages"
 
 BUILD_COMMIT_MSG="Build book"
 
@@ -24,15 +24,17 @@ if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "$SOURCE_BRANCH" ]
 fi
 
 
+# Run compile script
+Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::gitbook')"
+
+
 # Clone the existing gh-pages for this repo into out/
 # Create a new empty branch if gh-pages doesn't exist yet (should only happen on first deply)
 git clone -b $TARGET_BRANCH https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git out
 cd out
-# Run our compile script
-chmod +x ./_build.sh
-./_build.sh
+git rm -rf *
+cp -r ../_book/* ./
 git add --all *
-git add docs
 
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
