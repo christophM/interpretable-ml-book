@@ -35,6 +35,8 @@ cd out
 git rm -rf *
 cp -r ../_book/* ./
 touch .nojekyll
+git add .nojekyll
+
 git add --all *
 
 # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
