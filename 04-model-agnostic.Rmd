@@ -109,6 +109,50 @@ gridExtra::grid.arrange(p_boundaries, p_explain, p_weighted, p_boundaries_lime, 
 
 
 
+##### Example
+Let's look at a concrete example. We go back to the speed dating dataset and predict the probability that the participant will want to see the partner for a second date.
+
+```{r lime-tabular-example-train-black-box, cache = TRUE}
+ntree = 30
+
+model <- caret::train(train_speed_dating_classification[features_of_interest], 
+               train_speed_dating_classification$match, 
+               method = 'rf', ntree=ntree, maximise = FALSE)
+
+
+# Accuracy on test set
+# test_predict = predict(model, test_speed_dating_classification[features_of_interest])
+# caret::confusionMatrix(test_predict, test_speed_dating_classification[,target_var_class])
+
+```
+First we train a Random Forest on the classification task. Given correlation of interest, age of partner, field of study and so on, what is the probability that the participant will choose the partner for a second date?
+The Random Forest has `r ntree` trees. 
+```{r lime-tabular-example-explain}
+
+# Create explanation function
+set.seed(44)
+explain <- lime::lime(train_speed_dating_classification, model)
+
+
+n_features_lime = 2
+n_labels = 2
+instance_indices = c(1, 33)
+
+
+# Explain new observation
+explanation <- explain(test_speed_dating_classification[instance_indices, features_of_interest],  
+                       n_labels=n_labels, n_features = n_features_lime)
+
+explanation = filter(explanation, label == 'yes')
+```
+The continuous features are categorised into bins by quantiles for the explanation models. The explanations are set to contain `r n_features_lime` features. 
+
+
+
+```{r lime-tabular-example-explain-plot, fig.cap=sprintf('Explanations for two instances in the test data. The first instance got a probability of 0.13 for a match by the Random Forest. The correlation of interests between the participant and the partner is low which reduces the probability of a match for this participant. Also the importance for race of the partner is higher than 6, which lowers the probability of a match.  In the second case, the probability for a match is quite high with 0.46. The reasons are the high correlation (>0.43) and that the partner is younger then 25.', instance_indices[1], instance_indices[2])}
+# An can be visualised directly
+lime::plot_features(explanation, ncol=1)
+```
 
 #### LIME for images
 For images the sampling procedure works differently. Instead of sampling single pixels, LIME create variations of the image by turning off superpixel. 

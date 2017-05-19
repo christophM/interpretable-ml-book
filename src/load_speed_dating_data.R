@@ -19,9 +19,25 @@ speed_dating$date = factor(speed_dating$date, levels = 1:7, labels = c('Several 
                                                                        'Twice a month', 'Once a month', 'Several times a year', 'Almost never'))
 
 
-# Do mean imputation
-speed_dating = mlr::impute(speed_dating, classes = list(integer = mlr::imputeMean(), factor = mlr::imputeMode()),
-                           dummy.classes = "integer")$data
+
+## Select columns for later
+features_of_interest = c('gender', 'round', 'order', 'age_o', 'race_o', 'int_corr', 'samerace', 'imprelig', 'imprace',  'goal', 'date')
+target_var_class = 'match'
+target_var_regress = 'like'
+
+
+speed_dating_both = na.omit(speed_dating[c(features_of_interest,  target_var_regress, target_var_class)])
+speed_dating_regression = na.omit(speed_dating[c(features_of_interest,  target_var_regress)])
+speed_dating_classification = na.omit(speed_dating[c(features_of_interest,  target_var_class)])
+speed_dating_classification[,target_var_class] = factor(speed_dating_classification[,target_var_class], levels = c('yes', 'no'))
+
+
+set.seed(123)
+train_size <- floor(0.8 * nrow(speed_dating_classification))
+train_ind <- sample(seq_len(nrow(speed_dating_classification)), size = train_size)
+train_speed_dating_classification <- speed_dating_classification[train_ind, ]
+test_speed_dating_classification <- speed_dating_classification[-train_ind, ]
+
 
 
 speed_dating_names_matches = c('(Intercept)' = 'Intercept',
