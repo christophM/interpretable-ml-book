@@ -175,13 +175,19 @@ require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
   });
 
   var bookBody = $('.book-body'), bookInner = bookBody.find('.body-inner');
+  var chapterTitle = function() {
+    return bookInner.find('.page-inner').find('h1,h2').first().text();
+  };
+  var bookTitle = function() {
+    return bookInner.find('.book-header > h1').first().text();
+  };
   var saveScrollPos = function(e) {
     // save scroll position before page is reloaded
     gs.set('bodyScrollTop', {
       body: bookBody.scrollTop(),
       inner: bookInner.scrollTop(),
       focused: document.hasFocus(),
-      title: bookInner.find('.page-inner').find('h1,h2').first().text()
+      title: chapterTitle()
     });
   };
   $(document).on('servr:reload', saveScrollPos);
@@ -192,14 +198,16 @@ require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
     try { inIframe = window.self !== window.top; } catch (e) {}
     return inIframe;
   };
-  if (inIFrame()) {
-    $(window).on('blur unload', saveScrollPos);
-  }
+  $(window).on('blur unload', function(e) {
+    if (inIFrame()) saveScrollPos(e);
+    gs.set('bookTitle', bookTitle());
+  });
 
   $(function(e) {
+    if (gs.get('bookTitle', '') !== bookTitle()) localStorage.clear();
     var pos = gs.get('bodyScrollTop');
     if (pos) {
-      if (pos.title === bookInner.find('.page-inner').find('h1,h2').first().text()) {
+      if (pos.title === chapterTitle()) {
         if (pos.body !== 0) bookBody.scrollTop(pos.body);
         if (pos.inner !== 0) bookInner.scrollTop(pos.inner);
       }
