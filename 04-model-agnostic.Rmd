@@ -36,24 +36,24 @@ Instead of trying to explain predictions or mechanisms of the model globally, lo
 Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it's outcome.
 
 
-The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input  data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model's predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model's outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode  can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should  be a good approximation of the machine learning model locally, but it does not have to be so globally. 
+The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input  data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model's predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model's outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode  can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should  be a good approximation of the machine learning model locally, but it does not have to be so globally.
 
 The recipe:
 
 - Choose your instance of interest for which you want to have an explanation of it's black box outcome
-- Make some variations of the instances and check what the black box predicts in the neighbourhood of the instance of interest. 
+- Make some variations of the instances and check what the black box predicts in the neighbourhood of the instance of interest.
 - Fit a local, interpretable model on the dataset with the variations
-- Explain prediction by interpreting the local simple model. 
+- Explain prediction by interpreting the local simple model.
 
-As always, the devil is in the details. In a high-dimensional space, defining a neighbourhood is not trivial. Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all. How big should the neighbourhood be you look into? If it is too small, then there might be no difference in the predictions of the machine learning model at all. 
-The other question is: How do you get the variations of the data? This differs depending on the type of data, which can be either text, an image or tabular data. For text and image the solution is turning off and on single words or superpixels. In the case of tabular data LIME creates new samples by pertubing each feature individually, by drawing from a normal distribution with mean and standard deviation from the feature. 
+As always, the devil is in the details. In a high-dimensional space, defining a neighbourhood is not trivial. Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all. How big should the neighbourhood be you look into? If it is too small, then there might be no difference in the predictions of the machine learning model at all.
+The other question is: How do you get the variations of the data? This differs depending on the type of data, which can be either text, an image or tabular data. For text and image the solution is turning off and on single words or superpixels. In the case of tabular data LIME creates new samples by pertubing each feature individually, by drawing from a normal distribution with mean and standard deviation from the feature.
 
 
 #### LIME for tabular data
 Tabular data means any data that comes in tables, where each row represents an instance and each column a feature.
-Sampling is not done around the point, but from the training data's mass center. Has it's problems. But it increases the likelihood that the outcome for some of the sampled points predictions differ from the data point of interest and that LIME can learn at least some explanation. 
+Sampling is not done around the point, but from the training data's mass center. Has it's problems. But it increases the likelihood that the outcome for some of the sampled points predictions differ from the data point of interest and that LIME can learn at least some explanation.
 
-Figure \@ref(fig:lime-fitting) explains how the sampling and local model fitting works. 
+Figure \@ref(fig:lime-fitting) explains how the sampling and local model fitting works.
 
 
 ```{r lime-fitting, fig.cap='How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes.', fig.height=9, fig.width=9}
@@ -61,44 +61,44 @@ source(sprintf('%s/lime.R', src_dir))
 
 colors = c('#132B43', '#56B1F7')
 # Data with some noise
-p_data = ggplot(lime_training_df) + 
-  geom_point(aes(x=x1,y=x2,fill=y_noisy, color=y_noisy), alpha =0.3, shape=21) + 
-  scale_fill_manual(values = colors) + 
-  scale_color_manual(values = colors) + 
-  my_theme(legend.position = 'none') 
+p_data = ggplot(lime_training_df) +
+  geom_point(aes(x=x1,y=x2,fill=y_noisy, color=y_noisy), alpha =0.3, shape=21) +
+  scale_fill_manual(values = colors) +
+  scale_color_manual(values = colors) +
+  my_theme(legend.position = 'none')
 
 # The decision boundaries of the learned black box classifier
-p_boundaries = ggplot(grid_df) + 
-  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) + 
-  my_theme(legend.position='none') + 
+p_boundaries = ggplot(grid_df) +
+  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) +
+  my_theme(legend.position='none') +
   ggtitle('A')
 
 
 # Drawing some samples
-p_samples = p_boundaries + 
-  geom_point(data = df_sample, aes(x=x1, y=x2)) + 
-  scale_x_continuous(limits = c(-2, 2)) + 
+p_samples = p_boundaries +
+  geom_point(data = df_sample, aes(x=x1, y=x2)) +
+  scale_x_continuous(limits = c(-2, 2)) +
   scale_y_continuous(limits = c(-2, 1))
 # The point to be explained
 p_explain = p_samples +
-  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) + 
+  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
   ggtitle('B')
 
 
 
-p_weighted = p_boundaries + 
-  geom_point(data = df_sample, aes(x=x1, y=x2, size=weights)) + 
-  scale_x_continuous(limits = c(-2, 2)) + 
+p_weighted = p_boundaries +
+  geom_point(data = df_sample, aes(x=x1, y=x2, size=weights)) +
+  scale_x_continuous(limits = c(-2, 2)) +
   scale_y_continuous(limits = c(-2, 1)) +
-  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) + 
+  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
   ggtitle('C')
 
-p_boundaries_lime = ggplot(grid_df)  + 
-  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) + 
-  geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==1,], shape=3) + 
-  geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==0,], shape=95) + 
+p_boundaries_lime = ggplot(grid_df)  +
+  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) +
+  geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==1,], shape=3) +
+  geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==0,], shape=95) +
   geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
-  geom_line(aes(x=x1, y=x2), data =logistic_boundary_df, color = 'white') + 
+  geom_line(aes(x=x1, y=x2), data =logistic_boundary_df, color = 'white') +
   my_theme(legend.position='none') + ggtitle('D')
 
 
@@ -115,8 +115,8 @@ Let's look at a concrete example. We go back to the speed dating dataset and pre
 ```{r lime-tabular-example-train-black-box, cache = TRUE}
 ntree = 30
 
-model <- caret::train(train_speed_dating_classification[features_of_interest], 
-               train_speed_dating_classification$match, 
+model <- caret::train(train_speed_dating_classification[features_of_interest],
+               train_speed_dating_classification$match,
                method = 'rf', ntree=ntree, maximise = FALSE)
 
 
@@ -126,7 +126,7 @@ model <- caret::train(train_speed_dating_classification[features_of_interest],
 
 ```
 First we train a Random Forest on the classification task. Given correlation of interest, age of partner, field of study and so on, what is the probability that the participant will choose the partner for a second date?
-The Random Forest has `r ntree` trees. 
+The Random Forest has `r ntree` trees.
 ```{r lime-tabular-example-explain}
 
 # Create explanation function
@@ -140,12 +140,12 @@ instance_indices = c(1, 33)
 
 
 # Explain new observation
-explanation <- explain(test_speed_dating_classification[instance_indices, features_of_interest],  
+explanation <- explain(test_speed_dating_classification[instance_indices, features_of_interest],
                        n_labels=n_labels, n_features = n_features_lime)
 
 explanation = filter(explanation, label == 'yes')
 ```
-The continuous features are categorised into bins by quantiles for the explanation models. The explanations are set to contain `r n_features_lime` features. 
+The continuous features are categorised into bins by quantiles for the explanation models. The explanations are set to contain `r n_features_lime` features.
 
 
 
@@ -155,11 +155,13 @@ lime::plot_features(explanation, ncol=1)
 ```
 
 #### LIME for images
-For images the sampling procedure works differently. Instead of sampling single pixels, LIME create variations of the image by turning off superpixel. 
+For images the sampling procedure works differently. Instead of sampling single pixels, LIME create variations of the image by turning off superpixel.
 
 #### LIME for text
 
 
+## Model-agnostic: Why not use them on the data itself?
+Well, nothing stops you from using it on the data itself. 
 
 ## Explanation types
 
