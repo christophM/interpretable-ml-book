@@ -36,7 +36,7 @@ Instead of trying to explain predictions or mechanisms of the model globally, lo
 Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it's outcome.
 
 
-The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input  data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model's predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model's outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode  can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should  be a good approximation of the machine learning model locally, but it does not have to be so globally.
+The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model's predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model's outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode  can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should be a good approximation of the machine learning model locally, but it does not have to be so globally. This kind of accuracy is also called local fidelity.
 
 The recipe:
 
@@ -44,6 +44,8 @@ The recipe:
 - Make some variations of the instances and check what the black box predicts in the neighbourhood of the instance of interest.
 - Fit a local, interpretable model on the dataset with the variations
 - Explain prediction by interpreting the local simple model.
+
+In the current implementation, only LASSO can be chosen as a simple model. Upfront you have to choose K, the number of features that you want to have in your simple model. The lower the K, the simpler the model is to understand, higher K potentially creates models with higher fidelity. There are different methods for how to fit models with exactly K features. The most natural with LASSO is the lasso path. Starting from a model with a very high regularisation parameter $\lambda$ yields a model with only the intercept. By refitting the LASSO models with slowly decreasing $\lambda$ one after each other the features are getting weight estimates different from zero. When K features are in the model, you reached the desired number of features. Other strategies are forward or backward selection of features. This means you either start with the full model (=containing all features) or with a model with only the intercept and then testing which feature would create the biggest improvement when added or removed, until a model with K features are reached. Other simple models like decision trees are currently not implemented. 
 
 As always, the devil is in the details. In a high-dimensional space, defining a neighbourhood is not trivial. Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all. How big should the neighbourhood be you look into? If it is too small, then there might be no difference in the predictions of the machine learning model at all.
 The other question is: How do you get the variations of the data? This differs depending on the type of data, which can be either text, an image or tabular data. For text and image the solution is turning off and on single words or superpixels. In the case of tabular data LIME creates new samples by pertubing each feature individually, by drawing from a normal distribution with mean and standard deviation from the feature.
@@ -161,7 +163,7 @@ For images the sampling procedure works differently. Instead of sampling single 
 
 
 ## Model-agnostic: Why not use them on the data itself?
-Well, nothing stops you from using it on the data itself. 
+Well, nothing stops you from using it on the data itself.
 
 ## Explanation types
 
