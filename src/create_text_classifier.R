@@ -20,6 +20,7 @@ prepare_data = function(comments, trained_corpus = NULL){
   # Seems that columns called break or next cause trouble
   names(labeledTerms)[names(labeledTerms) %in% c('break')] <- 'break.'
   names(labeledTerms)[names(labeledTerms) %in% c('next')] <- 'next.'
+  names(labeledTerms)[names(labeledTerms) %in% c('else')] <- 'else.'
   
   
   if(!is.null(trained_corpus)){
