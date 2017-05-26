@@ -1,28 +1,19 @@
 
 
 library('tm')
-library('SnowballC')
+# library('SnowballC')
 library('rpart')
 
-
-urls = sprintf('http://lasid.sor.ufscar.br/labeling/datasets/%i/download/', 9:13)
-ycomments = lapply(urls, read.csv, stringsAsFactors=FALSE)
-ycomments = do.call('rbind', ycomments)
-cleanFun <- function(htmlString) {
-  return(gsub("<.*?>", "", htmlString))
-}
-ycomments$CONTENT = cleanFun(ycomments$CONTENT)
-# Convert to ASCII
-ycomments$CONTENT = iconv(ycomments$CONTENT, "UTF-8", "ASCII", sub="")
-
+ycomments = read.csv(sprintf('%s/TubeSpam.csv', data_dir), stringsAsFactors = FALSE)
 
 prepare_data = function(comments, trained_corpus = NULL){
   
   corpus = Corpus(VectorSource(comments))
   dtm = DocumentTermMatrix(corpus, control = list(removePunctuation = TRUE, 
                                                   stopwords=TRUE,
-                                                  removeNumbers = TRUE,
-                                                  stemming = TRUE))
+                                                  stemming = TRUE,
+                                                  removeNumbers = TRUE
+                                                  ))
   
   labeledTerms = as.data.frame(as.matrix(dtm))
   
