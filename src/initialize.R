@@ -10,8 +10,6 @@ library('partykit')
 library('party')
 library('randomForest')
 
-#library('gridExtra')
-# library('mlr')
 
 # define graphics theme
 my_theme = function(legend.position='right'){
