@@ -11,7 +11,7 @@ prepare_data = function(comments, trained_corpus = NULL){
   corpus = Corpus(VectorSource(comments))
   dtm = DocumentTermMatrix(corpus, control = list(removePunctuation = TRUE, 
                                                   stopwords=TRUE,
-                                                  stemming = TRUE,
+                                                  stemming = FALSE,
                                                   removeNumbers = TRUE
                                                   ))
   
