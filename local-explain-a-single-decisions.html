@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2017-05-29">
+<meta name="date" content="2017-05-31">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -120,11 +120,12 @@
 <li class="chapter" data-level="4" data-path="model-agnostic-explanations.html"><a href="model-agnostic-explanations.html"><i class="fa fa-check"></i><b>4</b> Model-agnostic explanations</a><ul>
 <li class="chapter" data-level="4.1" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html"><i class="fa fa-check"></i><b>4.1</b> Global: Explain the behaviour of a model</a><ul>
 <li class="chapter" data-level="4.1.1" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#global-surrogate-models"><i class="fa fa-check"></i><b>4.1.1</b> Global surrogate models</a></li>
-<li class="chapter" data-level="4.1.2" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#partial-dependency-plots"><i class="fa fa-check"></i><b>4.1.2</b> Partial dependency plots</a></li>
+<li class="chapter" data-level="4.1.2" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#partial-dependence-plots"><i class="fa fa-check"></i><b>4.1.2</b> Partial dependence plots</a></li>
 <li class="chapter" data-level="4.1.3" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#variable-importance"><i class="fa fa-check"></i><b>4.1.3</b> Variable importance</a></li>
 </ul></li>
 <li class="chapter" data-level="4.2" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html"><i class="fa fa-check"></i><b>4.2</b> Local: Explain a single decisions</a><ul>
-<li class="chapter" data-level="4.2.1" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html#local-surrogate-models-lime"><i class="fa fa-check"></i><b>4.2.1</b> Local surrogate models (LIME)</a></li>
+<li class="chapter" data-level="4.2.1" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html#individual-dependence-plots-icp-or-individual-conditional-expectation-ice"><i class="fa fa-check"></i><b>4.2.1</b> Individual dependence plots (ICP) or Individual Conditional Expectation (ICE)</a></li>
+<li class="chapter" data-level="4.2.2" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html#local-surrogate-models-lime"><i class="fa fa-check"></i><b>4.2.2</b> Local surrogate models (LIME)</a></li>
 </ul></li>
 <li class="chapter" data-level="4.3" data-path="model-agnostic-why-not-use-them-on-the-data-itself.html"><a href="model-agnostic-why-not-use-them-on-the-data-itself.html"><i class="fa fa-check"></i><b>4.3</b> Model-agnostic: Why not use them on the data itself?</a></li>
 <li class="chapter" data-level="4.4" data-path="explanation-types.html"><a href="explanation-types.html"><i class="fa fa-check"></i><b>4.4</b> Explanation types</a><ul>
@@ -157,8 +158,12 @@
 <div id="local-explain-a-single-decisions" class="section level2">
 <h2><span class="header-section-number">4.2</span> Local: Explain a single decisions</h2>
 <p>Instead of trying to explain predictions or mechanisms of the model globally, local methods focus on explaining single predictions.</p>
+<div id="individual-dependence-plots-icp-or-individual-conditional-expectation-ice" class="section level3">
+<h3><span class="header-section-number">4.2.1</span> Individual dependence plots (ICP) or Individual Conditional Expectation (ICE)</h3>
+<p><span class="citation">(Goldstein et al. <a href="#ref-goldstein2015peeking">2015</a>)</span></p>
+</div>
 <div id="local-surrogate-models-lime" class="section level3">
-<h3><span class="header-section-number">4.2.1</span> Local surrogate models (LIME)</h3>
+<h3><span class="header-section-number">4.2.2</span> Local surrogate models (LIME)</h3>
 <p>Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it’s outcome.</p>
 <p>The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model’s predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model’s outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should be a good approximation of the machine learning model locally, but it does not have to be so globally. This kind of accuracy is also called local fidelity.</p>
 <p>The recipe:</p>
@@ -171,37 +176,37 @@
 <p>In the current implementation, only LASSO can be chosen as a simple model. Upfront you have to choose K, the number of features that you want to have in your simple model. The lower the K, the simpler the model is to understand, higher K potentially creates models with higher fidelity. There are different methods for how to fit models with exactly K features. The most natural with LASSO is the lasso path. Starting from a model with a very high regularisation parameter <span class="math inline">\(\lambda\)</span> yields a model with only the intercept. By refitting the LASSO models with slowly decreasing <span class="math inline">\(\lambda\)</span> one after each other the features are getting weight estimates different from zero. When K features are in the model, you reached the desired number of features. Other strategies are forward or backward selection of features. This means you either start with the full model (=containing all features) or with a model with only the intercept and then testing which feature would create the biggest improvement when added or removed, until a model with K features are reached. Other simple models like decision trees are currently not implemented.</p>
 <p>As always, the devil is in the details. In a high-dimensional space, defining a neighbourhood is not trivial. Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all. How big should the neighbourhood be you look into? If it is too small, then there might be no difference in the predictions of the machine learning model at all. The other question is: How do you get the variations of the data? This differs depending on the type of data, which can be either text, an image or tabular data. For text and image the solution is turning off and on single words or superpixels. In the case of tabular data LIME creates new samples by pertubing each feature individually, by drawing from a normal distribution with mean and standard deviation from the feature.</p>
 <div id="lime-for-tabular-data" class="section level4">
-<h4><span class="header-section-number">4.2.1.1</span> LIME for tabular data</h4>
+<h4><span class="header-section-number">4.2.2.1</span> LIME for tabular data</h4>
 <p>Tabular data means any data that comes in tables, where each row represents an instance and each column a feature. Sampling is not done around the point, but from the training data’s mass center. Has it’s problems. But it increases the likelihood that the outcome for some of the sampled points predictions differ from the data point of interest and that LIME can learn at least some explanation.</p>
-<p>Figure <a href="local-explain-a-single-decisions.html#fig:lime-fitting">4.1</a> explains how the sampling and local model fitting works.</p>
+<p>Figure <a href="local-explain-a-single-decisions.html#fig:lime-fitting">4.3</a> explains how the sampling and local model fitting works.</p>
 <div class="figure"><span id="fig:lime-fitting"></span>
 <img src="xai-book_files/figure-html/lime-fitting-1.svg" alt="How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes." width="864" />
 <p class="caption">
-FIGURE 4.1: How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes.
+FIGURE 4.3: How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes.
 </p>
 </div>
 <div id="example" class="section level5">
-<h5><span class="header-section-number">4.2.1.1.1</span> Example</h5>
+<h5><span class="header-section-number">4.2.2.1.1</span> Example</h5>
 <p>Let’s look at a concrete example. We go back to the speed dating dataset and predict the probability that the participant will want to see the partner for a second date.</p>
 <p>First we train a Random Forest on the classification task. Given correlation of interest, age of partner, field of study and so on, what is the probability that the participant will choose the partner for a second date? The Random Forest has 30 trees.</p>
 <p>The continuous features are categorised into bins by quantiles for the explanation models. The explanations are set to contain 2 features.</p>
 <div class="figure"><span id="fig:lime-tabular-example-explain-plot"></span>
 <img src="xai-book_files/figure-html/lime-tabular-example-explain-plot-1.svg" alt="Explanations for two instances in the test data. The first instance got a probability of 0.13 for a match by the Random Forest. The correlation of interests between the participant and the partner is low which reduces the probability of a match for this participant. Also the importance for race of the partner is higher than 6, which lowers the probability of a match.  In the second case, the probability for a match is quite high with 0.46. The reasons are the high correlation (&gt;0.43) and that the partner is younger then 25." width="672" />
 <p class="caption">
-FIGURE 4.2: Explanations for two instances in the test data. The first instance got a probability of 0.13 for a match by the Random Forest. The correlation of interests between the participant and the partner is low which reduces the probability of a match for this participant. Also the importance for race of the partner is higher than 6, which lowers the probability of a match. In the second case, the probability for a match is quite high with 0.46. The reasons are the high correlation (&gt;0.43) and that the partner is younger then 25.
+FIGURE 4.4: Explanations for two instances in the test data. The first instance got a probability of 0.13 for a match by the Random Forest. The correlation of interests between the participant and the partner is low which reduces the probability of a match for this participant. Also the importance for race of the partner is higher than 6, which lowers the probability of a match. In the second case, the probability for a match is quite high with 0.46. The reasons are the high correlation (&gt;0.43) and that the partner is younger then 25.
 </p>
 </div>
 </div>
 </div>
 <div id="lime-for-images" class="section level4">
-<h4><span class="header-section-number">4.2.1.2</span> LIME for images</h4>
+<h4><span class="header-section-number">4.2.2.2</span> LIME for images</h4>
 <p>For images the sampling procedure works differently. Instead of sampling single pixels, LIME create variations of the image by turning off superpixel.</p>
 </div>
 <div id="lime-for-text" class="section level4">
-<h4><span class="header-section-number">4.2.1.3</span> LIME for text</h4>
+<h4><span class="header-section-number">4.2.2.3</span> LIME for text</h4>
 <p>LIME for text works a bit differently than for tabular data. Variation of the point to be explained are created differently: Starting from the original text, new texts are created by randomly removing words from it.</p>
 <div id="example-1" class="section level5">
-<h5><span class="header-section-number">4.2.1.3.1</span> Example</h5>
+<h5><span class="header-section-number">4.2.2.3.1</span> Example</h5>
 <p>In this example we classify spam vs. ham of YouTube comments. The dataset is described in [#TubeSpam].</p>
 <p>The black box model is a decision tree on the document word matrix. Each comment is one document (= one row) and each column is a the number of occurences of a specific word. A decision tree was trained on this data. As discussed in Section [#simple], decision trees are easy to understand, but in this case the tree is very deep. Also in the place of this tree there could have been a recurrent neural network or a support vector machine that was trained on the embeddings from word2vec. The machine learning model was trained on 80% of the approximately 2000 comments. From the remaining comments two were selected for showing the explanations.</p>
 <p>Let’s look at tow comments of this dataset and the corresponding classes:</p>
@@ -212,6 +217,12 @@ FIGURE 4.2: Explanations for two instances in the test data. The first instance 
 <p><img src="xai-book_files/figure-html/lime-text-explanations-1.svg" width="672" /></p>
 </div>
 </div>
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-goldstein2015peeking">
+<p>Goldstein, Alex, Adam Kapelner, Justin Bleich, and Emil Pitkin. 2015. “Peeking Inside the Black Box: Visualizing Statistical Learning with Plots of Individual Conditional Expectation.” <em>Journal of Computational and Graphical Statistics</em> 24 (1). Taylor &amp; Francis: 44–65.</p>
 </div>
 </div>
             </section>

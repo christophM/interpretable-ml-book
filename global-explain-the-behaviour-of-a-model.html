@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2017-05-29">
+<meta name="date" content="2017-05-31">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -120,11 +120,12 @@
 <li class="chapter" data-level="4" data-path="model-agnostic-explanations.html"><a href="model-agnostic-explanations.html"><i class="fa fa-check"></i><b>4</b> Model-agnostic explanations</a><ul>
 <li class="chapter" data-level="4.1" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html"><i class="fa fa-check"></i><b>4.1</b> Global: Explain the behaviour of a model</a><ul>
 <li class="chapter" data-level="4.1.1" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#global-surrogate-models"><i class="fa fa-check"></i><b>4.1.1</b> Global surrogate models</a></li>
-<li class="chapter" data-level="4.1.2" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#partial-dependency-plots"><i class="fa fa-check"></i><b>4.1.2</b> Partial dependency plots</a></li>
+<li class="chapter" data-level="4.1.2" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#partial-dependence-plots"><i class="fa fa-check"></i><b>4.1.2</b> Partial dependence plots</a></li>
 <li class="chapter" data-level="4.1.3" data-path="global-explain-the-behaviour-of-a-model.html"><a href="global-explain-the-behaviour-of-a-model.html#variable-importance"><i class="fa fa-check"></i><b>4.1.3</b> Variable importance</a></li>
 </ul></li>
 <li class="chapter" data-level="4.2" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html"><i class="fa fa-check"></i><b>4.2</b> Local: Explain a single decisions</a><ul>
-<li class="chapter" data-level="4.2.1" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html#local-surrogate-models-lime"><i class="fa fa-check"></i><b>4.2.1</b> Local surrogate models (LIME)</a></li>
+<li class="chapter" data-level="4.2.1" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html#individual-dependence-plots-icp-or-individual-conditional-expectation-ice"><i class="fa fa-check"></i><b>4.2.1</b> Individual dependence plots (ICP) or Individual Conditional Expectation (ICE)</a></li>
+<li class="chapter" data-level="4.2.2" data-path="local-explain-a-single-decisions.html"><a href="local-explain-a-single-decisions.html#local-surrogate-models-lime"><i class="fa fa-check"></i><b>4.2.2</b> Local surrogate models (LIME)</a></li>
 </ul></li>
 <li class="chapter" data-level="4.3" data-path="model-agnostic-why-not-use-them-on-the-data-itself.html"><a href="model-agnostic-why-not-use-them-on-the-data-itself.html"><i class="fa fa-check"></i><b>4.3</b> Model-agnostic: Why not use them on the data itself?</a></li>
 <li class="chapter" data-level="4.4" data-path="explanation-types.html"><a href="explanation-types.html"><i class="fa fa-check"></i><b>4.4</b> Explanation types</a><ul>
@@ -161,14 +162,39 @@
 <p>A surrogate model is a simple, explainable model that explains another complex machine learning model. Models in [#simple] are viable candidates.</p>
 <p>UNDER CONSTRUCTION</p>
 </div>
-<div id="partial-dependency-plots" class="section level3">
-<h3><span class="header-section-number">4.1.2</span> Partial dependency plots</h3>
-<p>Partial dependency plots show the relationship between the target and one or more features by averaging out all the other features. A dependency plot can show if the relationship between target and feature is linear, monotonic or something else. Are only partially global: It is global because it takes into account all instances, but it is local in the feature, because partial dependency plots only examine one variable, as the name suggests.</p>
-<p>UNDER CONSTRUCTION</p>
+<div id="partial-dependence-plots" class="section level3">
+<h3><span class="header-section-number">4.1.2</span> Partial dependence plots</h3>
+<p>Partial dependence plots show the marginal effect of a variable on the target (regression / classification) <span class="citation">(J. H. Friedman <a href="#ref-friedman2001greedy">2001</a>)</span>. A partial dependence plot can show if the relationship between target and feature is linear, monotonic or something else. In linear regression, those plots will always show a linear relationship.</p>
+<p>The partial dependence function for regression is defined as: <span class="math display">\[f_S = E_{x_C}[f(x_S, x_C)] = \int f(x_S, x_C) dP(x_C)\]</span> The <span class="math inline">\(x_S\)</span> is the set of variables for which the partial dependence should be depicted and <span class="math inline">\(x_C\)</span> are the other variables that were used in the machine learning model. Partial dependence works by averaging out the other variables, so that the remaining function shows the relationsship between the <span class="math inline">\(x_S\)</span>, in which we are interested, and the target. <span class="math inline">\(x_S\)</span> is fixed and <span class="math inline">\(x_C\)</span> is varying.</p>
+<p>The integral is estimated by calculating averages in the training data, which looks like this for regression: <span class="math display">\[ \hat{f}(x_S) = \frac{1}{n} \sum_{i=1}^n f(x_S, x_{Ci}) \]</span> In this formula, <span class="math inline">\(x\)</span> is the variable for which to calculate the partial dependence, <span class="math inline">\(x_{iC}\)</span> is the other variables and <span class="math inline">\(n\)</span> the number of instances in the data set.</p>
+<p>For classification it is the logits: <span class="math display">\[ f(x) = \log p_k(x) - \frac{1}{K} \sum_{j=1}^K \log p_j(x) \]</span></p>
+<p>Partial dependence plots are only partially global: They are global because they take into account all instances, but it is local in the feature, because partial dependence plots only examine one variable, as the name suggests.</p>
+<div id="examples" class="section level4">
+<h4><span class="header-section-number">4.1.2.1</span> Examples</h4>
+<p>In practice <span class="math inline">\(x_S\)</span> usually only contains one variable or a maximum of two, because one variable produces 2D plots and two variables produce 3D plots. Everything beyond that is quite tricky. Even 3D on a 2D paper or monitor is already challenging. This example here shows an artificial dataset with two x variables on which a Random Forest was trained.</p>
+<div class="figure"><span id="fig:dpd-data"></span>
+<img src="xai-book_files/figure-html/dpd-data-1.svg" alt="Artificial dataset with x1, x2 and y as color. Bright color indicate a high predicted value for y." width="672" />
+<p class="caption">
+FIGURE 4.1: Artificial dataset with x1, x2 and y as color. Bright color indicate a high predicted value for y.
+</p>
+</div>
+<div class="figure"><span id="fig:dpd"></span>
+<img src="xai-book_files/figure-html/dpd-1.svg" alt="The plots show the partial dependence plots of x1 and x2. x1 exhibits the V-shaped structure." width="672" />
+<p class="caption">
+FIGURE 4.2: The plots show the partial dependence plots of x1 and x2. x1 exhibits the V-shaped structure.
+</p>
+</div>
+</div>
 </div>
 <div id="variable-importance" class="section level3">
 <h3><span class="header-section-number">4.1.3</span> Variable importance</h3>
 <p>UNDER CONSTRUCTION</p>
+</div>
+</div>
+<h3>References</h3>
+<div id="refs" class="references">
+<div id="ref-friedman2001greedy">
+<p>Friedman, Jerome H. 2001. “Greedy Function Approximation: A Gradient Boosting Machine.” <em>Annals of Statistics</em>. JSTOR, 1189–1232.</p>
 </div>
 </div>
             </section>
