@@ -18,8 +18,8 @@ A surrogate model is a simple, explainable model that explains another complex m
 
 UNDER CONSTRUCTION
 
-### Partial dependence plots
-Partial dependence plots show the marginal effect of a variable on the target (regression / classification) [@friedman2001greedy]. A partial dependence plot can show if the relationship between target and feature is linear, monotonic or something else.
+### Partial dependence plot
+The partial dependence plot shows the marginal effect of a variable on the target (regression / classification) [@friedman2001greedy]. A partial dependence plot can show if the relationship between target and feature is linear, monotonic or something else.
 In linear regression, those plots will always show a linear relationship.
 
 The partial dependence function for regression is defined as:
@@ -71,6 +71,24 @@ px2 = ggplot(pds) +
 gridExtra::grid.arrange(px1, px2, ncol=2)
 ```
 
+
+\Sexpr{set_parent('Makepaper.Rnw')}
+\section{The effect of a feature}
+\label{sec:feature-effects}
+
+\subsection{Average Marginal Effects}
+
+Average marginal effects were originally developed for generalized linear models with special emphasis on the logistic regression model (CITATION).
+%Logistic regression models try to model the probability of a binary response using a set of features.
+The main idea in generalized linear models is to model the expected value of the target feature using a linear combination (also called linear predictor) of the features by weighting them with the coefficients $\beta$ and a so-called response function $h$, i.e.
+$$E(Y|X) = h(x^\top \beta).$$
+In any case the linear predictor takes values between minus and plus infinity, i.e., for a logistic regression model those values need to be translated into probabilities which is typically done by appling a sigmoid function (e.g., using a logistic function for $h$) to the linear predictor to make sure that the values are between 0 and 1.
+Although the logistic regression model is claimed to be an interpretable model (CITATION), the interpretations of the estimated coefficients (feature effects) are not directly related to the probability of the binary response due to the non-linear response function $h$.
+Instead, the interpretations are done w.r.t. log-odds, e.g. if $x$ increases by one, the log-odds ($log \frac{P(Y = 1)}{P(Y = 0)}$) will increase by $\beta$.
+Researchers of applied sciences, however, are often interested in making direct interpretations of how changes in $x$ affect the probability $P(Y=1)$. For this purpose one can use average marginal effects.
+
+
+
 ### Feature importance
 
 #### Permutation feature importance
@@ -117,7 +135,50 @@ A few examples:
 ## Local: Explain a single decisions
 Instead of trying to explain predictions or mechanisms of the model globally, local methods focus on explaining single predictions.
 
-### Individual dependence plots (ICP) or Individual Conditional Expectation (ICE)
+### Individual Conditional Expectation (ICE) plot
+
+The partial dependence plot are a global method, because it does not focus on the partial dependence of a specific instance, but on an average over all.
+The equivalent to a PDP for local expectations is called individiual conditional expectation (ICE) plot [@goldstein2015peeking].
+An ICE plot visualizes the dependence of each instance's predicted response on a feature.
+For drawing each line, the $x_C$ are fixed for this one instance, and the $x_C$ is varied on a grid and the $\hat(y)$ calculated with $\hat(f)$.
+
+So, what do you gain by looking at individual expectations, instead of partial dependencies?
+This averaged display can obfuscate a heterogeneous relationship that comes from interactions.
+ICE plots \citep{goldstein2015peeking} solve this problem by plotting the relationship between feature and predicted response for individual observations.
+It can be seen as an extension to the standard PDP.
+PDP can show you how the average relationship between feature $x_S$ and $\hat(y)$ looks like.
+This works only well in cases where the interactions between $x_S$ and the remaining $x_C$ are weak.
+If there are interactions, a ICE plot will give a lot more insight.
+
+A more formal definition:
+In ICE plots, for each observation in $\{(x_{S_i}, x_{C_i})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x_{S_i}$, while $x_{C_i}$ is kept fixed.
+
+
+EXAMPLE: UNDER CONSTRUCTION
+
+#### Centered ICE plot
+There is one issue with the ICE plot:
+It can be hard to see if the individual conditionl expectations curve differ between individuals when they start at different $\hat{f^{(i)}}.
+An easy fix is to center the curves at a certain point in $x_S$ and only display the difference in predited response.
+The resulting plot is called centered ICE plot (c-ICE).
+It is a kind of anchoring, and doing this at the lower end of $x_S$ is a good choice.
+The new curves are defined as: $$\hat{f}_{cent}^{(i)} = \hat{f}_i - 1\hat{f}(x^{\text{*}}, x_{C_i}), $$
+where $1$ is a vector of 1's with the appropriate dimensions (usually one- or two-dimensional), and $\hat{f}$ the fitted model.
+
+EXAMPLE: UNDER CONSTRUCTION
+
+
+#### Derivative ICE plot
+Another way to make it it visually easier to spot heterogenity is to look at the individual derivatives of $\hat(f)$ with respect to $\x_S$ instead of the predicted response $\hat(f)$.
+The resulting plot is called derivative ICE plot (d-ICE).
+If there is no interaction between $x_S$ and $x_C$, then $\hat{f}$ can be expressed as:
+$$\hat{f}(x) = \hat(f)(x_S, x_C) = g(x_S) + h(x_C), \text{ so that } \frac{\delta\hat{f}(x)}{\delta x_S} = g'(x_S)$$
+Without interactions, the individual partial derivatives should be the same for all observations.
+If they differ, it's because of interactions and it will become visible in the d-ICE plot.
+In addition to displaying the individual curves for derivative $\hat{f}$, showing the standard deviation of derivative $\hat{f}$ helps to highlight regions in $x_S$ with heterogeneity in the estimated derivatives.
+
+
+EXAMPLE: UNDER CONSTRUCTION
 
 [@goldstein2015peeking]
 
