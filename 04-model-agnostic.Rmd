@@ -40,37 +40,17 @@ Partial dependence plots are only partially global: They are global because they
 #### Examples
 In practice $x_S$ usually only contains one variable or a maximum of two, because one variable produces 2D plots and two variables produce 3D plots. Everything beyond that is quite tricky. Even 3D on a 2D paper or monitor is already challenging. This example here shows an artificial dataset with two x variables on which a Random Forest was trained.
 
-```{r dpd-data, fig.cap='Artificial dataset with x1, x2 and y as color. Bright color indicate a high predicted value for y.'}
-# Already using the LIME data here.
-source(sprintf('%s/lime.R', src_dir))
-set.seed(42)
-rf_numerical = randomForest::randomForest(as.numeric(y_noisy) ~ x1 + x2, data = lime_training_df, ntree=100)
 
-p_boundaries = ggplot(grid_df) +
-  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) +
-  my_theme(legend.position='none') +
-  ggtitle('')
 
-p_boundaries
+```{r dpd-cervical, fig.cap = 'The plots show the partial dependence plots of x1 and x2. x1 exhibits the V-shaped structure.'}
+mod = train(makeLearner('classif.randomForest', predict.type = 'prob'), cervical_task)
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, 'Age')
+mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous(limits = c(0, NA))
+
+
+pd2 = mlr::generatePartialDependenceData(mod, cervical_task, 'Smokes..years.')
+mlr::plotPartialDependence(pd2) + my_theme() + scale_x_continuous(limits = c(0, NA))
 ```
-
-```{r dpd, fig.cap = 'The plots show the partial dependence plots of x1 and x2. x1 exhibits the V-shaped structure.'}
-set.seed(42)
-pds = mmpf::marginalPrediction(data = lime_training_df, vars = c('x1'), n = c(15, 500), model = rf_numerical)
-
-px1 = ggplot(pds) +
-  geom_line(aes(x=x1, y=preds)) + my_theme()
-
-
-pds = mmpf::marginalPrediction(data = lime_training_df, vars = c('x2'), n = c(15, 500), model = rf_numerical)
-
-px2 = ggplot(pds) +
-  geom_line(aes(x=x2, y=preds)) + my_theme()
-
-
-gridExtra::grid.arrange(px1, px2, ncol=2)
-```
-
 
 \Sexpr{set_parent('Makepaper.Rnw')}
 \section{The effect of a feature}
@@ -79,7 +59,7 @@ gridExtra::grid.arrange(px1, px2, ncol=2)
 \subsection{Average Marginal Effects}
 
 Average marginal effects were originally developed for generalized linear models with special emphasis on the logistic regression model (CITATION).
-%Logistic regression models try to model the probability of a binary response using a set of features.
+Logistic regression models try to model the probability of a binary response using a set of features.
 The main idea in generalized linear models is to model the expected value of the target feature using a linear combination (also called linear predictor) of the features by weighting them with the coefficients $\beta$ and a so-called response function $h$, i.e.
 $$E(Y|X) = h(x^\top \beta).$$
 In any case the linear predictor takes values between minus and plus infinity, i.e., for a logistic regression model those values need to be translated into probabilities which is typically done by appling a sigmoid function (e.g., using a logistic function for $h$) to the linear predictor to make sure that the values are between 0 and 1.
@@ -152,9 +132,13 @@ If there are interactions, a ICE plot will give a lot more insight.
 
 A more formal definition:
 In ICE plots, for each observation in $\{(x_{S_i}, x_{C_i})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x_{S_i}$, while $x_{C_i}$ is kept fixed.
+#### Example
 
+```{r ice-cervical}
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, 'Age', individual = TRUE)
+mlr::plotPartialDependence(pd1) + my_theme()
+```
 
-EXAMPLE: UNDER CONSTRUCTION
 
 #### Centered ICE plot
 There is one issue with the ICE plot:
@@ -165,8 +149,15 @@ It is a kind of anchoring, and doing this at the lower end of $x_S$ is a good ch
 The new curves are defined as: $$\hat{f}_{cent}^{(i)} = \hat{f}_i - 1\hat{f}(x^{\text{*}}, x_{C_i}), $$
 where $1$ is a vector of 1's with the appropriate dimensions (usually one- or two-dimensional), and $\hat{f}$ the fitted model.
 
-EXAMPLE: UNDER CONSTRUCTION
+```{r ice-cervical-centered}
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, 'Age', individual = TRUE, center = list(Age=14))
+mlr::plotPartialDependence(pd1) + my_theme()
 
+
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, 'Smokes..years.', individual = TRUE, center = list(Smokes..years.=0), grid=20)
+mlr::plotPartialDependence(pd1) + my_theme()
+
+```
 
 #### Derivative ICE plot
 Another way to make it it visually easier to spot heterogenity is to look at the individual derivatives of $\hat(f)$ with respect to $\x_S$ instead of the predicted response $\hat(f)$.
@@ -177,11 +168,12 @@ Without interactions, the individual partial derivatives should be the same for 
 If they differ, it's because of interactions and it will become visible in the d-ICE plot.
 In addition to displaying the individual curves for derivative $\hat{f}$, showing the standard deviation of derivative $\hat{f}$ helps to highlight regions in $x_S$ with heterogeneity in the estimated derivatives.
 
-
-EXAMPLE: UNDER CONSTRUCTION
-
 [@goldstein2015peeking]
 
+```{r ice-cervical-centered}
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, 'Age', individual = TRUE, derivative = TRUE)
+mlr::plotPartialDependence(pd1) + my_theme()
+```
 
 ### Local surrogate models (LIME)
 Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it's outcome.
