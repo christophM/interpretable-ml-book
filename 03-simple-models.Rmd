@@ -38,10 +38,10 @@ Variables in the dataset:
 - 2: Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
 - 3: Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
 - 4: Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
-- temp : Normalized temperature in Celsius. The values are derived via (t-t_min)/(t_max-t_min), t_min=-8, t_max=+39 (only in hourly scale)
-- atemp: Normalized feeling temperature in Celsius. The values are derived via (t-t_min)/(t_max-t_min), t_min=-16, t_max=+50 (only in hourly scale)
-- hum: Normalized humidity. The values are divided to 100 (max)
-- windspeed: Normalized wind speed. The values are divided to 67 (max)
+- temp : Temperature in Celsius
+- atemp: Feeling temperature in Celsius
+- hum: Humidity
+- windspeed: Wind speed in km per hour
 - casual: count of casual users
 - registered: count of registered users
 - cnt: count of total rental bikes including both casual and registered
@@ -216,14 +216,14 @@ It isn't helpful to do interpretation on a model with very low $R^2$ or $\bar{R}
 ### Interpretation example
 
 ```{r linear_model}
+features_of_interest = c('season','holiday', 'workingday', 'weathersit', 'temp', 'hum', 'windspeed', 'days_since_2010')
+X = bike.train[features_of_interest]
+# colnames(X) = speed_dating_names_matches[colnames(X)]
 
-X = speed_dating_regression[features_of_interest]
-colnames(X) = speed_dating_names_matches[colnames(X)]
-
-y = speed_dating_regression[,target_var_regress]
+y = bike.train[,'cnt']
 dat = cbind(X, y)
-colnames(dat) = c(colnames(X), target_var_regress)
-mod = lm(like ~ ., data = dat, x = TRUE)
+#colnames(dat) = c(colnames(X), target_var_regress)
+mod = lm(y ~ ., data = dat, x = TRUE)
 lm_summary = summary(mod)$coefficients
 
 
@@ -240,9 +240,9 @@ rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 kable(lm_summary_print[,c('Estimate', 'Std. Error')])
 ```
 
-Interpretation of a numerical variable ('Age of partner'): An increase of the age of the partner of 1 year increases the Likeness rating by `r sprintf('%.2f', lm_summary_print['Age of partner', 'Estimate'])` given all other features stay the same.
+Interpretation of a numerical variable ('Temperature'): An increase of the temperature of 1 degree Celsius increases the number of bikes by `r sprintf('%.2f', lm_summary_print['temp', 'Estimate'])` given all other features stay the same.
 
-Interpretation of a categorical variable ('Goal of date' (reference category: 'Seemed like a fun night out')): The Likeness rating for a partner is `r sprintf('%.2f', lm_summary_print['Goal of date:date', 'Estimate'])` higher if the goal is to get a date, compared to if the participants goal was to have a fun night out. Also if participants were 'Looking for a serious relationship', the Likeness rating for the partner was `r sprintf('%.2f', lm_summary_print['Goal of date:relationship', 'Estimate'])` higher, compared to participants who wanted a fun night out, given all features stay the same.
+Interpretation of a categorical variable ('weathersituation')): The number of bikes is `r sprintf('%.2f', lm_summary_print['weathersitRAIN/SNOW/STORM', 'Estimate'])` lower when it is rainy, snowing or stormy, compared to good weather, given that all features stay the same. Also if the weather was only misty, the number of bike rentals was `r sprintf('%.2f', lm_summary_print['weathersitMISTY', 'Estimate'])` lower, compared to good weather, given all features stay the same.
 
 As you can see in the interpretation examples, the interpretations are always coming with the clause that 'all other features stay the same'.
 That's because of the nature of linear models: All features are input linearly into the function with no interactions (unless explicitly specified). The good side is, that is isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature.
@@ -289,29 +289,47 @@ coef_plot(mod)
 TODO: Add interpetation
 
 #### Effect plot
-The weights of the linear model only have meaning, when combined with the actual features. The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. The weight will change, but the actual relationships in your data will not. Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
-Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. The resulting effects are visualized with boxplots: The box contains the effect range for half of your data (25% to 75% effect quantiles). The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). The points are outlier to the whiskers.
+The weights of the linear model only have meaning, when combined with the actual features. 
+The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters. 
+The weight will change, but the actual relationships in your data will not. 
+Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature. 
+The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
+Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$. 
+The resulting effects are visualized with boxplots: 
+The box contains the effect range for half of your data (25% to 75% effect quantiles). 
+The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value. 
+The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}). 
+The points are outlier to the whiskers.
 
 ```{r linear_effects}
 
-get_effects = function(mod){
-  X = model.matrix(mod)
+get_reference_dataset = function(dat){
+  df = lapply(dat, function(feature){
+    if(class(feature) == 'factor'){
+      factor(levels(feature)[1], levels = levels(feature))
+    } else {
+      0
+    }
+  })
+  data.frame(df)
+}
+
+get_effects = function(mod, dat){
+
   X = data.frame(predict(mod, type = 'terms'))
 
   # Nicer colnames
   colnames(X) = gsub('^X\\.', '', colnames(X))
   colnames(X) = gsub('\\.', ' ', colnames(X))
 
-  means = apply(mod$x, 2, mean) * mod$coefficients
-  means = means[names(means)  != "(Intercept)"]
   # predict with type='terms' centers the results, so we have to add the mean again
-  means_X = matrix(rep(means, times = nrow(X)), nrow=nrow(X), byrow=TRUE)
-  X = X + means_X
-  X
+  reference_X = predict(mod, newdata=get_reference_dataset(dat), type='terms')
+  X_star = data.frame(t(apply(X, 1, function(x){ x - reference_X[1,names(X)]})))
+  X_star
 }
 
-effect_plot = function(mod, feature_names=NULL){
-  X = get_effects(mod)
+effect_plot = function(mod, dat,  feature_names=NULL){
+  X = get_effects(mod, dat)
   if(!missing(feature_names)){
     rownames(X) = feature_names
   }
@@ -321,16 +339,18 @@ effect_plot = function(mod, feature_names=NULL){
     coord_flip() + my_theme()
 }
 
-effect_plot(mod)
+effect_plot(mod, dat)
 ```
-TODO: Add interpetation
+The largest contributions are from temperature and the days variable, which capture the trend that the bike rental became more popular over time. The temperature has a high contribution distribution.
+The day trend variable has goes from zero to large positive contribution, because the first day in the dataset (1.1.2011) get's a very low contribution, and the estimated weight with this feature is positive (`r sprintf('%.2f', lm_summary_print['days_since_2010', 'Estimate'])`), so the effect gets higher with every day and is highest for the latest day in the dataset (31.12.2012). 
+Note that for effects from a feature with a negative effect, the instances with a positive effect (or the least negatives) are the ones that have a negative feature value (negative times negative is positive), so days with a high positive effect of windspeed on the bike rental count have the lowest windspeeds. 
 
 ### Explaining single predictions
 Why did a certain instance get the prediction it got from the linear model?
 This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects.
 ```{r linear_effects_single}
-i = 3434
-effects = get_effects(mod)
+i = 6
+effects = get_effects(mod, dat)
 predictions = predict(mod)
 
 effects_i = gather(effects[i, ])
@@ -339,12 +359,12 @@ predictions_mean = mean(predictions)
 names(predictions) = NULL
 pred_i = predictions[i]
 
-effect_plot(mod) +
+effect_plot(mod, dat) +
   geom_point(aes(x=key, y=value), color = 'red', data = effects_i) +
   ggtitle(sprintf('Predicted value for instance: %.2f\n Average predicted value: %.2f\nActual value: %.2f', pred_i, predictions_mean, y[i]))
 ```
 
-Let's have a look at the effect realization for the Likeness rating of one observation (= a date of a participant with a partner). Some features contribute unusually much to the degree to which the participant rates the Likeness towards the dating partner: Goal of date (`r X[i, 'Goal of date ']`) and Correlation of interests (value = `r  X[i, 'Correlation of interests ']`) and Dating frequency  (value = `r  X[i, 'Dating frequency ']`)
+Let's have a look at the effect realization for the rental bike count of one observation (= one day). Some features contribute unusually much to the predicted bike count: Temperature (`r X[i, 'temp']`) and the trend variable "days_since_2010", because this instance is from late 2011 (value = `r  X[i, 'days_since_2011']`). 
 
 
 ### Coding categorical variables:
@@ -447,14 +467,13 @@ Let's have a look again at the speed dating example. Again we want to predict th
 
 
 # increases readability of tree
-dat$`Goal of date` = as.factor(substr(dat$`Goal of date`, 1, 1))
-x = rpart(like ~ ., data = na.omit(dat), method = 'anova', control = rpart.control(cp = 0, maxdepth = 2))
+x = rpart(y ~ ., data = na.omit(dat), method = 'anova', control = rpart.control(cp = 0, maxdepth = 2))
 
 xp = as.party(x)
 plot(xp, type = 'extended')
 ```
-The first split was done in the wave variable, which is the number of dating partners within a wave. In smaller waves the participants were more likely to give the partners a better rating in how much they liked them.
-The ratings were low (median: 6), when there were 21 or more people in the wave and the goal of the date was either to have fun, to get a date, to meet new people, or to try out speed dating. When the goal was to find a serious relationship or when the stated goal was 'other', the rating was higher on average (median of around 7).
+The first split was done in the workingday variable, which tells if a day is a working day or a saturday/sunday/holiday. On days without work, the number of rental bikes was higher on average.
+In both child nodes the the next feature that was chosen was temperature. 
 
 In waves of size 20 or smaller, participants who gave 5/10 or more to importance of same religion of partner, they also rated lower on average (median around 6). If religion was less important (4 or lower), than they gave higher ratings.
 
