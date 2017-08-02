@@ -489,6 +489,7 @@
       // supported natively by Shiny at the time of this writing.
 
       shinyBinding.renderValue = function(el, data) {
+        Shiny.renderDependencies(data.deps);
         // Resolve strings marked as javascript literals to objects
         if (!(data.evals instanceof Array)) data.evals = [data.evals];
         for (var i = 0; data.evals && i < data.evals.length; i++) {
@@ -512,7 +513,6 @@
             elementData(el, "init_result", result);
           }
         }
-        Shiny.renderDependencies(data.deps);
         bindingDef.renderValue(el, data.x, elementData(el, "init_result"));
         evalAndRun(data.jsHooks.render, elementData(el, "init_result"), [el, data.x]);
       };
