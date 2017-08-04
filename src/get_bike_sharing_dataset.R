@@ -22,7 +22,6 @@ bike$mnth = factor(bike$mnth, levels = 1:12, labels = c('JAN', 'FEB', 'MAR', 'AP
 bike$yr[bike$yr == 0] = 2011
 bike$yr[bike$yr == 1] = 2012
 bike$yr  = factor(bike$yr)
-
 bike$days_since_2010 = day_diff(bike$dteday, min(as.Date(bike$dteday)))
 
 # denormalize weather features:
@@ -44,7 +43,7 @@ bike = dplyr::select(bike, -instant, -dteday, -registered, -casual, -atemp)
 set.seed(41)
 train.index = sample(1:nrow(bike), size = 0.85 * nrow(bike))
 bike.train = bike[train.index,]
-task.train = mlr::makeRegrTask(id='bike', data=bike.train, target = 'cnt')
+bike.task.train = mlr::makeRegrTask(id='bike', data=bike.train, target = 'cnt')
 
 bike.test = bike[setdiff(1:nrow(bike), train.index),]
 task.test = mlr::makeRegrTask(id='bike.test', data=bike.test, target = 'cnt')

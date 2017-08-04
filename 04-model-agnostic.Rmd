@@ -42,23 +42,34 @@ In practice $x_S$ usually only contains one variable or a maximum of two, becaus
 
 
 
-```{r dpd-cervical, fig.cap = 'Partial dependence plot of cancer probability and the age of the women. On average, the cancer probability is low before 45, spikes between age 45 and 55 and plateaus after that.'}
+```{r dpd-cervical, fig.cap = 'Partial dependence plot of cancer probability and different factors. For the age feature, the models partial dependence shows that on average, the cancer probability is low before 45, spikes between age 45 and 55 and plateaus after that.'}
 source(sprintf('%s/create-cervical-cancer-data.R', src_dir))
 
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical_task)
-pd1 = mlr::generatePartialDependenceData(mod, cervical_task, 'Age')
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, c('Age', "Hormonal.Contraceptives..years.", 'First.sexual.intercourse', 'Number.of.sexual.partners'))
 mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous(limits = c(0, NA))
-
-
-#pd2 = mlr::generatePartialDependenceData(mod, cervical_task, 'Smokes..years.')
-#mlr::plotPartialDependence(pd2) + my_theme() + scale_x_continuous(limits = c(0, NA))
 ```
 
-\Sexpr{set_parent('Makepaper.Rnw')}
-\section{The effect of a feature}
-\label{sec:feature-effects}
+```{r dpd-cervical-2d, fig.cap = "Partial dependence plot of cancer probability and the interaction of number of years on hormonal contraceptives and number of sexual partners. Interestingly, there is some odd interaction between the two variables when the number of sexual partners is 1 and the years of on hormonal contraceptives larger than 12. There are actually only two women in that group, who both happen to have cancer. So my best guess is that this was random and the model did overfit on those two women, but only more data could solve this question. "}
+## filter(cervical, Number.of.sexual.partners == 1 & Hormonal.Contraceptives..years. > 12)
+pd1 = mlr::generatePartialDependenceData(mod, cervical_task, c("Number.of.sexual.partners", "Hormonal.Contraceptives..years."), interaction = TRUE)
+mlr::plotPartialDependence(pd1, geom='tile') + my_theme()+ scale_x_continuous(limits = c(0, NA))
+```
 
-\subsection{Average Marginal Effects}
+Let's turn to the regression example with the bike counts again and have a look at how the weather effects look like. \@ref{fig:dpd-bike} shows the average influence of the weather features on the predicted bike counts. Warm, but not too hot weather makes the model predict a high number of bikes rentals. The potential bikers are increasingly inhibited in engaging in cycling when humidity reaches above 60%. Also the more wind the less people like to bike, which personally I can understand. Interestingly the predicted bike counts don't drop between 25 and 35 km/h, but maybe there is just not enough training data. At least intuitively I would expect the bike rentals to drop with each increase in windspeed, especially when the windspeed is very high. 
+
+
+```{r dpd-bike, fig.cap = 'Partial dependence plot of rental bike count and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in different temperatures: With rising temperatures, on average the bike rentals rise, until 20C degrees, where it stays the same also for hotter temperatures and drops a bit again towards 30C degrees.'}
+
+mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task.train)
+pd1 = mlr::generatePartialDependenceData(mod.bike, bike.task.train, c('temp', 'hum', 'windspeed'))
+mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous(limits = c(0, NA)) + scale_y_continuous(limits = c(0, NA))
+```
+
+
+
+
+### Average Marginal Effects}
 
 Average marginal effects were originally developed for generalized linear models with special emphasis on the logistic regression model (CITATION).
 Logistic regression models try to model the probability of a binary response using a set of features.
@@ -152,6 +163,13 @@ pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual
 mlr::plotPartialDependence(pd1) + my_theme()
 ```
 
+```{r ice-bike, fig.cap = 'Individual conditional expectation plot of expected bike rentals and weather conditions . Same effects as in the partial dependence plot can be seen.'}
+set.seed(42)
+bike.subset.index = sample(1:nrow(bike.train), size = 300)
+bike.subset = bike.train[bike.subset.index,]
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE)
+mlr::plotPartialDependence(pd.data) + my_theme()+ scale_x_continuous(limits = c(0, NA)) + scale_y_continuous(limits = c(0, NA))
+```
 
 #### Centered ICE plot
 There is one issue with the ICE plot:
@@ -167,13 +185,17 @@ Taking Figure \@ref{fig:ice-cervical} and centering the lines at the youngest ob
 It is easier to see now, how the relative change of the curves from the youngest age is.
 This can be useful when we are not interested in seing the absolute change of a predicted value, but rather the difference in prediction compared to a fixed point of the feature range. 
 ```{r ice-cervical-centered, fig.cap = "Centered ICE plot for predicted cervical cancer risk probability and age. Compared to age 18, the most predictions for most instances stay the same and see an increase up to +20%. A few cases show the opposite behaviour: The predicted probability decreases with increasing age. "}
-pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE, center = list(Age=18))
+pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE, center = list(Age=53))
 mlr::plotPartialDependence(pd1) + my_theme()
-# pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Smokes..years.', individual = TRUE, center = list(Smokes..years.=0), grid=20)
-# mlr::plotPartialDependence(pd1) + my_theme()
-
 ```
 
+```{r ice-bike-centered, fig.cap = 'Centered individual conditional expectation plot of expected bike rentals and weather conditions.'}
+set.seed(42)
+bike.subset.index = sample(1:nrow(bike.train), size = 100)
+bike.subset = bike.train[bike.subset.index,]
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE, center = list(temp = min(bike.train$temp), hum = min(bike.train$hum), windspeed = min(bike.train$windspeed)))
+mlr::plotPartialDependence(pd.data) + my_theme()
+```
 #### Derivative ICE plot
 Another way to make it it visually easier to spot heterogenity is to look at the individual derivatives of $\hat(f)$ with respect to $\x_S$ instead of the predicted response $\hat(f)$.
 The resulting plot is called derivative ICE plot (d-ICE).
@@ -196,6 +218,11 @@ pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual
 mlr::plotPartialDependence(pd1) + my_theme()
 ```
 
+
+```{r ice-bike-derivative, fig.cap = 'Derivative individual conditional expectation plot of expected bike rentals and weather conditions.'}
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset[1:30,], c('temp', 'hum', 'windspeed'), individual = TRUE, derivative = TRUE, method = 'simple')
+mlr::plotPartialDependence(pd.data) + my_theme()
+```
 ### Local surrogate models (LIME)
 Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it's outcome.
 
@@ -249,8 +276,6 @@ p_samples = p_boundaries +
 p_explain = p_samples +
   geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
   ggtitle('B')
-
-
 
 p_weighted = p_boundaries +
   geom_point(data = df_sample, aes(x=x1, y=x2, size=weights)) +
