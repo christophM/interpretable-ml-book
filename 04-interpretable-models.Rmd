@@ -119,14 +119,14 @@ The information of the coefficient table can also be put into a visualization, w
 coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   lm_summary = summary(mod)$coefficients
   rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
-
+  
   df = data.frame(Features = rownames(lm_summary),
                   Estimate = lm_summary[,'Estimate'],
                   std_error = lm_summary[,'Std. Error'])
   df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
   df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
-
-
+  
+  
   if(remove_intercept){
     df = df[!(df$Features == '(Intercept)'),]
   }
@@ -168,13 +168,13 @@ get_reference_dataset = function(dat){
 }
 
 get_effects = function(mod, dat){
-
+  
   X = data.frame(predict(mod, type = 'terms'))
-
+  
   # Nicer colnames
   colnames(X) = gsub('^X\\.', '', colnames(X))
   colnames(X) = gsub('\\.', ' ', colnames(X))
-
+  
   # predict with type='terms' centers the results, so we have to add the mean again
   reference_X = predict(mod, newdata=get_reference_dataset(dat), type='terms')
   X_star = data.frame(t(apply(X, 1, function(x){ x - reference_X[1,names(X)]})))
@@ -276,15 +276,75 @@ Because of possible high correlation between features, it is possible that a fea
 - Adding non-linear terms like polynomials
 - Stratifying data by variable and fitting linear models on subsets
 
-### Linear models beyond gaussian regression
-- Logistic regression
-- GAMs
-- Quantile regression
+
+## Logistic regression: a linear model for classification
+Logistic regression is the linear regression models counterpart for classification problems.
+
+### What's wrong with linear regression for classification?
+The gaussian linear model works well in most regression setup, but fails in the classification case. 
+Why is that? 
+In case of two classes, you could label one of the classes with 0 and the other with a 1 and use a linear model on it and it would work. 
+There are a few problems with that approach: 
+
+- A linear model does try to give you probabilities, but it treats the classes as numbers (0 and 1) and fits the best hyperplane (if you have one feature, it's a line) that minimizes the distances between the points and the hyperplane. So it simply interpolates between the points, but there is no meaning in it and you cannot interpret it as probabilities. 
+- Also a linear model will extrapolate the features and give you values below zero and above one, which are not meaningful and should tell you that there might be a more clever approach to doing classification. 
+- Since the predicted outcome is not a probability but some linear interpolation between points there is no meaningful threshold at which you can distinguish one class from the other. A good illustration of this issue was given on (Stackoverflow)[https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression], which I reproduced in Figure \@ref{fig:linear-class-threshold}
+- Linear models don't extend to classification problems with multiple classes. You would have to start giving labeling the next class with a 2, then 3 and so on. The classes might not have any order to them, but the linear model would force a weird structure on the relationship between the features and your class predictions. So for all features with a positive weight, the higher the features value the more they contribute to the prediction of a class with a higher number, even if the classes with similar numbers are not really related. 
+
+
+```{r, linear-class-threshold, fig.cap="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificail task on classifying a tumor as malignant (1) or benign (0) depending on the tumor size. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate  the classes any longer. That's a reason why logistic regression is better suited for classification problems."}
+df = data.frame(x = c(1,2,3,4,5,6,7), 
+                y = c(0,0,0,1,1,1,1), 
+                case = '0.5 threshold ok')
+
+df_extra  = data.frame(x=c(df$x, 7,7, 7, 4, 20), 
+                       y=c(df$y, 1,1,1,1, 1), 
+                       case = '0.5 threshold not ok')
+
+df = rbind(df, df_extra)
+p1 = ggplot(df, aes(x=x,y=y)) + 
+  geom_point() + 
+  geom_smooth(method='lm', se=FALSE) + 
+  my_theme() + 
+  scale_y_continuous('Tumor class', breaks = c(0, 0.5, 1), labels = c('benign tumor', '0.5',  'malignant tumor'), limits = c(-0.1,1.3)) + 
+  scale_x_continuous('Tumor size') + 
+  facet_grid(. ~ case) + 
+  geom_hline(yintercept=0.5, linetype = 3)
+
+p1
+```
+
+
+### Logistic regression 
+The solution is logistic regression. 
+Instead of fitting a straight line/hyperplane and uses a non-linear function, the logistic function to squeeze the output between 0 and 1. 
+The logistic function is defined as $$ logistic(\eta) = \frac{1}{1 + exp(-\eta)}$$
+And it looks like this:
+
+```{r, logistic-function, fig.cap="The logistic function. At input 0 it outputs 0.5."}
+logistic = function(x){1 / (1 + exp(-x))}
+
+x = seq(from=-6, to = 6, length.out = 100)
+df = data.frame(x = x, 
+                y = logistic(x))
+ggplot(df) + geom_line(aes(x=x,y=y)) + my_theme()
+```
+The step from linear regression models to logistic regression is kind of straight forward. Before we modeled the relationship like this: $$\hat{y}_{i} = \beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K} $$
+Now we want probabilities, which are between 0 and 1, so we wrap the right side of the equation into the logistic regression function and simply force the output to be between 0 and 1: 
+$$\hat{y}_{i} =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}))$$
+
+TODO: Example with tumor size now with logistic regression.
+
+
+### Interpretation
+
+### Example
+
 
 
 ## Decision trees
 Linear models fail in situation where the relationship is non-linear and/or where the features are interacting with each other. Time to shine for the decision trees!
-Tree-based models partition the data along the features into rectangles. For predicting the outcome in each rectangle it fits a simple model (for example the average of the outcome of the instances that fall into this rectangle). Trees have an intuitive structure starting from a root and splitting into nodes, according to cutoff values of the features. After each split, the instances fall into one of the new nodes. At the end of the training all the instances from the training data set are assigned into one of the leaf nodes. See Figure \@ref(fig:tree-artificial) for illustration.
+Tree-based models partition the data along the features into rectangles. For predicting the outcome in each rectangle it fits a simple model (for example the average of the outcome of the instances that fall into this rectangle). Trees have an intuitive structure starting from a root and splitting into nodes, according to cutoff values of the features. After each split, the instances fall into one of the new nodes. At the end of the training all the instances from the training data set are assigned into one of the leaf nodes. See Figure \@ref{fig:tree-artificial} for illustration.
 
 There are a lot of different tree algorithms. They differ in structure (number of splits per node), criteria for how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes. Classification and regression trees (CART) is one of the more popular algorithms for tree building. This book will only talk about CART, because in the interpretation they are all the same. If you know of some tree algorithm with a different interpretation, I would welcome your feedback.
 
