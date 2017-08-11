@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="the-bigger-picture.html">
-<link rel="next" href="evaluating-explainability.html">
+<link rel="prev" href="limo.html">
+<link rel="next" href="decision-trees.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
@@ -164,39 +164,42 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="scope-of-explainability" class="section level2">
-<h2><span class="header-section-number">2.4</span> Scope of explainability</h2>
-<p>An algorithm trains a model, which produces the predictions. Each step can be evaluated in terms of transparency or explainability.</p>
-<div id="algorithm-transparency" class="section level3">
-<h3><span class="header-section-number">2.4.1</span> Algorithm transparency</h3>
-<p>How does the algorithm create the model?</p>
-<p>Algorithm transparency is about how the algorithm learns a model from data and what kind of relationships it is capable of picking up. If you are using convolutional neural networks for classifying images, you can explain that the algorithm learns edge detectors and filters on the lowest layers. This is an understanding of how the algorithm works, but not of the specific model that is learned in the end and not about how single predictions are made. For this level of transparency only knowledge about the algorithm and not about the data or concrete learned models are required. This book focuses on model explainability. Algorithms like the least squares method for linear models are well studied and understood. They score high in transparency. Deep learning approaches (pushing a gradient through a network with millions of weights) are less understood and the inner workings are in the focus on-going research. It is not clear how they exactly work, so they are less transparent.</p>
-</div>
-<div id="global-holistic-model-explainability" class="section level3">
-<h3><span class="header-section-number">2.4.2</span> Global, holistic model explainability</h3>
-<p>How does the trained model make predictions?</p>
-<p>You could call a model explainable if you can comprehend the whole model at once <span class="citation">(Lipton <a href="#ref-Lipton2016">2016</a>)</span>. To explain the global model output, you need the trained model, knowledge about the algorithm and the data. This level of explainability is about understanding how the model makes the decisions, based on a holistic few on it’s features and each learned components like weights, parameters and structures. Which features are the important ones and what kind of interactions are happening? Global model explainability helps to understand the distribution of your target variable based on the features. Arguably, global model explainability is very hard to achieve in practice. Any model that exceeds a handful of parameters or weights, probably won’t fit an average human’s brain capacity. I’d argue that you cannot really imagine a linear model with 5 features and draw in your head the hyperplane that the was estimated in the 5-dimensional feature space. Each feature space with more than 3 dimensions is just not imaginable for humans. Usually when people try to comprehend a model, they look at parts of it, like the weights in linear models.</p>
-</div>
-<div id="global-model-explainability-on-a-modular-level" class="section level3">
-<h3><span class="header-section-number">2.4.3</span> Global model explainability on a modular level</h3>
-<p>How do parts of the model influence predictions?</p>
-<p>You might not be able to comprehend a naive bayes model with many hundred features, because there is no way you could hold all the feature weights in your brain’s working memory. But you can understand a single weight easily. Not many models are explainable on a strict parameter level.While global model explainability is usually out of reach, there is a better chance to understand at least some models on a modular level. In the case of linear models parts to understand are the weights and the distribution of the features, for trees it would be splits (used feature and cut-off point) and leaf node predictions. Linear models for example look like they would be, but the interpretation of a single weight is interlocked with all of the other weights. As you will see in Chapter [#limo], the interpretation of a single weight always comes with the footnote that the other input features stay at the same way value, which is not the case in many real world applications. A linear model predicting the rent of a flat, which takes into account both the size of the flat and the number of rooms might have a negative weight for the rooms feature, which is counter intuitive. But it can happen, because there is already the highly correlated flat size feature and in a market where people prefer bigger rooms, a flat with more rooms might be worth less than a flat with more rooms and same square meters. The weights only make sense in the light of the other features used in the model. But arguably a linear models weights still have better explainability than the weights of a deep neural network.</p>
-</div>
-<div id="explain-the-decision-for-a-single-instance" class="section level3">
-<h3><span class="header-section-number">2.4.4</span> Explain the decision for a single instance</h3>
-<p>Why did the model make a specific decision for an instance?</p>
-<p>You can go all the way down to a single observation and examine what kind of classification or decision the model gives for this input, and why it made this decision. When you look at one example, the local distribution of the target variable might behave more nicely. Locally it might depend only linearly or monotonic on some variables rather than having a complex dependency on the features. For example the rent of an apartment might not depend linearly on the size, but if you only look at a specific apartment of 100 square meter and check how the prize changes going up plus and minus 10 square meters there is a chance that this sub region in your data space is linear. Local explanations can be more accurate compared to global explanations because of this.</p>
-</div>
-<div id="explain-the-decisions-for-a-group-of-instances" class="section level3">
-<h3><span class="header-section-number">2.4.5</span> Explain the decisions for a group of instances</h3>
-<p>Why did the model make specific decisions for a group of instances?</p>
-<p>The model output for multiple instances can be explained by using methods for global model explainability and single instance explanations. The global methods can be applied by taking the group of observations pretending it’s the complete dataset and using the global methods on this subset. The single explanation methods can be used on each instance and listed or aggregated afterwards for the whole group.</p>
+<div id="logistic-regression-a-linear-model-for-classification" class="section level2">
+<h2><span class="header-section-number">4.4</span> Logistic regression: a linear model for classification</h2>
+<p>Logistic regression is the linear regression models counterpart for classification problems.</p>
+<div id="whats-wrong-with-linear-regression-for-classification" class="section level3">
+<h3><span class="header-section-number">4.4.1</span> What’s wrong with linear regression for classification?</h3>
+<p>The gaussian linear model works well in most regression setup, but fails in the classification case. Why is that? In case of two classes, you could label one of the classes with 0 and the other with a 1 and use a linear model on it and it would work. There are a few problems with that approach:</p>
+<ul>
+<li>A linear model does try to give you probabilities, but it treats the classes as numbers (0 and 1) and fits the best hyperplane (if you have one feature, it’s a line) that minimizes the distances between the points and the hyperplane. So it simply interpolates between the points, but there is no meaning in it and you cannot interpret it as probabilities.</li>
+<li>Also a linear model will extrapolate the features and give you values below zero and above one, which are not meaningful and should tell you that there might be a more clever approach to doing classification.</li>
+<li>Since the predicted outcome is not a probability but some linear interpolation between points there is no meaningful threshold at which you can distinguish one class from the other. A good illustration of this issue was given on (Stackoverflow)[<a href="https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression" class="uri">https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression</a>], which I reproduced in Figure @ref{fig:linear-class-threshold}</li>
+<li>Linear models don’t extend to classification problems with multiple classes. You would have to start giving labeling the next class with a 2, then 3 and so on. The classes might not have any order to them, but the linear model would force a weird structure on the relationship between the features and your class predictions. So for all features with a positive weight, the higher the features value the more they contribute to the prediction of a class with a higher number, even if the classes with similar numbers are not really related.</li>
+</ul>
+<div class="figure"><span id="fig:linear-class-threshold"></span>
+<img src="xai-book_files/figure-html/linear-class-threshold-1.svg" alt="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificail task on classifying a tumor as malignant (1) or benign (0) depending on the tumor size. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate  the classes any longer. That's a reason why logistic regression is better suited for classification problems." width="672" />
+<p class="caption">
+FIGURE 4.1: An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificail task on classifying a tumor as malignant (1) or benign (0) depending on the tumor size. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate the classes any longer. That’s a reason why logistic regression is better suited for classification problems.
+</p>
 </div>
 </div>
-<h3>References</h3>
-<div id="refs" class="references">
-<div id="ref-Lipton2016">
-<p>Lipton, Zachary C. 2016. “The Mythos of Model Interpretability.” <em>ICML Workshop on Human Interpretability in Machine Learning</em>, no. Whi.</p>
+<div id="logistic-regression" class="section level3">
+<h3><span class="header-section-number">4.4.2</span> Logistic regression</h3>
+<p>The solution is logistic regression. Instead of fitting a straight line/hyperplane and uses a non-linear function, the logistic function to squeeze the output between 0 and 1. The logistic function is defined as <span class="math display">\[ logistic(\eta) = \frac{1}{1 + exp(-\eta)}\]</span> And it looks like this:</p>
+<div class="figure"><span id="fig:logistic-function"></span>
+<img src="xai-book_files/figure-html/logistic-function-1.svg" alt="The logistic function. At input 0 it outputs 0.5." width="672" />
+<p class="caption">
+FIGURE 4.2: The logistic function. At input 0 it outputs 0.5.
+</p>
+</div>
+<p>The step from linear regression models to logistic regression is kind of straight forward. Before we modeled the relationship like this: <span class="math display">\[\hat{y}_{i} = \beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K} \]</span> Now we want probabilities, which are between 0 and 1, so we wrap the right side of the equation into the logistic regression function and simply force the output to be between 0 and 1: <span class="math display">\[\hat{y}_{i} =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}))\]</span></p>
+<p>TODO: Example with tumor size now with logistic regression.</p>
+</div>
+<div id="interpretation-1" class="section level3">
+<h3><span class="header-section-number">4.4.3</span> Interpretation</h3>
+</div>
+<div id="example" class="section level3">
+<h3><span class="header-section-number">4.4.4</span> Example</h3>
 </div>
 </div>
             </section>
@@ -204,8 +207,8 @@
           </div>
         </div>
       </div>
-<a href="the-bigger-picture.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="evaluating-explainability.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="limo.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="decision-trees.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -234,7 +237,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/xai-book/edit/master/02-interpretability.Rmd",
+"link": "https://github.com/christophM/xai-book/edit/master/04-interpretable-models.Rmd",
 "text": "Edit"
 },
 "download": null,
