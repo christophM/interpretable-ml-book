@@ -292,18 +292,18 @@ There are a few problems with that approach:
 - Linear models don't extend to classification problems with multiple classes. You would have to start giving labeling the next class with a 2, then 3 and so on. The classes might not have any order to them, but the linear model would force a weird structure on the relationship between the features and your class predictions. So for all features with a positive weight, the higher the features value the more they contribute to the prediction of a class with a higher number, even if the classes with similar numbers are not really related. 
 
 
-```{r, linear-class-threshold, fig.cap="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificail task on classifying a tumor as malignant (1) or benign (0) depending on the tumor size. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate  the classes any longer. That's a reason why logistic regression is better suited for classification problems."}
-df = data.frame(x = c(1,2,3,4,5,6,7), 
+```{r, linear-class-threshold, fig.cap="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificial task of classifying a tumor as malignant (1) or benign (0) depending on the tumor size. Each point is a tumor, the x-axis shows the size of the tumor, the y-axis the malignancy, points are slightly jittered to avoid overplotting of points. The lines display the fitted curve from the linear model. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate  the classes any longer. That's a reason why logistic regression is better suited for classification problems."}
+df = data.frame(x = c(1,2,3,6,7,8,9), 
                 y = c(0,0,0,1,1,1,1), 
                 case = '0.5 threshold ok')
 
-df_extra  = data.frame(x=c(df$x, 7,7, 7, 4, 20), 
-                       y=c(df$y, 1,1,1,1, 1), 
+df_extra  = data.frame(x=c(df$x, 7, 7, 7, 4, 20, 19), 
+                       y=c(df$y, 1,1,1,1, 1,1), 
                        case = '0.5 threshold not ok')
 
-df = rbind(df, df_extra)
-p1 = ggplot(df, aes(x=x,y=y)) + 
-  geom_point() + 
+df.lin.log = rbind(df, df_extra)
+p1 = ggplot(df.lin.log, aes(x=x,y=y)) + 
+  geom_point(position = position_jitter(width=0, height=0.02)) + 
   geom_smooth(method='lm', se=FALSE) + 
   my_theme() + 
   scale_y_continuous('Tumor class', breaks = c(0, 0.5, 1), labels = c('benign tumor', '0.5',  'malignant tumor'), limits = c(-0.1,1.3)) + 
@@ -331,10 +331,30 @@ ggplot(df) + geom_line(aes(x=x,y=y)) + my_theme()
 ```
 The step from linear regression models to logistic regression is kind of straight forward. Before we modeled the relationship like this: $$\hat{y}_{i} = \beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K} $$
 Now we want probabilities, which are between 0 and 1, so we wrap the right side of the equation into the logistic regression function and simply force the output to be between 0 and 1: 
-$$\hat{y}_{i} =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}))$$
+$$\hat{y}_{i} =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}))}$$
 
-TODO: Example with tumor size now with logistic regression.
+Let's check the tumor size example again. But now instead of the linear regression model, we use the logistic regression model:
+```{r, logistic-class-threshold, fig.cap="Logistic regression successfully finds the correct decision boundary to distinguish between malignant (class=1) and benign (class=0) tumors dependent on it's size in this illustrative example. The blue line is the logistic function shifted and squeezed so that it fits the data."}
+logistic1 = glm(y ~ x, family = binomial, data = df.lin.log[df.lin.log$case == '0.5 threshold ok',])
+logistic2 = glm(y ~ x, family = binomial, data = df.lin.log)
 
+lgrid = data.frame(x = seq(from=0, to=20, length.out=100))
+lgrid$y1_pred = predict(logistic1, newdata = lgrid, type='response')
+lgrid$y2_pred = predict(logistic2 , newdata = lgrid, type='response')
+
+
+p1 = ggplot(df.lin.log, aes(x=x,y=y)) + 
+  geom_line(aes(x=x, y=y1_pred), data = lgrid, color='blue', size=1) + 
+  geom_point(position = position_jitter(width=0, height=0.02)) + 
+  my_theme() + 
+  scale_y_continuous('Tumor class', breaks = c(0, 0.5, 1), labels = c('benign tumor', '0.5',  'malignant tumor'), limits = c(-0.1,1.3)) + 
+  scale_x_continuous('Tumor size') + 
+  facet_grid(. ~ case) + 
+  geom_hline(yintercept=0.5, linetype = 3) 
+
+p1
+```
+It works better than with logistic regression and we can use 0.5 as a threshold. The line does not shift much,  when including the additional datapoints.
 
 ### Interpretation
 
