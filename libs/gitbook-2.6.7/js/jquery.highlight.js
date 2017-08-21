@@ -1,4 +1,4 @@
-require(["jQuery"], function(jQuery) {
+gitbook.require(["jQuery"], function(jQuery) {
 
 /*
  * jQuery Highlight plugin
