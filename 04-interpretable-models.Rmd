@@ -262,10 +262,6 @@ $$
 \end{pmatrix}
 $$
 
-### Assuring sparsity in linear models
-Lasso, Ridge, elasticnet, forward/backward variable selection, dimensionality reduction, ...
-UNDER CONSTRUCTION
-
 ### The disadvantages of linear models
 They can only represent linear relationships as the name suggests. Each non-linearity or interaction has to be hand-crafted and explicitly given to the model as an input feature.
 Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both variables into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.
@@ -275,6 +271,35 @@ Because of possible high correlation between features, it is possible that a fea
 - Adding interactions
 - Adding non-linear terms like polynomials
 - Stratifying data by variable and fitting linear models on subsets
+
+## Sparse linear models
+The examples for the linear models that I chose look all nice and tidy, right? But in reality you might not have just a handful of features, but hundreds or thousands. 
+And your normal linear models? 
+Interpretability goes downriver. 
+But there are ways to introduce sparsity (= only keeping a few features) into the linear models. 
+The most automatic and convient to use is the LASSO method. 
+LASSO stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs variable selection and regularization of the selected variables.
+We did not dive into the optimization problem of finding the best coefficients of the linear model. 
+But basically it involves solving the least-squares equation:
+$$ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2\right)$$
+LASSO adds a term to this optimization problem:
+$$ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2 + \lambda ||\beta||_1\right)$$
+The term $||\beta||_1$ is the L1-norm of the feature vector, that leads to a penalization of large values in $\beta$. 
+Since the L1-norm is used, many of the coefficients for the features will get an estimate of 0 and the others are shrinked. 
+The weight $\lambda$ says how strong the regularizing effect should be and is usually tuned by doing cross-validation. 
+Especially when $\lambda$ is large, many coefficients are driven to 0. 
+
+There are lots of other methods for reducing the number of features in your linear regression model:
+
+Methods that include a pre-processing step:
+- Hand selected features: You can always use expert knowledge to choose and discard some features. The big drawback is, that it can't be automated and you might not be an expert. 
+- Use some measure to pre-select features: An example is the correlation coefficient. You only take features into account that exceed some chosen threshold of correlation between the feature and the target. Disadvantage is that it only looks at the features one at a time. Some features might only show correlation after the linear model has accounted for some other features. Those you will miss with this approach. 
+
+Then there are also step-wise procedures:
+- Forward selection: Fit the linear model with one feature. Do that with each feature. Choose the model that works best (for example decided by R squared measurement). Now again, for the remaining features, fit different versions of your model by adding each feature. Pick the one that performs best again. Continue until some criterium is reached, like the maximum number of features in the model. 
+- Backward selection: Same as forward selection, but instead of adding features, start with the model with all features and try which feature removal brings the best performance increase until some stopping criterium is reached. 
+
+I recommend using LASSO. It also works for the logistic regression model for classification models, which is the topic of the following chapter. 
 
 
 ## Logistic regression: a linear model for classification
@@ -405,6 +430,9 @@ Interpretation of a numerical variable ('Num. of diagnosed STDs'): An increase o
 Interpretation of a categorical variable ('Hormonal contraceptives y/n'): For women with hormonal contraceptives, the odds for cancer vs no cancer are by a factor of `r sprintf('%.2f', coef.table['Hormonal contraceptives y/n', 'Odds ratio'])` higher, compared women without hormonal contraceptives, given all other features stay the same.
 
 Again as in the linear models, the interpretations are always coming with the clause that 'all other features stay the same'.
+
+
+
 
 ## Decision trees
 Linear models fail in situation where the relationship is non-linear and/or where the features are interacting with each other. Time to shine for the decision trees!
