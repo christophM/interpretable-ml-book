@@ -14,16 +14,8 @@ if [ "$TRAVIS_COMMIT_MESSAGE" = "$BUILD_COMMIT_MSG" ]; then
   exit 0
 fi
 
-
-
-# Pull requests and commits to other branches shouldn't try to deploy, just build to verify
-if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" != "$SOURCE_BRANCH" ]; then
-    echo "Skipping deploy; just doing a build."
-    ./_build.sh
-    exit 0
-fi
-
-
+# Render PDF for download option
+Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::pdf_book')"
 # Run compile script
 Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::gitbook')"
 
