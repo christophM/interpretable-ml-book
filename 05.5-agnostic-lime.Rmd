@@ -1,0 +1,198 @@
+## Local surrogate models (LIME)
+Local interpretable model-agnostic explanations (LIME) is a method for fitting local, interpretable models that can explain single predictions or classifications of any black-box machine learning model. LIME explanations are local surrogate models. Instead of trying to fit a global surrogate model, LIME focuses on a prediction done by a black-box algorithm and explains it's outcome.
+
+
+The idea is quite simple, really. First of all, forget about the training data and imagine you only have the black box model where you can input data points and get the models outcome. You can probe the box as often as you want. Your goal is to understand why the machine learning model gave the outcome it produced. LIME tests out what happens to the model's predictions when you put some variations of your data point of interest into the machine learning model. This basically generates a new dataset consisting of the perturbed samples and the associated model's outcome. On this dataset LIME then trains a simple model weighted by the proximity of the sampled instances to the instance of interest. The simple mode  can basically be any from Section [#simple], for example LASSO or a short tree. The learned model should be a good approximation of the machine learning model locally, but it does not have to be so globally. This kind of accuracy is also called local fidelity.
+
+The recipe:
+
+- Choose your instance of interest for which you want to have an explanation of it's black box outcome
+- Make some variations of the instances and check what the black box predicts in the neighbourhood of the instance of interest.
+- Fit a local, interpretable model on the dataset with the variations
+- Explain prediction by interpreting the local simple model.
+
+In the current implementation, only LASSO can be chosen as a simple model. Upfront you have to choose K, the number of features that you want to have in your simple model. The lower the K, the simpler the model is to understand, higher K potentially creates models with higher fidelity. There are different methods for how to fit models with exactly K features. The most natural with LASSO is the lasso path. Starting from a model with a very high regularisation parameter $\lambda$ yields a model with only the intercept. By refitting the LASSO models with slowly decreasing $\lambda$ one after each other the features are getting weight estimates different from zero. When K features are in the model, you reached the desired number of features. Other strategies are forward or backward selection of features. This means you either start with the full model (=containing all features) or with a model with only the intercept and then testing which feature would create the biggest improvement when added or removed, until a model with K features are reached. Other simple models like decision trees are currently not implemented.
+
+As always, the devil is in the details. In a high-dimensional space, defining a neighbourhood is not trivial. Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all. How big should the neighbourhood be you look into? If it is too small, then there might be no difference in the predictions of the machine learning model at all.
+The other question is: How do you get the variations of the data? This differs depending on the type of data, which can be either text, an image or tabular data. For text and image the solution is turning off and on single words or superpixels. In the case of tabular data LIME creates new samples by pertubing each feature individually, by drawing from a normal distribution with mean and standard deviation from the feature.
+
+
+#### LIME for tabular data
+Tabular data means any data that comes in tables, where each row represents an instance and each column a feature.
+Sampling is not done around the point, but from the training data's mass center. Has it's problems. But it increases the likelihood that the outcome for some of the sampled points predictions differ from the data point of interest and that LIME can learn at least some explanation.
+
+Figure \@ref(fig:lime-fitting) explains how the sampling and local model fitting works.
+
+
+```{r lime-fitting, fig.cap='How LIME sampling works: A) The trainig data has two classes. The most data points have class 0, and the ones with class 1 are grouped in an upside-down V-shape. The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow is the instance of interest, for which an explanation is desired. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This has only to be done once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest a higher weights. D) The colors and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification changes.', fig.height=9, fig.width=9}
+source(sprintf('%s/lime.R', src_dir))
+
+colors = c('#132B43', '#56B1F7')
+# Data with some noise
+p_data = ggplot(lime_training_df) +
+  geom_point(aes(x=x1,y=x2,fill=y_noisy, color=y_noisy), alpha =0.3, shape=21) +
+  scale_fill_manual(values = colors) +
+  scale_color_manual(values = colors) +
+  my_theme(legend.position = 'none')
+
+# The decision boundaries of the learned black box classifier
+p_boundaries = ggplot(grid_df) +
+  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) +
+  my_theme(legend.position='none') +
+  ggtitle('A')
+
+
+# Drawing some samples
+p_samples = p_boundaries +
+  geom_point(data = df_sample, aes(x=x1, y=x2)) +
+  scale_x_continuous(limits = c(-2, 2)) +
+  scale_y_continuous(limits = c(-2, 1))
+# The point to be explained
+p_explain = p_samples +
+  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
+  ggtitle('B')
+
+p_weighted = p_boundaries +
+  geom_point(data = df_sample, aes(x=x1, y=x2, size=weights)) +
+  scale_x_continuous(limits = c(-2, 2)) +
+  scale_y_continuous(limits = c(-2, 1)) +
+  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
+  ggtitle('C')
+
+p_boundaries_lime = ggplot(grid_df)  +
+  geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) +
+  geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==1,], shape=3) +
+  geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==0,], shape=95) +
+  geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
+  geom_line(aes(x=x1, y=x2), data =logistic_boundary_df, color = 'white') +
+  my_theme(legend.position='none') + ggtitle('D')
+
+
+gridExtra::grid.arrange(p_boundaries, p_explain, p_weighted, p_boundaries_lime, ncol=2)
+
+```
+
+
+
+
+#### Example
+Let's look at a concrete example. We go back to the bike rental and turn the prediction problem into a classification: After accounting for the trend that the bike rental get's more popular over time we want to know on a given day if the number of rented bikes will be above or below the trend line. You can also interpret 'above' as being above the mean bike counts, but adjusted for the trend.
+
+```{r lime-tabular-example-train-black-box, cache = TRUE}
+ntree = 100
+
+bike.train.resid = factor(resid(lm(cnt ~ days_since_2010, data = bike.train)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
+bike.train.x = bike.train[names(bike.train) != 'cnt']
+
+model <- caret::train(bike.train.x,
+               bike.train.resid,
+               method = 'rf', ntree=ntree, maximise = FALSE)
+
+
+instance_indices = c(295, 285)
+
+probs = predict(model, newdata = bike.train[instance_indices, ], type='prob')
+
+
+# Accuracy on test set
+# test_predict = predict(model, test_speed_dating_classification[features_of_interest])
+# caret::confusionMatrix(test_predict, test_speed_dating_classification[,target_var_class])
+
+```
+First we train a Random Forest on the classification task. Given seasonal and wheather information, on which day will the number of bike rentals be above the trend-free average? The Random Forest has `r ntree` trees.
+```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('Explanations for two instances. The first instance got a probability of 0.13 for a match by the Random Forest. The correlation of interests between the participant and the partner is low which reduces the probability of a match for this participant. Also the importance for race of the partner is higher than 6, which lowers the probability of a match.  In the second case, the probability for a match is quite high with 0.46. The reasons are the high correlation (>0.43) and that the partner is younger then 25.', instance_indices[1], instance_indices[2])}
+
+# Create explanation function
+set.seed(44)
+explanation <- lime::lime(bike.train.x, model, bin_continuous=FALSE)
+
+
+n_features_lime = 3
+n_labels = 2
+
+
+# Explain new observation
+explainer <- lime::explain(bike.train.x[instance_indices, ],
+                       explanation,
+                       n_labels=n_labels, n_features = n_features_lime, n_permutations = 3000)
+
+
+explainer = filter(explainer, label == 'above')
+lime::plot_features(explainer, ncol=1)
+```
+The continuous features are categorised into bins by quantiles for the explanation models. The explanations are set to contain `r n_features_lime` features.  Figure  \@ref{fig:lime-tabular-example-explain-plot-1} shows the results of the sparse local linear model that was fitted for two instances with different predicted classes. It becomes clear from the figure, that it is easier to interpret categorical features than continuous features. Figure  \@ref{fig:lime-tabular-example-explain-plot-2} shows a variant where the continuous features are turned into categorial features by putting them into bins along the quantiles.
+
+
+
+```{r lime-tabular-example-explain-plot-2, fig.cap=sprintf('Explanations for two instances. This time continuous features were turned into categorial features by binning them.')}
+# An can be visualised directly
+# Create explanation function
+set.seed(44)
+explainer <- lime::lime(bike.train.x, model, bin_continuous=TRUE)
+
+# Explain new observation
+explanation <- lime::explain(bike.train.x[instance_indices, ],
+                       explainer,
+                       n_labels=n_labels, n_features = n_features_lime, n_permutations = 3000)
+
+
+explanation = filter(explanation, label == 'above')
+lime::plot_features(explanation, ncol=1)
+```
+
+#### LIME for images
+For images the sampling procedure works differently. Instead of sampling single pixels, LIME create variations of the image by turning off superpixel.
+
+#### LIME for text
+LIME for text works a bit differently than for tabular data. Variation of the point to be explained are created differently: Starting from the original text, new texts are created by randomly removing words from it.
+
+
+
+#### Example
+In this example we classify spam vs. ham of YouTube comments. The dataset is described in [#TubeSpam].
+
+The black box model is a decision tree on the document word matrix. Each comment is one document (= one row) and each column is a the number of occurences of a specific word. A decision tree was trained on this data. As discussed in Section [#simple], decision trees are easy to understand, but in this case the tree is very deep. Also in the place of this tree there could have been a recurrent neural network or a support vector machine that was trained on the embeddings from word2vec. The machine learning model was trained on 80% of the approximately 2000 comments. From the remaining comments two were selected for showing the explanations.
+
+```{r load-text-classification-lime}
+source(sprintf('%s/create_text_classifier.R', src_dir))
+```
+Let's look at tow comments of this dataset and the corresponding classes:
+
+
+```{r example-comments}
+example_indices = c(1,28)
+
+DT::datatable(test[example_indices, c('CONTENT', 'CLASS')], options = list(DT::JS('{"scrollX": true}')))
+texts = test$CONTENT[example_indices]
+```
+
+
+In the next step we create some variations of the datasets, which are used in a local model. For
+example some variations of one of the comments.
+```{r lime-text-variations, results='asis'}
+tokenized = tokenize(texts[2])
+variations = create_variations(texts[2], predict_fun, prob=0.8, n_variations = 5, class='spam')
+colnames(variations) = c(tokenized, 'prob', 'weight')
+
+DT::datatable(variations, options = list(DT::JS('{"scrollX": true}')))
+
+example_sentence = paste(colnames(variations)[variations[2, ] == 1], collapse = ' ')
+```
+Each column corresponds to one word in the sentence. Each row is a variation. 1 indicates that
+the word is part of this variation. 0 indicates that the word was removed.  The corresponding sentence for the first variation is "```r example_sentence```".
+
+
+
+```{r lime-text-explanations}
+explanations  = data.table::rbindlist(lapply(seq_along(texts), function(i) {
+ explain_text(texts[i], predict_fun, class='spam', case=i, prob = 0.5)
+ })
+)
+explanations = data.frame(explanations)
+explanations$model_type = 'classification'
+lime::plot_features(explanations, ncol=1)
+```
+#### Problems with LIME
+
+- LIME does not work if the classification is very unbalanced (one class is very common) and the black box only predicts one class
+- Defining the neighbourhood is tricky.

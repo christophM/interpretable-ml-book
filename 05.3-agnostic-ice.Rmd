@@ -1,0 +1,95 @@
+## Individual Conditional Expectation (ICE) plot
+
+The partial dependence plot is for visualizing the averaged effect of a feature is a global method, because it does not focus on the partial dependence of a specific instance, but on an average over all.
+The equivalent to a PDP for local expectations is called individiual conditional expectation (ICE) plot [@goldstein2015peeking].
+An ICE plot visualizes the dependence of each instance's predicted response on a feature.
+They are event simpler than PDPs, since no averaging is needed.
+Instead of drawing one line for a feature, each instance in the dataset gets it's own line.
+The values for a line can be computed easily, by leaving all other features the same, but creating variants of the instance of interest and letting the black box make the predictions or classifications.
+The result is a set of points for a varying feature, for one specific instance.
+The lines for the instances can look quite differently (if the black box allows interactions between features), because the course of the line depends on the specific values of each instance.
+For drawing each line, the $x_C$ are fixed for this one instance, and the $x_C$ is varied on a grid and the $\hat(y)$ calculated with $\hat(f)$.
+
+So, what do you gain by looking at individual expectations, instead of partial dependencies?
+This averaged display can obfuscate a heterogeneous relationship that comes from interactions.
+ICE plots \citep{goldstein2015peeking} solve this problem by plotting the relationship between feature and predicted response for individual observations.
+It can be seen as an extension to the standard PDP.
+PDP can show you how the average relationship between feature $x_S$ and $\hat(y)$ looks like.
+This works only well in cases where the interactions between $x_S$ and the remaining $x_C$ are weak.
+If there are interactions, a ICE plot will give a lot more insight.
+
+A more formal definition:
+In ICE plots, for each observation in $\{(x_{S_i}, x_{C_i})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x_{S_i}$, while $x_{C_i}$ is kept fixed.
+#### Example
+Let's go back to the dataset about risk factors for cervical cancers and see how each instance's prediction is associated with the feature 'Age'.
+In the partial dependence plot chapter {@pdp} we have seen that the probability increases around the age of 50, but does this hold true for each woman in the dataset?
+The ICE plot reveals that the most women's predicted probability follows the average pattern of increase at 50, but there are a few exceptions:
+In a few cases, the prediction of cancer probability does not change much with the age, and that is for women that have a high predicted probability.
+```{r ice-cervical, fig.cap="Individual conditional expectation plot of cervical cancer probability and age. Most women with a low cancer probability in younger years see an increase in predicted cancer probability, given all other feature values. Interestingly for a few women that have a high estimated cancer probability > 0.4, the estimated probability does not change much with higher age. "}
+set.seed(42)
+cervical_subset_index = sample(1:nrow(cervical), size = 30)
+cervical_subset = cervical[cervical_subset_index, ]
+pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE)
+mlr::plotPartialDependence(pd1) + my_theme()
+```
+
+```{r ice-bike, fig.cap = 'Individual conditional expectation plot of expected bike rentals and weather conditions . Same effects as in the partial dependence plot can be seen.'}
+set.seed(42)
+bike.subset.index = sample(1:nrow(bike.train), size = 300)
+bike.subset = bike.train[bike.subset.index,]
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE)
+mlr::plotPartialDependence(pd.data) + my_theme()+ scale_x_continuous(limits = c(0, NA)) + scale_y_continuous(limits = c(0, NA))
+```
+
+#### Centered ICE plot
+There is one issue with the ICE plot:
+It can be hard to see if the individual conditionl expectations curve differ between individuals when they start at different $\hat{f^{(i)}}$.
+An easy fix is to center the curves at a certain point in $x_S$ and only display the difference in predited response.
+The resulting plot is called centered ICE plot (c-ICE).
+It is a kind of anchoring, and doing this at the lower end of $x_S$ is a good choice.
+The new curves are defined as: $$\hat{f}_{cent}^{(i)} = \hat{f}_i - 1\hat{f}(x^{\text{*}}, x_{C_i}), $$
+where $1$ is a vector of 1's with the appropriate dimensions (usually one- or two-dimensional), and $\hat{f}$ the fitted model.
+
+#### Example
+Taking Figure \@ref{fig:ice-cervical} and centering the lines at the youngest observed age yields Figure \@ref{fig:ice-cervical-centered}.
+It is easier to see now, how the relative change of the curves from the youngest age is.
+This can be useful when we are not interested in seing the absolute change of a predicted value, but rather the difference in prediction compared to a fixed point of the feature range.
+```{r ice-cervical-centered, fig.cap = "Centered ICE plot for predicted cervical cancer risk probability and age. Compared to age 18, the most predictions for most instances stay the same and see an increase up to +20%. A few cases show the opposite behaviour: The predicted probability decreases with increasing age. "}
+pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE, center = list(Age=53))
+mlr::plotPartialDependence(pd1) + my_theme()
+```
+
+```{r ice-bike-centered, fig.cap = 'Centered individual conditional expectation plot of expected bike rentals and weather conditions.'}
+set.seed(42)
+bike.subset.index = sample(1:nrow(bike.train), size = 100)
+bike.subset = bike.train[bike.subset.index,]
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE, center = list(temp = min(bike.train$temp), hum = min(bike.train$hum), windspeed = min(bike.train$windspeed)))
+mlr::plotPartialDependence(pd.data) + my_theme()
+```
+#### Derivative ICE plot
+Another way to make it it visually easier to spot heterogenity is to look at the individual derivatives of $\hat(f)$ with respect to $x_S$ instead of the predicted response $\hat(f)$.
+The resulting plot is called derivative ICE plot (d-ICE).
+The derivatives of a function (or curve) tells you in which direction changes occur and if any occur at all.
+With the derivative ICE plot it is easy to spot value ranges in a feature where the black box's predicted value changes for (at least some) instances.
+If there is no interaction between $x_S$ and $x_C$, then $\hat{f}$ can be expressed as:
+$$\hat{f}(x) = \hat(f)(x_S, x_C) = g(x_S) + h(x_C), \text{ so that } \frac{\delta\hat{f}(x)}{\delta x_S} = g'(x_S)$$
+Without interactions, the individual partial derivatives should be the same for all observations.
+If they differ, it's because of interactions and it will become visible in the d-ICE plot.
+In addition to displaying the individual curves for derivative $\hat{f}$, showing the standard deviation of derivative $\hat{f}$ helps to highlight regions in $x_S$ with heterogeneity in the estimated derivatives.
+
+[@goldstein2015peeking]
+
+#### Example
+As we have seen, the most changes in estimated cancer probability happen around age 45.
+This is confirmed by the derivative ICE plot in Figure \@ref{fig:ice-cervical-derivative}.
+```{r ice-cervical-derivative, fig.cap = "Derivatice ICE plot of predicted cancer probability and age. Between age 14 and the early forties, a few instance see changes in prediction both upwards and downards, but the majorities derivatives are near zero. Between age 45 and 50, most women's prediction curves have a positive derivative, indicating an increase in predicted cancer probability."}
+# takes to much time ... maybe precompute and save results.
+pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE, derivative = TRUE, method = 'simple')
+mlr::plotPartialDependence(pd1) + my_theme()
+```
+
+
+```{r ice-bike-derivative, fig.cap = 'Derivative individual conditional expectation plot of expected bike rentals and weather conditions.'}
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset[1:30,], c('temp', 'hum', 'windspeed'), individual = TRUE, derivative = TRUE, method = 'simple')
+mlr::plotPartialDependence(pd.data) + my_theme()
+```
