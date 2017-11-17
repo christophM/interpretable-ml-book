@@ -1,68 +1,72 @@
+```{r output-type}
+## Get output type (latex or html) for deciding how to print tables
+output.type = knitr::opts_knit$get('rmarkdown.pandoc.to')
+```
 # Datasets {#data}
-Throughout the book all the models and techniques will be used on real datasets, which are freely available online.
-We will be using different datasets for different types of problems: classification, regression and text classification.
+Throughout the book all the models and techniques will be applied on real datasets, which are freely available online.
+We will be using different datasets for different tasks: classification, regression and text classification.
 
 ## Bike sharing counts (regression) {#bike.data}
-This dataset contains daily counts of bike rentals from bike sharing company [Capital-Bikeshare](https://www.capitalbikeshare.com/) in Washington D.C., including weather and seasonal information.
-The data is kindly open source by Capital-Bikeshare and the folks from [@bike2013] have added  weather data and seasonal information. The goal is to predict how many rental bike will be out on the street given weather and day. The data can be downloaded from the [UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset).
+This dataset contains daily counts of bike rentals from bike sharing company [Capital-Bikeshare](https://www.capitalbikeshare.com/) in Washington D.C., along with weather and seasonal information.
+The data was kindly open sourced by Capital-Bikeshare and the folks from (@bike2013) have added the weather data and the seasonal information. The goal is to predict how many rental bike will be out on the street given weather and day. The data can be downloaded from the [UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset).
 
 
-Variables in the dataset:
+For the examples, new features were introduced and not all original features used. Here is the list of features that were used:
 
-- instant: record index
-- dteday : date
-- season : season (1:springer, 2:summer, 3:fall, 4:winter)
-- yr : year (0: 2011, 1:2012)
-- mnth : month ( 1 to 12)
-- hr : hour (0 to 23)
-- holiday : weather day is holiday or not (extracted from [Web Link])
-- weekday : day of the week
-- workingday : if day is neither weekend nor holiday is 1, otherwise is 0.
-+ weathersit :
-- 1: Clear, Few clouds, Partly cloudy, Partly cloudy
-- 2: Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
-- 3: Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
-- 4: Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+- season : sprint (1), summer (2), autumn (3), winter (4)
+- holiday : Binary feature indicating if the day was a holiday (1) or not (0)
+- yr: The year (2011 or 2012)
+- days_since_2011: Number of days since the 01.01.2011 (the first day in the dataset). This feature was introduced to account for the trend, in this case that the bike rental service became more popular over time.
+- workingday : Binary feature indicating if the day was a workingday (1) or weekend / holiday (0).
+- weathersit : The weather situation on that day.
+    - Clear, Few clouds, Partly cloudy, Partly cloudy
+    - Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
+    - Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+    - Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
 - temp : Temperature in Celsius
-- atemp: Feeling temperature in Celsius
-- hum: Humidity
+- hum: Relative humidity in percent (0 to 100)
 - windspeed: Wind speed in km per hour
-- casual: count of casual users
-- registered: count of registered users
-- cnt: count of total rental bikes including both casual and registered
-
-
-You can look at a sample of 50 dates here:
-```{r show-bike-count-data}
+- cnt: Count of total rental bikes including both casual and registered. The count was used as the target in the regression tasks.
+```{r load-bike-data}
 source(sprintf('%s/get_bike_sharing_dataset.R', src_dir))
+data.intro.line = ifelse(output.type == 'html', "You can look at a sample of days here:", "")
+```
+`r data.intro.line`
 
+```{r show-bike-count-data-html, eval=output.type=='html'}
 set.seed(42)
-bike.raw.display = bike.raw[sample(1:nrow(bike.raw), size=50), ]
+bike.display = bike[sample(1:nrow(bike), size=50), ]
 
-DT::datatable(bike.raw.display, options = list(scrollX=TRUE))
+DT::datatable(bike.display, options = list(scrollX=TRUE))
 ```
 
 ## Youtube spam comments (text classification) {#spam.data}
-As an example for text classification we will be using 1956 comments from 5 different YouTube videos . Thankfully the authors that used this dataset in a paper about spam classification made the data  [freely available](http://dcomp.sor.ufscar.br/talmeida/youtubespamcollection/) [@alberto2015tubespam].
+As an example for text classification we will be using 1956 comments from 5 different YouTube videos. Thankfully the authors that used this dataset in an article about spam classification made the data  [freely available](http://dcomp.sor.ufscar.br/talmeida/youtubespamcollection/) [@alberto2015tubespam].
 
-Data was collected through the YouTube API from five of the ten most viewed videos
-on YouTube in the first half of 2015. All of the 5 videos are music videos. One of them is the wildly popular "Gangnam Style" from korean artist Psy. The other artists where Katy Perry, LMFAO, Eminem and Shakira.
+The comments were  collected through the YouTube API from five of the ten most viewed videos
+on YouTube in the first half of 2015. All of the 5 videos are music videos. One of them is "Gangnam Style" from Korean artist Psy. The other artists where Katy Perry, LMFAO, Eminem and Shakira.
 
 
-You can flip through the comments. The comments had been hand labeled as spam or legitimate.
+You can flip through some the comments. The comments had been hand labeled as spam or legitimate.
 Spam has been coded with a '1' and legitimate comments with a '0'.
 <br />
 <br />
 
-```{r show-dating-data-TubeSpam}
+```{r show-dating-data-TubeSpam-html, eval=output.type=='html'}
 tube_spam = read.csv(sprintf('%s/TubeSpam.csv', data_dir))
 
 DT::datatable(tube_spam[c('CONTENT', 'CLASS')], options = list(scrollX=TRUE))
 ```
 <br />
 <br />
+```{r show-dating-data-TubeSpam-latex, eval=output.type=='latex'}
+tube_spam = read.csv(sprintf('%s/TubeSpam.csv', data_dir))
 
-You could also go over to YouTube and have a look at the comment section. But please don't get trapped in the YouTube hell, ending up watching videos about monkeys stealing and drinking coktails from tourists on the beach. Also the Google Spam detector probably has changed a lot since 2015. Watch the view-record breaking video below "Gangnam Style" below:
+kable(tube_spam[c(3:11), c('CONTENT', 'CLASS')])
+```
+
+You could also go over to YouTube and have a look at the comment section. But please don't get trapped in the YouTube hell, ending up watching videos about monkeys stealing and drinking coktails from tourists on the beach. Also the Google Spam detector probably has changed a lot since 2015.
+`r if(output.type=="html"){'Watch the view-record breaking video below "Gangnam Style" below:'}`
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/9bZkp7q19f0" frameborder="0" allowfullscreen></iframe>
 

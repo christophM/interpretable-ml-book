@@ -22,7 +22,7 @@ bike$mnth = factor(bike$mnth, levels = 1:12, labels = c('JAN', 'FEB', 'MAR', 'AP
 bike$yr[bike$yr == 0] = 2011
 bike$yr[bike$yr == 1] = 2012
 bike$yr  = factor(bike$yr)
-bike$days_since_2010 = day_diff(bike$dteday, min(as.Date(bike$dteday)))
+bike$days_since_2011 = day_diff(bike$dteday, min(as.Date(bike$dteday)))
 
 # denormalize weather features:
 # temp : Normalized temperature in Celsius. The values are derived via (t-t_min)/(t_max-t_min), t_min=-8, t_max=+39 (only in hourly scale)
@@ -36,9 +36,6 @@ bike$windspeed = 67 * bike$windspeed
 bike$hum = 100 * bike$hum
 
 
-bike.raw = bike
-
-
 bike = dplyr::select(bike, -instant, -dteday, -registered, -casual, -atemp)
 set.seed(41)
 train.index = sample(1:nrow(bike), size = 0.85 * nrow(bike))
@@ -47,32 +44,3 @@ bike.task.train = mlr::makeRegrTask(id='bike', data=bike.train, target = 'cnt')
 
 bike.test = bike[setdiff(1:nrow(bike), train.index),]
 task.test = mlr::makeRegrTask(id='bike.test', data=bike.test, target = 'cnt')
-
-
-
-# 
-# lrn = mlr::makeLearner(cl='regr.randomForest')
-# 
-# 
-# lrn.trained = mlr::train(learner = lrn, task = task.train)
-# 
-# 
-# pred = mlr::getPredictionResponse(predict(lrn.trained, bike.test))
-# 
-# 
-# 
-# pdp.dat = mlr::generatePartialDependenceData(lrn.trained, input = bike.test, features = 'temp')
-# mlr::plotPartialDependence(pdp.dat)
-# 
-# 
-# pdp.dat = mlr::generatePartialDependenceData(lrn.trained, input = bike.test, features = 'windspeed')
-# mlr::plotPartialDependence(pdp.dat)
-# 
-# 
-# pdp.dat = mlr::generatePartialDependenceData(lrn.trained, input = bike.test, features = 'hum')
-# mlr::plotPartialDependence(pdp.dat)
-# 
-# 
-# 
-# pdp.dat = mlr::generatePartialDependenceData(lrn.trained, input = bike.test, features = c('hum', 'temp'), interaction = TRUE)
-# mlr::plotPartialDependence(pdp.dat, geom='tile')
