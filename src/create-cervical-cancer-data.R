@@ -9,10 +9,14 @@ cervical = read.csv(sprintf('%s/risk_factors_cervical_cancer.csv', data_dir), na
 cervical = select(cervical, -Citology, -Schiller, -Hinselmann)
 cervical$Biopsy = factor(cervical$Biopsy, levels = c(1, 0), labels=c('Cancer', 'Healthy'))
 
+## subset variables to the ones that should be used in the book
+cervical = dplyr::select(cervical, Age, Number.of.sexual.partners, First.sexual.intercourse,
+Num.of.pregnancies, Smokes, Smokes..years., Hormonal.Contraceptives, Hormonal.Contraceptives..years.,
+IUD, IUD..years., STDs, STDs..number., STDs..Number.of.diagnosis, STDs..Time.since.first.diagnosis,
+STDs..Time.since.last.diagnosis, Biopsy)
+
 # NA imputation
 imputer = imputeMode()
-# split training and test
-
 
 
 cervical_impute = mlr::impute(cervical, classes = list(numeric = imputeMode()))
