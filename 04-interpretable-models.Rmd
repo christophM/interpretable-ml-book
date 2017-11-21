@@ -124,7 +124,7 @@ Interpretation of a categorical feature ('weathersituation')): The estimated num
 As you can see in the interpretation examples, the interpretations always come with the footnote that 'all other features stay the same'.
 That's because of the nature of linear models: The target is a linear combination of the weighted features. The estimated linear equation spans a hyperplane in the feature/target space (a simple line in the case of a single feature). The $\beta$'s specify the slope (gradient) of the hyperplane in each direction. The good side is, that it isolates the interpretation. If you think of the features as turn-switches that you can turn up or down, it is nice to see what happens when you would just turn the switch for one feature. On the bad side of things, the interpretation ignores the joint distribution with other features. Increasing one feature, but not changing others, might create unrealistic or at least unlikely data points.
 
-### Interpretation templates {-}
+### Interpretation templates
 The interpretation of the features in the linear model can be automated by using following text templates.
 
 **Interpretation of a numerical feature**
@@ -137,10 +137,12 @@ A change from $x_{k}$'s reference level to the other category increases the expe
 
 
 ### Visual parameter interpretation
+Different visualisations make the linear model outcomes easier and quicker to grasp for humans.
 
 #### Weight plot
-The information of the coefficient table can also be put into a visualization, which makes the weights and the uncertainty about them can be made understandable on one glance. The weight is displayed as a point and the 95% confidence interval around the point with a line. The 95% confidence interval means that if the linear model was repeated 100 times on
-```{r linear_weights}
+The information of the coefficient table (weight estimates and variance) can be visualised. Figure \@ref(fig:linear-weights-plot) shows a weight plot of the linear model fitted before.
+
+```{r linear-weights-plot, fig.cap='Each row in the plot represents one feature weight. The weights are displayed as points and the 95% confidence intervals around the points with a line. A 95% confidence interval means that if the linear model would be estimated 100 times on similar data, in 95 out of 100 times, the confidence interval would cover the true weight, under the linear model assumptions (linearity, normality, homoscedasticity, independence, fixed features, absence of multicollinearity).', fig.align='center'}
 coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   lm_summary = summary(mod)$coefficients
   rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
@@ -156,30 +158,40 @@ coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
     df = df[!(df$Features == '(Intercept)'),]
   }
   ggplot(df) +
+    geom_vline(xintercept=0, linetype=4) +
     geom_point(aes(x=Estimate, y=Features)) +
     geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) +
+    scale_x_continuous('Weight estimate') +
+    scale_y_discrete('Feature') +
     my_theme()
 }
 
 coef_plot(mod)
 
 ```
-TODO: Add interpetation
+Figure \@ref(fig:linear-weights-plot) makes clear that rainy/snowy/stormy weather has a strong negative effect on the expected number of bikes.
+The working day feature's weight is close to zero and the zero is included in the 95% interval, meaning it is not influencing the prediction significantly.
+Some confidence intervals are very short and the estimates are close to zero, yet the features were important.
+Temperature is such a candidate.
+The problem about the weight plot is that the features are measured on different scales.
+While for weather situation feature the estimated $\beta$ signifies the difference between good and rainy/storm/snowy weather, for temperature it signifies only an increase of 1 degree Celsius.
+You can improve the comparison by scaling the features to mean zero and standard deviation of one before fitting the linear model, to make the estimated weights comparable.
 
 #### Effect plot
-The weights of the linear model only have meaning, when combined with the actual features.
-The weights depend on the scale of the features and will be different if you have a features measuring some height and you switch from inches to centemeters.
+The weights of the linear model can be analysed more meaningfully, when multiplied with the actual feature values.
+The weights depend on the scale of the features and will be different if you have a feature measuring some height and you switch from meters to centimetres.
 The weight will change, but the actual relationships in your data will not.
 Also it is important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature.
 The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
-Start with the computation of the effects, which is the weight per feature times the feature of an instance: $eff_{i,k} = w_{k} \cdot x_{i,k}$.
-The resulting effects are visualized with boxplots:
-The box contains the effect range for half of your data (25% to 75% effect quantiles).
+Start with the computation of the effects, which is the weight per feature times the feature of an instance: $\text{effect}_{i,j} = w_{j} \cdot x_{i,j}$.
+The resulting effects are visualised with boxplots:
+A box in a boxplot contains the effect range for half of your data (25% to 75% effect quantiles).
 The line in the box is the median effect, so 50% of the instances have a lower and the other half a higher effect on the prediction than the median value.
-The whiskers are $+/i 1.58 IQR / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}).
-The points are outlier to the whiskers.
+The lines reach up to $+/- 1.58 \text{ IQR} / \sqrt{n}$, with IQR being the inter quartile range ($q_{0.75} - q_{0.25}$).
+The points are outliers.
+The categorial feature effects can be aggregated into one boxplot, compared to the weight plot, where each weight gets a row.
 
-```{r linear_effects}
+```{r linear-effects, fig.cap='The feature effect plot shows the distribution of the effects (= feature value times feature weight) over the dataset for each feature.', fig.align='center'}
 
 get_reference_dataset = function(dat){
   df = lapply(dat, function(feature){
@@ -213,20 +225,25 @@ effect_plot = function(mod, dat,  feature_names=NULL){
   }
   X = gather(X)
   ggplot(X) +
+    geom_hline(yintercept=0, linetype=4) +
     geom_boxplot(aes(x=key, y=value, group=key)) +
-    coord_flip() + my_theme()
+    coord_flip() +
+    scale_y_continuous('Feature effect') +
+    scale_x_discrete('Feature') +
+    my_theme()
 }
 
 effect_plot(mod, dat)
 ```
-The largest contributions are from temperature and the days feature, which capture the trend that the bike rental became more popular over time. The temperature has a high contribution distribution.
-The day trend feature has goes from zero to large positive contribution, because the first day in the dataset (1.1.2011) get's a very low contribution, and the estimated weight with this feature is positive (`r sprintf('%.2f', lm_summary_print['days_since_2011', 'Estimate'])`), so the effect gets higher with every day and is highest for the latest day in the dataset (31.12.2012).
-Note that for effects from a feature with a negative effect, the instances with a positive effect (or the least negatives) are the ones that have a negative feature value (negative times negative is positive), so days with a high positive effect of windspeed on the bike rental count have the lowest windspeeds.
+The largest contributions to the expected number of bike rentals come from temperature and the days feature, which captures the trend that the bike rental service became more popular over time. The temperature has a broad contribution distribution.
+The day trend feature goes from zero to large positive contribution, because the first day in the dataset (01.01.2011) get's a very low day effect, and the estimated weight with this feature is positive (`r sprintf('%.2f', lm_summary_print['days_since_2011', 'Estimate'])`), so the effect gets higher with every day and is highest for the latest day in the dataset (31.12.2012).
+Note that for effects from a feature with a negative weight, the instances with a positive effect are the ones that have a negative feature value, so days with a high negative effect of windspeed on the bike rental count have the highest windspeeds.
 
 ### Explaining single predictions
-Why did a certain instance get the prediction it got from the linear model?
-This can again be answered by bringing together the weights and features and computing the effect. Now the effect will tell you how much each feature contributed towards the sum of the prediction. This is only meaningful if you compare the instance specific effects with the mean effects.
-```{r linear_effects_single}
+How much did each feature of an instance contribute towards the prediction?
+This can, again, be answered by bringing together the weights and feature values of this instance and computing the effects.
+An interpretation of instance specific effects is only meaningful in comparison with the distribution of each feature's effects.
+```{r linear-effects-single, fig.cap="The effect for one instance shows the effect distribution while highlighting the effects of the instance of interest.", fig.align='center'}
 i = 6
 effects = get_effects(mod, dat)
 predictions = predict(mod)
@@ -238,11 +255,11 @@ names(predictions) = NULL
 pred_i = predictions[i]
 
 effect_plot(mod, dat) +
-  geom_point(aes(x=key, y=value), color = 'red', data = effects_i) +
-  ggtitle(sprintf('Predicted value for instance: %.2f\n Average predicted value: %.2f\nActual value: %.2f', pred_i, predictions_mean, y[i]))
+  geom_point(aes(x=key, y=value), color = 'red', data = effects_i, shape = 4, size=2) +
+  ggtitle(sprintf('Predicted value for instance: %.0f\nAverage predicted value: %.0f\nActual value: %.0f', pred_i, predictions_mean, y[i]))
 ```
 
-Let's have a look at the effect realization for the rental bike count of one instance (= one day). Some features contribute unusually much to the predicted bike count: Temperature (`r X[i, 'temp']`) and the trend feature "days_since_2011", because this instance is from late 2011 (value = `r  X[i, 'days_since_2011']`).
+Let's have a look at the effect realisation for the rental bike count of one instance (= one day). Some features contribute unusually little or much to the predicted bike count, compared to the overall dataset: Temperature (`r round(X[i, 'temp'],0)` degrees) contributes less towards the predicted value compared to the average and the trend feature "days_since_2011" unusually much, because this instance is from late 2011 (`r  X[i, 'days_since_2011']` days).
 
 
 ### Coding categorical features {#cat.code}
@@ -292,7 +309,7 @@ They can only represent linear relationships as the name suggests. Each non-line
 Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both features into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.
 
 
-### Towards complexer relationships within linear model class
+### Towards more complex relationships within linear model class
 - Adding interactions
 - Adding non-linear terms like polynomials
 - Stratifying data by feature and fitting linear models on subsets
@@ -302,16 +319,16 @@ The examples for the linear models that I chose look all nice and tidy, right? B
 And your normal linear models?
 Interpretability goes downriver.
 But there are ways to introduce sparsity (= only keeping a few features) into the linear models.
-The most automatic and convient to use is the LASSO method.
-LASSO stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs feature selection and regularization of the selected features.
-We did not dive into the optimization problem of finding the best coefficients of the linear model.
+The most automatic and convenient to use is the LASSO method.
+LASSO stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs feature selection and regularisation of the selected features.
+We did not dive into the optimisation problem of finding the best coefficients of the linear model.
 But basically it involves solving the least-squares equation:
 $$ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2\right)$$
-LASSO adds a term to this optimization problem:
+LASSO adds a term to this optimisation problem:
 $$ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2 + \lambda ||\beta||_1\right)$$
-The term $||\beta||_1$ is the L1-norm of the feature vector, that leads to a penalization of large values in $\beta$.
-Since the L1-norm is used, many of the coefficients for the features will get an estimate of 0 and the others are shrinked.
-The weight $\lambda$ says how strong the regularizing effect should be and is usually tuned by doing cross-validation.
+The term $||\beta||_1$ is the L1-norm of the feature vector, that leads to a penalisation of large values in $\beta$.
+Since the L1-norm is used, many of the coefficients for the features will get an estimate of 0 and the others are shrunk.
+The weight $\lambda$ says how strong the regularising effect should be and is usually tuned by doing cross-validation.
 Especially when $\lambda$ is large, many coefficients are driven to 0.
 
 There are lots of other methods for reducing the number of features in your linear regression model:
@@ -342,7 +359,7 @@ There are a few problems with that approach:
 - Linear models don't extend to classification problems with multiple classes. You would have to start giving labeling the next class with a 2, then 3 and so on. The classes might not have any order to them, but the linear model would force a weird structure on the relationship between the features and your class predictions. So for all features with a positive weight, the higher the features value the more they contribute to the prediction of a class with a higher number, even if the classes with similar numbers are not really related.
 
 
-```{r, linear-class-threshold, fig.cap="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificial task of classifying a tumor as malignant (1) or benign (0) depending on the tumor size. Each point is a tumor, the x-axis shows the size of the tumor, the y-axis the malignancy, points are slightly jittered to avoid overplotting of points. The lines display the fitted curve from the linear model. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate  the classes any longer. That's a reason why logistic regression is better suited for classification problems."}
+```{r linear-class-threshold, fig.cap="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on the artificial task of classifying a tumor as malignant (1) or benign (0) depending on the tumor size. Each point is a tumor, the x-axis shows the size of the tumor, the y-axis the malignancy, points are slightly jittered to avoid overplotting of points. The lines display the fitted curve from the linear model. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for seperating benign from malignant tumors. After introducing a few more malignant tumor cases, especially one with a large tumor size the regression line shifts and a threshold of 0.5 would not separate  the classes any longer. That's a reason why logistic regression is better suited for classification problems."}
 df = data.frame(x = c(1,2,3,6,7,8,9),
                 y = c(0,0,0,1,1,1,1),
                 case = '0.5 threshold ok')
@@ -384,7 +401,7 @@ Now we want probabilities, which are between 0 and 1, so we wrap the right side 
 $$P(y_{i}=1) =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}))}$$
 
 Let's check the tumor size example again. But now instead of the linear regression model, we use the logistic regression model:
-```{r, logistic-class-threshold, fig.cap="Logistic regression successfully finds the correct decision boundary to distinguish between malignant (class=1) and benign (class=0) tumors dependent on it's size in this illustrative example. The blue line is the logistic function shifted and squeezed so that it fits the data."}
+```{r logistic-class-threshold, fig.cap="Logistic regression successfully finds the correct decision boundary to distinguish between malignant (class=1) and benign (class=0) tumors dependent on it's size in this illustrative example. The blue line is the logistic function shifted and squeezed so that it fits the data."}
 logistic1 = glm(y ~ x, family = binomial, data = df.lin.log[df.lin.log$case == '0.5 threshold ok',])
 logistic2 = glm(y ~ x, family = binomial, data = df.lin.log)
 
