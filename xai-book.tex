@@ -90,7 +90,7 @@
   \postauthor{\par}
   \predate{\centering\large\emph}
   \postdate{\par}
-  \date{2017-11-20}
+  \date{2017-11-21}
 
 \usepackage{booktabs}
 \usepackage{longtable}
@@ -1115,8 +1115,7 @@ interpretation ignores the joint distribution with other features.
 Increasing one feature, but not changing others, might create
 unrealistic or at least unlikely data points.
 
-\subsection*{Interpretation templates}\label{interpretation-templates}
-\addcontentsline{toc}{subsection}{Interpretation templates}
+\subsection{Interpretation templates}\label{interpretation-templates}
 
 The interpretation of the features in the linear model can be automated
 by using following text templates.
@@ -1135,68 +1134,114 @@ features stay the same.
 \subsection{Visual parameter
 interpretation}\label{visual-parameter-interpretation}
 
+Different visualisations make the linear model outcomes easier and
+quicker to grasp for humans.
+
 \subsubsection{Weight plot}\label{weight-plot}
 
-The information of the coefficient table can also be put into a
-visualization, which makes the weights and the uncertainty about them
-can be made understandable on one glance. The weight is displayed as a
-point and the 95\% confidence interval around the point with a line. The
-95\% confidence interval means that if the linear model was repeated 100
-times on
-\includegraphics{xai-book_files/figure-latex/linear_weights-1.pdf} TODO:
-Add interpetation
+The information of the coefficient table (weight estimates and variance)
+can be visualised. Figure \ref{fig:linear-weights-plot} shows a weight
+plot of the linear model fitted before.
+
+\textbackslash{}begin\{figure\}
+
+\{\centering \includegraphics{xai-book_files/figure-latex/linear-weights-plot-1}
+
+\}
+
+\textbackslash{}caption\{Each row in the plot represents one feature
+weight. The weights are displayed as points and the 95\% confidence
+intervals around the points with a line. A 95\% confidence interval
+means that if the linear model would be estimated 100 times on similar
+data, in 95 out of 100 times, the confidence interval would cover the
+true weight, under the linear model assumptions (linearity, normality,
+homoscedasticity, independence, fixed features, absence of
+multicollinearity).\}\label{fig:linear-weights-plot}
+\textbackslash{}end\{figure\} Figure \ref{fig:linear-weights-plot} makes
+clear that rainy/snowy/stormy weather has a strong negative effect on
+the expected number of bikes. The working day feature's weight is close
+to zero and the zero is included in the 95\% interval, meaning it is not
+influencing the prediction significantly. Some confidence intervals are
+very short and the estimates are close to zero, yet the features were
+important. Temperature is such a candidate. The problem about the weight
+plot is that the features are measured on different scales. While for
+weather situation feature the estimated \(\beta\) signifies the
+difference between good and rainy/storm/snowy weather, for temperature
+it signifies only an increase of 1 degree Celsius. You can improve the
+comparison by scaling the features to mean zero and standard deviation
+of one before fitting the linear model, to make the estimated weights
+comparable.
 
 \subsubsection{Effect plot}\label{effect-plot}
 
-The weights of the linear model only have meaning, when combined with
-the actual features. The weights depend on the scale of the features and
-will be different if you have a features measuring some height and you
-switch from inches to centemeters. The weight will change, but the
-actual relationships in your data will not. Also it is important to know
-the distribution of your feature in the data, because if you have a very
-low variance, it means that almost all instances will get a similar
-contribution from this feature. The effect plot can help to understand
-how much the combination of a weight and a feature contributes to the
-predictions in your data. Start with the computation of the effects,
-which is the weight per feature times the feature of an instance:
-\(eff_{i,k} = w_{k} \cdot x_{i,k}\). The resulting effects are
-visualized with boxplots: The box contains the effect range for half of
-your data (25\% to 75\% effect quantiles). The line in the box is the
-median effect, so 50\% of the instances have a lower and the other half
-a higher effect on the prediction than the median value. The whiskers
-are \(+/i 1.58 IQR / \sqrt{n}\), with IQR being the inter quartile range
-(\$q\_\{0.75\} - q\_\{0.25\}). The points are outlier to the whiskers.
+The weights of the linear model can be analysed more meaningfully, when
+multiplied with the actual feature values. The weights depend on the
+scale of the features and will be different if you have a feature
+measuring some height and you switch from meters to centimetres. The
+weight will change, but the actual relationships in your data will not.
+Also it is important to know the distribution of your feature in the
+data, because if you have a very low variance, it means that almost all
+instances will get a similar contribution from this feature. The effect
+plot can help to understand how much the combination of a weight and a
+feature contributes to the predictions in your data. Start with the
+computation of the effects, which is the weight per feature times the
+feature of an instance: \(\text{effect}_{i,j} = w_{j} \cdot x_{i,j}\).
+The resulting effects are visualised with boxplots: A box in a boxplot
+contains the effect range for half of your data (25\% to 75\% effect
+quantiles). The line in the box is the median effect, so 50\% of the
+instances have a lower and the other half a higher effect on the
+prediction than the median value. The lines reach up to
+\(+/- 1.58 \text{ IQR} / \sqrt{n}\), with IQR being the inter quartile
+range (\(q_{0.75} - q_{0.25}\)). The points are outliers. The categorial
+feature effects can be aggregated into one boxplot, compared to the
+weight plot, where each weight gets a row.
 
-\includegraphics{xai-book_files/figure-latex/linear_effects-1.pdf} The
-largest contributions are from temperature and the days feature, which
-capture the trend that the bike rental became more popular over time.
-The temperature has a high contribution distribution. The day trend
-feature has goes from zero to large positive contribution, because the
-first day in the dataset (1.1.2011) get's a very low contribution, and
-the estimated weight with this feature is positive (4.98), so the effect
-gets higher with every day and is highest for the latest day in the
-dataset (31.12.2012). Note that for effects from a feature with a
-negative effect, the instances with a positive effect (or the least
-negatives) are the ones that have a negative feature value (negative
-times negative is positive), so days with a high positive effect of
-windspeed on the bike rental count have the lowest windspeeds.
+\begin{figure}
+
+{\centering \includegraphics{xai-book_files/figure-latex/linear-effects-1} 
+
+}
+
+\caption{The feature effect plot shows the distribution of the effects (= feature value times feature weight) over the dataset for each feature.}\label{fig:linear-effects}
+\end{figure}
+
+The largest contributions to the expected number of bike rentals come
+from temperature and the days feature, which captures the trend that the
+bike rental service became more popular over time. The temperature has a
+broad contribution distribution. The day trend feature goes from zero to
+large positive contribution, because the first day in the dataset
+(01.01.2011) get's a very low day effect, and the estimated weight with
+this feature is positive (4.98), so the effect gets higher with every
+day and is highest for the latest day in the dataset (31.12.2012). Note
+that for effects from a feature with a negative weight, the instances
+with a positive effect are the ones that have a negative feature value,
+so days with a high negative effect of windspeed on the bike rental
+count have the highest windspeeds.
 
 \subsection{Explaining single
 predictions}\label{explaining-single-predictions}
 
-Why did a certain instance get the prediction it got from the linear
-model? This can again be answered by bringing together the weights and
-features and computing the effect. Now the effect will tell you how much
-each feature contributed towards the sum of the prediction. This is only
-meaningful if you compare the instance specific effects with the mean
-effects.
-\includegraphics{xai-book_files/figure-latex/linear_effects_single-1.pdf}
+How much did each feature of an instance contribute towards the
+prediction? This can, again, be answered by bringing together the
+weights and feature values of this instance and computing the effects.
+An interpretation of instance specific effects is only meaningful in
+comparison with the distribution of each feature's effects.
 
-Let's have a look at the effect realization for the rental bike count of
-one instance (= one day). Some features contribute unusually much to the
-predicted bike count: Temperature (5.20089) and the trend feature
-``days\_since\_2011'', because this instance is from late 2011 (value =
-698).
+\begin{figure}
+
+{\centering \includegraphics{xai-book_files/figure-latex/linear-effects-single-1} 
+
+}
+
+\caption{The effect for one instance shows the effect distribution while highlighting the effects of the instance of interest.}\label{fig:linear-effects-single}
+\end{figure}
+
+Let's have a look at the effect realisation for the rental bike count of
+one instance (= one day). Some features contribute unusually little or
+much to the predicted bike count, compared to the overall dataset:
+Temperature (5 degrees) contributes less towards the predicted value
+compared to the average and the trend feature ``days\_since\_2011''
+unusually much, because this instance is from late 2011 (698 days).
 
 \subsection{Coding categorical features}\label{cat.code}
 
@@ -1286,8 +1331,8 @@ positive weight. The room number might end up getting a negative weight,
 because given that a flat has the same size, increasing the number of
 rooms could make it less valuable.
 
-\subsection{Towards complexer relationships within linear model
-class}\label{towards-complexer-relationships-within-linear-model-class}
+\subsection{Towards more complex relationships within linear model
+class}\label{towards-more-complex-relationships-within-linear-model-class}
 
 \begin{itemize}
 \tightlist
@@ -1305,21 +1350,21 @@ The examples for the linear models that I chose look all nice and tidy,
 right? But in reality you might not have just a handful of features, but
 hundreds or thousands. And your normal linear models? Interpretability
 goes downriver. But there are ways to introduce sparsity (= only keeping
-a few features) into the linear models. The most automatic and convient
-to use is the LASSO method. LASSO stands for ``least absolute shrinkage
-and selection operator'' and when added to a linear model, it performs
-feature selection and regularization of the selected features. We did
-not dive into the optimization problem of finding the best coefficients
-of the linear model. But basically it involves solving the least-squares
-equation:
+a few features) into the linear models. The most automatic and
+convenient to use is the LASSO method. LASSO stands for ``least absolute
+shrinkage and selection operator'' and when added to a linear model, it
+performs feature selection and regularisation of the selected features.
+We did not dive into the optimisation problem of finding the best
+coefficients of the linear model. But basically it involves solving the
+least-squares equation:
 \[ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2\right)\]
-LASSO adds a term to this optimization problem:
+LASSO adds a term to this optimisation problem:
 \[ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2 + \lambda ||\beta||_1\right)\]
 The term \(||\beta||_1\) is the L1-norm of the feature vector, that
-leads to a penalization of large values in \(\beta\). Since the L1-norm
+leads to a penalisation of large values in \(\beta\). Since the L1-norm
 is used, many of the coefficients for the features will get an estimate
-of 0 and the others are shrinked. The weight \(\lambda\) says how strong
-the regularizing effect should be and is usually tuned by doing
+of 0 and the others are shrunk. The weight \(\lambda\) says how strong
+the regularising effect should be and is usually tuned by doing
 cross-validation. Especially when \(\lambda\) is large, many
 coefficients are driven to 0.
 
