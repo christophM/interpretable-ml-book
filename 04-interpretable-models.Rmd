@@ -69,7 +69,7 @@ Assumed is: Linearity, normality, homoscedasticity,  independence, fixed feature
 
 - **Linearity**: Linear regression models force the estimated response to be a linear combination of the features, which is both the greatest strength and biggest limitation. Linearity leads to interpretable models: linear effects are simple to quantify and describe (see also next chapter) and are additive, so it is easy to separate the effects. If you suspect interactions of features or a non-linear association of a feature with the target value, then you can add interaction terms and use techniques like regression splines to estimate non-linear effects.
 - **Normality**: The target outcome given the features are assumed to follow a normal distribution. If this assumption is violated, then the estimated confidence intervals of the feature weights are not valid. Any interpretation of the features p-values is not valid.
-- **Homoscedasticity** (constant variance): The variance of the error terms $\epsilon_{i}$ is assumed to be constant over the whole feature space. Let's say you want to predict the value of a house given the living area in square meters. You estimate a linear model, which assumes that no matter how big the flat, the error terms around the predicted response have the same variance. This assumption is often violated in reality. In the house example it is plausible that the variance of error terms around the predicted price is higher for bigger houses, since also the prices are higher and there is more room for prices to vary.
+- **Homoscedasticity** (constant variance): The variance of the error terms $\epsilon_{i}$ is assumed to be constant over the whole feature space. Let's say you want to predict the value of a house given the living area in square meters. You estimate a linear model, which assumes that no matter how big the house, the error terms around the predicted response have the same variance. This assumption is often violated in reality. In the house example it is plausible that the variance of error terms around the predicted price is higher for bigger houses, since also the prices are higher and there is more room for prices to vary.
 - **Independence**: Each instance is assumed to be independent from the next one. If you have repeated measurements, like multiple records per patient, the data points are not independent from each other and there are special linear model classes to deal with these cases, like mixed effect models or GEEs.
 - **Fixed features**: The input features are seen as 'fixed', carrying no errors or variation, which, of course, is very unrealistic and only makes sense in controlled experimental settings. But not assuming fixed features would mean that you have to fit very complex measurement error models that account for the measurement errors of your input features. And usually you don't want to do that.
 - **Absence of multicollinearity**: Basically you don't want features to be highly correlated, because this messes up the estimation of the weights. In a situation where two features are highly correlated (something like correlation > 0.9) it will become problematic to estimate the weights, since the feature effects are additive and it becomes indeterminable to which of the correlated features to attribute the effects.
@@ -309,16 +309,30 @@ If you want to dive a bit deeper into different encodings of categorical feature
 [this blog post](http://heidiseibold.github.io/page7/).
 
 ### The disadvantages of linear models
-They can only represent linear relationships as the name suggests. Each non-linearity or interaction has to be hand-crafted and explicitly given to the model as an input feature.
-Because of possible high correlation between features, it is possible that a feature that is positively correlated with the outcome might get a negative weight in a linear model, because in the high dimensional space it is negatively correlated. An example: You have a model to predict the rent price and have features like number of rooms and size of the flat. Of course flat size and room number are highly correlated, the bigger a flat the more rooms it has. If you now take both features into a linear model it might happen, that the flat size is the better predictor and get's a large positive weight. The room number might end up getting a negative weight, because given that a flat has the same size, increasing the number of rooms could make it less valuable.
+Linear models can only represent linear relationships. Each **non-linearity or interaction has to be hand-crafted** and explicitly given to the model as an input feature.
+
+Linear models are also often **not that good regarding predictive performance**, because the relationships that can be learned are so restricted and usually oversimplifies how complex reality is.
+
+The interpretation of a weight **can be unintuitive** because it depends on all other features. A feature with high positive correlation with the outcome $y$ and another feature might get a negative weight in the linear model, because, given the other correlated feature, it is negatively correlated with $y$ in the high-dimensional space. Completely correlated features make it even impossible to find a unique solution for the linear equation. An example: You have a model to predict the value of a house and have features like number of rooms and area of the house.
+House area and number of rooms are highly correlated: the bigger a house is, the more rooms it has. If you now take both features into a linear model, it might happen, that the area of the house is the better predictor and get's a large positive weight. The number of rooms might end up getting a negative weight, because either, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
 
 
-### Towards more complex relationships within linear model class
-- Adding interactions
-- Adding non-linear terms like polynomials
-- Stratifying data by feature and fitting linear models on subsets
 
-## Sparse linear models
+
+### Extending linear models
+Linear models have been extensively studied and extended to fix some of the shortcomings.
+
+- LASSO, presented in Chapter \@ref(lasso) is a method to "pressure" weights of irrelevant features to get an estimate of zero. Having unimportant features weighted by zero is useful, because having less terms to interpret makes the model more interpretable.
+- Generalised linear models (GLM) allow the target outcome to have different distributions. The target outcome is not any longer required to be normally distributed given the features, but GLMs allow you to model for example Poisson distributed count variables. Logistic regression, presented in Chapter \@ref(logistic), is a GLM for categorical outcomes.
+- Generalised additive models (GAMs) are GLMs with the additional ability to allow non-linear relationships with features, while maintaining the linear equation structure (sounds paradox, I know, but it works).
+
+You can also apply all sorts of tricks to go around some of the problems:
+
+- Adding interactions: You can define interactions between features and add them as new features before estimating the linear model. The RuleFit algorithm, introduced in Chapter \@ref(rulefit), can add interactions automatically.
+- Adding non-linear terms like polynomials to allow non-linear relationships with features.
+- Stratifying data by feature and fitting linear models on subsets.
+
+## Sparse linear models {#lasso}
 The examples for the linear models that I chose look all nice and tidy, right? But in reality you might not have just a handful of features, but hundreds or thousands.
 And your normal linear models?
 Interpretability goes downriver.
@@ -348,7 +362,7 @@ Then there are also step-wise procedures:
 I recommend using LASSO. It also works for the logistic regression model for classification models, which is the topic of the following chapter.
 
 
-## Logistic regression: a linear model for classification
+## Logistic regression: a linear model for classification {#logistic}
 Logistic regression is the linear regression models counterpart for classification problems.
 
 ### What's wrong with linear regression for classification?
@@ -533,7 +547,7 @@ In waves of size 20 or smaller, participants who gave 5/10 or more to importance
 The tree structure is perfectly suited to **cover interactions** between features in the data. The data also ends up in **distinct groups**, which are easier to grasp than points on a hyperplane like in linear regression. The interpretation is arguably pretty straightforward. The tree structure also has a **natural visualization**, with it's nodes and edges.
 
 ### Disadvantages
-**Handling of real linear relationships**, that's what trees suck at. Any real linear relationship between an input feature and the outcome has to be approximated by hard splits, which produces a step function. This is not efficient. This goes hand in hand with **lack of smoothness**. Slight changes in the input feature can have a big impact on the predicted outcome, which might not be desirable. Imagine a tree that predicts the worth of a house and the tree splits in the square meters multiple times. One of the splits is at 100.5 square meters. When a user measure his house and arrives at 99 square meters, types it into some nice web interface and get's 200 000 Euro. The user notices that she forgot to measure a small storeroom with 2 square meters. The storeroom has a skewed wall, so she is not sure if she can count it fully towards the whole flat area or only half of the space. So she decides to try both  100.0 and 101.0 square meters. The results: 200 000 Euro and 205 000 Euro, which is quite unintuitive.
+**Handling of real linear relationships**, that's what trees suck at. Any real linear relationship between an input feature and the outcome has to be approximated by hard splits, which produces a step function. This is not efficient. This goes hand in hand with **lack of smoothness**. Slight changes in the input feature can have a big impact on the predicted outcome, which might not be desirable. Imagine a tree that predicts the worth of a house and the tree splits in the square meters multiple times. One of the splits is at 100.5 square meters. When a user measure his house and arrives at 99 square meters, types it into some nice web interface and get's 200 000 Euro. The user notices that she forgot to measure a small storeroom with 2 square meters. The storeroom has a skewed wall, so she is not sure if she can count it fully towards the whole house area or only half of the space. So she decides to try both  100.0 and 101.0 square meters. The results: 200 000 Euro and 205 000 Euro, which is quite unintuitive.
 
 Trees are also quite **unstable**, so a few changes in the training data set might create a completely different tree. That's because each splits depends on the parent split. It does not generate trust if the structure flips so easily.
 
@@ -554,7 +568,7 @@ Naive Bayes is an interpretable model, because of the independence assumption. F
 k-nearest neighbour can be used for regression and classification and uses the closest neighbours for a data point for prediction. For classification it assigns the class most common the closest $k$ neighbours of an instance and for regression it takes the average of the outcome. The tricky parts are finding the right $k$ and defining the neighbourhood. This algorithm is different from the other intepretable models presented in this book, since it is an instance-based learning algorithm.
 How is k-nearest neighbour interpretable? For starters, there is no global model interpretability, since the model is inherently local and there are no global weights or structures that are learned explicitly by the k-nearest neighbour method. Maybe it is interpretable on a local level? To explain a prediction, you can always retrieve the k-neighbours that were used. If this is interpretable solely depends if you can 'interpret' single instances in the dataset. If the dataset consists of hundreds or thousands of features, then it is not interpretable I'd argue. But if you have few features or a way to reduce your instance to the most important features, presenting the k-nearest neighbours can give you good explanations.
 
-### RuleFit
+### RuleFit {#rulefit}
 The RuleFit algorithm from Friedman and Propescu [@friedman2008predictive] is a regression and classification approach that uses decision rules in a linear model. RuleFit consists of two components: The first component produces "rules" and the second component fits a linear model with these rules as input (hence the name "RuleFit"). It enables automatic integration of interactions between features into a linear model, while having the interpretability of a sparse linear model.
 
 There are two steps involved:
