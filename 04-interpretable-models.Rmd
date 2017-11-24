@@ -322,7 +322,7 @@ House area and number of rooms are highly correlated: the bigger a house is, the
 ### Extending linear models
 Linear models have been extensively studied and extended to fix some of the shortcomings.
 
-- LASSO, presented in Chapter \@ref(lasso) is a method to "pressure" weights of irrelevant features to get an estimate of zero. Having unimportant features weighted by zero is useful, because having less terms to interpret makes the model more interpretable.
+- Lasso, presented in Chapter \@ref(lasso) is a method to "pressure" weights of irrelevant features to get an estimate of zero. Having unimportant features weighted by zero is useful, because having less terms to interpret makes the model more interpretable.
 - Generalised linear models (GLM) allow the target outcome to have different distributions. The target outcome is not any longer required to be normally distributed given the features, but GLMs allow you to model for example Poisson distributed count variables. Logistic regression, presented in Chapter \@ref(logistic), is a GLM for categorical outcomes.
 - Generalised additive models (GAMs) are GLMs with the additional ability to allow non-linear relationships with features, while maintaining the linear equation structure (sounds paradox, I know, but it works).
 
@@ -332,40 +332,45 @@ You can also apply all sorts of tricks to go around some of the problems:
 - Adding non-linear terms like polynomials to allow non-linear relationships with features.
 - Stratifying data by feature and fitting linear models on subsets.
 
-## Sparse linear models {#lasso}
+###  Sparse linear models  {#sparse-linear}
 The examples for the linear models that I chose look all nice and tidy, right? But in reality you might not have just a handful of features, but hundreds or thousands.
 And your normal linear models?
 Interpretability goes downriver.
-But there are ways to introduce sparsity (= only keeping a few features) into the linear models.
-The most automatic and convenient to use is the LASSO method.
-LASSO stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs feature selection and regularisation of the selected features.
-We did not dive into the optimisation problem of finding the best coefficients of the linear model.
-But basically it involves solving the least-squares equation:
-$$ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2\right)$$
-LASSO adds a term to this optimisation problem:
-$$ min_{\beta_0,\beta} \left( \frac{1}{n} \sum_{i=1}^n (y_i - \beta_0 - x_i^T \beta)^2 + \lambda ||\beta||_1\right)$$
-The term $||\beta||_1$ is the L1-norm of the feature vector, that leads to a penalisation of large values in $\beta$.
-Since the L1-norm is used, many of the coefficients for the features will get an estimate of 0 and the others are shrunk.
-The weight $\lambda$ says how strong the regularising effect should be and is usually tuned by doing cross-validation.
-Especially when $\lambda$ is large, many coefficients are driven to 0.
+You might even get into a situation with  more features than instances and you can't fit a standard linear model at all.
+The good news is that there are ways to introduce sparsity (= only keeping a few features) into linear models.
 
-There are lots of other methods for reducing the number of features in your linear regression model:
+#### Lasso {#lasso}
+The most automatic and convenient way to introduce sparsity is to use the Lasso method.
+Lasso stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs feature selection and regularisation of the selected feature weights.
+Let's review the minimization problem, the $\beta$s optimise:
+$$ min_{\mathbf{\beta}} \left( \frac{1}{n} \sum_{i=1}^n (y_i - x_i^T \mathbf{\beta})^2\right)$$
+Lasso adds a term to this optimisation problem:
+$$ min_{\mathbf{\beta}} \left( \frac{1}{n} \sum_{i=1}^n (y_i - x_i^T \mathbf{\beta})^2 + \lambda ||\mathbf{\beta}||_1\right)$$
+The term $||\mathbf{\beta}||_1$, the L1-norm of the feature vector,  leads to a penalisation of large  $\mathbf{\beta}$-values.
+Since the L1-norm is used, many of the weights for the features will get an estimate of 0 and the others are shrunk.
+The parameter $\lambda$ controls the strength of the regularising effect and is usually tuned by doing cross-validation.
+Especially when $\lambda$ is large, many weights become 0.
+
+#### Other methods for sparsity in linear models
+A big spectrum of methods can be used to reduce the number of features in a linear model.
 
 Methods that include a pre-processing step:
+
 - Hand selected features: You can always use expert knowledge to choose and discard some features. The big drawback is, that it can't be automated and you might not be an expert.
-- Use some measure to pre-select features: An example is the correlation coefficient. You only take features into account that exceed some chosen threshold of correlation between the feature and the target. Disadvantage is that it only looks at the features one at a time. Some features might only show correlation after the linear model has accounted for some other features. Those you will miss with this approach.
+- Use some measures to pre-select features: An example is the correlation coefficient. You only take features into account that exceed some chosen threshold of correlation between the feature and the target. Disadvantage is that it only looks at the features one at a time. Some features might only show correlation after the linear model has accounted for some other features. Those you will miss with this approach.
 
-Then there are also step-wise procedures:
-- Forward selection: Fit the linear model with one feature. Do that with each feature. Choose the model that works best (for example decided by R squared measurement). Now again, for the remaining features, fit different versions of your model by adding each feature. Pick the one that performs best again. Continue until some criterium is reached, like the maximum number of features in the model.
-- Backward selection: Same as forward selection, but instead of adding features, start with the model with all features and try which feature removal brings the best performance increase until some stopping criterium is reached.
+Step-wise procedures:
 
-I recommend using LASSO. It also works for the logistic regression model for classification models, which is the topic of the following chapter.
+- Forward selection: Fit the linear model with one feature. Do that with each feature. Choose the model that works best (for example decided by the highest R squared). Now again, for the remaining features, fit different versions of your model by adding each feature to your chosen model. Pick the one that performs best. Continue until some criterium is reached, like the maximum number of features in the model.
+- Backward selection: Same as forward selection, but instead of adding features, start with the model that includes all features and try out which feature you have to remove  to get the highest performance increase. Repeat until some stopping criterium is reached.
+
+I recommend using Lasso, because it can be automated, looks at all features at the same time and can be controlled via $\lambda$. It also works for the logistic regression model for classification, which is the topic of Chapter \@ref(logistic).
 
 
 ## Logistic regression: a linear model for classification {#logistic}
 Logistic regression is the linear regression models counterpart for classification problems.
 
-### What's wrong with linear regression for classification?
+### What's wrong with linear regression models for classification?
 The gaussian linear model works well in most regression setup, but fails in the classification case.
 Why is that?
 In case of two classes, you could label one of the classes with 0 and the other with a 1 and use a linear model on it and it would work.
