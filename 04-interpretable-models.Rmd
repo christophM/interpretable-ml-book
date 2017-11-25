@@ -587,104 +587,95 @@ Again as in the linear models, the interpretations are always coming with the cl
 
 
 ## Decision trees
-Linear models fail in situation where the relationship is non-linear and/or where the features are interacting with each other.
+Linear regression models and logistic regression fail in situations where the relationship between features and outcome is non-linear or where the features are interacting with each other.
 Time to shine for the decision trees!
-Tree-based models partition the data along the features into rectangles.
-For predicting the outcome in each rectangle it fits a simple model (for example the average of the outcome of the instances that fall into this rectangle).
-Trees have an intuitive structure starting from a root and splitting into nodes, according to cutoff values of the features.
-After each split, the instances fall into one of the new nodes.
-At the end of the training all the instances from the training data set are assigned into one of the leaf nodes.
-See Figure \@ref{fig:tree-artificial} for illustration.
+Before you read about decision trees, have a look at Figure \@ref(fig:tree-artificial) for an illustration.
+Tree-based models split the data according to certain cutoff values in the features multiple times.
+Splitting means that different subsets of the dataset are created, where each instance belongs to one subset.
+The final subsets are called terminal or leaf nodes and the intermediate subsets are called internal nodes or split nodes.
+For predicting the outcome in each leaf node, a simple model is fitted with the instances in this subset (for example the subsets average target outcome).
+Trees can be used for classification and regression.
 
-There are a lot of different tree algorithms.
-They differ in structure (number of splits per node), criteria for how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes.
-Classification and regression trees (CART) is one of the more popular algorithms for tree building.
-This book will only talk about CART, because in the interpretation they are all the same.
-If you know of some tree algorithm with a different interpretation, I would welcome your feedback.
-
-Each of these rectangles is associated with a simple model of the outcome of the interest.
-This is usually estimated by taking the mean of outcomes from all training instances that fall into a rectangle.
+There are a lot of tree algorithms with different approaches for how to grow a tree.
+They differ in the possible structure of the tree (e.g. number of splits per node), criteria for how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes.
+Classification and regression trees (CART) is one of the more popular algorithms for tree induction.
+We will focus on CART, but the interpretation is similar for most of the tree types.
 I recommend the book 'The elements of statistical learning' [@Hastie2009] for a more detailed introduction.
-```{r tree-artificial, fig.cap='Exemplary decision tree with artificial data', out.width='100%'}
+```{r tree-artificial, fig.cap='Decision tree with artificial data. Instances with a value bigger than 3 for feature x1 end up in node 5. All other instances are assigned to node 3 or node 4, depending whether feature x2 values exceed 1'}
 set.seed(42)
 n = 100
-dat_sim = data.frame(feature_x1 = rep(c(1,1,2,2), times = n), feature_x2 = rep(c(2,3,3,3), times = n), y = rep(c(1, 2, 3, 4), times = n))
+dat_sim = data.frame(feature_x1 = rep(c(3,3,4,4), times = n), feature_x2 = rep(c(1,2,2,2), times = n), y = rep(c(1, 2, 3, 4), times = n))
 dat_sim = dat_sim[sample(1:nrow(dat_sim), size = 0.9 * nrow(dat_sim)), ]
 dat_sim$y = dat_sim$y + rnorm(nrow(dat_sim), sd = 0.2)
 ct = ctree(y ~ feature_x1 + feature_x2, dat_sim)
-plot(ct, inner_panel = node_inner(ct, pval = FALSE))
+plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
 ```
 
-The following formula describes relationship of y and x (in which rectangle does x fall?).
+The following formula describes the relationship between outcome $y$ and the features $x$.
 $$\hat{y}_i = \hat{f}(x_i) = \sum_{m = 1}^M c_m I\{x_i \in R_m\}$$
-Each instance $x_i$ falls into exactly one leaf node (=rectangle), so $I_{\{x_i \in R_m\}}$ is only 1 for the this single leaf node ($I$ is the identity function which is 1 if $x_i \in R_m$ and else 0).
-If $x_i$ falls into leaf node $R_l$, the predicted outcome $\hat{y} = c_l$, where $c_l$ is the mean of all the training instances in leaf node $R_l$.
+Each instance $x_i$ falls into exactly one leaf node (=subset $R_m$). $I_{\{x_i \in R_m\}}$ is the identity function which returns 1 if $x_i$ is in the subset $R_m$ and else 0.
+If $x_i$ falls into a leaf node $R_l$, the predicted outcome is $\hat{y} = c_l$, where $c_l$ is the mean of all the training instances in leaf node $R_l$.
 
-But where do the 'rectangles' come from?
+But where do the subsets come from?
 This is quite simple:
-The algorithm takes a feature and tries which cut-off point minimises the sum of squares if it is a regression task or the Gini index in classification tasks.
-It's the cut-off point that makes the two resulting subsets as different as possible in terms of the outcome feature of interest.
-For categorial features the algorithm tries different groupings by category into to nodes.
-After this was done for each feature, the algorithm looks for the feature with the best cut-off and chooses this to split the node into two new nodes.
-The algorithm continues doing this in both new nodes until the stopping criteria is reached.
+The algorithm takes a feature and tries which cut-off point minimises the sum of squares of $y$ for a regression tasks or the Gini index of the class distribution of $y$ for classification tasks.
+The best cut-off point makes the two resulting subsets as different as possible in terms of the target outcome.
+For categorical features the algorithm tries to build subsets by trying different groupings of categories.
+After this was done for each feature, the algorithm looks for the feature with the best cut-off and chooses it to split the node into two new nodes.
+The algorithm continues doing this recursively in both of the new nodes until a stopping criterium is reached.
 Possible criteria are:
-A minimum number of instances that have to be in a node before the split, the minimum number of instances that have to be in a terminal node.
-
-A common strategy is to grow a tree fully and then cut it back to optimise it's complexity measure $cp$.
+A minimum number of instances that have to be in a node before the split or the minimum number of instances that have to be in a terminal node.
 
 ### Interpretation
-It's easy:
+The interpretation is simple:
 Starting from the root node you go to the next nodes and the edges tell you which subsets you are looking at.
 Once you reach the leaf node, the node tells you the predicted outcome.
 All the edges are connected by 'AND'.
 
-Template: If feature x is [smaller/bigger] than threshold c AND ..., then the predicted value is $\hat{y}$.
+Template: If feature x is [smaller/bigger] than threshold c AND ..., then the predicted outcome is $\hat{y}_{\text{leafnode}}$.
 
 
 ### Interpretation example
-Let's have a look again at the speed dating example.
-Again we want to predict the rating from the participants, how much they will like the rating partners.
+Let's have a look again at the bike rental data from Chapter \@ref(bike-data).
+We want to predict the number of bike rentals on a given day. The learned tree is visualised in Figure \@ref(fig:tree-example).
 
-```{r tree-example, fig.cap='Regression tree fitted on the speed dating data. Categories of goal of date feature have been abbreviated for readability: f = for fun, m = meet new people, d = date, r = relationship, e = experience, o = other'}
-
+```{r tree-example, fig.cap='Regression tree fitted on the bike rental data. The maximally allowed depth for the tree was set to 2. The features picked for the tree splits were the trend feature (days since 2011) and the temperature (temp)'}
 
 # increases readability of tree
 x = rpart(y ~ ., data = na.omit(dat), method = 'anova', control = rpart.control(cp = 0, maxdepth = 2))
 
 xp = as.party(x)
-plot(xp, type = 'extended')
+plot(as.simpleparty(xp), type='simple')
+
 ```
-The first split was done in the workingday feature, which tells if a day is a working day or a saturday/sunday/holiday.
-On days without work, the number of rental bikes was higher on average.
-In both child nodes the the next feature that was chosen was temperature.
-
-In waves of size 20 or smaller, participants who gave 5/10 or more to importance of same religion of partner, they also rated lower on average (median around 6).
-If religion was less important (4 or lower), than they gave higher ratings.
-
+The first split and one of the second splits was done in the trend feature, which tells how many days passed since beginning of the data collection and covers the trend that the bike rental service became more popular over time.
+For days that came before the 105th day the predicted number of bike rentals is ca. 1800, between the 106th and 430th day it is around 3900.
+For days after the 430th day, depending on the temperature, the prediction is either 4600 (if below 12 degrees) or 6600 (if above 12 degrees).
 
 ### Advantages
 The tree structure is perfectly suited to **cover interactions** between features in the data.
-The data also ends up in **distinct groups**, which are easier to grasp than points on a hyperplane like in linear regression.
+The data also ends up in **distinct groups**, which are often easier to grasp than points on a hyperplane like in linear regression.
 The interpretation is arguably pretty straightforward.
 The tree structure also has a **natural visualization**, with it's nodes and edges.
 
 ### Disadvantages
-**Handling of real linear relationships**, that's what trees suck at.
-Any real linear relationship between an input feature and the outcome has to be approximated by hard splits, which produces a step function.
+**Handling of linear relationships**, that's what trees suck at.
+Any linear relationship between an input feature and the outcome has to be approximated by hard splits, which produces a step function.
 This is not efficient.
 This goes hand in hand with **lack of smoothness**.
 Slight changes in the input feature can have a big impact on the predicted outcome, which might not be desirable.
-Imagine a tree that predicts the worth of a house and the tree splits in the square meters multiple times.
-One of the splits is at 100.5 square meters. When a user measure his house and arrives at 99 square meters,
-types it into some nice web interface and get's 200 000 Euro.
+Imagine a tree that predicts the value of a house and the tree splits in the square meters multiple times.
+One of the splits is at 100.5 square meters.
+Imagine a user of a house prize estimator, that uses your decision tree model: She measures her house, concludes that the house has 99 square meters, types it into some nice web interface and get's a prediction of 200 000 Euro.
 The user notices that she forgot to measure a small storeroom with 2 square meters.
 The storeroom has a skewed wall, so she is not sure if she can count it fully towards the whole house area or only half of the space.
 So she decides to try both 100.0 and 101.0 square meters.
-The results: 200 000 Euro and 205 000 Euro, which is quite unintuitive.
+The results: 200 000 Euro and 205 000 Euro, which is quite unintuitive, because there was no change from 99 square meters to 100, but from 100 to 101.
 
-Trees are also quite **unstable**, so a few changes in the training data set might create a completely different tree.
-That's because each splits depends on the parent split.
-It does not generate trust if the structure flips so easily.
+Trees are also quite **unstable**, so a few changes in the training dataset might create a completely different tree.
+That's because each split depends on the parent split.
+And if a different feature gets selected as the first split feature, the whole tree structure will change.
+It does not generate confidence in the model if the structure flips so easily.
 
 
 
@@ -738,7 +729,7 @@ if  (number of rooms $> 6.64$)  and  (concentration of nitric oxide $< 0.67$) th
 
 The interesting part is how those rules are generated:
 They are derived from Decision Trees, by basically disassembling them. Every path in a tree can be turned into a decision rule.
-ou simply chain the binary decisions that lead to a certain node, et voilà, you have a rule.
+You simply chain the binary decisions that lead to a certain node, et voilà, you have a rule.
 It is desirable to generate a lot of diverse and meaningful rules. Gradient boosting is used to fit an ensemble of decision trees (by regressing/classifying y with your original features X).
 Each resulting trees is turned into multiple rules.
 
@@ -768,4 +759,4 @@ Measurement tools for feature importance, degree of relevance of original input 
 
 ### And so many more ...
 There are lots and lots of algorithms that produce interpretable models and not all will be listed here.
-If you are a researcher or just a big fan and user of a certain interpreable method that is not listed here, get in touch with me and add the method to this book!
+If you are a researcher or just a big fan and user of a certain interpretable method that is not listed here, get in touch with me and add the method to this book!
