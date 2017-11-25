@@ -426,7 +426,7 @@ $$P(y_{i}=1) =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots 
 
 Let's revisit the tumour size example from Figure \@ref(fig:linear-class-threshold) again. But now instead of the linear regression model, we use the logistic regression model:
 
-```{r logistic-class-threshold, fig.cap="Logistic regression successfully finds the correct decision boundary to distinguish between malignant (class=1) and benign (class=0) tumours dependent on it's size in this illustrative example. The blue line is the logistic function shifted and squeezed so that it fits the data."}
+```{r logistic-class-threshold, fig.cap="The logistic regression model successfully finds the correct decision boundary to distinguish between malignant and benign tumours dependent on the size of the tumour in this example. The blue line is the logistic function shifted and squeezed so that it fits the data."}
 logistic1 = glm(y ~ x, family = binomial, data = df.lin.log[df.lin.log$case == '0.5 threshold ok',])
 logistic2 = glm(y ~ x, family = binomial, data = df.lin.log)
 
@@ -446,32 +446,55 @@ p1 = ggplot(df.lin.log, aes(x=x,y=y)) +
 
 p1
 ```
-It works better than with logistic regression and we can use 0.5 as a threshold. The line does not shift much,  when including the additional datapoints.
+It works better with logistic regression and we can use 0.5 as a threshold in both cases. Including the additional points does not affect the estimated curve much.
 
 ### Interpretation
-The interpretation of the coefficients differs from linear regression models. Because now our target value is not some arbitrary number, but a probability between 0 and 1. Also through the logistic function, the influence of the features on the target probability has become non-linear. That's why we need to reformulate the equation for the interpretation>
-$$log\left(\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))}\right) =  log\left(\frac{P(y_{i}=1)}{ P(y_{i}=0)}\right) = \beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}$$
-$\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))}$ is also called  odds (probability of event vs. probability of no event) and $log\left(\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))}\right)$ are the log odds. So with a logistic regression model we have a linear model for the log odds. Great! Doesn't sound helpful!
-Well, with a bit of shuffling again, you can find out how the prediction changes, when one of the features $x{\cdot, k}$ is changed by 1 point. For this we can first apply the $exp()$ function on both sides of the equation:
-$$\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))} = odds_i =  exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}\right)$$
-Then we compare what happens when we increase one of the $x_{i,j}'s$ by 1. But instead of looking at the difference, we look at the ratio of the two predictions, you will see why:
-$$ \frac{odds_{i, x_i + 1}}{odds_i}= \frac{exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot (x_{i,k} + 1)  + \ldots+ \beta_{K} x_{i,K}\right)}{exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot x_{i,k}  + \ldots+ \beta_{K} x_{i,K}\right) }  $$
-Using the rule that $\frac{exp(a)}{exp(b)} = exp(a - b)$ gives us:
-$$ \frac{odds_{i, x_i + 1}}{odds_i}=exp\left( (\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot (x_{i,k} + 1)  + \ldots+ \beta_{K} x_{i,K}\right) - \left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot x_{i,k}  + \ldots+ \beta_{K} x_{i,K})\right)$$
-And then we can remove a lot of terms from the equation, which is convenient:
-$$ \frac{odds_{i, x_i + 1}}{odds_i}=  exp\left( \beta_{k} \cdot (x_{i,k} + 1) - \beta_{k} \cdot x_{i,k} \right) = exp\left(\beta_k\right)$$
+The interpretation of the logistic regression weights differs from the linear regression case, because in logistic regression the outcome is a probability between 0 and 1, and the weights don't affect the probability linearly, but are squeezed through the logistic function.
+That's why we need to reformulate the equation for the interpretation, so that there is only the linear term left on the right side of the formula.
 
-And we end up with something simple like $\exp(\beta_k)$. So a change in $x_k$ by one unit changes the odds ratio (multiplicatively) by a factor of $\exp(\beta_k)$. We could also interpret it this way: A change in $x_k$ by one unit change the log odds ratio by $\beta_k$ units, but most people do the former because thinking in logs is known to be hard on the brain. Interpreting the odds ratio already needs a bit of getting used to. If you have odds of 2, it means that the probability for $y_i = 1$ is twice as big as $y_i = 0$. If you have a $\beta$ (=odds ratio) of $0.7$, then an increase in the respective x by one unit multiplies the odds by $\exp(0.7) \approx 2$ and your odds would be 4. But usually you don't deal with the odds and only interpret the $\beta$ as the odds ratios. Because for actually calculating the odds you would need to set a value for each $x_{i,k}$ for all $k$, which only makes sense if you want to look at one specific instance of your dataset.
+$$log\left(\frac{P(y_{i}=1)}{1 - P(y_{i}=1)}\right) =  log\left(\frac{P(y_{i}=1)}{ P(y_{i}=0)}\right) = \beta_{0} + \beta_{1} x_{i,1} + \ldots + \beta_{p} x_{i,p}$$
+
+$\frac{P(y_{i}=1)}{1 - P(y_{i}=1)}$ is also called odds (probability of event divided by probability of no event) and $log\left(\frac{P(y_{i}=1)}{1 - P(y_{i}=1)}\right)$ is called log odds. So with a logistic regression model we have a linear model for the log odds. Great! Doesn't sound helpful!
+Well, with a bit of shuffling again, you can find out how the prediction changes, when one of the features $x_j$ is changed by 1 point. For this we can first apply the $exp()$ function on both sides of the equation:
+
+$$\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))} = odds_i =  exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{p} x_{i,p}\right)$$
+
+Then we compare what happens when we increase one of the $x_{i,j}$ by 1.
+But instead of looking at the difference, we look at the ratio of the two predictions:
+
+$$ \frac{odds_{i, x_j + 1}}{odds_i}= \frac{exp\left(\beta_{0} + \beta_{1} x_{i,1} + \ldots + \beta_{j} (x_{i,j} + 1)  + \ldots+ \beta_{p} x_{i,p}\right)}{exp\left(\beta_{0} + \beta_{1} x_{i,1} + \ldots + \beta_{j} x_{i,j}  + \ldots+ \beta_{p} x_{i,p}\right) }  $$
+
+Using the rule that $\frac{exp(a)}{exp(b)} = exp(a - b)$ gives us:
+
+$$
+\begin{aligned}
+  \frac{odds_{i, x_j + 1}}{odds_i} &  = & exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot (x_{i,j} + 1)  + \ldots+ \beta_{i,p}x_{i,p}\right) \\
+    & & - exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot x_{i,j}  + \ldots+ \beta_{p} x_{i,p}\right)
+\end{aligned}
+$$
+
+And then we can remove a lot of terms from the equation, which is convenient:
+$$ \frac{odds_{i, x_j + 1}}{odds_i}=  exp\left( \beta_{j} (x_{i,j} + 1) - \beta_{j} x_{i,j} \right) = exp\left(\beta_j\right)$$
+
+And we end up with something simple like $\exp(\beta_j)$. So a change of $x_j$ by one unit changes the odds ratio (multiplicatively) by a factor of $\exp(\beta_j)$.
+We could also interpret it this way:
+A change in $x_j$ by one unit changes the log odds ratio by $\beta_j$ units, but most people do the former because thinking about the $log()$ of something is known to be hard on the brain.
+Interpreting the odds ratio already needs a bit of getting used to.
+For example if you have odds of 2, it means that the probability for $y_i = 1$ is twice as big as $y_i = 0$.
+If you have a $\beta_j$ (=odds ratio) of $0.7$, then an increase in the respective $x_j$ by one unit multiplies the odds by $\exp(0.7) \approx 2$ and the odds change to 4.
+But usually you don't deal with the odds and only interpret the $\beta$'s as the odds ratios.
+Because for actually calculating the odds you would need to set a value for each feature $x_j$, which only makes sense if you want to look at one specific instance of your dataset.
 
 Here are the interpretations for the logistic regression model with different feature types:
 
-- Numerical feature: For an increase of one unit of the feature $x_{j}$ the estimated odds change (multiplicatively) by a factor of $\exp{\beta_{j}}$
-- Binary categorical features: One of the features is the reference level (in some languages the one that was coded in 0). A change of the feature $x_{i}$ the reference level to the other category changes the estimated odds change (multiplicatively) by a factor of $\exp{\beta_{j}}$
-- Categorical features with many levels: One solution to deal with many features is to one-hot-encode them, meaning each level gets it's own column. From a categorical feature with L levels, you only need L-1 columns, otherwise it is over parameterized. The interpretation for each level is then according to the binary features. Some language like R allow to
-- Intercept $\beta_{0}$: The interpretation is: Given all numerical features are zero and the categorical features are on the reference level, the estimated odds are is $\exp{\beta_{0}}$. The interpretation of $\beta_{0}$ is usually not relevant.
+- Numerical feature: For an increase of one unit of the feature $x_{j}$, the estimated odds change (multiplicatively) by a factor of $\exp(\beta_{j})$
+- Binary categorical feature: One of the two values of the feature is the reference level (in some languages the one that was coded in 0). A change of the feature $x_{j}$ from the reference level to the other level changes the estimated odds (multiplicatively) by a factor of $\exp(\beta_{j})$
+- Categorical feature with many levels: One solution to deal with many possible feature values is to one-hot-encode them, meaning each level gets it's own column. From a categorical feature with L levels, you only need L-1 columns, otherwise it is over-parameterised. The interpretation for each level is then according to the binary features.
+- Intercept $\beta_{0}$: Given all numerical features are zero and the categorical features are at the reference level, the estimated odds are $\exp(\beta_{0})$. The interpretation of $\beta_{0}$ is usually not relevant.
 
 ### Example
-With the logistic regression model we can predict cervical cancer given risk factors.
+We use the logistic regression model to predict cervical cancer given some risk factors.
+The data are described in Chapter \@ref(cervical-data)
 ```{r logistic-example}
 
 neat_cervical_names = c('Intercept', 'Hormonal contraceptives y/n',
@@ -489,12 +512,13 @@ coef.table = summary(mod)$coefficients[,c('Estimate', 'Std. Error')]
 coef.table = cbind(coef.table, 'Odds ratio' = as.vector(exp(coef.table[, c('Estimate')])))
 # Interpret one numerical and one factor
 rownames(coef.table) = neat_cervical_names
-kable(coef.table[, c('Estimate', 'Odds ratio', 'Std. Error')])
+colnames(coef.table)[1] = 'Weight'
+kable(coef.table[, c('Weight', 'Odds ratio', 'Std. Error')], digits=2, caption='The results from fitting a logistic regression model on the cervical cancer dataset. Shown are the features used in the model, their estimated weights and according odds ratios and the standard errors of the estimated weights.')
 ```
 
-Interpretation of a numerical feature ('Num. of diagnosed STDs'): An increase of the number of diagnosed STDs changes (decreases) the odds for cancer vs. no cancer multiplicatively by `r sprintf('%.2f', coef.table['Num. of diagnosed STDs', 'Odds ratio'])`, given all other features stay the same. Keep in mind that correlation does not imply causation. No recommendation here to get STDs.
+Interpretation of a numerical feature ('Num. of diagnosed STDs'): An increase of the number of diagnosed STDs (sexually transmitted diseases) changes (decreases) the odds for cancer vs. no cancer multiplicatively by `r sprintf('%.2f', coef.table['Num. of diagnosed STDs', 'Odds ratio'])`, given all other features stay the same. Keep in mind that correlation does not imply causation. No recommendation here to get STDs.
 
-Interpretation of a categorical feature ('Hormonal contraceptives y/n'): For women with hormonal contraceptives, the odds for cancer vs no cancer are by a factor of `r sprintf('%.2f', coef.table['Hormonal contraceptives y/n', 'Odds ratio'])` higher, compared women without hormonal contraceptives, given all other features stay the same.
+Interpretation of a categorical feature ('Hormonal contraceptives y/n'): For women with hormonal contraceptives, the odds for cancer vs. no cancer are by a factor of `r sprintf('%.2f', coef.table['Hormonal contraceptives y/n', 'Odds ratio'])` higher, compared to women without hormonal contraceptives, given all other features stay the same.
 
 Again as in the linear models, the interpretations are always coming with the clause that 'all other features stay the same'.
 
