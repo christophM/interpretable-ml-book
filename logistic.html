@@ -185,33 +185,47 @@ FIGURE 5.5: The logistic function. It only outputs numbers between 0 and 1. At i
 <p>The step from linear regression models to logistic regression is kind of straightforward. In the linear regression model we modelled the relationship between the outcome and the features with a linear equation: <span class="math display">\[\hat{y}_{i} = \beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{p} x_{i,p} \]</span> For the classification we prefer probabilities, which are between 0 and 1, so we wrap the right side of the equation into the logistic regression function and like that force the output to only take on values between 0 and 1. <span class="math display">\[P(y_{i}=1) =  \frac{1}{1 + exp(-(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{p} x_{i,p}))}\]</span></p>
 <p>Let’s revisit the tumour size example from Figure <a href="logistic.html#fig:linear-class-threshold">5.4</a> again. But now instead of the linear regression model, we use the logistic regression model:</p>
 <div class="figure" style="text-align: center"><span id="fig:logistic-class-threshold"></span>
-<img src="xai-book_files/figure-html/logistic-class-threshold-1.svg" alt="Logistic regression successfully finds the correct decision boundary to distinguish between malignant (class=1) and benign (class=0) tumours dependent on it's size in this illustrative example. The blue line is the logistic function shifted and squeezed so that it fits the data." width="80%" />
+<img src="xai-book_files/figure-html/logistic-class-threshold-1.svg" alt="The logistic regression model successfully finds the correct decision boundary to distinguish between malignant and benign tumours dependent on the size of the tumour in this example. The blue line is the logistic function shifted and squeezed so that it fits the data." width="80%" />
 <p class="caption">
-FIGURE 5.6: Logistic regression successfully finds the correct decision boundary to distinguish between malignant (class=1) and benign (class=0) tumours dependent on it’s size in this illustrative example. The blue line is the logistic function shifted and squeezed so that it fits the data.
+FIGURE 5.6: The logistic regression model successfully finds the correct decision boundary to distinguish between malignant and benign tumours dependent on the size of the tumour in this example. The blue line is the logistic function shifted and squeezed so that it fits the data.
 </p>
 </div>
-<p>It works better than with logistic regression and we can use 0.5 as a threshold. The line does not shift much, when including the additional datapoints.</p>
+<p>It works better with logistic regression and we can use 0.5 as a threshold in both cases. Including the additional points does not affect the estimated curve much.</p>
 </div>
 <div id="interpretation-1" class="section level3">
 <h3><span class="header-section-number">5.3.3</span> Interpretation</h3>
-<p>The interpretation of the coefficients differs from linear regression models. Because now our target value is not some arbitrary number, but a probability between 0 and 1. Also through the logistic function, the influence of the features on the target probability has become non-linear. That’s why we need to reformulate the equation for the interpretation&gt; <span class="math display">\[log\left(\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))}\right) =  log\left(\frac{P(y_{i}=1)}{ P(y_{i}=0)}\right) = \beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}\]</span> <span class="math inline">\(\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))}\)</span> is also called odds (probability of event vs. probability of no event) and <span class="math inline">\(log\left(\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))}\right)\)</span> are the log odds. So with a logistic regression model we have a linear model for the log odds. Great! Doesn’t sound helpful! Well, with a bit of shuffling again, you can find out how the prediction changes, when one of the features <span class="math inline">\(x{\cdot, k}\)</span> is changed by 1 point. For this we can first apply the <span class="math inline">\(exp()\)</span> function on both sides of the equation: <span class="math display">\[\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))} = odds_i =  exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{K} x_{i,K}\right)\]</span> Then we compare what happens when we increase one of the <span class="math inline">\(x_{i,j}&#39;s\)</span> by 1. But instead of looking at the difference, we look at the ratio of the two predictions, you will see why: <span class="math display">\[ \frac{odds_{i, x_i + 1}}{odds_i}= \frac{exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot (x_{i,k} + 1)  + \ldots+ \beta_{K} x_{i,K}\right)}{exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot x_{i,k}  + \ldots+ \beta_{K} x_{i,K}\right) }  \]</span> Using the rule that <span class="math inline">\(\frac{exp(a)}{exp(b)} = exp(a - b)\)</span> gives us: <span class="math display">\[ \frac{odds_{i, x_i + 1}}{odds_i}=exp\left( (\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot (x_{i,k} + 1)  + \ldots+ \beta_{K} x_{i,K}\right) - \left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{k} \cdot x_{i,k}  + \ldots+ \beta_{K} x_{i,K})\right)\]</span> And then we can remove a lot of terms from the equation, which is convenient: <span class="math display">\[ \frac{odds_{i, x_i + 1}}{odds_i}=  exp\left( \beta_{k} \cdot (x_{i,k} + 1) - \beta_{k} \cdot x_{i,k} \right) = exp\left(\beta_k\right)\]</span></p>
-<p>And we end up with something simple like <span class="math inline">\(\exp(\beta_k)\)</span>. So a change in <span class="math inline">\(x_k\)</span> by one unit changes the odds ratio (multiplicatively) by a factor of <span class="math inline">\(\exp(\beta_k)\)</span>. We could also interpret it this way: A change in <span class="math inline">\(x_k\)</span> by one unit change the log odds ratio by <span class="math inline">\(\beta_k\)</span> units, but most people do the former because thinking in logs is known to be hard on the brain. Interpreting the odds ratio already needs a bit of getting used to. If you have odds of 2, it means that the probability for <span class="math inline">\(y_i = 1\)</span> is twice as big as <span class="math inline">\(y_i = 0\)</span>. If you have a <span class="math inline">\(\beta\)</span> (=odds ratio) of <span class="math inline">\(0.7\)</span>, then an increase in the respective x by one unit multiplies the odds by <span class="math inline">\(\exp(0.7) \approx 2\)</span> and your odds would be 4. But usually you don’t deal with the odds and only interpret the <span class="math inline">\(\beta\)</span> as the odds ratios. Because for actually calculating the odds you would need to set a value for each <span class="math inline">\(x_{i,k}\)</span> for all <span class="math inline">\(k\)</span>, which only makes sense if you want to look at one specific instance of your dataset.</p>
+<p>The interpretation of the logistic regression weights differs from the linear regression case, because in logistic regression the outcome is a probability between 0 and 1, and the weights don’t affect the probability linearly, but are squeezed through the logistic function. That’s why we need to reformulate the equation for the interpretation, so that there is only the linear term left on the right side of the formula.</p>
+<p><span class="math display">\[log\left(\frac{P(y_{i}=1)}{1 - P(y_{i}=1)}\right) =  log\left(\frac{P(y_{i}=1)}{ P(y_{i}=0)}\right) = \beta_{0} + \beta_{1} x_{i,1} + \ldots + \beta_{p} x_{i,p}\]</span></p>
+<p><span class="math inline">\(\frac{P(y_{i}=1)}{1 - P(y_{i}=1)}\)</span> is also called odds (probability of event divided by probability of no event) and <span class="math inline">\(log\left(\frac{P(y_{i}=1)}{1 - P(y_{i}=1)}\right)\)</span> is called log odds. So with a logistic regression model we have a linear model for the log odds. Great! Doesn’t sound helpful! Well, with a bit of shuffling again, you can find out how the prediction changes, when one of the features <span class="math inline">\(x_j\)</span> is changed by 1 point. For this we can first apply the <span class="math inline">\(exp()\)</span> function on both sides of the equation:</p>
+<p><span class="math display">\[\frac{P(y_{i}=1)}{(1 - P(y_{i}=1))} = odds_i =  exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{p} x_{i,p}\right)\]</span></p>
+<p>Then we compare what happens when we increase one of the <span class="math inline">\(x_{i,j}\)</span> by 1. But instead of looking at the difference, we look at the ratio of the two predictions:</p>
+<p><span class="math display">\[ \frac{odds_{i, x_j + 1}}{odds_i}= \frac{exp\left(\beta_{0} + \beta_{1} x_{i,1} + \ldots + \beta_{j} (x_{i,j} + 1)  + \ldots+ \beta_{p} x_{i,p}\right)}{exp\left(\beta_{0} + \beta_{1} x_{i,1} + \ldots + \beta_{j} x_{i,j}  + \ldots+ \beta_{p} x_{i,p}\right) }  \]</span></p>
+<p>Using the rule that <span class="math inline">\(\frac{exp(a)}{exp(b)} = exp(a - b)\)</span> gives us:</p>
+<p><span class="math display">\[
+\begin{aligned}
+  \frac{odds_{i, x_j + 1}}{odds_i} &amp;  = &amp; exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot (x_{i,j} + 1)  + \ldots+ \beta_{i,p}x_{i,p}\right) \\
+    &amp; &amp; - exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot x_{i,j}  + \ldots+ \beta_{p} x_{i,p}\right)
+\end{aligned}
+\]</span></p>
+<p>And then we can remove a lot of terms from the equation, which is convenient: <span class="math display">\[ \frac{odds_{i, x_j + 1}}{odds_i}=  exp\left( \beta_{j} (x_{i,j} + 1) - \beta_{j} x_{i,j} \right) = exp\left(\beta_j\right)\]</span></p>
+<p>And we end up with something simple like <span class="math inline">\(\exp(\beta_j)\)</span>. So a change of <span class="math inline">\(x_j\)</span> by one unit changes the odds ratio (multiplicatively) by a factor of <span class="math inline">\(\exp(\beta_j)\)</span>. We could also interpret it this way: A change in <span class="math inline">\(x_j\)</span> by one unit changes the log odds ratio by <span class="math inline">\(\beta_j\)</span> units, but most people do the former because thinking about the <span class="math inline">\(log()\)</span> of something is known to be hard on the brain. Interpreting the odds ratio already needs a bit of getting used to. For example if you have odds of 2, it means that the probability for <span class="math inline">\(y_i = 1\)</span> is twice as big as <span class="math inline">\(y_i = 0\)</span>. If you have a <span class="math inline">\(\beta_j\)</span> (=odds ratio) of <span class="math inline">\(0.7\)</span>, then an increase in the respective <span class="math inline">\(x_j\)</span> by one unit multiplies the odds by <span class="math inline">\(\exp(0.7) \approx 2\)</span> and the odds change to 4. But usually you don’t deal with the odds and only interpret the <span class="math inline">\(\beta\)</span>’s as the odds ratios. Because for actually calculating the odds you would need to set a value for each feature <span class="math inline">\(x_j\)</span>, which only makes sense if you want to look at one specific instance of your dataset.</p>
 <p>Here are the interpretations for the logistic regression model with different feature types:</p>
 <ul>
-<li>Numerical feature: For an increase of one unit of the feature <span class="math inline">\(x_{j}\)</span> the estimated odds change (multiplicatively) by a factor of <span class="math inline">\(\exp{\beta_{j}}\)</span></li>
-<li>Binary categorical features: One of the features is the reference level (in some languages the one that was coded in 0). A change of the feature <span class="math inline">\(x_{i}\)</span> the reference level to the other category changes the estimated odds change (multiplicatively) by a factor of <span class="math inline">\(\exp{\beta_{j}}\)</span></li>
-<li>Categorical features with many levels: One solution to deal with many features is to one-hot-encode them, meaning each level gets it’s own column. From a categorical feature with L levels, you only need L-1 columns, otherwise it is over parameterized. The interpretation for each level is then according to the binary features. Some language like R allow to</li>
-<li>Intercept <span class="math inline">\(\beta_{0}\)</span>: The interpretation is: Given all numerical features are zero and the categorical features are on the reference level, the estimated odds are is <span class="math inline">\(\exp{\beta_{0}}\)</span>. The interpretation of <span class="math inline">\(\beta_{0}\)</span> is usually not relevant.</li>
+<li>Numerical feature: For an increase of one unit of the feature <span class="math inline">\(x_{j}\)</span>, the estimated odds change (multiplicatively) by a factor of <span class="math inline">\(\exp(\beta_{j})\)</span></li>
+<li>Binary categorical feature: One of the two values of the feature is the reference level (in some languages the one that was coded in 0). A change of the feature <span class="math inline">\(x_{j}\)</span> from the reference level to the other level changes the estimated odds (multiplicatively) by a factor of <span class="math inline">\(\exp(\beta_{j})\)</span></li>
+<li>Categorical feature with many levels: One solution to deal with many possible feature values is to one-hot-encode them, meaning each level gets it’s own column. From a categorical feature with L levels, you only need L-1 columns, otherwise it is over-parameterised. The interpretation for each level is then according to the binary features.</li>
+<li>Intercept <span class="math inline">\(\beta_{0}\)</span>: Given all numerical features are zero and the categorical features are at the reference level, the estimated odds are <span class="math inline">\(\exp(\beta_{0})\)</span>. The interpretation of <span class="math inline">\(\beta_{0}\)</span> is usually not relevant.</li>
 </ul>
 </div>
 <div id="example" class="section level3">
 <h3><span class="header-section-number">5.3.4</span> Example</h3>
-<p>With the logistic regression model we can predict cervical cancer given risk factors.</p>
+<p>We use the logistic regression model to predict cervical cancer given some risk factors. The data are described in Chapter <a href="cervical-data.html#cervical-data">3.3</a></p>
 <table>
+<caption><span id="tab:logistic-example">TABLE 5.1: </span>The results from fitting a logistic regression model on the cervical cancer dataset. Shown are the features used in the model, their estimated weights and according odds ratios and the standard errors of the estimated weights.</caption>
 <thead>
 <tr class="header">
 <th></th>
-<th align="right">Estimate</th>
+<th align="right">Weight</th>
 <th align="right">Odds ratio</th>
 <th align="right">Std. Error</th>
 </tr>
@@ -219,44 +233,44 @@ FIGURE 5.6: Logistic regression successfully finds the correct decision boundary
 <tbody>
 <tr class="odd">
 <td>Intercept</td>
-<td align="right">2.9101469</td>
-<td align="right">18.3594963</td>
-<td align="right">0.3225918</td>
+<td align="right">2.91</td>
+<td align="right">18.36</td>
+<td align="right">0.32</td>
 </tr>
 <tr class="even">
 <td>Hormonal contraceptives y/n</td>
-<td align="right">0.1166594</td>
-<td align="right">1.1237366</td>
-<td align="right">0.2989597</td>
+<td align="right">0.12</td>
+<td align="right">1.12</td>
+<td align="right">0.30</td>
 </tr>
 <tr class="odd">
 <td>Smokes y/n</td>
-<td align="right">-0.2557759</td>
-<td align="right">0.7743154</td>
-<td align="right">0.3719329</td>
+<td align="right">-0.26</td>
+<td align="right">0.77</td>
+<td align="right">0.37</td>
 </tr>
 <tr class="even">
 <td>Num. of pregnancies</td>
-<td align="right">-0.0368039</td>
-<td align="right">0.9638651</td>
-<td align="right">0.0965331</td>
+<td align="right">-0.04</td>
+<td align="right">0.96</td>
+<td align="right">0.10</td>
 </tr>
 <tr class="odd">
 <td>Num. of diagnosed STDs</td>
-<td align="right">-0.8154926</td>
-<td align="right">0.4424213</td>
-<td align="right">0.3260103</td>
+<td align="right">-0.82</td>
+<td align="right">0.44</td>
+<td align="right">0.33</td>
 </tr>
 <tr class="even">
 <td>Intrauterine device y/n</td>
-<td align="right">-0.6163016</td>
-<td align="right">0.5399376</td>
-<td align="right">0.3995933</td>
+<td align="right">-0.62</td>
+<td align="right">0.54</td>
+<td align="right">0.40</td>
 </tr>
 </tbody>
 </table>
-<p>Interpretation of a numerical feature (‘Num. of diagnosed STDs’): An increase of the number of diagnosed STDs changes (decreases) the odds for cancer vs. no cancer multiplicatively by 0.44, given all other features stay the same. Keep in mind that correlation does not imply causation. No recommendation here to get STDs.</p>
-<p>Interpretation of a categorical feature (‘Hormonal contraceptives y/n’): For women with hormonal contraceptives, the odds for cancer vs no cancer are by a factor of 1.12 higher, compared women without hormonal contraceptives, given all other features stay the same.</p>
+<p>Interpretation of a numerical feature (‘Num. of diagnosed STDs’): An increase of the number of diagnosed STDs (sexually transmitted diseases) changes (decreases) the odds for cancer vs. no cancer multiplicatively by 0.44, given all other features stay the same. Keep in mind that correlation does not imply causation. No recommendation here to get STDs.</p>
+<p>Interpretation of a categorical feature (‘Hormonal contraceptives y/n’): For women with hormonal contraceptives, the odds for cancer vs. no cancer are by a factor of 1.12 higher, compared to women without hormonal contraceptives, given all other features stay the same.</p>
 <p>Again as in the linear models, the interpretations are always coming with the clause that ‘all other features stay the same’.</p>
 </div>
 </div>
