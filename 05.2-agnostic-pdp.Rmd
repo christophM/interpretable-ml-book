@@ -1,32 +1,56 @@
 ## Partial dependence plot {#pdp}
-The partial dependence plot shows the marginal effect of a variable on the target (regression / classification) [@friedman2001greedy].
-A partial dependence plot can show if the relationship between target and feature is linear, monotonic or something else.
-In linear regression, those plots will always show a linear relationship.
+The partial dependence plot shows the marginal effect of a feature on the predicted outcome  [@friedman2001greedy].
+Have a glance at Figure \@ref(fig:dpd-cervical) to get some intuition before diving into the theory of partial dependencies.
+A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or something else.
+Applied to a linear regression model, partial dependence plots will always show a linear relationship, for example.
 
 The partial dependence function for regression is defined as:
-$$f_S = E_{x_C}[f(x_S, x_C)] = \int f(x_S, x_C) dP(x_C)$$
-The $x_S$ is the set of variables for which the partial dependence should be depicted and $x_C$ are the other variables that were used in the machine learning model.
-Partial dependence works by averaging out the other variables, so that the remaining function shows the relationship between the $x_S$, in which we are interested, and the target.
-$x_S$ is fixed and $x_C$ is varying.
+$$\hat{f}_{x_S}(x_S) = E_{x_C}\left[\hat{f}(x_S, x_C)\right] = \int \hat{f}(x_S, x_C) dP(x_C)$$
+The term $x_S$ is the set of features for which the partial dependence function should be plotted and $x_C$ are the other features that were used in the machine learning model $\hat{f}$.
+Usually, there are only one or two features in $x_S$.
+Together, $x_S$ and $x_C$ make up $x$.
+Partial dependence works by averaging the machine learning model output $\hat{f}$ over the distribution of the features $x_C$, so that the remaining function shows the relationship between the $x_S$, in which we are interested, and the predicted outcome.
 
-The integral is estimated by calculating averages in the training data, which looks like this for regression:
-$$ \hat{f}(x_S) = \frac{1}{n} \sum_{i=1}^n f(x_S, x_{Ci}) $$
-In  this formula, $x$ is the variable for which to calculate the partial dependence, $x_{iC}$ is the other variables and $n$ the number of instances in the data set.
+The partial function $\hat{f}_{x_S}$ along $x_S$ is estimated by calculating averages in the training data, which is also known as Monte Carlo method:
+$$ \hat{f}_{x_S}(x_S) = \frac{1}{n} \sum_{i=1}^n \hat{f}(x_S, x_{Ci}) $$
+In this formula $x_{iC}$ are concrete values taken from the data for the features we are not interested and $n$ the number of instances in the dataset.
+Note that $\hat{f}_{x_S}$ only depends on features $x_S$ as input.
+For classification, where the machine model outputs probabilities, the partial dependence function displays the probability for a certain class given different values for features $x_S$.
+A straightforward way to handle multi-class problems is to plot one line per class.
 
-For classification it is the logits:
-$$ f(x) = \log p_k(x) - \frac{1}{K} \sum_{j=1}^K \log p_j(x) $$
+The partial dependence plot is a global method:
+The method takes into account all instances and makes a statement about the global relationship of a feature with the predicted outcome.
 
 
-Partial dependence plots are only partially global:
-They are global because they take into account all instances, but it is local in the feature, because partial dependence plots only examine one variable, as the name suggests.
-
-
-#### Examples
-In practice $x_S$ usually only contains one variable or a maximum of two, because one variable produces 2D plots and two variables produce 3D plots.
+### Examples
+In practice, the set of features $x_S$ usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
 Everything beyond that is quite tricky.
 Even 3D on a 2D paper or monitor is already challenging.
-This example here shows an artificial dataset with two x variables on which a Random Forest was trained.
 
+
+Let's turn to the regression example with the bike counts from Chapter \@ref(bike-data) and have a look at how the weather affects the predicted bike rentals.
+We first fit a machine learning model on the dataset, for which we want to analyse the partial dependencies.
+In this case, we fitted a RandomForest to predict the bike rentals and make use of the partial dependence method to understand what relationships the model learned.
+Figure \@ref(fig:dpd-bike) shows the influence of the weather features on the predicted bike counts.
+For warm (but not too hot) weather, the model predicts a high number of bike rentals on average.
+The potential bikers are increasingly inhibited in engaging in cycling when humidity reaches above 60%.
+Also, the more wind the less people like to bike, which makes sense.
+Interestingly, the predicted bike counts don't drop between 25 and 35 km/h windspeed, but maybe there is just not enough training data.
+At least intuitively I would expect the bike rentals to drop with any increase in windspeed, especially when the windspeed is very high.
+
+Figure \@ref(fig:dpd-cervical) shows a partial dependence plot example for cervical cancer classification (see Chapter \@ref(cervical-data) for the data).
+Again, we fit a RandomForest to predict whether a woman has cervical cancer given some risk factors.
+Any other type of model would have worked as well.
+The interpretation is analogue to the partial dependence plots for regression.
+
+Figure \@ref(fig:dpd-cervical-2d) shows an example of a partial dependence plot with two features.
+
+```{r dpd-bike, fig.cap = 'Partial dependence plot of rental bike count and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in different temperatures: With rising temperatures, on average the bike rentals rise, until 20C degrees, where it stays the same also for hotter temperatures and drops a bit again towards 30C degrees.'}
+
+mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task.train)
+pd1 = mlr::generatePartialDependenceData(mod.bike, bike.task.train, c('temp', 'hum', 'windspeed'))
+mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous(limits = c(0, NA)) + scale_y_continuous(limits = c(0, NA))
+```
 
 
 ```{r dpd-cervical, fig.cap = 'Partial dependence plot of cancer probability and different factors. For the age feature, the models partial dependence shows that on average, the cancer probability is low before 45, spikes between age 45 and 55 and plateaus after that.'}
@@ -37,21 +61,8 @@ pd1 = mlr::generatePartialDependenceData(mod, cervical_task, c('Age', "Hormonal.
 mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous(limits = c(0, NA))
 ```
 
-```{r dpd-cervical-2d, fig.cap = "Partial dependence plot of cancer probability and the interaction of number of years on hormonal contraceptives and number of sexual partners.
-Interestingly, there is some odd interaction between the two variables when the number of sexual partners is 1 and the years of on hormonal contraceptives larger than 12.
-There are actually only two women in that group, who both happen to have cancer.
-So my best guess is that this was random and the model did overfit on those two women, but only more data could solve this question. "}
+```{r dpd-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of number of years on hormonal contraceptives and number of sexual partners.Interestingly, there is some odd interaction between the two features when the number of sexual partners is 1 and the years of on hormonal contraceptives larger than 12. There are actually only two women in that group, who both happen to have cancer. So my best guess is that this was random and the model did overfit on those two women, but only more data could solve this question.'}
 ## filter(cervical, Number.of.sexual.partners == 1 & Hormonal.Contraceptives..years. > 12)
 pd1 = mlr::generatePartialDependenceData(mod, cervical_task, c("Number.of.sexual.partners", "Hormonal.Contraceptives..years."), interaction = TRUE)
 mlr::plotPartialDependence(pd1, geom='tile') + my_theme()+ scale_x_continuous(limits = c(0, NA))
-```
-
-Let's turn to the regression example with the bike counts again and have a look at how the weather effects look like. \@ref{fig:dpd-bike} shows the average influence of the weather features on the predicted bike counts. Warm, but not too hot weather makes the model predict a high number of bikes rentals. The potential bikers are increasingly inhibited in engaging in cycling when humidity reaches above 60%. Also the more wind the less people like to bike, which personally I can understand. Interestingly the predicted bike counts don't drop between 25 and 35 km/h, but maybe there is just not enough training data. At least intuitively I would expect the bike rentals to drop with each increase in windspeed, especially when the windspeed is very high.
-
-
-```{r dpd-bike, fig.cap = 'Partial dependence plot of rental bike count and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in different temperatures: With rising temperatures, on average the bike rentals rise, until 20C degrees, where it stays the same also for hotter temperatures and drops a bit again towards 30C degrees.'}
-
-mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task.train)
-pd1 = mlr::generatePartialDependenceData(mod.bike, bike.task.train, c('temp', 'hum', 'windspeed'))
-mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous(limits = c(0, NA)) + scale_y_continuous(limits = c(0, NA))
 ```
