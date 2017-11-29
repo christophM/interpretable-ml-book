@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2017-11-28">
+<meta name="date" content="2017-11-29">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -130,10 +130,10 @@
 <li class="chapter" data-level="6.1" data-path="pdp.html"><a href="pdp.html"><i class="fa fa-check"></i><b>6.1</b> Partial dependence plot</a><ul>
 <li class="chapter" data-level="6.1.1" data-path="pdp.html"><a href="pdp.html#examples"><i class="fa fa-check"></i><b>6.1.1</b> Examples</a></li>
 </ul></li>
-<li class="chapter" data-level="6.2" data-path="individual-conditional-expectation-ice-plot.html"><a href="individual-conditional-expectation-ice-plot.html"><i class="fa fa-check"></i><b>6.2</b> Individual Conditional Expectation (ICE) plot</a></li>
-<li class="chapter" data-level="6.3" data-path="permutation-feature-importance.html"><a href="permutation-feature-importance.html"><i class="fa fa-check"></i><b>6.3</b> Permutation feature importance</a><ul>
-<li class="chapter" data-level="6.3.1" data-path="permutation-feature-importance.html"><a href="permutation-feature-importance.html#model-dependent-feature-importance"><i class="fa fa-check"></i><b>6.3.1</b> Model dependent feature importance</a></li>
+<li class="chapter" data-level="6.2" data-path="individual-conditional-expectation-ice-plot.html"><a href="individual-conditional-expectation-ice-plot.html"><i class="fa fa-check"></i><b>6.2</b> Individual Conditional Expectation (ICE) plot</a><ul>
+<li class="chapter" data-level="6.2.1" data-path="individual-conditional-expectation-ice-plot.html"><a href="individual-conditional-expectation-ice-plot.html#example-1"><i class="fa fa-check"></i><b>6.2.1</b> Example</a></li>
 </ul></li>
+<li class="chapter" data-level="6.3" data-path="permutation-feature-importance.html"><a href="permutation-feature-importance.html"><i class="fa fa-check"></i><b>6.3</b> Permutation feature importance</a></li>
 <li class="chapter" data-level="6.4" data-path="local-surrogate-models-lime.html"><a href="local-surrogate-models-lime.html"><i class="fa fa-check"></i><b>6.4</b> Local surrogate models (LIME)</a></li>
 </ul></li>
 <li class="divider"></li>
@@ -158,41 +158,30 @@
             <section class="normal" id="section-">
 <div id="permutation-feature-importance" class="section level2">
 <h2><span class="header-section-number">6.3</span> Permutation feature importance</h2>
-<p>The permutation importance measurement was orginially introduced for RandomForests <span class="citation">(Breiman <a href="#ref-breiman2001random">2001</a>)</span>. It is calculated on the out-of-bag instances and works by estimating the original model performance and checking what happens with the model performance when you permute each feature. A big loss in performance means a big feature importance. The idea of permutation of features is per se model-agnostic, only the OOB-scheme is specific for ensemble methods. In can be used for any model when a hold-out dataset is used, instead of OOB samples. Of course you could also use the training data, but you risk getting variable importance measures that overfit your training data, since the model was already trained on it.</p>
-<p>Algorithm <span class="citation">(Breiman <a href="#ref-breiman2001random">2001</a>)</span>:</p>
+<p>The permutation feature importance measurement was introduced for RandomForests by <span class="citation">Breiman (<a href="#ref-breiman2001random">2001</a>)</span>. It works by measuring what happens to the model performance when you permute each feature. A big loss in performance means a big feature importance. The idea of the permutation of features is per se model-agnostic, only the out-of-bag (=datapoints not used for model fitting) estimation scheme is specific for bootstrapped ensemble methods. Permutation feature importance can be used for any model when a hold-out dataset, instead of out-of-bag samples is used. Of course you could also use the training data, but you risk getting variable importance measures that overfit your data, since the model was already trained on it.</p>
+<p>The algorithm <span class="citation">(Breiman <a href="#ref-breiman2001random">2001</a>)</span>, generalised for model-agnostic application, is defined as:</p>
 <p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, hold-out dataset <span class="math inline">\(D\)</span>, number of permutations <span class="math inline">\(n_{perm}\)</span></p>
 <ol style="list-style-type: decimal">
-<li>Estimate performance <span class="math inline">\(Perf\)</span> of <span class="math inline">\(\hat{f}\)</span> with <span class="math inline">\(D\)</span> (e.g. MSE for regression or accuracy for classification)</li>
-<li>For each feature <span class="math inline">\(j \in 1, \ldots, J\)</span> do:</li>
-</ol>
+<li>Estimate performance <span class="math inline">\(Perf\)</span> of <span class="math inline">\(\hat{f}\)</span> on dataset <span class="math inline">\(D\)</span> (e.g. mean squared error)</li>
+<li>For each feature <span class="math inline">\(j \in 1, \ldots, p\)</span> do
 <ul>
 <li>For <span class="math inline">\(i \in 1,\ldots , n_{perm}\)</span>
 <ul>
-<li>Get <span class="math inline">\(D_{j_{perm}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in data <span class="math inline">\(D\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
-<li>Estimate performance <span class="math inline">\(Perf_{i,j_{perm}}\)</span> of <span class="math inline">\(\hat{f}\)</span> with <span class="math inline">\(D_{j_{perm}}\)</span></li>
-<li>Calculate permutation variable importance <span class="math inline">\(VI_i(X_j) = Perf_{i,j_{perm}} - Perf\)</span></li>
+<li>Generate data <span class="math inline">\(D_{j_{perm}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in data <span class="math inline">\(D\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
+<li>Estimate performance <span class="math inline">\(Perf_{i,j_{perm}}\)</span> of <span class="math inline">\(\hat{f}\)</span> on dataset <span class="math inline">\(D_{j_{perm}}\)</span></li>
+<li>Calculate permutation feature importance <span class="math inline">\(FI_i(X_j) = Perf_{i,j_{perm}} - Perf\)</span></li>
 </ul></li>
-<li>Calculate mean variable importance: <span class="math inline">\(VI(X_j) = \frac{1}{n_{perm}}\sum_{i=1}^{n_{perm}} VI_i(X_j)\)</span></li>
-<li>Optional: Calculate p-value <span class="math inline">\(p = \frac{I(Perf_{j_{perm}} &gt; Perf)}{n_{perm}}\)</span></li>
-</ul>
-<ol start="3" style="list-style-type: decimal">
-<li>Sort variables by descending <span class="math inline">\(VI\)</span>.</li>
+<li>Calculate mean variable importance for the sample: <span class="math inline">\(FI(X_j) = \frac{1}{n_{perm}}\sum_{i=1}^{n_{perm}} FI_i(X_j)\)</span></li>
+</ul></li>
+<li>Sort variables by descending <span class="math inline">\(FI\)</span>.</li>
 </ol>
-<p>The feature with the highest <span class="math inline">\(VI\)</span> measure is the most important globally in your model. With the p-value you can additionally check if a feature importance is significantly different from 0. You might want to adjust your <span class="math inline">\(\alpha\)</span> confidence level for multiple testing.</p>
-<p>You can also find the algorithm in more detail in <span class="citation">(Strobl et al. <a href="#ref-Strobl2008">2008</a>)</span>. The authors additionally suggest a conditional feature importance measurement, which is not (yet) covered in this book. The standard permutation feature importance only works with marginal feature improvements and cannot distinguish between correlation and spurious correlation. <span class="citation">(Strobl et al. <a href="#ref-Strobl2008">2008</a>)</span> suggest to condition the importance measure also on other features, which makes it possible to account for correlation among the features.</p>
-<div id="model-dependent-feature-importance" class="section level3">
-<h3><span class="header-section-number">6.3.1</span> Model dependent feature importance</h3>
-<p>Some model classes already come with built in feature importance measurements. A few examples: - RandomForest: Permutation based feature importance - CART and boosting: mean decrease in Gini impurity index - Linear Model: (absolute value of) t-test statistic for each feature</p>
+<p>The feature with the highest importance measure <span class="math inline">\(FI\)</span> makes the most difference in performance globally in your model. I haven’t found any paper that generalises permutation feature importance, so that it can be applied model-agnostic. Please drop me a mail if you know about model-agnostic feature importance.</p>
 
-</div>
 </div>
 <h3>References</h3>
 <div id="refs" class="references">
 <div id="ref-breiman2001random">
 <p>Breiman, Leo. 2001. “Random Forests.” <em>Machine Learning</em> 45 (1). Springer: 5–32.</p>
-</div>
-<div id="ref-Strobl2008">
-<p>Strobl, Carolin, Anne-Laure Boulesteix, Thomas Kneib, Thomas Augustin, and Achim Zeileis. 2008. “Conditional variable importance for random forests.” <em>BMC Bioinformatics</em> 9 (January): 307. doi:<a href="https://doi.org/10.1186/1471-2105-9-307">10.1186/1471-2105-9-307</a>.</p>
 </div>
 </div>
             </section>
