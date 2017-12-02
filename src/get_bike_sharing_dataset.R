@@ -12,7 +12,6 @@ day_diff = function(date1, date2){
 }
 # See http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
 
-## TODO: Name levels
 bike$weekday = factor(bike$weekday, levels=0:6, labels = c('SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'))
 bike$holiday = factor(bike$holiday, levels = c(0,1), labels = c('NO HOLIDAY', 'HOLIDAY'))
 bike$workingday = factor(bike$workingday, levels = c(0,1), labels = c('NO WORKING DAY', 'WORKING DAY'))
