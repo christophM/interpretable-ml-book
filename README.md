@@ -47,3 +47,11 @@ After rendering, the HTML files of the  book will be in the "_book" folder. You 
 ```{r}
 browseURL('_book/index.html')
  ```
+
+
+
+## Changelog
+All notable changes to the book will be documented here.
+
+### v0.1 (2017-12-03)
+- First release of the Interpretable Machine Learning book
