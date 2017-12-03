@@ -30,12 +30,12 @@ Rules for contributing text or code:
 ## Rendering the book
 Make sure all dependencies for the book are installed. This book has the structure of an R package, so dependencies can be installed easily, only R and the devtools library is required:
 ```{r}
-devtools::install_github("christophM/xai-book")
+devtools::install_github("christophM/interpretable-ml-book")
 ```
 
 After you installed the dependencies, you have to clone the repository.
 ```{shell}
-git clone git@github.com:christophM/xai-book.git
+git clone git@github.com:christophM/interpretable-ml-book.git
 ```
 
 For rendering the book, start an R session and type:
