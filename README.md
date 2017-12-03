@@ -2,7 +2,7 @@
 
 Explaining the decisions and behaviour of machine learning models.
 
-[![Build Status](https://travis-ci.org/christophM/xai-book.svg?branch=master)](https://travis-ci.org/christophM/interpretable-ml-book)
+[![Build Status](https://travis-ci.org/christophM/interpretable-ml-book.svg?branch=master)](https://travis-ci.org/christophM/interpretable-ml-book)
 
 ## Summary
 You can find the current version of the book here: https://christophm.github.io/interpretable-ml-book/.
