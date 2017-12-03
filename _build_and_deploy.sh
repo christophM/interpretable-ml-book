@@ -14,8 +14,6 @@ if [ "$TRAVIS_COMMIT_MESSAGE" = "$BUILD_COMMIT_MSG" ]; then
   exit 0
 fi
 
-# Render PDF for download option
-Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::pdf_book')"
 # Run compile script
 Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::gitbook')"
 

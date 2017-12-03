@@ -24,7 +24,7 @@ If you are interested in a bigger contribution, like writing a chapter or provid
 Rules for contributing text or code:
 
 - Make sure each text line only contains one sentence. Exception: for item lists it is one item (with possibly multiple sentences) per line.
-- Fork the repository and open a pull request (PR) for requesting to include the changes. You can use "[WIP]" in the title of the PR, to indicate that you are still working on it 
+- Fork the repository and open a pull request (PR) for requesting to include the changes. You can use "[WIP]" in the title of the PR, to indicate that you are still working on it
 
 
 ## Rendering the book
@@ -40,8 +40,9 @@ git clone git@github.com:christophM/interpretable-ml-book.git
 
 For rendering the book, start an R session and type:
 ```{r}
-bookdown::render_book("index.Rmd", "bookdown::pdf_book")
+bookdown::render_book('./', 'bookdown::gitbook')
 ```
+
 After rendering, the HTML files of the  book will be in the "_book" folder. You can either double-click index.html directly or, of course, do it in R:
 ```{r}
 browseURL('_book/index.html')
