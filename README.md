@@ -53,5 +53,8 @@ browseURL('_book/index.html')
 ## Changelog
 All notable changes to the book will be documented here.
 
+### v0.2 WORK IN PROGRESS
+- Making it easier to collaborate: Travis checks if book can be rendered for pull requests
+
 ### v0.1 (2017-12-03)
 - First release of the Interpretable Machine Learning book
