@@ -210,18 +210,10 @@ In this Chapter I want to convince you of the following:
 As an explanation for an event, humans prefer short explanations (just 1 or 2 causes), which contrast the current situation with a situation where the event would not have happened.
 Also explanations are social interactions between the explainer and the explainee (receiver of the explanation) and therefore the social context has a huge influence on the actual content of the explanation.
 
+If you build the explanation system to get ALL the factors for a certain prediction or behaviour, you do not want a human-style explanation, but rather a complete causal attribution.
+You probably want a causal attribution when you are legally required to state all influencing features or if you are debugging the machine learning model. In this case, ignore the following points.
+In all other setting, where mostly lay persons are the recipients of the explanation, follow the advice here.
 
-<!--TODO: Move this to 'good explanations' to avoid duplication. Also summary is already up there-->
-If you don't want to read the whole Chapter, but want the insights translated for building good (read: human-preferred) explanation frameworks for machine learning:
-
-- If you build the explanation system to get ALL the factors for a certain prediction or behaviour, you do not want a human-style explanation, but rather a complete causal attribution. You probably want a causal attribution when you are legally required to state all influencing features or if you are debugging the machine learning model. In this case, ignore the following points. In all other setting, where mostly lay persons are the recipients of the explanation, follow the advice here.
-- Good explanations are selective. Make the explanation very short, give only 1 to 3 reasons, even if the world is more complex. The LIME method, described in Chapter \@ref(lime) does a good job with this.
-- Explanations are social. Keep in mind, what the social setting of your machine learning is and who the target audience is. This will differ a lot depending on your application. I know this advice is a bit fuzzy, but it is probably the best to ask people from the humanities (e.g. psychologists, sociologists) to help you out.
-- Good explanations are contrastive. Humans don't want a complete explanation for a prediction but rather compare what the difference were to another instance's prediction (could also be a fictive one). Making explanations contrastive is application dependent, because it requires a point of reference for comparison. And this might depend on the data point to be explained, but also on the one receiving an explanation. A user of a house prize prediction website might want to have an explanation of a house prize prediction contrastive to her own house or maybe to some other house on the website or maybe to an average house in the neighbourhood. The solution for creating contrastive explanations in an automated fashion might include finding prototypes or archetypes in the data to contrast to.
-- Good explanations focus on abnormal causes. If one of the input features for a prediction was abnormal in any sense (like a rare category of a categorical feature) and the feature changed the prediction, it should be included in an explanation, even if other 'normal' features have the same importance as the abnormal one. An "abnormal" feature in our house prize predictor example might be that a rather expensive house has three balconies. Even if some attribution method finds out that the three balconies contribute has the same effect as the somewhat above average size, the good neighbourhood and the recent renovation, the abnormal feature "three balconies" might be the best explanation why the house is so expensive.
-- The explanation should explain the event as truthfully as possible, which is sometimes called **fidelity** in the context of machine learning. So when we say that three balconies increase the prize of a house, it should hold true for other houses as well (or at least for similar houses). To humans, fidelity is not as important for a good explanations as selectivity, contrast and the social aspect.
-- Humans prefer **simple and general** explanations. A good example is the size of a house, which is a very general, good explanation why houses are expensive or cheap. Note that it contradicts the claim that "abnormal" causes make good explanations. As I see it, abnormal causes beat general causes. Abnormal causes are, by definition, rare. So in the absence of some abnormal event, a general explanation is judged to be good by humans. Generality is easily measured by its support, which is the number of instances for which the explanation applies over the total number of instances.
-- Good explanations are consistent with prior beliefs. This one is hard to infuse into machine learning and would probably drastically compromise accuracy. An example would be negative effects of house size for the predicted prize of the house for a few special houses, which let's say improve accuracy (because of some complex interactions), but strongly contradicts prior beliefs. One thing you can do is to enforce monotonicity constraints (a feature can affect the outcome only into one direction) or use something like a linear model that has this property.
 
 ### What is an explanation?
 
@@ -256,7 +248,8 @@ Now that we know what an explanation is, the question arises, what a good explan
 Machine learning model interpretability on a per-instance level as described in Chapter \@ref(interpretability) generates explanations, but as we will learn, not necessarily "good" ones.
 "Many artificial intelligence and machine learning publications and methods claim to be about "interpretable" or "explainable" methods, yet often this claim is only based on the authors intuition instead of hard facts and research." - @miller2017explanation
 
-From @miller2017explanation's findings we can learn, what is important for an explanation to be viewed as 'good':
+From @miller2017explanation's findings we can learn, what is important for an explanation to be viewed as 'good'.
+The major attributes of a good explanations are: contrastive, social, selected and abnormality-focused.
 
 **Explanations are contrastive** (@lipton1990contrastive):
 Humans usually don't ask *why* a certain prediction was made, but rather why this prediction was made instead of another prediction.
@@ -270,10 +263,17 @@ As we will see, most interpretable models allow to extract some form of explanat
 Going back to the question "Why did the treatment not work on the patient?", the doctor might ask for an explanation contrastive to a patient, where the treatment worked and who was maybe similar to the non-responsive patient.
 Contrastive explanations are easier to understand than complete explanations.
 A complete explanation to the doctor's why question (why does the treatment not work) might include:
-The patient has the disease already since 10 years, 11 genes are over-expressed making the disease more severe, the patients body is very fast in breaking down the treatment into ineffective compounds , etc.. The contrastive explanation, which answers the question compared to the other patient, for whom the drug worked, might be much simpler:
+The patient has the disease already since 10 years, 11 genes are over-expressed making the disease more severe, the patients body is very fast in breaking down the treatment into ineffective compounds , etc..
+The contrastive explanation, which answers the question compared to the other patient, for whom the drug worked, might be much simpler:
 The non-responsive has a certain combination of genes, that make the medication much less effective, compared to the other patient.
 The best explanation is the one that highlights the greatest difference between the object of interest and reference objects.
 To explain why class A was predicted rather than class B, a good explanation consists of the difference between class A and B and not what constitutes class A (or class B) in general.
+*What it means for interpretable machine learning*:
+Humans don't want a complete explanation for a prediction but rather compare what the difference were to another instance's prediction (could also be a fictive one).
+Making explanations contrastive is application dependent, because it requires a point of reference for comparison.
+And this might depend on the data point to be explained, but also on the one receiving an explanation.
+A user of a house prize prediction website might want to have an explanation of a house prize prediction contrastive to her own house or maybe to some other house on the website or maybe to an average house in the neighbourhood.
+The solution for creating contrastive explanations in an automated fashion might include finding prototypes or archetypes in the data to contrast to.
 
 **Explanations are selected**:
 People don't expect expectations to cover the actual and complete cause of an event.
@@ -287,6 +287,10 @@ Rashomon is a Japanese movie in which alternative, contradictory stories (explan
 For machine learning models it is good, when a good prediction can be made from different features.
 Especially ensemble methods that combine multiple models with different features (different explanations) thrive on the fact that averaging over those "stories" makes the prediction more robust an accurate.
 But it also means that there is no good explanation why they made the prediction.
+*What it means for interpretable machine learning*:
+Make the explanation very short, give only 1 to 3 reasons, even if the world is more complex.
+The LIME method, described in Chapter \@ref(lime) does a good job with this.
+
 
 **Explanations are social**:
 They are part of a conversation or interaction between the explainer and the receiver of the explanation.
@@ -295,9 +299,13 @@ If I wanted to explain why digital cryptocurrencies are worth so much technical 
 "The decentralised, distributed blockchain-based ledger that cannot be controlled by a central entity resonates with peoples desire to secure their wealth, which explains the high demand and high prize.".
 But to my grandma I might say:
 "Look Grandma: Cryptocurrencies are a bit like gold, but it is just in your computer. Old people like and pay a lot for physical gold, young people like and pay a lot for digital gold".
+*What it means for interpretable machine learning*:
+Keep in mind, what the social setting of your machine learning is and who the target audience is.
+This will differ a lot depending on your application.
+I know this advice is a bit fuzzy, but it is probably the best to ask people from the humanities (e.g. psychologists, sociologists) to help you out.
 
-
-**Explanations focus on the abnormal** People focus more on abnormal causes (@kahneman1981simulation).
+**Explanations focus on the abnormal**.
+People focus more on abnormal causes (@kahneman1981simulation).
 These are causes, that had a small likelihood, but happened anyways.
 And removing these unlikely, abnormal causes would have changed the outcome a lot.
 These kinds of "abnormal" causes are considered good explanations by humans.
@@ -313,15 +321,41 @@ The teacher tests the students most of the time.
 A student who did not study (0 preparation) fails the test.
 Why did the student fail the test?
 We would say it was the students fault to not study.
+*What it means for interpretable machine learning*:
+If one of the input features for a prediction was abnormal in any sense (like a rare category of a categorical feature) and the feature changed the prediction, it should be included in an explanation, even if other 'normal' features have the same importance as the abnormal one.
+An "abnormal" feature in our house prize predictor example might be that a rather expensive house has three balconies.
+Even if some attribution method finds out that the three balconies contribute has the same effect as the somewhat above average size, the good neighbourhood and the recent renovation, the abnormal feature "three balconies" might be the best explanation why the house is so expensive.
 
+**Explanations are truthful**.
+If they are not true, people probably don't accept them.
+But, disturbingly, this is not the most important factor for a 'good' explanation.
+For example selectiveness is more important than truthfulness.
+An explanation that selects only one or two possible causes can never cover the complete causes in reality. Selectivity omits part of the truth.
+It's not true that only one or the other factor caused a market crash for example, but the truth is that there are millions of causes that influence millions of people to act in a way that caused a stock crash in the end.
+*What it means for interpretable machine learning*:
+The explanation should explain the event as truthfully as possible, which is sometimes called **fidelity** in the context of machine learning.
+So when we say that three balconies increase the prize of a house, it should hold true for other houses as well (or at least for similar houses).
+To humans, fidelity is not as important for a good explanations as selectivity, contrast and the social aspect.
 
-Also relevant, but minor points for good explanations:
+**Good explanations are coherent with prior beliefs of the explainee**.
+Humans tend to ignore information that is not coherent with their prior beliefs .
+This effect is known as confirmation bias (@nickerson1998confirmation).
+Explanations are not spared from this type of bias:
+People will tend to devalue or ignore explanations that do not cohere with their beliefs.
+This of course differs individually, but there are also group-based prior beliefs like political opinions.
+*What it means for interpretable machine learning*:
+Good explanations are consistent with prior beliefs.
+This one is hard to infuse into machine learning and would probably drastically compromise accuracy.
+An example would be negative effects of house size for the predicted prize of the house for a few special houses, which let's say improve accuracy (because of some complex interactions), but strongly contradicts prior beliefs.
+One thing you can do is to enforce monotonicity constraints (a feature can affect the outcome only into one direction) or use something like a linear model that has this property.
 
-- Explanations have to be true. If they are not true, people probably don't accept them. But this is not the most important factor for a 'good' explanation
-- The explanations should be coherent with their prior beliefs, otherwise they might not accept it.
-- Necessary causes are preferred to sufficient causes. Necessary means, that without that cause, the event could never happen. Sufficient means, that this feature enables the prediction, but there can be other sufficient features.<!--TODO: Find good example here -->
-- Probability. Not that this contradicts the fact that this contradicts that people explain things with abnormal causes. Abnormal causes are more important. But in the absence of abnormal causes, causes that are more probable are better.  But keep in mind that people tend to wrongly judge probability of joint events. (Joe is a librarian. Is it more likely that he is shy or that he is a shy person that loves reading books?)
-- The more general the explanation is the better.
-- The more events it can explain, the better.
-<!--TODO: Improve description of probable causes-->
-<!--TODO: Improve description of  generality of explanations -->
+**Good explanations are general and probable**.
+A cause that can explain a lot of events is very general and makes for a good explanation.
+Note that this contradicts the fact that this contradicts that people explain things with abnormal causes. Abnormal causes are more important.
+But in the absence of abnormal causes, causes that are more probable are better.  But keep in mind that people tend to wrongly judge probability of joint events.
+(Joe is a librarian. Is it more likely that he is shy or that he is a shy person that loves reading books?).
+A good example is the size of a house, which is a very general, good explanation why houses are expensive or cheap.
+Note that it contradicts the claim that "abnormal" causes make good explanations. As I see it, abnormal causes beat general causes.
+Abnormal causes are, by definition, rare. So in the absence of some abnormal event, a general explanation is judged to be good by humans.
+*What it means for interpretable machine learning*:
+Generality is easily measured by its support, which is the number of instances for which the explanation applies over the total number of instances.
