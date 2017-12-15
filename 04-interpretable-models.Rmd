@@ -25,9 +25,9 @@ Not in detail, only the basics, because there are already a ton of books, videos
 We will focus on how to interpret the models.
 This chapter covers linear models, logistic regression, and decision trees in more detail. It also lists some more.
 
-All of the interpretable model types explained in this book are interpretable on a modular level, with the exception of the k-nearest neighbours method.
+All of the interpretable model types explained in this book are interpretable on a modular level, with the exception of the k-nearest neighbors method.
 The following table gives an overview over the interpretable model types and their properties.
-A model is linear if the association between features and target is modelled linearly.
+A model is linear if the association between features and target is modeled linearly.
 A monotonic model ensures that the relationship between a feature and the target outcome is always in the same direction over the whole range of the feature:
 an increase in the features value will consistently lead to either an increase or a decrease of the target outcome, but never both for this feature.
 Monotonicity is useful for the interpretation of a model, because it makes it easier to understand a relationship.
@@ -304,6 +304,8 @@ Let's have a look at the effect realisation for the rental bike count of one ins
 Some features contribute unusually little or much to the predicted bike count when compared to the overall dataset: Temperature (`r round(X[i, 'temp'],0)` degrees) contributes less towards the predicted value compared to the average and the trend feature "days_since_2011" unusually much, because this instance is from late 2011 (`r  X[i, 'days_since_2011']` days).
 
 
+
+
 ### Coding Categorical Features {#cat.code}
 There are several ways to encode a categorical feature and the choice influences the interpretation of the $\beta$-weights.
 
@@ -364,7 +366,20 @@ You have a model to predict the value of a house and have features like number o
 House area and number of rooms are highly correlated: the bigger a house is, the more rooms it has. If you now take both features into a linear model, it might happen, that the area of the house is the better predictor and get's a large positive weight.
 The number of rooms might end up getting a negative weight, because either, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
 
-
+### Do linear models create good explanations?
+Judging by the attributes that constitute a good explanation as presented in Chapter \@ref(good-explanation), linear models don't create the best explanations.
+They are contrastive, but the reference instance is a data point for which all continuous features are zero and the categorical features at their reference levels
+This is usually an artificial, meaningless instance, which is unlikely to occur in your dataset.
+There is an exception:
+When all continuous features are mean centered (feature minus mean of feature) and all categorical features are effect coded, the reference instance is the data point for which each feature is at its mean.
+This might also be a non-existent data point, but it might be at least more likely or meaningful.
+In this case, the $\beta$-values times the feature values (feature effects)  explain the contribution to the predicted outcome contrastive to the reference mean-instance.
+Another aspect of a good explanation is selectivity, which can be achieved in linear models by using less features or by fitting sparse linear models, see Chapter \@ref(sparse-linear).
+But by default, linear models don't create selective explanations.
+Linear models create truthful explanations, as long as the  linear equation can model the relationship between features and outcome.
+The more non-linearities and interactions exist, the less accurate the linear model becomes and the less truthful explanations it will produce.
+The linearity makes the explanations more general and simple.
+The linear nature of the model, I believe, is the main factor why people like linear models for explaining relationships.
 
 
 ### Extending Linear Models
@@ -657,6 +672,16 @@ The tree structure is perfectly suited to **cover interactions** between feature
 The data also ends up in **distinct groups**, which are often easier to grasp than points on a hyperplane like in linear regression.
 The interpretation is arguably pretty straightforward.
 The tree structure also has a **natural visualization**, with it's nodes and edges.
+Trees **create good explanations** as defined in Chapter \@ref(good-explanation).
+The tree structure automatically invites to think about predicted values for single instances in a counterfactual way:
+"If feature $x_j$ would have been bigger / smaller than the split point, the prediction would have been $\hat{y}_{1}$ instead of $\hat{y}_2$"
+The created explanations are contrastive, because you can always compare the prediction of an instance with relevant (as defined by the tree) "what-if"-scenarios, which are simply the other leaf nodes of the tree.
+If the tree is short, like one to three splits deep, the resulting explanations are selective.
+A tree with a depth of three needs a maximum of three features and split points to create the explanation for the prediction of an instance.
+The truthfulness of the prediction depends on the predictive performance of the tree.
+The explanations for short trees are very simple and general, because for each split, the instance either falls into one or the other leave., and binary decisions are easy to understand.
+
+
 
 ### Disadvantages
 **Handling of linear relationships**, that's what trees suck at.
