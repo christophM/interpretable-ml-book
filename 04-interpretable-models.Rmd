@@ -707,12 +707,11 @@ It does not generate confidence in the model if the structure flips so easily.
 
 RuleFit [@friedman2008predictive] fits a sparse linear model with automatically created binary decision rules as features.
 
-
-One big problem with linear models is the lack of interaction effects between features.
+One big problem with linear models is that they don't account for interaction effects between features.
 Wouldn't it be cool to have a model that is as simple as linear models, but can, somehow, also integrate feature interactions?
 Let me introduce RuleFit to you!
 
-RuleFit fits a sparse linear model with (optionally) the original features and also new features which are decision rules, extracted from decision trees.
+RuleFit fits a sparse linear model with (optionally) the original features and also a set of new features which are decision rules, extracted from decision trees.
 These new features are interaction effects between original features.
 RuleFit generates these features automatically.
 It uses the trick, that you can create for each path through a tree a decision rule by combining the split decisions to a rule, see for example Figure \@ref(rulefit-split).
@@ -722,11 +721,18 @@ knitr::include_graphics("images/rulefit.jpg")
 Where are those trees coming from?
 These are trees that are trained to predict the outcome of interest, so the splits it finds are meaningful for the task at hand and not arbitrary.
 Basically any algorithm that creates trees can be used, like a Random Forest for example.
-Then the decision rules are created and
+Each tree from that ensemble is then disassembled into decision rules, which are used in the Lasso linear model.
+
+TODO: Mention feature importance, interaction effects and partial dependence
+
+### Interpretation and Example
+
+The interpretation is the same as in linear models.
+The only difference is that some features are coming from decision rules.
+So they are binary features, with 1 meaning that the conditions of the rule are met, and 0 otherwise.
 
 
-
-### Interpretation
+An example of rules that are generated from the bike dataset (see Chapter \@ref(bike-data)):
 
 ```{r rulefit-example, fig.cap="4 rules can be generated from a tree with 3 terminal nodes.", out.width="80%"}
 library('pre')
@@ -741,10 +747,34 @@ coefs <- coef(mod)
 DT::datatable(coefs[coefs$coefficient!=0,], options = list(scrollX=TRUE))
 ```
 
+TODO: Show table with importance, coefficient, support and rule. Do interpretation.
+
+TODO: Add extended bike sharing example here.
+
+TODO: Add interpretation example
+
+TODO: Add importance measurement.
+
+TODO: Add feature interaction example
+
+TODO: Add partial dependence plots and refert to pdp chapter
+
+TODO: Add cervical cancer example
+
+TODO: Mention number of rules that were generate for each application example. How many with non-zero weights?
 
 ### Guidelines
 
-### Digging deeper
+
+TODO: What is good about the method
+
+TODO: What is not so good about the method
+
+TODO: Tricks for using it.
+
+
+
+### Getting technical
 
 
 ```{r rulefit-trees, fig.cap="4 rules can be generated from a tree with 3 terminal nodes.", out.width="80%"}
@@ -779,8 +809,28 @@ They are derived from Decision Trees, by basically disassembling them.
 Every path in a tree can be turned into a decision rule.
 Figure \@ref(fig:rulefit) illustrates the rule generation.
 You simply chain the binary decisions that lead to a certain node, and voilà, you have a rule.
-It is desirable to generate a lot of diverse and meaningful rules. Gradient boosting is used to fit an ensemble of decision trees (by regressing or classifying $y$ with your original features $X$).
+It is desirable to generate a lot of diverse and meaningful rules.
+Gradient boosting is used to fit an ensemble of decision trees (by regressing or classifying $y$ with your original features $X$).
 Each resulting tree is turned into multiple rules.
+Any type of ensemble of trees can be used to generate the trees:
+$$F(x) = a_0 + \sum_{m=1}^M a_m f_m(X)$$
+where $M$ is the size of the ensemble (number of trees). and $f_m(x)$ is one of its members (a single tree).
+This is true for RandomForests, but also for any boosted trees.
+
+A general ensemble generation algorithm:
+
+- $F_0(x) = \text{arg min}_{\alpha} \sum_{i = 1}^N L(y_i, \alpha)$
+- For $m = 1$ to $M$:
+    - $p_m = \text{arg min}_p \sum_{i \in S_m (\eta)} L(y_i, F_{m-1}(x_i) + f(x_i; p))$
+    - $f_m(x) = f(x;p_m)$
+    - $F_m(x) = F_{m-1}(x) + \nu \cdot f_m(x)$
+- $\text{ensemble} = \{f_m(x)\}_1^M$
+
+TODO: explain generation algorithm components
+
+TODO: Definition of rule base ensemble with formulas
+
+TODO: Formulas for rule fitting.
 
 
 
@@ -789,6 +839,10 @@ Those features are binary and can represent quite complex interactions of your o
 The rules are chosen to maximise the prediction task at hand.
 
 **Step 2: Sparse linear model**
+
+TODO: Write about linear basis function
+
+TODO: Write complete $F(X)$ With linear basis functions and rules and the optimization problem (Lasso)
 
 You will get A LOT of rules from the first step (and that is what you want).
 Since the first step is only a feature transformation function on your original data set you are still not done with fitting a model and also you want to reduce the number of rules.
@@ -800,8 +854,22 @@ The numerical features are added because trees suck at representing simple linea
 The outcome is a linear model that has linear effects for all of the numerical features and also linear terms for the rules.
 The interpretation is the same as with linear models, the only difference is that some features are now binary rules.
 
+
+
+TODO: Add feature importance measurement (mathematical definition)
+
+TODO: Add interaction effects measurement (mathematical definition)
+
+TODO: Mention random tree size?
+
+TODO: Mention special loss for classification?
+
+TODO: Add normalization of rules (with this 0.4 factor)
+
+
 ### Summary
 
+TODO: Write a summary of the RuleFit method
 
 
 
