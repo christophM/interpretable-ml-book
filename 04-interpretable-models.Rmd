@@ -186,14 +186,14 @@ Figure \@ref(fig:linear-weights-plot) shows a weight plot of the linear model fi
 coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   lm_summary = summary(mod)$coefficients
   rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
-
+  
   df = data.frame(Features = rownames(lm_summary),
-                  Estimate = lm_summary[,'Estimate'],
-                  std_error = lm_summary[,'Std. Error'])
+    Estimate = lm_summary[,'Estimate'],
+    std_error = lm_summary[,'Std. Error'])
   df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
   df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
-
-
+  
+  
   if(remove_intercept){
     df = df[!(df$Features == '(Intercept)'),]
   }
@@ -246,13 +246,13 @@ get_reference_dataset = function(dat){
 }
 
 get_effects = function(mod, dat){
-
+  
   X = data.frame(predict(mod, type = 'terms'))
-
+  
   # Nicer colnames
   colnames(X) = gsub('^X\\.', '', colnames(X))
   colnames(X) = gsub('\\.', ' ', colnames(X))
-
+  
   # predict with type='terms' centers the results, so we have to add the mean again
   reference_X = predict(mod, newdata=get_reference_dataset(dat), type='terms')
   X_star = data.frame(t(apply(X, 1, function(x){ x - reference_X[1,names(X)]})))
@@ -449,12 +449,12 @@ There are just a few problems with that approach:
 
 ```{r linear-class-threshold, fig.cap="An illustration why linear regression does not work well in a binary classification setting. A linear model is fitted on artificial data for classifying a tumour as malignant (1) or benign (0), dependant on the size of the tumour. Each point is a tumour, the x-axis shows the size of the tumour, the y-axis the malignancy, points are slightly jittered to reduce over-plotting. The lines display the fitted curve from a linear model. In the data setting on the left, we can use 0.5 as a threshold for the predicted outcome of the linear model for separating benign from malignant tumours. After introducing a few more malignant tumour cases, especially with larger tumour sizes, the regression line shifts and a threshold of 0.5 does not separate the classes any longer.", out.width = '80%'}
 df = data.frame(x = c(1,2,3,6,7,8,9),
-                y = c(0,0,0,1,1,1,1),
-                case = '0.5 threshold ok')
+  y = c(0,0,0,1,1,1,1),
+  case = '0.5 threshold ok')
 
 df_extra  = data.frame(x=c(df$x, 7, 7, 7, 4, 20, 19),
-                       y=c(df$y, 1,1,1,1, 1,1),
-                       case = '0.5 threshold not ok')
+  y=c(df$y, 1,1,1,1, 1,1),
+  case = '0.5 threshold not ok')
 
 df.lin.log = rbind(df, df_extra)
 p1 = ggplot(df.lin.log, aes(x=x,y=y)) +
@@ -482,7 +482,7 @@ logistic = function(x){1 / (1 + exp(-x))}
 
 x = seq(from=-6, to = 6, length.out = 100)
 df = data.frame(x = x,
-                y = logistic(x))
+  y = logistic(x))
 ggplot(df) + geom_line(aes(x=x,y=y)) + my_theme()
 ```
 The step from linear regression models to logistic regression is kind of straightforward. In the linear regression model we modelled the relationship between the outcome and the features with a linear equation:
@@ -539,8 +539,8 @@ Using the rule that $\frac{exp(a)}{exp(b)} = exp(a - b)$ gives us:
 
 $$
 \begin{aligned}
-  \frac{odds_{i, x_j + 1}}{odds_i} &  = & exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot (x_{i,j} + 1)  + \ldots+ \beta_{i,p}x_{i,p}\right) \\
-    & & - exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot x_{i,j}  + \ldots+ \beta_{p} x_{i,p}\right)
+\frac{odds_{i, x_j + 1}}{odds_i} &  = & exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot (x_{i,j} + 1)  + \ldots+ \beta_{i,p}x_{i,p}\right) \\
+& & - exp\left(\beta_{0} + \beta_{1} \cdot x_{i,1} + \ldots + \beta_{j} \cdot x_{i,j}  + \ldots+ \beta_{p} x_{i,p}\right)
 \end{aligned}
 $$
 
@@ -570,15 +570,15 @@ The data are described in Chapter \@ref(cervical-data)
 ```{r logistic-example}
 
 neat_cervical_names = c('Intercept', 'Hormonal contraceptives y/n',
-                        'Smokes y/n', 'Num. of pregnancies',
-                        'Num. of diagnosed STDs',
-                        'Intrauterine device y/n')
+  'Smokes y/n', 'Num. of pregnancies',
+  'Num. of diagnosed STDs',
+  'Intrauterine device y/n')
 
 # Load cervical data
 source(sprintf('%s/create-cervical-cancer-data.R', src_dir))
 # Fit logistic model for probability of cancer, use few features that are interesting
 mod = glm(Biopsy ~ Hormonal.Contraceptives + Smokes + Num.of.pregnancies + STDs..Number.of.diagnosis + IUD,
-          data = cervical, family = binomial())
+  data = cervical, family = binomial())
 # Print table of coef, exp(coef), std, p-value
 coef.table = summary(mod)$coefficients[,c('Estimate', 'Std. Error')]
 coef.table = cbind(coef.table, 'Odds ratio' = as.vector(exp(coef.table[, c('Estimate')])))
@@ -714,7 +714,7 @@ Let me introduce RuleFit to you!
 RuleFit fits a sparse linear model with (optionally) the original features and also a set of new features which are decision rules, extracted from decision trees.
 These new features are interaction effects between original features.
 RuleFit generates these features automatically.
-It uses the trick, that you can create for each path through a tree a decision rule by combining the split decisions to a rule, see for example Figure \@ref(rulefit-split).
+It uses the trick, that you can create for each path through a tree a decision rule by combining the split decisions to a rule, see for example Figure \@ref(fig:rulefit-split).
 ```{r rulefit-split, fig.cap="4 rules can be generated from a tree with 3 terminal nodes.", out.width="80%"}
 knitr::include_graphics("images/rulefit.jpg")
 ```
@@ -723,7 +723,15 @@ These are trees that are trained to predict the outcome of interest, so the spli
 Basically any algorithm that creates trees can be used, like a Random Forest for example.
 Each tree from that ensemble is then disassembled into decision rules, which are used in the Lasso linear model.
 
-TODO: Mention feature importance, interaction effects and partial dependence
+RuleFit also comes with automatic feature importance measurements.
+This makes it easy to see, which linear feature or rule was important globally for the predictions.
+The feature importance is calculated from the weights of the regression model.
+
+Another tool is the interaction effects measurement which tells you how much the feature interact with each other.
+TODO: Tell more about the intuition of the feature interaction measurement. 
+
+The RuleFit paper (@friedman2008predictive) also introduces partial dependence plots to plot the average change of the prediction by changing one feature.
+The partial dependence plot is a model-agnostic method, which can be used with any model, and it has it's own part in the book, see Chapter \@ref{pdp}.
 
 ### Interpretation and Example
 
@@ -731,10 +739,7 @@ The interpretation is the same as in linear models.
 The only difference is that some features are coming from decision rules.
 So they are binary features, with 1 meaning that the conditions of the rule are met, and 0 otherwise.
 
-
-An example of rules that are generated from the bike dataset (see Chapter \@ref(bike-data)):
-
-```{r rulefit-example, fig.cap="4 rules can be generated from a tree with 3 terminal nodes.", out.width="80%"}
+```{r prepare-rulefit-example}
 library('pre')
 features_of_interest = c('season','holiday', 'workingday', 'weathersit', 'temp', 'hum', 'windspeed', 'days_since_2011')
 X = bike.train[features_of_interest]
@@ -742,26 +747,51 @@ X = bike.train[features_of_interest]
 y = bike.train[,'cnt']
 dat = cbind(X, y)
 mod = pre(y ~ ., data = dat, maxdepth = 2, ntrees = 100)
-
 coefs <- coef(mod)
-DT::datatable(coefs[coefs$coefficient!=0,], options = list(scrollX=TRUE))
+coefs = left_join(coef(mod), importance(mod, plot=FALSE)$baseimp)
+coefs = coefs[!is.na(coefs$coefficient), ]
+coefs$imp = round(coefs$imp, 1)
+coefs$coefficient = round(coefs$coefficient, 1)
+coefs$sd = round(coefs$sd, 2)
+coefs$rule = NULL
+coefs = filter(coefs, !is.na(description))
+```
+An example of rules that are generated from the bike dataset (see Chapter \@ref(bike-data)) can be seen in Figure \@ref(fig:rulefit-example). 
+The most important rule was: `r coefs[1, 'description']`. 
+When all these conditions are met, the predicted number of bike rentals increases by `r round(coefs[1, 'coefficient'], 1)`. 
+In total,  `r nrow(coef(mod))` rules were created from the original `r ncol(X)` features. 
+Quite a lot!
+But thanks to Lasso, only `r nrow(coefs)` of the `r nrow(coef(mod))` got a weight different from zero. 
+
+```{r rulefit-example, fig.cap="The table shows the resulting rules and weights after fitting 'RuleFit' on the bike dataset. ", out.width="80%"}
+DT::datatable(coefs[c('description', 'coefficient', 'imp', 'sd')], options = list(scrollX=TRUE), 
+colnames = c('Description', 'Weight', 'Importance', 'Std. Dev'), 
+style = 'bootstrap', rownames=FALSE)
+
+```
+Computing the global feature importances reveals that temperature and the time trend are the most important features, see Figure \@ref(fig:rulefit-importance). 
+The feature importance measurement includes the importance from interaction of a feature with another feature. 
+For linear terms in RuleFit, the interpretation is the same as in linear regression models: 
+If $x_j$ increases by one unit, the predicted outcome changes by $\beta_j$. 
+
+Figure \@ref(fig:rulefit-importance) shows the aggregated feature importance values. 
+The feature importances for each rule are attributed to each base feature from X. 
+```{r rulefit-importance, fig.cap = 'Feature importance measures for a RuleFit model predicting bike rentals. The most important features for the predictions were temperature and the time trend.'}
+importance(mod)
 ```
 
-TODO: Show table with importance, coefficient, support and rule. Do interpretation.
 
-TODO: Add extended bike sharing example here.
+Figure \@ref(rulefit-interaction) shows the feature interaction strength of each feature. 
+A feature that interacts a lot with other features has a high interaction strength. 
 
-TODO: Add interpretation example
-
-TODO: Add importance measurement.
-
-TODO: Add feature interaction example
+```{r rulefit-interaction, fig.cap = 'Feature importance measures for a RuleFit model predicting bike rentals. The most important features for the predictions were temperature and the time trend.'}
+interact(mod, varnames = c('weathersit', 'temp'))
+```
 
 TODO: Add partial dependence plots and refert to pdp chapter
 
 TODO: Add cervical cancer example
 
-TODO: Mention number of rules that were generate for each application example. How many with non-zero weights?
 
 ### Guidelines
 
@@ -821,9 +851,9 @@ A general ensemble generation algorithm:
 
 - $F_0(x) = \text{arg min}_{\alpha} \sum_{i = 1}^N L(y_i, \alpha)$
 - For $m = 1$ to $M$:
-    - $p_m = \text{arg min}_p \sum_{i \in S_m (\eta)} L(y_i, F_{m-1}(x_i) + f(x_i; p))$
-    - $f_m(x) = f(x;p_m)$
-    - $F_m(x) = F_{m-1}(x) + \nu \cdot f_m(x)$
+- $p_m = \text{arg min}_p \sum_{i \in S_m (\eta)} L(y_i, F_{m-1}(x_i) + f(x_i; p))$
+- $f_m(x) = f(x;p_m)$
+- $F_m(x) = F_{m-1}(x) + \nu \cdot f_m(x)$
 - $\text{ensemble} = \{f_m(x)\}_1^M$
 
 TODO: explain generation algorithm components
