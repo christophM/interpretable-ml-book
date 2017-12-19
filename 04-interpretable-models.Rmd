@@ -748,6 +748,7 @@ y = bike.train[,'cnt']
 dat = cbind(X, y)
 mod = pre(y ~ ., data = dat, maxdepth = 2, ntrees = 100)
 coefs <- coef(mod)
+coefs$description[is.na(coefs$description)] = coefs$rule[is.na(coefs$description)]
 coefs = left_join(coef(mod), importance(mod, plot=FALSE)$baseimp)
 coefs = coefs[!is.na(coefs$coefficient), ]
 coefs$imp = round(coefs$imp, 1)
@@ -761,7 +762,7 @@ The most important rule was: `r coefs[1, 'description']`.
 When all these conditions are met, the predicted number of bike rentals increases by `r round(coefs[1, 'coefficient'], 1)`. 
 In total,  `r nrow(coef(mod))` rules were created from the original `r ncol(X)` features. 
 Quite a lot!
-But thanks to Lasso, only `r nrow(coefs)` of the `r nrow(coef(mod))` got a weight different from zero. 
+But thanks to Lasso, only `r nrow(coefs[coefs$coefficient != 0,])` of the `r nrow(coef(mod))` got a weight different from zero. 
 
 ```{r rulefit-example, fig.cap="The table shows the resulting rules and weights after fitting 'RuleFit' on the bike dataset. ", out.width="80%"}
 DT::datatable(coefs[c('description', 'coefficient', 'imp', 'sd')], options = list(scrollX=TRUE), 
@@ -781,26 +782,54 @@ importance(mod)
 ```
 
 
-Figure \@ref(rulefit-interaction) shows the feature interaction strength of each feature. 
+Figure \@ref(fig:rulefit-interaction) shows the feature interaction strength of each feature. 
 A feature that interacts a lot with other features has a high interaction strength. 
 
 ```{r rulefit-interaction, fig.cap = 'Feature importance measures for a RuleFit model predicting bike rentals. The most important features for the predictions were temperature and the time trend.'}
 interact(mod, varnames = c('weathersit', 'temp'))
 ```
 
-TODO: Add partial dependence plots and refert to pdp chapter
-
-TODO: Add cervical cancer example
+The original RuleFit paper also introduces the partial dependence plot which displays the average prediction. 
+The partial dependence method is not specific to RuleFit and can in fact be applied to any machine learning model. 
+That's why it deserves its own space in the book, see Chapter \@ref(dpd). 
 
 
 ### Guidelines
 
+**Interpretation template**
 
-TODO: What is good about the method
+The interpretation is analogue to linear models. 
+What is slightly different is the interpretation when the feature $x_j$ is a decision rule: 
+If all conditions of decision rule $x_j$ apply, the predicted outcome changes by $\beta_j$.
+And, respectively, for classification: If all conditions of decision rule $x_j$ apply, the odds for event vs. no-event changes by a factor of $\beta_j$. 
 
-TODO: What is not so good about the method
 
-TODO: Tricks for using it.
+**The Good**: 
+
+- RuleFit brings **automatic interaction** modeling to linear models. 
+Therefore it solves the problem of linear models with having to manually add interaction terms and, partially, the problem of modeling non-linear relationships.
+- RuleFit can handle both classification and regression tasks.
+- The created rules are easy to interpret, because they are binary decision rules. 
+Either the feature applies or not to an instance. 
+This only holds as long as the number of conditions within a rule is not to big. 
+1 to 3 conditions seems reasonable to me. 
+This translates into a maximum depth of 3 for the trees in the tree ensemble. 
+- Even if there are many rules, they do not apply to each instance, so for one instance only a handful of rules are important which makes interpretation easy. 
+- RuleFit comes with a bunch of tools, namely an importance measurement, interaction effects calculation and a partial dependence plot. 
+
+
+**The Bad**: 
+
+- Sometimes RuleFit creates many rules which are also not sparsed out much by Lasso and you end up with a lot of non-zero weights. This is not nice to interpret. 
+A promising approach is to force feature effects to be monotonic, meaning that an increase in a feature has to result in an increase of the predicted outcome. 
+- A more anecdotal drawback: The papers claim good performance of RuleFit - often close to the predictive performance of Random Forests! - yet in the few cases where I personally tried it, the performance was disappointing. 
+- The end product of the RuleFit procedure is a linear model with additional fancy features (the decision rules). 
+But since it is a linear model, the weight interpretation is still unintuitive (given all features are fixed, increasing feature $x_j$ by one unit, increases the predicted outcome by $\beta_j$). 
+It gets a bit more tricky if you have overlapping rules: For example one decision rule (feature) for the bike prediction could be: "temp > 15" and another rule could be "temp > 10 & weather='GOOD'". 
+When the weather is good and the temperature is above 10 degrees, the temperature is automatically also always bigger then 15, which means if the second rule applies, the first one also applies. 
+The interpretation of the estimated weight for the second rule is: 'Given all other features are fixed, the predicted number of bikes increases by $\beta_2$'. 
+BUT, now it becomes really clear that the 'all other feature fixed' is problematic, because if rule 2 applies, also rule 1 applies and the interpretation is nonsensical. 
+
 
 
 
