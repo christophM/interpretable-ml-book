@@ -54,7 +54,9 @@ browseURL('_book/index.html')
 All notable changes to the book will be documented here.
 
 ### v0.2 WORK IN PROGRESS
-- Reworked RuleFit to complete chapter with examples and theory. 
+- Reworked RuleFit to complete chapter with examples and theory.
+- Intepretability chapter extended
+- Add chapter on human-style explanations
 - Making it easier to collaborate: Travis checks if book can be rendered for pull requests
 
 ### v0.1 (2017-12-03)
