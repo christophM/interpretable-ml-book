@@ -1,6 +1,6 @@
 all : html
 
-html : *.Rmd
-	# When build fails xai-book.Rmd is created and not removed. Next build will fail when file exists.
-	rm -f interpretable-ml-book.Rmd
+html : chapters/*.Rmd
+	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
+	rm -f interpretable-ml.Rmd
 	Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::gitbook')"
