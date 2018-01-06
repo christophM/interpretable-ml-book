@@ -1,6 +1,3 @@
-
-library('mlr')
-library('dplyr')
 bike = read.csv(sprintf('%s/bike-sharing-daily.csv', data_dir), stringsAsFactors = FALSE)
 
 year_diff = function(date1, date2){
