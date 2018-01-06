@@ -76,14 +76,6 @@ dat = cbind(X, y)
 mod = lm(y ~ ., data = dat, x = TRUE)
 lm_summary = summary(mod)$coefficients
 
-
-pretty_rownames = function(rnames){
-  rnames = gsub('^`', '', rnames)
-  rnames = gsub('`$', '', rnames)
-  rnames = gsub('`', ':', rnames)
-  rnames
-}
-
 lm_summary_print = lm_summary
 rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 
@@ -127,31 +119,7 @@ The information of the weights table (weight estimates and variance) can be visu
 Figure \@ref(fig:linear-weights-plot) shows a weight plot of the linear model fitted before.
 
 ```{r linear-weights-plot, fig.cap="Each row in the plot represents one feature weight. The weights are displayed as points and the 95\\% confidence intervals with a line around the points. A 95\\% confidence interval means that if the linear model would be estimated 100 times on similar data, in 95 out of 100 times, the confidence interval would cover the true weight, under the linear model assumptions (linearity, normality, homoscedasticity, independence, fixed features, absence of multicollinearity).", fig.align='center'}
-coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
-  lm_summary = summary(mod)$coefficients
-  rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
-
-  df = data.frame(Features = rownames(lm_summary),
-    Estimate = lm_summary[,'Estimate'],
-    std_error = lm_summary[,'Std. Error'])
-  df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
-  df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
-
-
-  if(remove_intercept){
-    df = df[!(df$Features == '(Intercept)'),]
-  }
-  ggplot(df) +
-    geom_vline(xintercept=0, linetype=4) +
-    geom_point(aes(x=Estimate, y=Features)) +
-    geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) +
-    scale_x_continuous('Weight estimate') +
-    scale_y_discrete('Feature') +
-    my_theme()
-}
-
 coef_plot(mod)
-
 ```
 Figure \@ref(fig:linear-weights-plot) makes clear that rainy/snowy/stormy weather has a strong negative effect on the expected number of bikes.
 The working day feature's weight is close to zero and the zero is included in the 95% interval, meaning it is not influencing the prediction significantly.
@@ -177,47 +145,6 @@ The points are outliers.
 The categorical feature effects can be aggregated into one boxplot, compared to the weight plot, where each weight gets a row.
 
 ```{r linear-effects, fig.cap="The feature effect plot shows the distribution of the effects (= feature value times feature weight) over the dataset for each feature.", fig.align='center'}
-
-get_reference_dataset = function(dat){
-  df = lapply(dat, function(feature){
-    if(class(feature) == 'factor'){
-      factor(levels(feature)[1], levels = levels(feature))
-    } else {
-      0
-    }
-  })
-  data.frame(df)
-}
-
-get_effects = function(mod, dat){
-
-  X = data.frame(predict(mod, type = 'terms'))
-
-  # Nicer colnames
-  colnames(X) = gsub('^X\\.', '', colnames(X))
-  colnames(X) = gsub('\\.', ' ', colnames(X))
-
-  # predict with type='terms' centers the results, so we have to add the mean again
-  reference_X = predict(mod, newdata=get_reference_dataset(dat), type='terms')
-  X_star = data.frame(t(apply(X, 1, function(x){ x - reference_X[1,names(X)]})))
-  X_star
-}
-
-effect_plot = function(mod, dat,  feature_names=NULL){
-  X = get_effects(mod, dat)
-  if(!missing(feature_names)){
-    rownames(X) = feature_names
-  }
-  X = gather(X)
-  ggplot(X) +
-    geom_hline(yintercept=0, linetype=4) +
-    geom_boxplot(aes(x=key, y=value, group=key)) +
-    coord_flip() +
-    scale_y_continuous('Feature effect') +
-    scale_x_discrete('Feature') +
-    my_theme()
-}
-
 effect_plot(mod, dat)
 ```
 The largest contributions to the expected number of bike rentals come from temperature and from the days feature, which captures the trend that the bike rental service became more popular over time. The temperature has a broad contribution distribution.
