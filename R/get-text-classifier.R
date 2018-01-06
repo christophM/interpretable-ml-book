@@ -1,4 +1,10 @@
-ycomments = read.csv(sprintf('%s/TubeSpam.csv', data_dir), stringsAsFactors = FALSE)
+
+get.ycomments.classifier = function(ycomments){
+  labeledTerms = prepare_data(ycomments$CONTENT)
+  labeledTerms$class = factor(ycomments$CLASS, levels = c(0,1), labels = c('no spam', 'spam'))
+  rp = rpart::rpart(class ~ ., data = labeledTerms)
+  get_predict_fun(rp, labeledTerms)
+}
 
 prepare_data = function(comments, trained_corpus = NULL){
 
@@ -31,35 +37,12 @@ prepare_data = function(comments, trained_corpus = NULL){
 
 
 
-# Split into training and test by date
-set.seed(42)
-percent_train = 0.8
-train_index = sample(1:nrow(ycomments), size=percent_train * nrow(ycomments), replace = FALSE)
-test_index = setdiff(1:nrow(ycomments), train_index)
-
-train = ycomments[train_index,]
-test = ycomments[test_index, ]
-
-
-
 get_predict_fun = function(model, train_corpus){
   function(comments){
     terms = prepare_data(comments, train_corpus)
     predict(model, newdata = terms, type='prob')
   }
 }
-
-
-
-labeledTerms = prepare_data(train$CONTENT)
-labeledTerms$class = factor(ycomments$CLASS[train_index], levels = c(0,1), labels = c('no spam', 'spam'))
-labeledTerms2 = prepare_data(test$CONTENT, trained_corpus = labeledTerms)
-
-
-
-
-rp = rpart::rpart(class ~ ., data = labeledTerms)
-predict_fun = get_predict_fun(rp, labeledTerms)
 
 
 
@@ -108,7 +91,7 @@ draw_combination =  function(words, prob=0.5){
 #'@param class The class for which to create the predictions
 #'@return data.frame for a local linear model, containing binary features for word occurence
 #'weights for distance to original sentence and the predictions for the chosen class.
-create_variations = function(text, pred_fun, prob=0.5, n_variations = 100, class){
+create_variations = function(text, pred_fun, prob=0.5, n_variations = 100, class, round.to = 2){
   tokenized = tokenize(text)
   df = data.frame(lapply(tokenized, function(x) 1))
   names(df) = tokenized
@@ -120,8 +103,8 @@ create_variations = function(text, pred_fun, prob=0.5, n_variations = 100, class
   texts = as.vector(sapply(combinations, function(x) x['text']))
 
   features = data.frame(data.table::rbindlist(sapply(combinations, function(x) x['combi'])))
-  weights = rowSums(features) / ncol(features)
-  predictions = pred_fun(texts)[,class]
+  weights = round(rowSums(features) / ncol(features), round.to)
+  predictions = round(pred_fun(texts)[,class], round.to)
 
   cbind(features, pred=predictions, weights = weights)
 }
