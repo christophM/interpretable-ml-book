@@ -19,7 +19,7 @@ This kind of accuracy is also called local fidelity.
 The recipe for fitting local surrogate models:
 
 - Choose your instance of interest for which you want to have an explanation of it's black box prediction.
-- Pertube your dataset and  get the black box predictions for these new points.
+- Perturb your dataset and  get the black box predictions for these new points.
 - Weight the new samples by their proximity to the instance of interest.
 - Fit a weighted, interpretable model on the dataset with the variations.
 - Explain prediction by interpreting the local model.
@@ -60,7 +60,6 @@ Figure \@ref(fig:lime-fitting) explains how the sampling and local model fitting
 
 
 ```{r lime-fitting, fig.cap='How LIME sampling works: A) The black box model predicts one of two classes given feature x1 and x2. Most data points have class 0 (darker colour), and the ones with class 1 are grouped in an upside-down V-shape (lighter colour). The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow point is the instance of interest, which we want to explain. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This needs to be done only once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest higher weights. D) The colours and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification of the local model changes.', fig.height=9, fig.width=9}
-source(sprintf('%s/lime.R', src_dir))
 
 colors = c('#132B43', '#56B1F7')
 # Data with some noise
@@ -118,8 +117,8 @@ You can also interpret 'above' as being above the mean bike counts, but adjusted
 
 ```{r lime-tabular-example-train-black-box, cache = TRUE}
 ntree = 100
-bike.train.resid = factor(resid(lm(cnt ~ days_since_2011, data = bike.train)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
-bike.train.x = bike.train[names(bike.train) != 'cnt']
+bike.train.resid = factor(resid(lm(cnt ~ days_since_2011, data = bike.data)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
+bike.train.x = bike.data[names(bike.data) != 'cnt']
 
 model <- caret::train(bike.train.x,
                bike.train.resid,
@@ -128,11 +127,11 @@ model <- caret::train(bike.train.x,
 
 instance_indices = c(295, 285)
 
-probs = predict(model, newdata = bike.train[instance_indices, ], type='prob')
+probs = predict(model, newdata = bike.data[instance_indices, ], type='prob')
 ```
 First we train a Random Forest with `r ntree` trees on the classification task. Given seasonal and weather information, on which day will the number of bike rentals be above the trend-free average?
 
-```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset.  Temperature and good weather situation have a positive effect on the prediction, increasing humidity a negative one. The effect of temperature is roughly the same in both cases. One problem becomes clear: This plot shows the weights and not the effects, which would be weights times actual feature values, which would be more informative. ') }
+```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset.  Temperature and good weather situation have a positive effect on the prediction, the day of the week and increasing humidity a negative one. The effect of temperature is roughly the same in both cases. One problem becomes clear: This plot shows the weights and not the effects, which would be weights times actual feature values, which would be more informative. ') }
 set.seed(44)
 explanation <- lime::lime(bike.train.x, model, bin_continuous=FALSE)
 
@@ -189,15 +188,14 @@ Also in the place of this tree there could have been a recurrent neural network 
 From the remaining comments two were selected for showing the explanations.
 
 ```{r load-text-classification-lime}
-source(sprintf('%s/create_text_classifier.R', src_dir))
-example_indices = c(2,28)
-texts = test$CONTENT[example_indices]
+example_indices = c(8,9)
+texts = ycomments.data$CONTENT[example_indices]
 ```
 Let's look at two comments of this dataset and the corresponding classes:
 
 
 ```{r show--data-TubeSpam}
-DT::datatable(test[example_indices, c('CONTENT', 'CLASS')], options = list(DT::JS('{"scrollX": true}')))
+DT::datatable(ycomments.data[example_indices, c('CONTENT', 'CLASS')], options = list(DT::JS('{"scrollX": true}')))
 ```
 
 
@@ -224,8 +222,9 @@ Figure \@ref(fig:lime-text-explanations) shows for two sentences (one spam, one 
 
 ```{r lime-text-explanations, fig.cap=sprintf('LIME explanations of spam predictions for two Youtube comments. Comment 1: "%s", comment 2: "%s"', texts[1], texts[2])}
 set.seed(42)
+ycomments.predict = get.ycomments.classifier(ycomments)
 explanations  = data.table::rbindlist(lapply(seq_along(texts), function(i) {
- explain_text(texts[i], predict_fun, class='spam', case=i, prob = 0.5)
+ explain_text(texts[i], ycomments.predict, class='spam', case=i, prob = 0.5)
  })
 )
 explanations = data.frame(explanations)
