@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="ice.html">
-<link rel="next" href="lime.html">
+<link rel="prev" href="pdp.html">
+<link rel="next" href="permutation-feature-importance.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
@@ -184,33 +184,75 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="permutation-feature-importance" class="section level2">
-<h2><span class="header-section-number">5.3</span> Permutation Feature Importance</h2>
-<p>The permutation feature importance measurement was introduced for RandomForests by <span class="citation">Breiman (<a href="#ref-breiman2001random">2001</a>)</span>. It works by measuring what happens to the model performance when you permute each feature. A big loss in performance means a big feature importance. The idea of the permutation of features is per se model-agnostic, only the out-of-bag (=datapoints not used for model fitting) estimation scheme is specific for bootstrapped ensemble methods. Permutation feature importance can be used for any model when a hold-out dataset, instead of out-of-bag samples is used. Of course you could also use the training data, but you risk getting variable importance measures that overfit your data, since the model was already trained on it.</p>
-<p>I haven’t found any paper that generalises permutation feature importance, so that it can be applied model-agnostic. There are a few implementations, but seemingly without research backing it up. Please drop me a mail if you know about a formal introduction of model-agnostic feature importance.</p>
-<p>Taking the RandomForest feature importance algorithm from <span class="citation">(Breiman <a href="#ref-breiman2001random">2001</a>)</span>, here is my take for how to do permutation feature importance in a model-agnostic way:</p>
-<p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, hold-out dataset <span class="math inline">\(D\)</span>, number of permutations <span class="math inline">\(n_{perm}\)</span></p>
-<ol style="list-style-type: decimal">
-<li>Estimate performance <span class="math inline">\(Perf\)</span> of <span class="math inline">\(\hat{f}\)</span> on dataset <span class="math inline">\(D\)</span> (e.g. mean squared error)</li>
-<li>For each feature <span class="math inline">\(j \in 1, \ldots, p\)</span> do
-<ul>
-<li>For <span class="math inline">\(i \in 1,\ldots , n_{perm}\)</span>
-<ul>
-<li>Generate data <span class="math inline">\(D_{j_{perm}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in data <span class="math inline">\(D\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
-<li>Estimate performance <span class="math inline">\(Perf_{i,j_{perm}}\)</span> of <span class="math inline">\(\hat{f}\)</span> on dataset <span class="math inline">\(D_{j_{perm}}\)</span></li>
-<li>Calculate permutation feature importance <span class="math inline">\(FI_i(X_j) = Perf_{i,j_{perm}} - Perf\)</span></li>
-</ul></li>
-<li>Calculate mean variable importance for the sample: <span class="math inline">\(FI(X_j) = \frac{1}{n_{perm}}\sum_{i=1}^{n_{perm}} FI_i(X_j)\)</span></li>
-</ul></li>
-<li>Sort variables by descending <span class="math inline">\(FI\)</span>.</li>
-</ol>
-<p>The feature with the highest importance measure <span class="math inline">\(FI\)</span> makes the most difference in performance globally in your model.</p>
+<div id="ice" class="section level2">
+<h2><span class="header-section-number">5.2</span> Individual Conditional Expectation (ICE) Plot</h2>
+<p>The partial dependence plot for visualising the average effect of a feature is a global method, because it does not focus on specific instances, but on an overall average. The equivalent to a PDP for local expectations is called individual conditional expectation (ICE) plot <span class="citation">(Goldstein et al. <a href="#ref-goldstein2015peeking">2015</a>)</span>. An ICE plot visualises the dependence of the predicted response on a feature for EACH instance separately, resulting in multiple lines, one for each instance, compared to one line in partial dependence plots. A PDP is the average of the lines of an ICE plot. The values for a line (and one instance) can be computed by leaving all other features the same, creating variants of this instance by replacing the feature’s value with values from a grid and letting the black box make the predictions with these newly created instances. The result is a set of points for an instance with the feature value from the grid and the respective predictions.</p>
+<p>So, what do you gain by looking at individual expectations, instead of partial dependencies? Partial dependence plots can obfuscate a heterogeneous relationship that comes from interactions. PDPs can show you how the average relationship between feature <span class="math inline">\(x_S\)</span> and <span class="math inline">\(\hat{y}\)</span> looks like. This works only well in cases where the interactions between <span class="math inline">\(x_S\)</span> and the remaining <span class="math inline">\(x_C\)</span> are weak. In case of interactions, the ICE plot will give a lot more insight.</p>
+<p>A more formal definition: In ICE plots, for each instance in <span class="math inline">\(\{(x_{S_i}, x_{C_i})\}_{i=1}^N\)</span> the curve <span class="math inline">\(\hat{f}_S^{(i)}\)</span> is plotted against <span class="math inline">\(x_{S_i}\)</span>, while <span class="math inline">\(x_{C_i}\)</span> is kept fixed.</p>
+<div id="example-1" class="section level3">
+<h3><span class="header-section-number">5.2.1</span> Example</h3>
+<p>Let’s go back to the dataset about risk factors for cervical cancer from Chapter <a href="cervical-data.html#cervical-data">3.3</a> and see how each instance’s prediction is associated with the feature ‘Age’. The model we will analyse is a RandomForest that predicts the probability of cancer for a woman given risk factors. In the partial dependence plot from Chapter <a href="pdp.html#pdp">5.1</a> we have seen that the cancer probability increases around the age of 50, but does it hold true for each woman in the dataset? The ICE plot (Figure <a href="ice.html#fig:ice-cervical">5.5</a>) reveals that the most women’s predicted probability follows the average pattern of increase at 50, but there are a few exceptions: For the few women that have a high predicted probability at a young age, the predicted cancer probability does not change much with increasing age.</p>
+Figure <a href="ice.html#fig:ice-bike">5.6</a> shows an ICE plot for the bike rental prediction (the underlying prediction model is a RandomForest). The data is described in Chapter <a href="bike-data.html#bike-data">3.1</a>. All curves seem to follow the same course, so there seem to be no obvious interactions. That means that the PDP is already a good summary of the relationships of the displayed features and the predicted bike rentals.
+<div class="figure" style="text-align: center"><span id="fig:ice-cervical"></span>
+<img src="interpretable-ml_files/figure-html/ice-cervical-1.svg" alt="Individual conditional expectation plot of cervical cancer probability by age. Each line represents the conditional expectation for one woman. Most women with a low cancer probability in younger years see an increase in predicted cancer probability, given all other feature value stay the same. Interestingly for a few women that have a high estimated cancer probability bigger than 0.4, the estimated probability does not change much with higher age." width="80%" />
+<p class="caption">
+FIGURE 5.5: Individual conditional expectation plot of cervical cancer probability by age. Each line represents the conditional expectation for one woman. Most women with a low cancer probability in younger years see an increase in predicted cancer probability, given all other feature value stay the same. Interestingly for a few women that have a high estimated cancer probability bigger than 0.4, the estimated probability does not change much with higher age.
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:ice-bike"></span>
+<img src="interpretable-ml_files/figure-html/ice-bike-1.svg" alt="Individual conditional expectation plot of expected bike rentals and weather conditions. The same effects as in the partial dependence plots can be observed." width="80%" />
+<p class="caption">
+FIGURE 5.6: Individual conditional expectation plot of expected bike rentals and weather conditions. The same effects as in the partial dependence plots can be observed.
+</p>
+</div>
+<div id="centred-ice-plot" class="section level4">
+<h4><span class="header-section-number">5.2.1.1</span> Centred ICE Plot</h4>
+<p>There is one issue with ICE plots: It can be hard to see if the individual conditional expectation curves differ between individuals, because they start at different <span class="math inline">\(\hat{f}(x)\)</span>. An easy fix is to centre the curves at a certain point in <span class="math inline">\(x_S\)</span> and only display the difference in the predicted response. The resulting plot is called centred ICE plot (c-ICE). Anchoring the curves at the lower end of <span class="math inline">\(x_S\)</span> is a good choice. The new curves are defined as: <span class="math display">\[\hat{f}_{cent}^{(i)} = \hat{f}_i - \mathbf{1}\hat{f}(x^{\text{*}}, x_{C_i}), \]</span> where <span class="math inline">\(\mathbf{1}\)</span> is a vector of 1’s with the appropriate number of dimensions (usually one- or two-dimensional), <span class="math inline">\(\hat{f}\)</span> the fitted model and <span class="math inline">\(x^{\text{*}}\)</span> the anchor point.</p>
+</div>
+<div id="example-2" class="section level4">
+<h4><span class="header-section-number">5.2.1.2</span> Example</h4>
+Taking the plot in Figure <a href="ice.html#fig:ice-cervical">5.5</a> and centring the lines at the youngest observed age yields Figure <a href="ice.html#fig:ice-cervical-centered">5.7</a>. With the centred ICE plots it is easier to compare the curves of individual instances. This can be useful when we are not interested in seeing the absolute change of a predicted value, but rather the difference in prediction compared to a fixed point of the feature range.
+<div class="figure" style="text-align: center"><span id="fig:ice-cervical-centered"></span>
+<img src="interpretable-ml_files/figure-html/ice-cervical-centered-1.svg" alt="Centred ICE plot for predicted cervical cancer risk probability by age. The lines are fixed to 0 at age 13 and each point shows the difference to the prediction with age 13. Compared to age 18, the predictions for most instances stay the same and see an increase up to 20 percent. A few cases show the opposite behaviour: The predicted probability decreases with increasing age." width="80%" />
+<p class="caption">
+FIGURE 5.7: Centred ICE plot for predicted cervical cancer risk probability by age. The lines are fixed to 0 at age 13 and each point shows the difference to the prediction with age 13. Compared to age 18, the predictions for most instances stay the same and see an increase up to 20 percent. A few cases show the opposite behaviour: The predicted probability decreases with increasing age.
+</p>
+</div>
+<div class="figure" style="text-align: center"><span id="fig:ice-bike-centered"></span>
+<img src="interpretable-ml_files/figure-html/ice-bike-centered-1.svg" alt="Centred individual conditional expectation plots of expected bike rentals by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at 0." width="80%" />
+<p class="caption">
+FIGURE 5.8: Centred individual conditional expectation plots of expected bike rentals by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at 0.
+</p>
+</div>
+</div>
+<div id="derivative-ice-plot" class="section level4">
+<h4><span class="header-section-number">5.2.1.3</span> Derivative ICE Plot</h4>
+<p>Another way to make it visually easier to spot heterogeneity is to look at the individual derivatives of <span class="math inline">\(\hat{f}\)</span> with respect to <span class="math inline">\(x_S\)</span> instead of the predicted response <span class="math inline">\(\hat{f}\)</span>. The resulting plot is called derivative ICE plot (d-ICE). The derivatives of a function (or curve) tell you in which direction changes occur and if any occur at all. With the derivative ICE plot it is easy to spot value ranges in a feature where the black box’s predicted values change for (at least some) instances. If there is no interaction between <span class="math inline">\(x_S\)</span> and <span class="math inline">\(x_C\)</span>, then <span class="math inline">\(\hat{f}\)</span> can be expressed as: <span class="math display">\[\hat{f}(x) = \hat{f}(x_S, x_C) = g(x_S) + h(x_C), \text{ so that } \frac{\delta\hat{f}(x)}{\delta x_S} = g&#39;(x_S)\]</span> Without interactions, the individual partial derivatives should be the same for all instances. If they differ, it’s because of interactions and it will become visible in the d-ICE plot. In addition to displaying the individual curves for derivative <span class="math inline">\(\hat{f}\)</span>, showing the standard deviation of derivative <span class="math inline">\(\hat{f}\)</span> helps to highlight regions in <span class="math inline">\(x_S\)</span> with heterogeneity in the estimated derivatives.</p>
+</div>
+<div id="example-3" class="section level4">
+<h4><span class="header-section-number">5.2.1.4</span> Example</h4>
+As we have seen, the most changes in estimated cancer probability happen around age 45. This is confirmed by the derivative ICE plot in Figure <a href="ice.html#fig:ice-cervical-derivative">5.9</a>.
+<div class="figure" style="text-align: center"><span id="fig:ice-cervical-derivative"></span>
+<img src="interpretable-ml_files/figure-html/ice-cervical-derivative-1.svg" alt="Derivative ICE plot of predicted cancer probability by age. Between age 14 and the early forties, a few instance see changes in prediction both upwards and downwards, but the majorities derivatives are near zero. Between age 45 and 50, most women's prediction curves have a positive derivative, indicating an increase in predicted cancer probability." width="80%" />
+<p class="caption">
+FIGURE 5.9: Derivative ICE plot of predicted cancer probability by age. Between age 14 and the early forties, a few instance see changes in prediction both upwards and downwards, but the majorities derivatives are near zero. Between age 45 and 50, most women’s prediction curves have a positive derivative, indicating an increase in predicted cancer probability.
+</p>
+</div>
+<p>Figure <a href="ice.html#fig:ice-bike-derivative">5.10</a> shows the derivative ICE plot for the bike rental model.</p>
+<div class="figure" style="text-align: center"><span id="fig:ice-bike-derivative"></span>
+<img src="interpretable-ml_files/figure-html/ice-bike-derivative-1.svg" alt="Derivative individual conditional expectation plot of expected bike rentals and weather conditions." width="80%" />
+<p class="caption">
+FIGURE 5.10: Derivative individual conditional expectation plot of expected bike rentals and weather conditions.
+</p>
+</div>
 
+</div>
+</div>
 </div>
 <h3>References</h3>
 <div id="refs" class="references">
-<div id="ref-breiman2001random">
-<p>Breiman, Leo. 2001. “Random Forests.” <em>Machine Learning</em> 45 (1). Springer: 5–32.</p>
+<div id="ref-goldstein2015peeking">
+<p>Goldstein, Alex, Adam Kapelner, Justin Bleich, and Emil Pitkin. 2015. “Peeking Inside the Black Box: Visualizing Statistical Learning with Plots of Individual Conditional Expectation.” <em>Journal of Computational and Graphical Statistics</em> 24 (1). Taylor &amp; Francis: 44–65.</p>
 </div>
 </div>
             </section>
@@ -218,8 +260,8 @@
           </div>
         </div>
       </div>
-<a href="ice.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="lime.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="pdp.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="permutation-feature-importance.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -248,7 +290,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/chapters/05.4-agnostic-permfeatimp.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/chapters/05.3-agnostic-ice.Rmd",
 "text": "Edit"
 },
 "download": null,
