@@ -7,8 +7,12 @@ The Shapley value is a way how to fairly distribute the 'payout' among the featu
 ### The general idea
 
 We are given a data point, it's prediction from a machine learning model and the task to say how much each feature contributed to the prediction. 
-For example someone gives you a Random Forest model trained to predict the value of a flat, which predicts 300.000 Euros for a flat in a great neighbourhood with 50 square meters and having cats in the flat is forbidden. 
+For example someone gives you a Random Forest model trained to predict the value of a flat, which predicts 300.000 Euros for a flat with 50 square meters on the 2nd floor, with a park nearby and having cats in the flat is forbidden. 
+This instance is visualised in figure \@ref(fig:shapley-instance).
 How much did each feature contribute to the prediction?
+```{r shapley-instance, fig.cap = "The predicted value for a flat is 300.00 Euros. It's a 50 square meter flat on the second floor. There is a park nearby and cats are not allowed. Our goal is to explain how each of these features contributed towards the predicted value of 300k Euros."}
+knitr::include_graphics("./images/shapley-instance.png")
+```
 
 Cooperative game theory provides an answer to this type of question. 
 A method for assigning payouts to players depending on their contribution towards the total payout is the Shapley value @shapley1953value from cooperative game theory.
@@ -34,7 +38,7 @@ Payout?
 The game is the prediction task for a single instance of the dataset. 
 The gain is the actual prediction for this instance minus the average of all instance's predictions. 
 The players are the features, which collaborate to receive the gain. 
-In our flat example, the square meter feature, the neighbourhood feature and the balcony feature collaborated, resulting in a 'payout' of 300.000 Euro prediction. 
+In our flat example from Figure \@ref(fig:shapley-instance), the feature values park-allowed, cat-forbidden, area-$50m^2$ and floor-2nd collaborated, resulting in a 'payout' of 300.000 Euro prediction. 
 The Shapley value is the value each feature should be given, when we fairly distribute the 300.000 Euro among them. 
 Actually we don't distribute the 300.000 Euro, but the difference between the actual prediction (300k) and the average predicted value for all flats in the dataset (let's say 310k). 
 So we want to explain the -10k difference. 
@@ -42,7 +46,7 @@ The answer might be:
 The great neighbourhood contributed 30k higher value, the size of the flat ($50 m^2$) contributed 10k and the fact that cat's are not allowed contributed -50k. 
 The contributions add up to the final prediction (= payout) of -10k. 
 What personally took me a while to understand is that the Shapley value for a feature can also be negative.
-But that's important, because a feature can also negatively contribute to a prediction, meaning that its presence reduces the predicted value. 
+That's important to understand, because a feature can also negatively contribute to a prediction, meaning that its presence reduces the predicted value. 
 For example a not-so-good neighbourhood might reduce the predicted value of a house.  
 
 So how the hell do we calculate this Shapley value for one feature?
@@ -50,7 +54,10 @@ So how the hell do we calculate this Shapley value for one feature?
 The answer: We form a coalitions of a subset of the features, in one version with the feature of interest and in the other without. 
 The we take the difference in both predictions and get the contribution to the gain of the feature of interest for this specific coalition of features. 
 Then we do this for all possible combinations of coalitions of features and average the results to get the Shapley value of the feature. 
-
+One of these possible subsets is displayed in Figure \@ref(fig:shapley-instance-intervened). 
+```{r shapley-instance-intervened, fig.cap = "We want to assess the contribution of the cat-prohibited feature value to a coalition of park-nearby, cat-prohibited, size-$50m^2$. By randomly drawing the value for the floor feature, we simulate that only the park, cat and size feature are in a coalition. Then we predict the value of the flat with this combination (301.000 Euros). In a second step we remove the cat-prohibited feature value from the coalition and replace it with a random value from another flat. Here it was cat-allowed, but note that it could have been cat-allowed again. Again we predict the flat value for this coalition of park-nearby and size-$50m^2$ (320.000 Euros). The contribution of the cat-disallowed feature value was 301.000 Euros - 320.000 Euros = -19.000 Euros. A negative effect. Of course this estimation depends on the sample of the non-participating features, so we should repeat this procedure to get a better estimate."}
+knitr::include_graphics("./images/shapley-instance-intervention.png")
+```
 
 The first big question I had was how you even calculate the prediction where one or more of the features are not part of the team. 
 One answer is: Refit the model with only the feature that are 'playing'. 
