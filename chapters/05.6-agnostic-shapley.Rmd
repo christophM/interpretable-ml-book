@@ -1,126 +1,110 @@
-## Shapley value
+## Explain Predictions with the Shapley Value
 
-Single predictions can be explained by assuming that each feature is a 'player' in a game where the prediction is the payout. 
-The Shapley value is a way how to fairly distribute the 'payout' among the features. 
+Predictions can be explained by assuming that each feature is a 'player' in a game where the prediction is the payout.
+The Shapley value is a way how to fairly distribute the 'payout' among the features.
 
 
 ### The general idea
 
-We are given a data point, it's prediction from a machine learning model and the task to say how much each feature contributed to the prediction. 
-For example someone gives you a Random Forest model trained to predict the value of a flat, which predicts 300.000 Euros for a flat with 50 square meters on the 2nd floor, with a park nearby and having cats in the flat is forbidden. 
-This instance is visualised in figure \@ref(fig:shapley-instance).
-How much did each feature contribute to the prediction?
+Someone gives you a data point and a machine learning model.
+Your task is to find out how much each feature value contributed to the prediction.
+
+For example you get a Random Forest model trained to predict the value of apartments.
+For a certain apartment it predicts 300.000 Euros and you need to explain this prediction.
+The flat has a size of $50 m^2$, is located on the 2nd floor, with a park nearby and keeping cats in the flat is forbidden (see Figure \@ref(fig:shapley-instance)).
 ```{r shapley-instance, fig.cap = "The predicted value for a flat is 300.00 Euros. It's a 50 square meter flat on the second floor. There is a park nearby and cats are not allowed. Our goal is to explain how each of these features contributed towards the predicted value of 300k Euros."}
 knitr::include_graphics("./images/shapley-instance.png")
 ```
-
-Cooperative game theory provides an answer to this type of question. 
-A method for assigning payouts to players depending on their contribution towards the total payout is the Shapley value @shapley1953value from cooperative game theory.
-The coalition of players cooperate and obtain a certain gain from that cooperation. 
-Cooperative game theory is concerned with how to fairly distribute the gain. 
-There are different ways how to define fair. 
-The Shapley value is the unique solution how to fairly calculate each players share of the gain (depending on a certain definition of 'fair'). 
-The definition of fairness involves the following axioms: 
-Assume we have a given set of players and can form different teams and measure their gain from collaboration:
-The gain of a team is the payout for this cooperation. 
-The gain of a team with zero players is zero. 
-The fairness axioms are:
-1. The individual payouts for each player have to sum up to the total gain (efficiency)
-1. If we add player A or player B to a team and the gain is always the same, no matter which players are in the team, the payout for A and B should be the same. 
-1. If adding player A to any team never changes the gain of the team, A's payout should be 0. 
-1. When we play to different games and sum up their gain, each players gain of this combined game should be the sum of payouts. 
+The average prediction over all apartments is 310.000 Euros.
+How much did each feature value contribute to the prediction compared to the average prediction?
 
 
+The answer is easy for linear regression models:
+The effect of each feature is the weight of the feature times the feature value minus the average effect of all apartments:
+See also Chapter \@ref(limo).
+This works only because of the linearity of the effects and missing feature interactions.
+
+For more complex model we need a different solution.
+LIME (see Chapter \@ref(lime)) suggests local models to estimate effects.
+
+Another solution comes from cooperative game theory: the Shapley value (@shapley1953value).
+The Shapley value is a method for assigning payouts to players depending on their contribution towards the total payout.
+Players cooperate in a coalition and obtain a certain gain from that cooperation.
 Players?
 Game?
 Payout?
-"What's the connection to machine learning prediction and interpretability?", you might ask. 
-The game is the prediction task for a single instance of the dataset. 
-The gain is the actual prediction for this instance minus the average of all instance's predictions. 
-The players are the features, which collaborate to receive the gain. 
-In our flat example from Figure \@ref(fig:shapley-instance), the feature values park-allowed, cat-forbidden, area-$50m^2$ and floor-2nd collaborated, resulting in a 'payout' of 300.000 Euro prediction. 
-The Shapley value is the value each feature should be given, when we fairly distribute the 300.000 Euro among them. 
-Actually we don't distribute the 300.000 Euro, but the difference between the actual prediction (300k) and the average predicted value for all flats in the dataset (let's say 310k). 
-So we want to explain the -10k difference. 
-The answer might be: 
-The great neighbourhood contributed 30k higher value, the size of the flat ($50 m^2$) contributed 10k and the fact that cat's are not allowed contributed -50k. 
-The contributions add up to the final prediction (= payout) of -10k. 
-What personally took me a while to understand is that the Shapley value for a feature can also be negative.
-That's important to understand, because a feature can also negatively contribute to a prediction, meaning that its presence reduces the predicted value. 
-For example a not-so-good neighbourhood might reduce the predicted value of a house.  
+"What's the connection to machine learning prediction and interpretability?", you might ask.
+The game is the prediction task for a single instance of the dataset.
+The gain is the actual prediction for this instance minus the average of all instance's predictions.
+The players are the feature values of the instance, which collaborate to receive the gain (predict a certain value).
+In our flat example from Figure \@ref(fig:shapley-instance), the feature values park-allowed, cat-forbidden, area-$50m^2$ and floor-2nd worked together to receive a 'payout' of the 300.000 Euro prediction.
+Our goal is to explain the difference of the actual prediction (300.000) and the average prediction (310.000):
+So we want to explain the -10k difference.
+The answer might be:
+The great neighbourhood contributed 30k higher value, the size of the flat ($50 m^2$) contributed 10k and the fact that cat's are not allowed contributed -50k.
+The contributions add up to the final prediction (= payout) of -10k.
+This example shows that the Shapley value can also be negative.
 
-So how the hell do we calculate this Shapley value for one feature?
+How the hell do we calculate the Shapley value for one feature?
 
-The answer: We form a coalitions of a subset of the features, in one version with the feature of interest and in the other without. 
-The we take the difference in both predictions and get the contribution to the gain of the feature of interest for this specific coalition of features. 
-Then we do this for all possible combinations of coalitions of features and average the results to get the Shapley value of the feature. 
-One of these possible subsets is displayed in Figure \@ref(fig:shapley-instance-intervened). 
-```{r shapley-instance-intervened, fig.cap = "We want to assess the contribution of the cat-prohibited feature value to a coalition of park-nearby, cat-prohibited, size-$50m^2$. By randomly drawing the value for the floor feature, we simulate that only the park, cat and size feature are in a coalition. Then we predict the value of the flat with this combination (301.000 Euros). In a second step we remove the cat-prohibited feature value from the coalition and replace it with a random value from another flat. Here it was cat-allowed, but note that it could have been cat-allowed again. Again we predict the flat value for this coalition of park-nearby and size-$50m^2$ (320.000 Euros). The contribution of the cat-disallowed feature value was 301.000 Euros - 320.000 Euros = -19.000 Euros. A negative effect. Of course this estimation depends on the sample of the non-participating features, so we should repeat this procedure to get a better estimate."}
+The Shapley value is the average marginal contribution of a feature value over all possible coalitions.
+Clear now?
+Have a look at Figure \@ref(fig:shapley-instance-intervened) to understand how to compute the contribution of a feature value to one coalition.
+```{r shapley-instance-intervened, fig.cap = "We want to assess the contribution of the cat-forbidden feature value when added to a coalition of park-nearby, size-$50m^2$. By randomly drawing the value for the floor feature, we simulate that only the park, cat and size feature are in a coalition. Then we predict the value of the flat with this combination (301.000 Euros). In a second step we remove the cat-forbidden feature value from the coalition and replace it with a random value for the cat allowed/forbidden feature from another flat. Here it was cat-allowed, but note that it could have been cat-allowed again. Again we predict the flat value for this coalition of park-nearby and size-$50m^2$ (320.000 Euros). The contribution of the cat-disallowed feature value was 301.000 Euros - 320.000 Euros = -19.000 Euros. A negative effect. Of course this estimation depends on the sample of the non-participating features, so we should repeat this procedure to get a better estimate. This figure shows the computation of the marginal contribution for one coalition. The Shapley value is the average marginal contribution over all such coalition of feature value."}
 knitr::include_graphics("./images/shapley-instance-intervention.png")
 ```
-
-The first big question I had was how you even calculate the prediction where one or more of the features are not part of the team. 
-One answer is: Refit the model with only the feature that are 'playing'. 
-Has the big disadvantage to having to refit the model. 
-Also it is problematic, since the model will be a different model if you completely remove it. 
-That's not what you want. 
-The other and preferred option is to marginalise the feature(s), meaning we integrate over all possible values. 
-That's what we do for calculating the gain aka prediction of the model for a subset of features: 
-For the features that are not in the subset, we average over all possible values. 
-We can draw as many samples as we want. 
-The more we sample, the better the approximation will be. 
-You could also only sample one, then it has a high variance. 
-
-If we have five features and want to calculate the gain of a coalition of feature 1, 4 and 5, we leave the values for those features the same, but draw random values for features 2 and 3 from our dataset. 
-Then we average the prediction and see what our model would predict when only the features 1,4 and 5 of this instance would have "collaborated". 
-
-There are a lot of possible coalitions of features, namely 2 to the power of number of features. 
-For 2 features that's 4, for 10 features that's 1024 and for 100 features that's a number with thirty zeroes. 
-It becomes infeasible to compute all combinations. 
-The solution: 
-We only sample some of the possible combinations to estimate the Shapley value for a feature. 
+We repeat this computation for all possible coalition.
+When we have many variables it becomes exponentially large, so we have to sample from all possible coalitions.
+The Shapley value is the average over all the marginal contributions.
+Figure \@ref(fig:shapley-coalitions) shows all possible coalitions for which we compute the marginal contribution of adding cat-forbidden feature value.
+```{r shapley-coalitions, fig.cap = "All possible coalitions of feature values that are needed to assess the Shapley value of the cat-forbidden feature value. For each of this coalitions we compute the predicted apartment value with and without the cat-forbidden feature value and calculate the difference to get the marginal contribution. The Shapley value is the (weighted) average marginal contribution. We replace the feature values of features not in a coalition with random values from the apartment dataset to get a prediction from the machine learning model."}
+knitr::include_graphics("./images/shapley-coalitions.png")
+```
 
 
-There are now two reasons why we sample: 
-First, we have to approximate that a feature is not in the coalition by marginalising it, which we do by sampling values from our data. 
-Second, we usually can't go over all possible feature combinations, so we sample from possible coalitions. 
 
-For each sampled coalition, we calculate the difference in gain of the coalition with and without the feature of interest. 
-When we have done this a few times, we can average the results and get the Shapley value. 
-
-
-It's also possible to define the Shapley value not compared to the average prediction in the dataset, but with a subset or even with single point. 
 
 ### Interpretation and example
 
-The interpretation of the shapley value is: the feature $x_j$ contributed $sh(x_j)$ towards the prediction for instance $i$ compared to the average prediction for the dataset.
+The interpretation of the Shapley value is: the feature $x_j$ contributed $sh(x_j)$ towards the prediction for instance $i$ compared to the average prediction for the dataset.
 
-We use the Shapley value to analyse the predictions of a Random Forest model on the cervical cancer dataset. 
-Table XXX shows the Shapley values for the instance XXX. 
-Figure XXX visualizes the same information. 
-TODO: Example of Shapley value for cervical. 
-The Shapley values for all features sum up to the difference in predicted value of the instance and the average prediction for the whole dastaset. 
+We use the Shapley value to analyse the predictions of a Random Forest model on the cervical cancer dataset.
+Table XXX shows the Shapley values for the instance XXX.
+Figure XXX visualizes the same information.
+TODO: Example of Shapley value for cervical.
+The Shapley values for all features sum up to the difference in predicted value of the instance and the average prediction for the whole dastaset.
 
 
-In Figure XXX and Table XXX are the results for computing the feature contributions with the Shapley value on the bike rental dataset. 
+In Figure XXX and Table XXX are the results for computing the feature contributions with the Shapley value on the bike rental dataset.
 TODO: Example for Shapley on bike data
 
-Ways to misinterpret the Shapley value: 
-The Shapley value is the average contribution of a feature towards the prediction in different alliances with features. 
-The Shapley value is NOT the difference in prediction when we would drop the feature from the model. 
+Ways to misinterpret the Shapley value:
+The Shapley value is the average contribution of a feature towards the prediction in different alliances with features.
+The Shapley value is NOT the difference in prediction when we would drop the feature from the model.
 
 
 
 ### In Detail
 
-This section goes deeper into the definition and computation of the Shapley value for the ones interested and patient enough to learn more. 
-After reading this section you should really understand the computation and be able to implement the Shapley value yourself. 
+This section goes deeper into the definition and computation of the Shapley value for the ones interested and patient enough to learn more.
+After reading this section you should really understand the computation and be able to implement the Shapley value yourself.
 
+
+#### Excursion: The Shapley Value
+
+In a linear model, our estimated function $f$ would have following form:
+$$f(x) = f(x_1, \ldots, x_p) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p $$
+The effect of feature k would be measured by:
+$$ \phi_k = \beta_k x_k - \beta_k E(X_k)$$
+where $E(X_k)$ is the mean estimate for feature k.
+However, we don't usually work with a linear model, but use model classes that can learn non-linear functions with interactions between the feature to capture more complex associations with the target outcome.
+We don't want to have assumptions on the model.
+But still we want some computation of the feature effects.
+Simply perturbing the feature is not enough, since this disregards interaction effects.
 
 This payout method can be used to assign the total payout, which is the predicted value for instance i, to the players, which are the features $x_{i,1}, \ldots, x_{i,p}$.
 In a cooperative game of the feature values $ \{x_{i,1}, \ldots, x^{i,p}\}$  and a game payout of $v(x_{i}) = \hat{f}(x_{i}) - E_x(\hat{f}(x))$, the Shapley value provides a unique solution for how the payout can be fairly distributed among the features.
 The Shapley value for a feature $x_{i,j}$ is the difference the feature makes in the payed outcome summed over all possible feature combinations.
-
 
 
 $$ \phi_j (\hat{f}) = \sum_{S \subseteq \{x_{i,1}, \ldots, x_{i,p}\} \setminus \{x_{i,p}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(v\left(S \cup \{x_{i,j}\}\right) - v(S)\right)$$
@@ -130,7 +114,7 @@ The tricky part is to define "fairly", so most attribution methods are shown to 
 
 The Shapley value is the only attribution method that satisfies the following four desirable properties:
 \begin{enumerate}
-  \item Eficiency: $\sum_{j=1}^p \phi_j = val(x_i) =  \hat{f}(x_i) - E_x(\hat{f}(x))$. The feature effects have to sum up to the difference in prediction between prediction for $\xi$ and the models mean prediction.
+  \item Eficiency: $\sum_{j=1}^p \phi_j = val(x_i) =  \hat{f}(x_i) - E_x(\hat{f}(x))$. The feature effects have to sum up to the difference in prediction between prediction for $x_i$ and the models mean prediction.
   \item Symmetry: If $val(S \cup \{x_j^{(i)}\}) = val(S \cup \{x_k^{(i)}\})$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\} \setminus \{x_j^{(i)},x_k^{(i)}\}$, then $\phi_j = \phi_k$. The contribution for two features should be the same if they contribute the same to all possible coalitions.
   \item Dummy: If $val(S \cup \{x_j^{(j)}\}) = val(S)$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$, then $\phi_j = 0$. A feature which does not change the predicted value no matter to which coalition of features it is added should get assigned a contribution of 0.
   \item Additivity: For a game with combined values $val + val'$ the respective Shapley values are $\phi_j + \phi_j'$. The additivity axiom has no relevance in the context of feature effects.
@@ -143,14 +127,14 @@ The Shapley value $\phi_j$ is the average additional contribution of feature $j$
 
 #### Estimating the Shapley value
 
-The value function $val_{\xi}(S) $ (parameterized by the instance of interest $\xi$) for a coalition of features $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$ is the expected prediction (minus expected value of model) when the values for features in $S$ are taken from instance $\xi$ and for features not in $S$ the values come from the distribution of $X$.
+The value function $val_{x_i}(S) $ (parameterized by the instance of interest $x_i$) for a coalition of features $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$ is the expected prediction (minus expected value of model) when the values for features in $S$ are taken from instance $x_i$ and for features not in $S$ the values come from the distribution of $X$.
 
-$$val_{\xi}(S) = E\left(\hat{f}|\text{values of features in S taken from }\xi \right) - E\left(\hat{f}\right)$$
+$$val_{x_i}(S) = E\left(\hat{f}|\text{values of features in S taken from }x_i \right) - E\left(\hat{f}\right)$$
 
 The value can be estimated via Monte Carlo sampling by  sampling $M$-times from the data on which the machine learning model was trained on from a holdout dataset and averaging the results:
-$$\hat{val}_{\xi}(S) = \sum_{i=1}^M \hat{f}(x_{S}^{(i)})- E\left(\hat{f}\right)$$
+$$\hat{val}_{x_i}(S) = \sum_{i=1}^M \hat{f}(x_{S}^{(i)})- E\left(\hat{f}\right)$$
 
-The $x_{S}^{(i)}$ is defined as an x value where the values for features in $S$ come from a random sample from $X$ and for features not in $S$ from  $\xi$.
+The $x_{S}^{(i)}$ is defined as an x value where the values for features in $S$ come from a random sample from $X$ and for features not in $S$ from  $x_i$.
 
 The idea to use the Shapley value to measure feature contributions was first presented for classification cases in \citep{kononenko2010efficient} and later generalized for regression, extended for global analysis and some sampling assumptions loosened in \citep{vstrumbelj2011general}.
 \citep{vstrumbelj2011general} suggest a sample based strategy to calculate each features contribution towards the prediction of a chosen instance.
@@ -170,8 +154,8 @@ Averaging like this automatically weighs samples by the probability distribution
 
 Algorithm: Estimating the Shapley value, the contribution of feature j's contribution towards the $\hat{f}(x)$ for instance $x \in X$.
 
-- Require: $m$,  $x$, $X$, $\hat{f}$
-- for all $k \in \{1, \hdots, m\}$:
+- Require: Number of iterations $m$, instance of interest $x$, data $X$, and machine learning model $\hat{f}$
+- For all $k \in \{1, \ldots, m\}$:
 	- draw random instance $z$ from $X$
 	- choose a random permutation of feature $o \in \pi(S)$
 	- order instance x: $x_{o} = (x_{o_1}, \ldots, x_{o_j}, \ldots, x_{o_p})$
@@ -183,8 +167,13 @@ Algorithm: Estimating the Shapley value, the contribution of feature j's contrib
 - $\phi_j(x) = \sum_{k=1}^m\frac{\phi_j^{(k)}}{m}$
 
 
+
+There are now two reasons why we sample:
+First, we have to approximate that a feature is not in the coalition by marginalising it, which we do by sampling values from our data.
+Second, we usually can't go over all possible feature combinations, so we sample from possible coalitions.
+
 #### Kernel based estimation of the Shapley value
-@lundberg2017unified (pre-print) suggest a kernel based approach and claim that it needs less samples.
+@Lundberg2017 (pre-print) suggest a kernel based approach and claim that it needs less samples.
 They propose a kernel function $K_{x'}(x)$, the Shapley kernel: $$K_{x'}(x) = \frac{(p-1)}{{p \choose |S|}|S|(p-|S|)}$$ where $p$ is the number of features, $|S|$ is the number of features in $x$ coming from the instance of interest $x'$.  Based on the kernel, following loss function is defined: $$L(f,g,K_{x'})  = \sum_{x \in X}\left[f(x)) - g(x)\right]^2 K_{x'}(x)$$
 $g(x')$ is the function that should approximate the black box function $f(x)$, while satisfying local accuracy: $f(x) = g(x') = \phi_0 + \sum_{i=1}^M \phi_i x_i'$.
 This function can be minimized by sampling data points and fitting a linear regression model with L2 loss.
@@ -193,21 +182,11 @@ They show that their approach is similar to LIME, which also models a linear att
 But only the Shapley value attribution method satisfies the efficiency property (contributions sum up to predicted value).
 
 
-### Guidelines
-An accurate computation of the Shapley value is potentially computational expensive, because there are $2^k$ possible coalations of features and the 'absence' of a feature has to be simulated by drawing random samples, which increases the variance for the estimate $\phi_j$.
-The exponentiality of the coalitions is handled by sampling coalitions and fixing the number of samples $m$  \citep{vstrumbelj2011general}.
-Decreasing $m$ reduces computation time, but increases the variance of $\phi_j$.
-It is unclear how to automatically choose a sensitive $m$.
 
-A further caveat is the interpretation of the Shapley value:
-The Shapley value $\phi_j$ of a feature $j$ is not the difference in predicted value after the removal of feature $j$.
-Removing a feature from a machine learning model is equal to removing its main effect and all interation effects with other features that include feature $j$.
-If $\phi_j$ would be equal to the sum of the main feature effect and all possible interactions, then interactions involving feature $j4$ would be fully attributed to each $\phi_j$.
-For example, the interaction effect between feature $j$ and feature $k$ would be attributed to both $\phi_j$ and $\phi_k$.
-This would violate the efficiency axiom which says that all effects sum up to the total prediction, because interactions would be summed multiple times.
-The interpretation of the Shapley value is rather:
-Given the current set of features, the total contribution of the feature $j$ to the difference in the actual prediction  and the mean prediction is $\phi_j$.
-Feature interaction effects contributing to the prediction are split up evenly among the features.
+
+
+### Advantages
+Nice property of efficiency.
 
 The Shapley value is the only system that satisfies all axioms: efficiency, symmetry, dummy and additivity.
 The method can be used to compute the complete causal attributions of the difference of the actual prediction and the mean prediction of the dataset.
@@ -215,7 +194,21 @@ This is also a big difference to LIME, which gives a very selective explanation 
 Humans prefer selective explanations \cite{miller2017explanation}, like LIME produces, so especially for explanations facing lay-persons, LIME might be the better choice for feature effects computation.
 The big advantage of LIME is its complete attribution, which makes it great for a deep understanding of a prediction and possibly even in scenarios in which it is legally required to explain an algorithms decision.
 
-### The Good, the Bad and the the Ugly
 
+### Disadvantages
+Heavy on computation
+Only approximate solution really feasible
+An accurate computation of the Shapley value is potentially computational expensive, because there are $2^k$ possible coalitions of features and the 'absence' of a feature has to be simulated by drawing random samples, which increases the variance for the estimate $\phi_j$.
+The exponentiality of the coalitions is handled by sampling coalitions and fixing the number of samples $m$  \citep{vstrumbelj2011general}.
+Decreasing $m$ reduces computation time, but increases the variance of $\phi_j$.
+It is unclear how to automatically choose a sensitive $m$.
 
-
+A further caveat is the interpretation of the Shapley value:
+The Shapley value $\phi_j$ of a feature $j$ is not the difference in predicted value after the removal of feature $j$.
+Removing a feature from a machine learning model is equal to removing its main effect and all interaction effects with other features that include feature $j$.
+If $\phi_j$ would be equal to the sum of the main feature effect and all possible interactions, then interactions involving feature $j4$ would be fully attributed to each $\phi_j$.
+For example, the interaction effect between feature $j$ and feature $k$ would be attributed to both $\phi_j$ and $\phi_k$.
+This would violate the efficiency axiom which says that all effects sum up to the total prediction, because interactions would be summed multiple times.
+The interpretation of the Shapley value is rather:
+Given the current set of features, the total contribution of the feature $j$ to the difference in the actual prediction  and the mean prediction is $\phi_j$.
+Feature interaction effects contributing to the prediction are split up evenly among the features.
