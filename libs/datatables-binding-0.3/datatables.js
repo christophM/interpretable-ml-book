@@ -7,19 +7,20 @@
 // a global object
 var DTWidget = {};
 
+// 123456666.7890 -> 123,456,666.7890
+var markInterval = function(d, digits, interval, mark, decMark, precision) {
+  x = precision ? d.toPrecision(digits) : d.toFixed(digits);
+  if (!/^-?[\d.]+$/.test(x)) return x;
+  var xv = x.split('.');
+  if (xv.length > 2) return x;  // should have at most one decimal point
+  xv[0] = xv[0].replace(new RegExp('\\B(?=(\\d{' + interval + '})+(?!\\d))', 'g'), mark);
+  return xv.join(decMark);
+};
+
 DTWidget.formatCurrency = function(thiz, row, data, col, currency, digits, interval, mark, decMark, before) {
   var d = parseFloat(data[col]);
   if (isNaN(d)) return;
-  // 123456666.7890 -> 123,456,666.7890
-  var markInterval = function(x, interval, mark) {
-    if (!/^-?[\d.]+$/.test(x)) return x;
-    var xv = x.split('.');
-    if (xv.length > 2) return x;  // should have at most one decimal point
-    xv[0] = xv[0].replace(new RegExp('\\B(?=(\\d{' + interval + '})+(?!\\d))', 'g'), mark);
-    return xv.join(decMark);
-  };
-  d = d.toFixed(digits);
-  var res = markInterval(d, interval, mark);
+  var res = markInterval(d, digits, interval, mark, decMark);
   res = before ? (/^-/.test(res) ? '-' + currency + res.replace(/^-/, '') : currency + res) :
     res + currency;
   $(thiz.api().cell(row, col).node()).html(res);
@@ -31,29 +32,39 @@ DTWidget.formatString = function(thiz, row, data, col, prefix, suffix) {
   $(thiz.api().cell(row, col).node()).html(prefix + d + suffix);
 };
 
-DTWidget.formatPercentage = function(thiz, row, data, col, digits) {
+DTWidget.formatPercentage = function(thiz, row, data, col, digits, interval, mark, decMark) {
   var d = parseFloat(data[col]);
   if (isNaN(d)) return;
-  $(thiz.api().cell(row, col).node()).html((d * 100).toFixed(digits) + '%');
+  $(thiz.api().cell(row, col).node())
+  .html(markInterval(d * 100, digits, interval, mark, decMark) + '%');
 };
 
-DTWidget.formatRound = function(thiz, row, data, col, digits) {
+DTWidget.formatRound = function(thiz, row, data, col, digits, interval, mark, decMark) {
   var d = parseFloat(data[col]);
   if (isNaN(d)) return;
-  $(thiz.api().cell(row, col).node()).html(d.toFixed(digits));
+  $(thiz.api().cell(row, col).node()).html(markInterval(d, digits, interval, mark, decMark));
 };
 
-DTWidget.formatSignif = function(thiz, row, data, col, digits) {
+DTWidget.formatSignif = function(thiz, row, data, col, digits, interval, mark, decMark) {
   var d = parseFloat(data[col]);
   if (isNaN(d)) return;
-  $(thiz.api().cell(row, col).node()).html(d.toPrecision(digits));
+  $(thiz.api().cell(row, col).node())
+    .html(markInterval(d, digits, interval, mark, decMark, true));
 };
 
-DTWidget.formatDate = function(thiz, row, data, col, method) {
+DTWidget.formatDate = function(thiz, row, data, col, method, params) {
   var d = data[col];
   if (d === null) return;
-  d = new Date(d);
-  $(thiz.api().cell(row, col).node()).html(d[method]());
+  // (new Date('2015-10-28')).toDateString() may return 2015-10-27 because the
+  // actual time created could be like 'Tue Oct 27 2015 19:00:00 GMT-0500 (CDT)',
+  // i.e. the date-only string is treated as UTC time instead of local time
+  if (method === 'toDateString' && /^\d{4,}\D\d{2}\D\d{2}$/.test(d)) {
+    d = d.split(/\D/);
+    d = new Date(d[0], d[1] - 1, d[2]);
+  } else {
+    d = new Date(d);
+  }
+  $(thiz.api().cell(row, col).node()).html(d[method].apply(d, params));
 };
 
 window.DTWidget = DTWidget;
@@ -62,12 +73,41 @@ var transposeArray2D = function(a) {
   return a.length === 0 ? a : HTMLWidgets.transposeArray2D(a);
 };
 
+var crosstalkPluginsInstalled = false;
+
+function maybeInstallCrosstalkPlugins() {
+  if (crosstalkPluginsInstalled)
+    return;
+  crosstalkPluginsInstalled = true;
+
+  $.fn.dataTable.ext.afnFiltering.push(
+    function(oSettings, aData, iDataIndex) {
+      var ctfilter = oSettings.nTable.ctfilter;
+      if (ctfilter && !ctfilter[iDataIndex])
+        return false;
+
+      var ctselect = oSettings.nTable.ctselect;
+      if (ctselect && !ctselect[iDataIndex])
+        return false;
+
+      return true;
+    }
+  );
+}
+
 HTMLWidgets.widget({
   name: "datatables",
   type: "output",
+  renderOnNullValue: true,
   initialize: function(el, width, height) {
     $(el).html('&nbsp;');
-    return { data: null };
+    return {
+      data: null,
+      ctfilterHandle: new crosstalk.FilterHandle(),
+      ctfilterSubscription: null,
+      ctselectHandle: new crosstalk.SelectionHandle(),
+      ctselectSubscription: null
+    };
   },
   renderValue: function(el, data, instance) {
     if (el.offsetWidth === 0 || el.offsetHeight === 0) {
@@ -79,7 +119,20 @@ HTMLWidgets.widget({
     $el.empty();
 
     if (data === null) {
+      // clear previous Shiny inputs (if any)
+      for (var i in instance.clearInputs) instance.clearInputs[i]();
+      instance.clearInputs = {};
       return;
+    }
+
+    var crosstalkOptions = data.crosstalkOptions;
+    if (!crosstalkOptions) crosstalkOptions = {
+      'key': null, 'group': null
+    };
+    if (crosstalkOptions.group) {
+      maybeInstallCrosstalkPlugins();
+      instance.ctfilterHandle.setGroup(crosstalkOptions.group);
+      instance.ctselectHandle.setGroup(crosstalkOptions.group);
     }
 
     // If we are in a flexdashboard scroll layout then we:
@@ -207,8 +260,78 @@ HTMLWidgets.widget({
       };
     }
 
+    var thiz = this;
+    if (instance.fillContainer) $table.on('init.dt', function(e) {
+      thiz.fillAvailableHeight(el, $(el).innerHeight());
+    });
+
     var table = $table.DataTable(options);
     $el.data('datatable', table);
+
+    // Unregister previous Crosstalk event subscriptions, if they exist
+    if (instance.ctfilterSubscription) {
+      instance.ctfilterHandle.off("change", instance.ctfilterSubscription);
+      instance.ctfilterSubscription = null;
+    }
+    if (instance.ctselectSubscription) {
+      instance.ctselectHandle.off("change", instance.ctselectSubscription);
+      instance.ctselectSubscription = null;
+    }
+
+    if (!crosstalkOptions.group) {
+      $table[0].ctfilter = null;
+      $table[0].ctselect = null;
+    } else {
+      var key = crosstalkOptions.key;
+      function keysToMatches(keys) {
+        if (!keys) {
+          return null;
+        } else {
+          var selectedKeys = {};
+          for (var i = 0; i < keys.length; i++) {
+            selectedKeys[keys[i]] = true;
+          }
+          var matches = {};
+          for (var j = 0; j < key.length; j++) {
+            if (selectedKeys[key[j]])
+              matches[j] = true;
+          }
+          return matches;
+        }
+      }
+
+      function applyCrosstalkFilter(e) {
+        $table[0].ctfilter = keysToMatches(e.value);
+        table.draw();
+      }
+      instance.ctfilterSubscription = instance.ctfilterHandle.on("change", applyCrosstalkFilter);
+      applyCrosstalkFilter({value: instance.ctfilterHandle.filteredKeys});
+
+      function applyCrosstalkSelection(e) {
+        if (e.sender !== instance.ctselectHandle) {
+          table
+            .rows('.' + selClass, {search: 'applied'})
+            .nodes()
+            .to$()
+            .removeClass(selClass);
+          if (selectedRows)
+            changeInput('rows_selected', selectedRows(), void 0, true);
+        }
+
+        if (e.sender !== instance.ctselectHandle && e.value && e.value.length) {
+          $table[0].ctselect = keysToMatches(e.value);
+          table.draw();
+        } else {
+          if ($table[0].ctselect) {
+            $table[0].ctselect = null;
+            table.draw();
+          }
+        }
+      }
+      instance.ctselectSubscription = instance.ctselectHandle.on("change", applyCrosstalkSelection);
+      // TODO: This next line doesn't seem to work when renderDataTable is used
+      applyCrosstalkSelection({value: instance.ctselectHandle.value});
+    }
 
     var inArray = function(val, array) {
       return $.inArray(val, $.makeArray(array)) > -1;
@@ -535,7 +658,7 @@ HTMLWidgets.widget({
       .on('draw.dt.dth column-visibility.dt.dth column-reorder.dt.dth', highlight)
       .on('destroy', function() {
         // remove event handler
-        table.off( 'draw.dt.dth column-visibility.dt.dth column-reorder.dt.dth' );
+        table.off('draw.dt.dth column-visibility.dt.dth column-reorder.dt.dth');
       });
 
       // initial highlight for state saved conditions and initial states
@@ -544,27 +667,33 @@ HTMLWidgets.widget({
 
     // run the callback function on the table instance
     if (typeof data.callback === 'function') data.callback(table);
-    this.adjustWidth(el);
 
-     // fillContainer = TRUE behavior
-    if (instance.fillContainer) {
-
-      // we need to wait just a bit to do this so DT can completely
-      // finish laying itself out
-      var thiz = this;
-      setTimeout(function() {
-
-        // calculate correct height
-        thiz.fillAvailableHeight(el, $(el).innerHeight());
-
-        // we need to force DT to recalculate column widths
-        // (otherwise all the columns are the same size)
-        table.columns.adjust();
-      }, 200);
-    }
+    // double click to edit the cell
+    if (data.editable) table.on('dblclick.dt', 'tbody td', function() {
+      var $input = $('<input type="text">');
+      var $this = $(this), value = table.cell(this).data(), html = $this.html();
+      var changed = false;
+      $input.val(value);
+      $this.empty().append($input);
+      $input.css('width', '100%').focus().on('change', function() {
+        changed = true;
+        var valueNew = $input.val();
+        if (valueNew != value) {
+          table.cell($this).data(valueNew);
+          if (HTMLWidgets.shinyMode) changeInput('cell_edit', cellInfo($this));
+          // for server-side processing, users have to call replaceData() to update the table
+          if (!server) table.draw(false);
+        } else {
+          $this.html(html);
+        }
+        $input.remove();
+      }).on('blur', function() {
+        if (!changed) $input.trigger('change');
+      });
+    });
 
     // interaction with shiny
-    if (!HTMLWidgets.shinyMode) return;
+    if (!HTMLWidgets.shinyMode && !crosstalkOptions.group) return;
 
     var methods = {};
     var shinyData = {};
@@ -574,14 +703,40 @@ HTMLWidgets.widget({
       $table.children('caption').replaceWith(caption);
     }
 
-    var changeInput = function(id, data, type) {
+    // register clear functions to remove input values when the table is removed
+    instance.clearInputs = {};
+
+    var changeInput = function(id, value, type, noCrosstalk) {
+      var event = id;
       id = el.id + '_' + id;
       if (type) id = id + ':' + type;
-      // do not update if the new data is the same as old data
-      if (shinyData.hasOwnProperty(id) && shinyData[id] === JSON.stringify(data))
+      // do not update if the new value is the same as old value
+      if (shinyData.hasOwnProperty(id) && shinyData[id] === JSON.stringify(value))
         return;
-      shinyData[id] = JSON.stringify(data);
-      Shiny.onInputChange(id, data);
+      shinyData[id] = JSON.stringify(value);
+      if (HTMLWidgets.shinyMode) {
+        Shiny.onInputChange(id, value);
+        if (!instance.clearInputs[id]) instance.clearInputs[id] = function() {
+          Shiny.onInputChange(id, null);
+        }
+      }
+
+      // HACK
+      if (event === "rows_selected" && !noCrosstalk) {
+        if (crosstalkOptions.group) {
+          var keys = crosstalkOptions.key;
+          var selectedKeys = null;
+          if (value) {
+            selectedKeys = [];
+            for (var i = 0; i < value.length; i++) {
+              // The value array's contents use 1-based row numbers, so we must
+              // convert to 0-based before indexing into the keys array.
+              selectedKeys.push(keys[value[i] - 1]);
+            }
+          }
+          instance.ctselectHandle.set(selectedKeys);
+        }
+      }
     };
 
     var addOne = function(x) {
@@ -611,6 +766,7 @@ HTMLWidgets.widget({
     if (inArray(selMode, ['single', 'multiple'])) {
       var selClass = data.style === 'bootstrap' ? 'active' : 'selected';
       var selected = data.selection.selected, selected1, selected2;
+      // selected1: row indices; selected2: column indices
       if (selected === null) {
         selected1 = selected2 = [];
       } else if (selTarget === 'row') {
@@ -621,10 +777,30 @@ HTMLWidgets.widget({
         selected1 = $.makeArray(selected.rows);
         selected2 = $.makeArray(selected.cols);
       }
+
+      // After users reorder the rows or filter the table, we cannot use the table index
+      // directly. Instead, we need this function to find out the rows between the two clicks.
+      // If user filter the table again between the start click and the end click, the behavior
+      // would be undefined, but it should not be a problem.
+      var shiftSelRowsIndex = function(start, end) {
+        var indexes = server ? DT_rows_all : table.rows({ search: 'applied' }).indexes().toArray();
+        start = indexes.indexOf(start); end = indexes.indexOf(end);
+        // if start is larger than end, we need to swap
+        if (start > end) {
+          var tmp = end; end = start; start = tmp;
+        }
+        return indexes.slice(start, end + 1);
+      }
+
+      var serverRowIndex = function(clientRowIndex) {
+        return server ? DT_rows_current[clientRowIndex] : clientRowIndex + 1;
+      }
+
       // row, column, or cell selection
+      var lastClickedRow;
       if (inArray(selTarget, ['row', 'row+column'])) {
         var selectedRows = function() {
-          var rows = table.rows('.' + selClass, {search: 'applied'});
+          var rows = table.rows('.' + selClass);
           var idx = rows.indexes().toArray();
           if (!server) return addOne(idx);
           idx = idx.map(function(i) {
@@ -633,10 +809,44 @@ HTMLWidgets.widget({
           selected1 = selMode === 'multiple' ? unique(selected1.concat(idx)) : idx;
           return selected1;
         }
-        table.on('click.dt', 'tbody tr', function() {
+        table.on('mousedown.dt', 'tbody tr', function(e) {
           var $this = $(this), thisRow = table.row(this);
           if (selMode === 'multiple') {
-            $this.toggleClass(selClass);
+            if (e.shiftKey && lastClickedRow !== undefined) {
+              // select or de-select depends on the last clicked row's status
+              var flagSel = !$this.hasClass(selClass);
+              var crtClickedRow = serverRowIndex(thisRow.index());
+              if (server) {
+                var rowsIndex = shiftSelRowsIndex(lastClickedRow, crtClickedRow);
+                // update current page's selClass
+                rowsIndex.map(function(i) {
+                  var rowIndex = DT_rows_current.indexOf(i);
+                  if (rowIndex >= 0) {
+                    var row = table.row(rowIndex).nodes().to$();
+                    var flagRowSel = !row.hasClass(selClass);
+                    if (flagSel === flagRowSel) row.toggleClass(selClass);
+                  }
+                });
+                // update selected1
+                if (flagSel) {
+                  selected1 = unique(selected1.concat(rowsIndex));
+                } else {
+                  selected1 = selected1.filter(function(index) {
+                    return !inArray(index, rowsIndex);
+                  });
+                }
+              } else {
+                // js starts from 0
+                shiftSelRowsIndex(lastClickedRow - 1, crtClickedRow - 1).map(function(value) {
+                  var row = table.row(value).nodes().to$();
+                  var flagRowSel = !row.hasClass(selClass);
+                  if (flagSel === flagRowSel) row.toggleClass(selClass);
+                });
+              }
+              e.preventDefault();
+            } else {
+              $this.toggleClass(selClass);
+            }
           } else {
             if ($this.hasClass(selClass)) {
               $this.removeClass(selClass);
@@ -648,11 +858,11 @@ HTMLWidgets.widget({
           if (server && !$this.hasClass(selClass)) {
             var id = DT_rows_current[thisRow.index()];
             // remove id from selected1 since its class .selected has been removed
-            selected1.splice($.inArray(id, selected1), 1);
+            if (inArray(id, selected1)) selected1.splice($.inArray(id, selected1), 1);
           }
           changeInput('rows_selected', selectedRows());
-          changeInput('row_last_clicked', server ?
-                      DT_rows_current[thisRow.index()] : thisRow.index() + 1);
+          changeInput('row_last_clicked', serverRowIndex(thisRow.index()));
+          lastClickedRow = serverRowIndex(thisRow.index());
         });
         changeInput('rows_selected', selected1);
         var selectRows = function() {
@@ -806,11 +1016,14 @@ HTMLWidgets.widget({
     table.on('draw.dt', updateSearchInfo);
     updateSearchInfo();
 
+    var cellInfo = function(thiz) {
+      var info = tweakCellIndex(table.cell(thiz));
+      info.value = table.cell(thiz).data();
+      return info;
+    }
     // the current cell clicked on
     table.on('click.dt', 'tbody td', function() {
-      var info = tweakCellIndex(table.cell(this));
-      info.value = table.cell(this).data();
-      changeInput('cell_clicked', info);
+      changeInput('cell_clicked', cellInfo(this));
     })
     changeInput('cell_clicked', {});
 
