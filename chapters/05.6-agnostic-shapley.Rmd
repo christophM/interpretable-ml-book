@@ -86,30 +86,54 @@ The Shapley value is NOT the difference in prediction when we would drop the fea
 
 ### In Detail
 
-This section goes deeper into the definition and computation of the Shapley value for the ones interested and patient enough to learn more.
-After reading this section you should really understand the computation and be able to implement the Shapley value yourself.
+This Section goes deeper into the definition and computation of the Shapley value for the curious reader.
 
-A linear model for $\hat{f}$ has following form:
-$$\hat{f}(x) = \hat{f}(x_1, \ldots, x_p) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p $$
-The effect of feature $x_{\cdotj}$ and instance i would be measured by:
-$$ \phi_k = \beta_k x_j - \beta_k E(X_j)$$
-where $E(X_k)$ is the mean estimate for feature k.
-We also want to compute feature effects in single predictions for non-linear functions with feature interaction.
+We motivate the Shapley value from a machine learning (or statistics) perspective. 
+We want to know the effect each feature has for a prediction of a data point. 
+In a linear model, this is easy to answer. 
+A linear model $\hat{f}$ has following form:
+$$\hat{f}(x_{i\cdot}) = \hat{f}(x_{i1}, \ldots, x_{ip}) = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip} $$
+where $x_{i\cdot} is the instance for which we want to compute the feature effects. 
+Each $x_{ij}$ is a feature value, with $j \in \{1, \ldots p\}$. 
+The $\beta_j$ are the coefficients corresponding to $x_{ij}$. 
 
-A solution for computing feature effects for single predictions is the Shapley value $\phi_k$ for feature $x_{\cdotk}$. 
+The effect $\phi_j$ of feature $x_{ij}$ is on the prediction $\hat{f}(x_{i\dot})$ is:
+$$ \phi_{ij}(\hat{f}) = \beta_j x_{ij} - E(\beta_j X_{\cdot j}) = \beta_j x_{ij} - \beta_j E(X_{\cdot j})$$
+where $E_X(\beta_jX_{\cdot j})$ is the mean estimate for feature $X_{\cdot j}$
+This is nice!
+Now we know how much each feature contributed towards the prediction. 
+If we sum up all the feature effects over all features for one instance, the result is: 
+$$\sum_{j=1}^p \phi_{ij}(\hat{f}) = \sum_{j=1}^p (\beta_j x_{ij} - E(\beta_j X_{\cdot j})) =   (\beta_0 +\sum_{j=1}^p \beta_j x_{ij}) - (\beta_0 + \sum_{j=1}^p E(\beta_j X_{\cdot j})) = \hat{f}(x_{i\cdot}) - E(\hat{f}(X))$$
+This is the predicted value minus the predicted value on average in the dataset. 
+This is nice, because we can now explain the difference between the predicted value and the average prediction by contributing it among the features. 
+Note that the feature effects $\phi_{ij}$ can also be negative.
+
+Now, can we do the same for other models?
+It would be great to have this for any kind of machine learning model, as a model-agnostic tool. 
+Since we don't have the $\beta$ from a linear equation in other model types, we need a different solution. 
+
+Help comes from unexpected places: cooperative game theory. 
+The Shapley value is a solution for computing feature effects $\phi_{ij}(\hat{f})$ for single predictions for any model $\hat{f}$. 
 
 The Shapley value for feature $j$ can be computed with: 
-$$ \phi_j (\hat{f}) = \sum_{S \subseteq \{x_{i,1}, \ldots, x_{i,p}\} \setminus \{x_{i,p}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(v\left(S \cup \{x_{i,j}\}\right) - v(S)\right)$$
-where $S$ is a subset of features, $\hat{f}(S)$ is the prediction for feature values in set $S$ (marginalised over features not in $S$), $x_{i\cdot}$ all feature values of observation $i$ and $p$ the number of features. 
-The approximate solution is: 
-$$ TODO$$
+$$ \phi_{ij} (\hat{f}) = \sum_{S \subseteq \{x_{i1}, \ldots, x_{ip}\} \setminus \{x_{ij}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(\hat{f}^*\left(S \cup \{x_{ij}\}\right) - \hat{f}^*(S)\right)$$
+where $S$ is a subset of the features used in the model, $x_{i\cdot}$ all feature values of observation $i$ and $p$ the number of features. 
+$\hat{f}^*(S)$ is the prediction for feature values in set $S$ (marginalised over features not in $S$):
+$$\hat{f}^*(S) = \int_{x_{i\cdot} \notin S} \hat{f}(x_{i\cdot}) $$
+The approximate solution for the Shapley value is: 
+$$ \hat{\phi}_{ij} =  \frac{1}{m} \sum_{m=1}^M (\hat{f}(x^{*+j}) - \hat{f}(x^{*-j})) $$
+where $x^{* + j}$ is the prediction for $x_{i\cdot}$, but with a random number of features replaced from a random sample from your data $X$, excluding the feature value $x_{ij}$
+The x-vector  $x^{* - j}$ is the same as  $x^{* + j}$, with the difference that the value $x_{ij}$ is also replaced by the sampled $x$. 
+Each is a kind of Frankenstein-instances, pieced together from two instances. 
+
+After the following excursion about the Shapley value itself, the Estimation of the Shapley value will be explained in more detail.
 
 #### Excursion: The Shapley Value
 
 This payout method can be used to assign the total payout, which is the predicted value for instance i, to the players, which are the features $x_{i,1}, \ldots, x_{i,p}$.
 In a cooperative game of the feature values $ \{x_{i,1}, \ldots, x^{i,p}\}$  and a game payout of $v(x_{i}) = \hat{f}(x_{i}) - E_x(\hat{f}(x))$, the Shapley value provides a unique solution for how the payout can be fairly distributed among the features.
 The Shapley value for a feature $x_{i,j}$ is the difference the feature makes in the payed outcome summed over all possible feature combinations.
-$$ \phi_j (\hat{f}) = \sum_{S \subseteq \{x_{i,1}, \ldots, x_{i,p}\} \setminus \{x_{i,p}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(v\left(S \cup \{x_{i,j}\}\right) - v(S)\right)$$
+$$ \phi_{ij} (\hat{f}) = \sum_{S \subseteq \{x_{i1}, \ldots, x_{ip}\} \setminus \{x_{ij}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(\hat{f}\left(S \cup \{x_{ij}\}\right) - \hat{f}(S)\right)$$
 
 In the Shapley value definition $v(S)$ is the value function that takes a coalition of set $S \subseteq \{x_{i,1}, \ldots, x^{i,p}\}$ of players (i.e. features) and returns the total payout of the game (i.e. the predicted value).
 The tricky part is to define "fairly", so most attribution methods are shown to satisfy some desirable axioms.
