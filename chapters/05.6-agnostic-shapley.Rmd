@@ -89,36 +89,37 @@ The Shapley value is NOT the difference in prediction when we would drop the fea
 This section goes deeper into the definition and computation of the Shapley value for the ones interested and patient enough to learn more.
 After reading this section you should really understand the computation and be able to implement the Shapley value yourself.
 
+A linear model for $\hat{f}$ has following form:
+$$\hat{f}(x) = \hat{f}(x_1, \ldots, x_p) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p $$
+The effect of feature $x_{\cdotj}$ and instance i would be measured by:
+$$ \phi_k = \beta_k x_j - \beta_k E(X_j)$$
+where $E(X_k)$ is the mean estimate for feature k.
+We also want to compute feature effects in single predictions for non-linear functions with feature interaction.
+
+A solution for computing feature effects for single predictions is the Shapley value $\phi_k$ for feature $x_{\cdotk}$. 
+
+The Shapley value for feature $j$ can be computed with: 
+$$ \phi_j (\hat{f}) = \sum_{S \subseteq \{x_{i,1}, \ldots, x_{i,p}\} \setminus \{x_{i,p}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(v\left(S \cup \{x_{i,j}\}\right) - v(S)\right)$$
+where $S$ is a subset of features, $\hat{f}(S)$ is the prediction for feature values in set $S$ (marginalised over features not in $S$), $x_{i\cdot}$ all feature values of observation $i$ and $p$ the number of features. 
+The approximate solution is: 
+$$ TODO$$
 
 #### Excursion: The Shapley Value
-
-In a linear model, our estimated function $f$ would have following form:
-$$f(x) = f(x_1, \ldots, x_p) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p $$
-The effect of feature k would be measured by:
-$$ \phi_k = \beta_k x_k - \beta_k E(X_k)$$
-where $E(X_k)$ is the mean estimate for feature k.
-However, we don't usually work with a linear model, but use model classes that can learn non-linear functions with interactions between the feature to capture more complex associations with the target outcome.
-We don't want to have assumptions on the model.
-But still we want some computation of the feature effects.
-Simply perturbing the feature is not enough, since this disregards interaction effects.
 
 This payout method can be used to assign the total payout, which is the predicted value for instance i, to the players, which are the features $x_{i,1}, \ldots, x_{i,p}$.
 In a cooperative game of the feature values $ \{x_{i,1}, \ldots, x^{i,p}\}$  and a game payout of $v(x_{i}) = \hat{f}(x_{i}) - E_x(\hat{f}(x))$, the Shapley value provides a unique solution for how the payout can be fairly distributed among the features.
 The Shapley value for a feature $x_{i,j}$ is the difference the feature makes in the payed outcome summed over all possible feature combinations.
-
-
 $$ \phi_j (\hat{f}) = \sum_{S \subseteq \{x_{i,1}, \ldots, x_{i,p}\} \setminus \{x_{i,p}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(v\left(S \cup \{x_{i,j}\}\right) - v(S)\right)$$
 
 In the Shapley value definition $v(S)$ is the value function that takes a coalition of set $S \subseteq \{x_{i,1}, \ldots, x^{i,p}\}$ of players (i.e. features) and returns the total payout of the game (i.e. the predicted value).
 The tricky part is to define "fairly", so most attribution methods are shown to satisfy some desirable axioms.
 
-The Shapley value is the only attribution method that satisfies the following four desirable properties:
-\begin{enumerate}
-  \item Eficiency: $\sum_{j=1}^p \phi_j = val(x_i) =  \hat{f}(x_i) - E_x(\hat{f}(x))$. The feature effects have to sum up to the difference in prediction between prediction for $x_i$ and the models mean prediction.
-  \item Symmetry: If $val(S \cup \{x_j^{(i)}\}) = val(S \cup \{x_k^{(i)}\})$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\} \setminus \{x_j^{(i)},x_k^{(i)}\}$, then $\phi_j = \phi_k$. The contribution for two features should be the same if they contribute the same to all possible coalitions.
-  \item Dummy: If $val(S \cup \{x_j^{(j)}\}) = val(S)$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$, then $\phi_j = 0$. A feature which does not change the predicted value no matter to which coalition of features it is added should get assigned a contribution of 0.
-  \item Additivity: For a game with combined values $val + val'$ the respective Shapley values are $\phi_j + \phi_j'$. The additivity axiom has no relevance in the context of feature effects.
-\end{enumerate}
+The Shapley value is the only attribution method that satisfies these properties:
+1. Eficiency: $\sum_{j=1}^p \phi_j = val(x_i) =  \hat{f}(x_i) - E_x(\hat{f}(x))$. The feature effects have to sum up to the difference in prediction between prediction for $x_i$ and the models mean prediction.
+1.   Symmetry: If $val(S \cup \{x_j^{(i)}\}) = val(S \cup \{x_k^{(i)}\})$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\} \setminus \{x_j^{(i)},x_k^{(i)}\}$, then $\phi_j = \phi_k$. The contribution for two features should be the same if they contribute the same to all possible coalitions.
+1.  Dummy: If $val(S \cup \{x_j^{(j)}\}) = val(S)$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$, then $\phi_j = 0$. A feature which does not change the predicted value no matter to which coalition of features it is added should get assigned a contribution of 0.
+1.  Additivity: For a game with combined values $val + val'$ the respective Shapley values are $\phi_j + \phi_j'$. The additivity axiom has no relevance in the context of feature effects.
+
 
 An intuitive way to understand the Shapley value is  the following illustration:
 The features enter a room in random order.
@@ -174,7 +175,10 @@ Second, we usually can't go over all possible feature combinations, so we sample
 
 #### Kernel based estimation of the Shapley value
 @Lundberg2017 (pre-print) suggest a kernel based approach and claim that it needs less samples.
-They propose a kernel function $K_{x'}(x)$, the Shapley kernel: $$K_{x'}(x) = \frac{(p-1)}{{p \choose |S|}|S|(p-|S|)}$$ where $p$ is the number of features, $|S|$ is the number of features in $x$ coming from the instance of interest $x'$.  Based on the kernel, following loss function is defined: $$L(f,g,K_{x'})  = \sum_{x \in X}\left[f(x)) - g(x)\right]^2 K_{x'}(x)$$
+They propose a kernel function $K_{x'}(x)$, the Shapley kernel: 
+$$K_{x'}(x) = \frac{(p-1)}{{p \choose |S|}|S|(p-|S|)}$$ 
+where $p$ is the number of features, $|S|$ is the number of features in $x$ coming from the instance of interest $x'$.  
+Based on the kernel, following loss function is defined: $$L(f,g,K_{x'})  = \sum_{x \in X}\left[f(x)) - g(x)\right]^2 K_{x'}(x)$$
 $g(x')$ is the function that should approximate the black box function $f(x)$, while satisfying local accuracy: $f(x) = g(x') = \phi_0 + \sum_{i=1}^M \phi_i x_i'$.
 This function can be minimized by sampling data points and fitting a linear regression model with L2 loss.
 They claim a better sampling efficiency with the kernel approach.
