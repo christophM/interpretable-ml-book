@@ -119,7 +119,8 @@ The Shapley value for feature $j$ can be computed with:
 $$ \phi_{ij} (\hat{f}) = \sum_{S \subseteq \{x_{i1}, \ldots, x_{ip}\} \setminus \{x_{ij}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(\hat{f}^*\left(S \cup \{x_{ij}\}\right) - \hat{f}^*(S)\right)$$
 where $S$ is a subset of the features used in the model, $x_{i\cdot}$ all feature values of observation $i$ and $p$ the number of features. 
 $\hat{f}^*(S)$ is the prediction for feature values in set $S$ (marginalised over features not in $S$):
-$$\hat{f}^*(S) = \int_{x_{i\cdot} \notin S} \hat{f}(x_{i\cdot}) $$
+$$\hat{f}^*(S) = \int \hat{f}(x_{i1}, \ldots, x_{ip})d\mathbb{P}_{X_{i\cdot} \notin S}  $$
+You actually do multiple integrations, for each feature not in $S$. 
 The approximate solution for the Shapley value is: 
 $$ \hat{\phi}_{ij} =  \frac{1}{m} \sum_{m=1}^M (\hat{f}(x^{*+j}) - \hat{f}(x^{*-j})) $$
 where $x^{* + j}$ is the prediction for $x_{i\cdot}$, but with a random number of features replaced from a random sample from your data $X$, excluding the feature value $x_{ij}$
@@ -129,27 +130,31 @@ Each is a kind of Frankenstein-instances, pieced together from two instances.
 After the following excursion about the Shapley value itself, the Estimation of the Shapley value will be explained in more detail.
 
 #### Excursion: The Shapley Value
-
-This payout method can be used to assign the total payout, which is the predicted value for instance i, to the players, which are the features $x_{i,1}, \ldots, x_{i,p}$.
-In a cooperative game of the feature values $ \{x_{i,1}, \ldots, x^{i,p}\}$  and a game payout of $v(x_{i}) = \hat{f}(x_{i}) - E_x(\hat{f}(x))$, the Shapley value provides a unique solution for how the payout can be fairly distributed among the features.
-The Shapley value for a feature $x_{i,j}$ is the difference the feature makes in the payed outcome summed over all possible feature combinations.
+The original Shapley value is defined via a value function over players in S ($v(S)$). 
+For machine learning predictions, we define the value function as follows:
+$$v(S) =\int \hat{f}(x_{i1}, \ldots, x_{ip})d\mathbb{P}_{X_{i\cdot} \notin S}    - E_X(\hat{f}(X))$$
+The Shapley value of a feature value $x_{i,j}$ is the difference it makes in the payed outcome summed over all possible feature value combinations.
 $$ \phi_{ij} (\hat{f}) = \sum_{S \subseteq \{x_{i1}, \ldots, x_{ip}\} \setminus \{x_{ij}\}} \frac{|S|!\left(p-|S| - 1\right)!}{p!} \left(\hat{f}\left(S \cup \{x_{ij}\}\right) - \hat{f}(S)\right)$$
 
-In the Shapley value definition $v(S)$ is the value function that takes a coalition of set $S \subseteq \{x_{i,1}, \ldots, x^{i,p}\}$ of players (i.e. features) and returns the total payout of the game (i.e. the predicted value).
-The tricky part is to define "fairly", so most attribution methods are shown to satisfy some desirable axioms.
-
-The Shapley value is the only attribution method that satisfies these properties:
-1. Eficiency: $\sum_{j=1}^p \phi_j = val(x_i) =  \hat{f}(x_i) - E_x(\hat{f}(x))$. The feature effects have to sum up to the difference in prediction between prediction for $x_i$ and the models mean prediction.
-1.   Symmetry: If $val(S \cup \{x_j^{(i)}\}) = val(S \cup \{x_k^{(i)}\})$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\} \setminus \{x_j^{(i)},x_k^{(i)}\}$, then $\phi_j = \phi_k$. The contribution for two features should be the same if they contribute the same to all possible coalitions.
-1.  Dummy: If $val(S \cup \{x_j^{(j)}\}) = val(S)$ for all $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$, then $\phi_j = 0$. A feature which does not change the predicted value no matter to which coalition of features it is added should get assigned a contribution of 0.
-1.  Additivity: For a game with combined values $val + val'$ the respective Shapley values are $\phi_j + \phi_j'$. The additivity axiom has no relevance in the context of feature effects.
+The Shapley value is the only attribution method that satisfies the following properties (which can be seen as a definition of a fair payout):
+1. Eficiency: $\sum_{j=1}^p \phi_{ij} = \hat{f}(x_i) - E_X(\hat{f}(X))$. 
+The feature effects have to sum up to the difference in prediction between prediction for $x_i$ and the models mean prediction.
+1.   Symmetry: If $\hat{f}^*(S \cup \{x_{ij}\}) = \hat{f}^*(S \cup \{x_{ik}\})$ for all $S \subseteq \{x_{i1}, \ldots, x_{ip}\} \setminus \{x_{ij},x_{ik}}\}$, then $\phi_{ij} = \phi_{ik}$. 
+$\hat{f}^*(S)$ is the prediction for feature values in its argument (marginalised over the other features):
+The contribution for two features should be the same if they contribute the same to all possible coalitions.
+1.  Dummy: If $\hat{f}^*(S \cup \{x_{ij}\}) = \hat{f}^*(S)$ for all $S \subseteq \{x_{i1}, \ldots, x_{ip}\}$, then $\phi_{ij} = 0$. 
+A feature which does not change the predicted value no matter to which coalition of features it is added should get assigned a contribution of 0.
+1.  Additivity: For a game with combined values $v + v'$ the respective Shapley values are $\phi_{ij} + \phi_{ij}'$. 
+The additivity axiom has no relevance in the context of feature effects.
 
 
 An intuitive way to understand the Shapley value is  the following illustration:
 The features enter a room in random order.
 All features in the room participate in the game (= contribute to the prediction).
-The Shapley value $\phi_j$ is the average additional contribution of feature $j$ by joining whatever features already entered the room before, i.e. $$\phi_j = \sum_{\text{All  orderings}} v(\{\text{features before j}\} \cup \{x_j^{(i)}\}) -  v(\{\text{features before j}\})$$
+The Shapley value $\phi_{ij}$ is the average additional contribution of feature $j$ by joining whatever features already entered the room before, i.e. 
+$$\phi_{ij} = \sum_{\text{All orderings}} \hat{f}^*(\{\text{features before j}\} \cup x_{ij}) -  \hat{f}^*(\{\text{features before j}\})$$
 
+TODO: Continue here
 #### Estimating the Shapley value
 
 The value function $val_{x_i}(S) $ (parameterized by the instance of interest $x_i$) for a coalition of features $S \subseteq \{x^{(i)}_1, \ldots, x^{(i)}_p\}$ is the expected prediction (minus expected value of model) when the values for features in $S$ are taken from instance $x_i$ and for features not in $S$ the values come from the distribution of $X$.
