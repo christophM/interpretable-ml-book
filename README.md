@@ -54,6 +54,7 @@ browseURL('_book/index.html')
 All notable changes to the book will be documented here.
 
 ### v0.2 WORK IN PROGRESS
+- Added short story chapters
 - Added donation links in Preface
 - Reworked RuleFit to complete chapter with examples and theory.
 - Interpretability chapter extended
