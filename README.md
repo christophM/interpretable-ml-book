@@ -53,10 +53,13 @@ browseURL('_book/index.html')
 ## Changelog
 All notable changes to the book will be documented here.
 
-### v0.2 WORK IN PROGRESS
+### v0.3 IN PROGRESS
+
+### v0.2 (2018-02-13)
+- Added chapter about Shapley value explanations
 - Added short story chapters
 - Added donation links in Preface
-- Reworked RuleFit to complete chapter with examples and theory.
+- Reworked RuleFit with examples and theory.
 - Interpretability chapter extended
 - Add chapter on human-style explanations
 - Making it easier to collaborate: Travis checks if book can be rendered for pull requests
