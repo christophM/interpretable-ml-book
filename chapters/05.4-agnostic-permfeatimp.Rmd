@@ -1,28 +1,68 @@
-## Permutation Feature Importance
+## Permutation Feature Importance {feature-importance}
+Feature importance scores each feature by how much the model error increases, when the feature is omitted from the model. 
 
-The permutation feature importance measurement was  introduced for RandomForests by @breiman2001random.
+
+### The Theory
+
+The concept is really straightforward: 
+We measure a feature's importance by calculating the difference between model performance before and after perturbing the feature.
+The permutation feature importance measurement was introduced for RandomForests by @breiman2001random.
+Based on this idea, @Fisher2018formulated the feature importance - they call it model reliance -  in a model-agnostic way. 
+They also introduce some deeper ideas about the feature importance, for example how to measure the Rashomon effect in model classes (model-specific). 
+Their paper is worth a read!
+
+
 It works by measuring what happens to the model performance when you permute each feature.
 A big loss in performance means a big feature importance.
-The idea of the permutation of features is per se model-agnostic, only the out-of-bag (=datapoints not used for model fitting) estimation scheme is specific for bootstrapped ensemble methods.
 Permutation feature importance can be used for any model when a hold-out dataset, instead of out-of-bag samples is used.
 Of course you could also use the training data, but you risk
 getting variable importance measures that overfit your data, since the model was already trained on it.
 
-I haven't found any paper that generalises permutation feature importance, so that it can be applied model-agnostic.
-There are a few implementations, but seemingly without research backing it up. 
-Please drop me a mail if you know about a formal introduction of model-agnostic feature importance.
+Input: Trained model $\hat{f}$, dataset $D$$
 
-Taking the RandomForest feature importance algorithm from [@breiman2001random], here is my take for how to do permutation feature importance in a model-agnostic way:
-
-Input: Trained model $\hat{f}$, hold-out dataset $D$, number of permutations $n_{perm}$
-
-1. Estimate performance $Perf$ of $\hat{f}$ on dataset $D$ (e.g. mean squared error)
+1. Estimate the model error $e_{orig}(\hat{f})$ of $\hat{f}$ on dataset $D$ (e.g. mean squared error)
 2. For each feature $j \in 1, \ldots, p$ do
     - For $i \in 1,\ldots , n_{perm}$
         - Generate data $D_{j_{perm}}$ by permuting feature $X_j$ in data $D$. This breaks the association between $X_j$ and $Y$.
-        - Estimate performance $Perf_{i,j_{perm}}$ of $\hat{f}$ on dataset $D_{j_{perm}}$
-        - Calculate permutation feature importance $FI_i(X_j) = Perf_{i,j_{perm}} - Perf$
-    - Calculate mean variable importance for the sample: $FI(X_j) = \frac{1}{n_{perm}}\sum_{i=1}^{n_{perm}} FI_i(X_j)$
+        - Estimate error $e_{perm}$ of $\hat{f}$ on dataset $D_{j_{perm}}$
+        - Calculate permutation feature importance $FI_i(X_j) = \frac{e_{perm}(\hat{f})}{e_{orig}(\hat{f})} $
 3. Sort variables by descending $FI$.
 
+In their paper, @Fisher2018 propose to cut dataset $D$ in half and exchange the $X_j$ values instead of permuting $X_j$ in $D$. 
+But this is exactly the same as permuting the feature $X_j$ if you think about it. 
+If you want to have a more accurate estimate, you could estimate the error of dropping $X_j$ by pairing each instance with the $X_j$ value of each other datapoint (except from itself). 
+This gives you a dataset of size $n(n-1)$ to estimate the permuted error.
+
 The feature with the highest importance measure $FI$ makes the most difference in performance globally in your model.
+
+
+### Example and Interpretation
+
+Let's fit a decision tree to predict cervical cancer. 
+```{r importance-cervical}
+library('randomForest')
+tree = randomForest(Biopsy ~ ., data = cervical.data)
+library('iml')
+importance = feature.imp(tree, X = cervical.data, y = cervical.data$Biopsy, loss = 'ce', predict.args = list(type = 'prob'))
+importance
+```
+
+
+```{r importance-cervical}
+library('iml')
+feature.imp(tree, X = cervical.data, y = cervical.data$Biopsy, loss = 'ce')
+```
+
+
+
+
+### Advantages
+- Nice interpretation
+- 
+
+### Disadvantages
+- Tied to performance
+- In reality more important what the model does (variance) instead of performance. 
+
+
+Alternatives: 
