@@ -28,14 +28,14 @@ Rules for contributing text or code:
 
 
 ## Rendering the book
-Make sure all dependencies for the book are installed. This book has the structure of an R package, so dependencies can be installed easily, only R and the devtools library is required:
-```{r}
-devtools::install_github("christophM/interpretable-ml-book")
-```
-
-After you installed the dependencies, you have to clone the repository.
+Clone the repository.
 ```{shell}
 git clone git@github.com:christophM/interpretable-ml-book.git
+```
+Make sure all dependencies for the book are installed. This book has the structure of an R package, so dependencies can be installed easily, only R and the devtools library is required. 
+Start an R session in the folder of the book repository and type:
+```{r}
+devtools::install_deps()
 ```
 
 For rendering the book, start an R session and type:
@@ -53,10 +53,13 @@ browseURL('_book/index.html')
 ## Changelog
 All notable changes to the book will be documented here.
 
-### v0.2 WORK IN PROGRESS
+### v0.3 IN PROGRESS
+
+### v0.2 (2018-02-13)
+- Added chapter about Shapley value explanations
 - Added short story chapters
 - Added donation links in Preface
-- Reworked RuleFit to complete chapter with examples and theory.
+- Reworked RuleFit with examples and theory.
 - Interpretability chapter extended
 - Add chapter on human-style explanations
 - Making it easier to collaborate: Travis checks if book can be rendered for pull requests
