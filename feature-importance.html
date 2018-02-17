@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2018-02-15">
+<meta name="date" content="2018-02-17">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -164,17 +164,22 @@
 <li class="chapter" data-level="5.2" data-path="ice.html"><a href="ice.html"><i class="fa fa-check"></i><b>5.2</b> Individual Conditional Expectation (ICE) Plot</a><ul>
 <li class="chapter" data-level="5.2.1" data-path="ice.html"><a href="ice.html#example-1"><i class="fa fa-check"></i><b>5.2.1</b> Example</a></li>
 </ul></li>
-<li class="chapter" data-level="5.3" data-path="permutation-feature-importance.html"><a href="permutation-feature-importance.html"><i class="fa fa-check"></i><b>5.3</b> Permutation Feature Importance</a></li>
+<li class="chapter" data-level="5.3" data-path="feature-importance.html"><a href="feature-importance.html"><i class="fa fa-check"></i><b>5.3</b> Feature Importance</a><ul>
+<li class="chapter" data-level="5.3.1" data-path="feature-importance.html"><a href="feature-importance.html#the-theory"><i class="fa fa-check"></i><b>5.3.1</b> The Theory</a></li>
+<li class="chapter" data-level="5.3.2" data-path="feature-importance.html"><a href="feature-importance.html#example-and-interpretation"><i class="fa fa-check"></i><b>5.3.2</b> Example and Interpretation</a></li>
+<li class="chapter" data-level="5.3.3" data-path="feature-importance.html"><a href="feature-importance.html#advantages-1"><i class="fa fa-check"></i><b>5.3.3</b> Advantages</a></li>
+<li class="chapter" data-level="5.3.4" data-path="feature-importance.html"><a href="feature-importance.html#disadvantages-1"><i class="fa fa-check"></i><b>5.3.4</b> Disadvantages</a></li>
+</ul></li>
 <li class="chapter" data-level="5.4" data-path="lime.html"><a href="lime.html"><i class="fa fa-check"></i><b>5.4</b> Local Surrogate Models (LIME)</a><ul>
 <li class="chapter" data-level="5.4.1" data-path="lime.html"><a href="lime.html#lime-for-tabular-data"><i class="fa fa-check"></i><b>5.4.1</b> LIME for Tabular Data</a></li>
 <li class="chapter" data-level="5.4.2" data-path="lime.html"><a href="lime.html#lime-for-text"><i class="fa fa-check"></i><b>5.4.2</b> LIME for Text</a></li>
 </ul></li>
 <li class="chapter" data-level="5.5" data-path="shapley.html"><a href="shapley.html"><i class="fa fa-check"></i><b>5.5</b> Shapley Value Explanations</a><ul>
 <li class="chapter" data-level="5.5.1" data-path="shapley.html"><a href="shapley.html#the-general-idea"><i class="fa fa-check"></i><b>5.5.1</b> The general idea</a></li>
-<li class="chapter" data-level="5.5.2" data-path="shapley.html"><a href="shapley.html#interpretation-and-example-1"><i class="fa fa-check"></i><b>5.5.2</b> Interpretation and example</a></li>
+<li class="chapter" data-level="5.5.2" data-path="shapley.html"><a href="shapley.html#examples-and-interpretation"><i class="fa fa-check"></i><b>5.5.2</b> Examples and Interpretation</a></li>
 <li class="chapter" data-level="5.5.3" data-path="shapley.html"><a href="shapley.html#the-shapley-value-in-detail"><i class="fa fa-check"></i><b>5.5.3</b> The Shapley Value in Detail</a></li>
-<li class="chapter" data-level="5.5.4" data-path="shapley.html"><a href="shapley.html#advantages-1"><i class="fa fa-check"></i><b>5.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="5.5.5" data-path="shapley.html"><a href="shapley.html#disadvantages-1"><i class="fa fa-check"></i><b>5.5.5</b> Disadvantages</a></li>
+<li class="chapter" data-level="5.5.4" data-path="shapley.html"><a href="shapley.html#advantages-2"><i class="fa fa-check"></i><b>5.5.4</b> Advantages</a></li>
+<li class="chapter" data-level="5.5.5" data-path="shapley.html"><a href="shapley.html#disadvantages-2"><i class="fa fa-check"></i><b>5.5.5</b> Disadvantages</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="6" data-path="contribute.html"><a href="contribute.html"><i class="fa fa-check"></i><b>6</b> Contribute</a></li>
@@ -198,33 +203,235 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="permutation-feature-importance" class="section level2">
-<h2><span class="header-section-number">5.3</span> Permutation Feature Importance</h2>
-<p>The permutation feature importance measurement was introduced for RandomForests by <span class="citation">Breiman (<a href="#ref-breiman2001random">2001</a>)</span>. It works by measuring what happens to the model performance when you permute each feature. A big loss in performance means a big feature importance. The idea of the permutation of features is per se model-agnostic, only the out-of-bag (=datapoints not used for model fitting) estimation scheme is specific for bootstrapped ensemble methods. Permutation feature importance can be used for any model when a hold-out dataset, instead of out-of-bag samples is used. Of course you could also use the training data, but you risk getting variable importance measures that overfit your data, since the model was already trained on it.</p>
-<p>I haven’t found any paper that generalises permutation feature importance, so that it can be applied model-agnostic. There are a few implementations, but seemingly without research backing it up. Please drop me a mail if you know about a formal introduction of model-agnostic feature importance.</p>
-<p>Taking the RandomForest feature importance algorithm from <span class="citation">(Breiman <a href="#ref-breiman2001random">2001</a>)</span>, here is my take for how to do permutation feature importance in a model-agnostic way:</p>
-<p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, hold-out dataset <span class="math inline">\(D\)</span>, number of permutations <span class="math inline">\(n_{perm}\)</span></p>
+<div id="feature-importance" class="section level2">
+<h2><span class="header-section-number">5.3</span> Feature Importance</h2>
+<p>A feature’s importance is the increase in the model’s prediction error after we permuted the feature’s values (breaks the relationship between the feature and the outcome).</p>
+<div id="the-theory" class="section level3">
+<h3><span class="header-section-number">5.3.1</span> The Theory</h3>
+<p>The concept is really straightforward: We measure a feature’s importance by calculating the increase of the model’s prediction error after permuting the feature. A feature is “important”, if permuting its values increases the model error, because the model relied on the feature for the prediction; A feature is “unimportant” if permuting its values keeps the model error unchanged, because the model ignored the feature for the prediction. The permutation feature importance measurement was introduced for Random Forests by <span class="citation">Breiman (<a href="#ref-breiman2001random">2001</a>)</span>. Based on this idea, <span class="citation">Fisher, Rudin, and Dominici (<a href="#ref-Fisher2018">2018</a>)</span> proposed a model-agnostic version of the feature importance - they called it model reliance. They also introduce more advanced ideas about feature importance, for example a (model-specific) version that accounts for the fact that many prediction models may fit the data well. Their paper is worth a read.</p>
+<p><strong>The algorithm: </strong></p>
+<p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, feature matrix <span class="math inline">\(X\)</span>, target vector <span class="math inline">\(Y\)</span>, error measure <span class="math inline">\(L(Y,\hat{Y})\)</span></p>
 <ol style="list-style-type: decimal">
-<li>Estimate performance <span class="math inline">\(Perf\)</span> of <span class="math inline">\(\hat{f}\)</span> on dataset <span class="math inline">\(D\)</span> (e.g. mean squared error)</li>
+<li>Estimate the original model error <span class="math inline">\(e_{orig}(\hat{f}) = L(Y, \hat{f}(X))\)</span> (e.g. mean squared error)</li>
 <li>For each feature <span class="math inline">\(j \in 1, \ldots, p\)</span> do
 <ul>
-<li>For <span class="math inline">\(i \in 1,\ldots , n_{perm}\)</span>
-<ul>
-<li>Generate data <span class="math inline">\(D_{j_{perm}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in data <span class="math inline">\(D\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
-<li>Estimate performance <span class="math inline">\(Perf_{i,j_{perm}}\)</span> of <span class="math inline">\(\hat{f}\)</span> on dataset <span class="math inline">\(D_{j_{perm}}\)</span></li>
-<li>Calculate permutation feature importance <span class="math inline">\(FI_i(X_j) = Perf_{i,j_{perm}} - Perf\)</span></li>
-</ul></li>
-<li>Calculate mean variable importance for the sample: <span class="math inline">\(FI(X_j) = \frac{1}{n_{perm}}\sum_{i=1}^{n_{perm}} FI_i(X_j)\)</span></li>
+<li>Generate feature matrix <span class="math inline">\(X_{perm_{j}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in <span class="math inline">\(X\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
+<li>Estimate error <span class="math inline">\(e_{perm} = L(Y, \hat{f}(X_{perm_j}))\)</span> based on the predictions of the permuted data.</li>
+<li>Calculate permutation feature importance <span class="math inline">\(FI_j = e_{perm}(\hat{f}) / e_{orig}(\hat{f})\)</span>. Alternatively, the difference can be used: <span class="math inline">\(FI_j = e_{perm}(\hat{f}) - e_{orig}(\hat{f})\)</span></li>
 </ul></li>
 <li>Sort variables by descending <span class="math inline">\(FI\)</span>.</li>
 </ol>
-<p>The feature with the highest importance measure <span class="math inline">\(FI\)</span> makes the most difference in performance globally in your model.</p>
+<p>In their paper, <span class="citation">Fisher, Rudin, and Dominici (<a href="#ref-Fisher2018">2018</a>)</span> propose to split the dataset in half and exchange the <span class="math inline">\(X_j\)</span> values of the two halves instead of permuting <span class="math inline">\(X_j\)</span>. This is exactly the same as permuting the feature <span class="math inline">\(X_j\)</span> if you think about it. If you want to have a more accurate estimate, you can estimate the error of permuting <span class="math inline">\(X_j\)</span> by pairing each instance with the <span class="math inline">\(X_j\)</span> value of each other instance (except with itself). This gives you a dataset of size <span class="math inline">\(n(n-1)\)</span> to estimate the permutation error and it takes a big amount of computation time. I can only recommend using the <span class="math inline">\(n(n-1)\)</span> - method when you are serious about getting extremely accurate estimates.</p>
+</div>
+<div id="example-and-interpretation" class="section level3">
+<h3><span class="header-section-number">5.3.2</span> Example and Interpretation</h3>
+<p>We show examples for classification and regression.</p>
+<p><strong>Cervical cancer (Classification)</strong></p>
+<p>We fit an xgboost model to predict cervical cancer (data described in Chapter <a href="cervical-data.html#cervical-data">3.3</a>). We measure the error increase by: <span class="math inline">\(1 - AUC\)</span> (one minus the area under the ROC curve). Figure <a href="feature-importance.html#fig:importance-cervical">5.11</a> and Table <a href="feature-importance.html#tab:importance-cervical-table">5.1</a> show the results. Features that are associated model error increase by a factor of 1 (= no change) were not important for predicting cervical cancer.</p>
+<div class="figure" style="text-align: center"><span id="fig:importance-cervical"></span>
+<img src="interpretable-ml_files/figure-html/importance-cervical-1.svg" alt="The importance for each of the features in predicting cervical cancer with an xgboost model." width="80%" />
+<p class="caption">
+FIGURE 5.11: The importance for each of the features in predicting cervical cancer with an xgboost model.
+</p>
+</div>
+<table>
+<caption><span id="tab:importance-cervical-table">TABLE 5.1: </span>The feature importance of an xgboost model predicting cervical cancer. The original model error is 0.340 (1 - AUC). The ‘error’-column shows the error after feature permutation. The ‘importance’-column shows the factor by which the error is increased compared to the original model error.</caption>
+<thead>
+<tr class="header">
+<th align="left">..feature</th>
+<th align="right">error</th>
+<th align="right">importance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">STDs</td>
+<td align="right">0.43</td>
+<td align="right">1.28</td>
+</tr>
+<tr class="even">
+<td align="left">Hormonal.Contraceptives..years.</td>
+<td align="right">0.40</td>
+<td align="right">1.19</td>
+</tr>
+<tr class="odd">
+<td align="left">Age</td>
+<td align="right">0.36</td>
+<td align="right">1.05</td>
+</tr>
+<tr class="even">
+<td align="left">First.sexual.intercourse</td>
+<td align="right">0.35</td>
+<td align="right">1.02</td>
+</tr>
+<tr class="odd">
+<td align="left">Smokes..years.</td>
+<td align="right">0.34</td>
+<td align="right">1.01</td>
+</tr>
+<tr class="even">
+<td align="left">IUD..years.</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="odd">
+<td align="left">Number.of.sexual.partners</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="even">
+<td align="left">Biopsy</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="odd">
+<td align="left">Hormonal.Contraceptives</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="even">
+<td align="left">IUD</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="odd">
+<td align="left">Num.of.pregnancies</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="even">
+<td align="left">Smokes</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="odd">
+<td align="left">STDs..number.</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="even">
+<td align="left">STDs..Number.of.diagnosis</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="odd">
+<td align="left">STDs..Time.since.first.diagnosis</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+<tr class="even">
+<td align="left">STDs..Time.since.last.diagnosis</td>
+<td align="right">0.34</td>
+<td align="right">1.00</td>
+</tr>
+</tbody>
+</table>
+<p>The feature with the highest importance was STDs associated with an error increase of 1.28 after permutation.</p>
+<p><strong>Bike rentals (Classification)</strong></p>
+We fit a random forest model to predict bike rentals, given weather conditions and calendric information (data described in Chapter <a href="bike-data.html#bike-data">3.1</a>). As error measurement we use the mean absolute error. Figure <a href="feature-importance.html#fig:importance-bike">5.12</a> and Table <a href="feature-importance.html#tab:importance-bike-table">5.2</a> show the estimated feature importance values.
+<div class="figure" style="text-align: center"><span id="fig:importance-bike"></span>
+<img src="interpretable-ml_files/figure-html/importance-bike-1.svg" alt="The importance for each of the features in predicting bike rentals with a random forest." width="80%" />
+<p class="caption">
+FIGURE 5.12: The importance for each of the features in predicting bike rentals with a random forest.
+</p>
+</div>
+<table>
+<caption><span id="tab:importance-bike-table">TABLE 5.2: </span>The feature importance of a Random Forest predicting bike rentals. It’s measured as relative increase in mean absolute error (mae) after feature permutation. The mean absolute error of the model is 211.065. The ‘error’-column shows the absolute error after feature permutation. The ‘importance’-column shows the factor by which the error is increased compared to the original model error.</caption>
+<thead>
+<tr class="header">
+<th align="left">..feature</th>
+<th align="right">error</th>
+<th align="right">importance</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">days_since_2011</td>
+<td align="right">870.92</td>
+<td align="right">4.13</td>
+</tr>
+<tr class="even">
+<td align="left">temp</td>
+<td align="right">743.55</td>
+<td align="right">3.52</td>
+</tr>
+<tr class="odd">
+<td align="left">yr</td>
+<td align="right">552.99</td>
+<td align="right">2.62</td>
+</tr>
+<tr class="even">
+<td align="left">mnth</td>
+<td align="right">444.96</td>
+<td align="right">2.11</td>
+</tr>
+<tr class="odd">
+<td align="left">hum</td>
+<td align="right">405.85</td>
+<td align="right">1.92</td>
+</tr>
+<tr class="even">
+<td align="left">season</td>
+<td align="right">382.71</td>
+<td align="right">1.81</td>
+</tr>
+<tr class="odd">
+<td align="left">weathersit</td>
+<td align="right">316.81</td>
+<td align="right">1.50</td>
+</tr>
+<tr class="even">
+<td align="left">windspeed</td>
+<td align="right">312.84</td>
+<td align="right">1.48</td>
+</tr>
+<tr class="odd">
+<td align="left">weekday</td>
+<td align="right">302.39</td>
+<td align="right">1.43</td>
+</tr>
+<tr class="even">
+<td align="left">workingday</td>
+<td align="right">240.91</td>
+<td align="right">1.14</td>
+</tr>
+<tr class="odd">
+<td align="left">holiday</td>
+<td align="right">216.53</td>
+<td align="right">1.03</td>
+</tr>
+<tr class="even">
+<td align="left">cnt</td>
+<td align="right">211.07</td>
+<td align="right">1.00</td>
+</tr>
+</tbody>
+</table>
+<p>A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are comparable across different problems. You can see that the importance of the most important features in the bike rental prediction task is 2 to 3 times higher than in the cervical cancer prediction task. This indicates that the features were much more informative in the bike rental prediction task and that the bike model does a better job at predicting bike rentals compared to the cancer model at predicting cancer.</p>
+</div>
+<div id="advantages-1" class="section level3">
+<h3><span class="header-section-number">5.3.3</span> Advantages</h3>
+<ul>
+<li>Nice interpretation: Feature importance is the increase of model error when the feature’s information is destroyed.</li>
+<li>Feature importance provides a highly compressed, global insight into the model’s behaviour.</li>
+</ul>
+</div>
+<div id="disadvantages-1" class="section level3">
+<h3><span class="header-section-number">5.3.4</span> Disadvantages</h3>
+<ul>
+<li>The feature importance measure is tied to the error of the model. This is not inherently bad, but in some cases not what you need. In some cases you would prefer to know how much the model’s output varies for one feature, ignoring what it means for the performance. For example: You want to find out how robust your model’s output is, given someone manipulates the features. In this case, you wouldn’t be interested in how much the model performance drops given the permutation of a feature, but rather how much of the model’s output variance is explained by each feature. Model variance (explained by the features) and feature importance correlate strongly, when the model generalizes well (i.e. it doesn’t overfit).</li>
+<li>You need access to the actual outcome target. If someone only gives you the model and unlabeled data - but not the actual target- you can’t compute the permutation feature importance.</li>
+</ul>
 
+</div>
 </div>
 <h3>References</h3>
 <div id="refs" class="references">
 <div id="ref-breiman2001random">
 <p>Breiman, Leo. 2001. “Random Forests.” <em>Machine Learning</em> 45 (1). Springer: 5–32.</p>
+</div>
+<div id="ref-Fisher2018">
+<p>Fisher, Aaron, Cynthia Rudin, and Francesca Dominici. 2018. “Model Class Reliance: Variable Importance Measures for any Machine Learning Model Class, from the ‘Rashomon’ Perspective.” <a href="http://arxiv.org/abs/1801.01489" class="uri">http://arxiv.org/abs/1801.01489</a>.</p>
 </div>
 </div>
             </section>
