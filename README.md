@@ -54,7 +54,9 @@ browseURL('_book/index.html')
 All notable changes to the book will be documented here.
 
 ### v0.3 IN PROGRESS
-
+- Reworked the Feature Importance Chapter
+-
+ 
 ### v0.2 (2018-02-13)
 - Added chapter about Shapley value explanations
 - Added short story chapters
