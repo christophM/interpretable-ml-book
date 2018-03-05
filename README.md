@@ -30,7 +30,7 @@ devtools::install_deps()
 
 For rendering the book, start an R session and type:
 ```{r}
-bookdown::render_book('./', 'bookdown::gitbook')
+bookdown::render_book('./manuscript/', 'bookdown::gitbook')
 ```
 
 After rendering, the HTML files of the  book will be in the "_book" folder. You can either double-click index.html directly or, of course, do it in R:
