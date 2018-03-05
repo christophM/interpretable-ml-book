@@ -46,17 +46,18 @@ library('iml')
 task = makeClassifTask(data = cervical.data, target = "Biopsy")
 learner = makeLearner('classif.xgboost', predict.type = 'prob')
 mod = mlr::train(learner, task)
+predictor = Predictor$new(mod, data = cervical.data[-which(names(cervical.data) == "Biopsy")], y = (cervical.data$Biopsy == "Cancer"), class = 1)
 auc_error = function(actual, predicted) 1 - Metrics::auc(actual, predicted )
-importance = feature.imp(mod, X = cervical.data, y = (cervical.data$Biopsy == "Cancer"), loss = auc_error, class = 1)
+importance = FeatureImp$new(predictor, loss = auc_error)
 plot(importance)
 ```
 
 ```{r importance-cervical-table}
-impDat = importance$data()
-kable(impDat, caption = sprintf("The feature importance of an xgboost model predicting cervical cancer. The original model error is %.3f (1 - AUC). The 'error'-column shows the error after feature permutation. The 'importance'-column shows the factor by which the error is increased compared to the original model error.", importance$error.original), digits = 2)
+imp.dat = importance$results
+kable(imp.dat, caption = sprintf("The feature importance of an xgboost model predicting cervical cancer. The original model error is %.3f (1 - AUC). The 'error'-column shows the error after feature permutation. The 'importance'-column shows the factor by which the error is increased compared to the original model error.", importance$original.error), digits = 2)
 ```
 
-The feature with the highest importance was `r impDat[1, '..feature']` associated with an error increase of `r round(impDat[1,'importance'], 2)` after permutation.
+The feature with the highest importance was `r imp.dat[1, '..feature']` associated with an error increase of `r round(imp.dat[1,'importance'], 2)` after permutation.
 
 **Bike rentals (Classification)**
 
@@ -67,14 +68,16 @@ Figure \@ref(fig:importance-bike) and Table \@ref(tab:importance-bike-table) sho
 task = makeRegrTask(data = bike.data, target = "cnt")
 learner = makeLearner('regr.randomForest')
 mod = mlr::train(learner, task)
-importance = feature.imp(mod, X = bike.data, y = bike.data$cnt, loss = 'mae')
+predictor = Predictor$new(mod, data = bike.data[-which(names(bike.data) == "cnt")], y = bike.data$cnt)
+importance = FeatureImp$new(predictor, loss = 'mae')
 plot(importance) 
 ```
 
 
 ```{r importance-bike-table}
-impDat = importance$data()
-kable(impDat, caption = sprintf("The feature importance of a Random Forest predicting bike rentals. It's measured as relative increase in mean absolute error (mae) after feature permutation. The mean absolute error of the model is %.3f. The  'error'-column shows the absolute error after feature permutation. The 'importance'-column shows the factor by which the error is increased compared to the original model error.", importance$error.original), digits = 2)
+imp.dat = importance$results
+kable(imp.dat, caption = sprintf("The feature importance of a Random Forest predicting bike rentals. It's measured as relative increase in mean absolute error (mae) after feature permutation. The mean absolute error of the model is %.3f. The  'error'-column shows the absolute error after feature permutation. The 'importance'-column shows the factor by which the error is increased compared to the original model error.", importance$original.error), digits = 2)
+
 ```
 
 A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are comparable across different problems. 
