@@ -12,7 +12,7 @@ BUILD_COMMIT_MSG="Update book (travis build ${TRAVIS_BUILD_NUMBER})"
 BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 
 # Compile book
-Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::gitbook')"
+Rscript --vanilla -e "setwd('manuscript'); bookdown::render_book('./', 'bookdown::gitbook')"
 
 ## Only deploy when on master branch of main repository
 if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
@@ -23,7 +23,7 @@ if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
   git clone -b $TARGET_BRANCH https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git out
   cd out
   git rm -rf *
-  cp -r ../_book/* ./
+  cp -r ../manuscript/_book/* ./
   touch .nojekyll
   git add .nojekyll
 
