@@ -1,3 +1,6 @@
+```{r load}
+devtools::load_all("../")
+```
 ## Partial Dependence Plot (PDP) {#pdp}
 The partial dependence plot shows the marginal effect of a feature on the predicted outcome  [@friedman2001greedy].
 Have a glance at Figure \@ref(fig:pdp-cervical) to get some intuition before diving into the theory of partial dependencies.
@@ -46,7 +49,10 @@ The interpretation is analogue to the partial dependence plots for regression.
 Figure \@ref(fig:pdp-cervical-2d) shows an example of a partial dependence plot with two features.
 
 ```{r pdp-bike, fig.cap = 'Partial dependence plot of rental bike count and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in different temperatures: With rising temperatures, on average the bike rentals rise, until 20C degrees, where it stays the same also for hotter temperatures and drops a bit again towards 30C degrees.'}
-
+data(bike.data)
+library("mlr")
+library("ggplot2")
+bike.task = makeRegrTask(data = bike.data, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
 pd1 = mlr::generatePartialDependenceData(mod.bike, bike.task, c('temp', 'hum', 'windspeed'))
 mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous('', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, NA))
@@ -55,6 +61,8 @@ mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous('', limits = c(
 
 
 ```{r pdp-cervical, fig.cap = 'Partial dependence plot of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the models partial dependence shows that on average, the cancer probability is low before 45, spikes between age 45 and 55 and plateaus after that. The number of years on hormonal contraceptives is associated with a higher cancer risk especially after 15 years.'}
+data(cervical.data)
+cervical.task = makeClassifTask(data = cervical.data, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
 pd1 = mlr::generatePartialDependenceData(mod, cervical.task, c('Age', "Hormonal.Contraceptives..years."))
 
@@ -62,7 +70,6 @@ mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous('', limits = c(
 ```
 
 ```{r pdp-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of number of years on hormonal contraceptives and number of sexual partners. Interestingly, there is some odd interaction between the two features when the number of sexual partners is 1 and the years of on hormonal contraceptives larger than 12. There are actually only two women in that group, who both happen to have cancer. So my best guess is that this was random and the model did overfit on those two women, but only more data could answer this question.'}
-## filter(cervical, Number.of.sexual.partners == 1 & Hormonal.Contraceptives..years. > 12)
 pd1 = mlr::generatePartialDependenceData(mod, cervical.task, c("Number.of.sexual.partners", "Hormonal.Contraceptives..years."), interaction = TRUE)
 mlr::plotPartialDependence(pd1, geom='tile') + my_theme()+ scale_x_continuous('Number of sexual partners', limits = c(0, NA)) + scale_y_continuous('Years on hormonal contraceptives')  +
   scale_fill_continuous('Predicted\ncancer\nprobability') +
