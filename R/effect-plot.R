@@ -5,7 +5,8 @@ effect_plot = function(mod, dat,  feature_names=NULL){
   if(!missing(feature_names)){
     rownames(X) = feature_names
   }
-  X = gather(X)
+  X = tidyr::gather(X)
+  require("ggplot2")
   ggplot(X) +
     geom_hline(yintercept=0, linetype=4) +
     geom_boxplot(aes(x=key, y=value, group=key)) +

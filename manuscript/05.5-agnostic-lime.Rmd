@@ -64,7 +64,8 @@ Figure \@ref(fig:lime-fitting) explains how the sampling and local model fitting
 
 ```{r lime-fitting, fig.cap='How LIME sampling works: A) The black box model predicts one of two classes given feature x1 and x2. Most data points have class 0 (darker colour), and the ones with class 1 are grouped in an upside-down V-shape (lighter colour). The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow point is the instance of interest, which we want to explain. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This needs to be done only once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest higher weights. D) The colours and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification of the local model changes.', fig.height=9, fig.width=9}
 ## Creating dataset ###########################################################
-
+library("dplyr")
+library("ggplot2")
 
 # Define range of set
 lower_x1 = -2
@@ -213,9 +214,10 @@ After accounting for the trend that the bike rental get's more popular over time
 You can also interpret 'above' as being above the mean bike counts, but adjusted for the trend.
 
 ```{r lime-tabular-example-train-black-box, cache = TRUE}
+data("bike")
 ntree = 100
-bike.train.resid = factor(resid(lm(cnt ~ days_since_2011, data = bike.data)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
-bike.train.x = bike.data[names(bike.data) != 'cnt']
+bike.train.resid = factor(resid(lm(cnt ~ days_since_2011, data = bike)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
+bike.train.x = bike[names(bike) != 'cnt']
 
 model <- caret::train(bike.train.x,
                bike.train.resid,
@@ -224,11 +226,12 @@ model <- caret::train(bike.train.x,
 
 instance_indices = c(295, 285)
 
-probs = predict(model, newdata = bike.data[instance_indices, ], type='prob')
+probs = predict(model, newdata = bike[instance_indices, ], type='prob')
 ```
 First we train a Random Forest with `r ntree` trees on the classification task. Given seasonal and weather information, on which day will the number of bike rentals be above the trend-free average?
 
 ```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset.  Temperature and good weather situation have a positive effect on the prediction, the day of the week and increasing humidity a negative one. The effect of temperature is roughly the same in both cases. One problem becomes clear: This plot shows the weights and not the effects, which would be weights times actual feature values, which would be more informative. ') }
+library("lime")
 set.seed(44)
 explanation <- lime::lime(bike.train.x, model, bin_continuous=FALSE)
 
@@ -285,14 +288,15 @@ Also in the place of this tree there could have been a recurrent neural network 
 From the remaining comments two were selected for showing the explanations.
 
 ```{r load-text-classification-lime}
+data("ycomments")
 example_indices = c(24,9)
-texts = ycomments.data$CONTENT[example_indices]
+texts = ycomments$CONTENT[example_indices]
 ```
 Let's look at two comments of this dataset and the corresponding classes:
 
 
 ```{r show--data-TubeSpam}
-DT::datatable(ycomments.data[example_indices, c('CONTENT', 'CLASS')], options = list(DT::JS('{"scrollX": true}')))
+kable(ycomments[example_indices, c('CONTENT', 'CLASS')])
 ```
 
 
@@ -300,6 +304,23 @@ DT::datatable(ycomments.data[example_indices, c('CONTENT', 'CLASS')], options = 
 In the next step we create some variations of the datasets, which are used in a local model.
 For example some variations of one of the comments:
 ```{r lime-text-variations}
+library("tm")
+# Split into training and test by date
+set.seed(42)
+percent_train = 0.8
+train_index = sample(1:nrow(ycomments), size=percent_train * nrow(ycomments), replace = FALSE)
+test_index = setdiff(1:nrow(ycomments), train_index)
+
+train = ycomments[train_index,]
+test = ycomments[test_index, ]
+
+
+labeledTerms = prepare_data(train$CONTENT)
+labeledTerms$class = factor(ycomments$CLASS[train_index], levels = c(0,1), labels = c('no spam', 'spam'))
+labeledTerms2 = prepare_data(test$CONTENT, trained_corpus = labeledTerms)
+
+rp = rpart::rpart(class ~ ., data = labeledTerms)
+predict_fun = get_predict_fun(rp, labeledTerms)
 tokenized = tokenize(texts[2])
 variations = create_variations(texts[2], predict_fun, prob=0.8, n_variations = 5, class='spam')
 colnames(variations) = c(tokenized, 'prob', 'weight')
@@ -307,7 +328,7 @@ example_sentence = paste(colnames(variations)[variations[2, ] == 1], collapse = 
 ```
 
 ```{r lime-text-variations-output, results='asis'}
-DT::datatable(variations, options = list(DT::JS('{"scrollX": true}')))
+kable(variations)
 ```
 
 Each column corresponds to one word in the sentence.

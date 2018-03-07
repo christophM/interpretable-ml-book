@@ -1,4 +1,4 @@
-get.bike.data = memoise(function(){
+get.bike.data = function(data_dir){
   bike = read.csv(sprintf('%s/bike-sharing-daily.csv', data_dir), stringsAsFactors = FALSE)
   # See http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
 
@@ -26,12 +26,12 @@ get.bike.data = memoise(function(){
 
 
   dplyr::select(bike, -instant, -dteday, -registered, -casual, -atemp)
-})
+}
 
 
-get.bike.task = memoise(function(){
-  mlr::makeRegrTask(id='bike', data=get.bike.data(), target = 'cnt')
-})
+get.bike.task = function(data_dir){
+  mlr::makeRegrTask(id='bike', data=get.bike.data(data_dir), target = 'cnt')
+}
 
 
 bike.features.of.interest = c('season','holiday', 'workingday', 'weathersit', 'temp', 'hum', 'windspeed', 'days_since_2011')

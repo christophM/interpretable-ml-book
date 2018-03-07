@@ -20,7 +20,7 @@ A more formal definition:
 In ICE plots, for each instance in $\{(x_{S_i}, x_{C_i})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x_{S_i}$, while $x_{C_i}$ is kept fixed.
 
 ### Example
-Let's go back to the dataset about risk factors for cervical cancer from Chapter \@ref(cervical-data) and see how each instance's prediction is associated with the feature 'Age'.
+Let's go back to the dataset about risk factors for cervical cancer from Chapter \@ref(cervical) and see how each instance's prediction is associated with the feature 'Age'.
 The model we will analyse is a RandomForest that predicts the probability of cancer for a woman given risk factors.
 In the partial dependence plot from Chapter \@ref(pdp) we have seen that the cancer probability increases around the age of 50, but does it hold true for each woman in the dataset?
 The ICE plot (Figure \@ref(fig:ice-cervical)) reveals that the most women's predicted probability follows the average pattern of increase at 50, but there are a few exceptions:
@@ -33,11 +33,11 @@ That means that the PDP is already a good summary of the relationships of the di
 ```{r ice-cervical, fig.cap="Individual conditional expectation plot of cervical cancer probability by age. Each line represents the conditional expectation for one woman. Most women with a low cancer probability in younger years see an increase in predicted cancer probability, given all other feature value stay the same. Interestingly for a few women that have a high estimated cancer probability bigger than 0.4, the estimated probability does not change much with higher age."}
 library("mlr")
 library("ggplot2")
-data(cervical.data)
+data(cervical)
 set.seed(43)
-cervical_subset_index = sample(1:nrow(cervical.data), size = 300)
-cervical_subset = cervical.data[cervical_subset_index, ]
-cervical.task = makeClassifTask(data = cervical.data, target = "Biopsy")
+cervical_subset_index = sample(1:nrow(cervical), size = 300)
+cervical_subset = cervical[cervical_subset_index, ]
+cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
 pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE)
 mlr::plotPartialDependence(pd1) + my_theme() + scale_color_discrete(guide='none') + scale_y_continuous('Predicted cancer probability')
@@ -45,10 +45,10 @@ mlr::plotPartialDependence(pd1) + my_theme() + scale_color_discrete(guide='none'
 
 ```{r ice-bike, fig.cap='Individual conditional expectation plot of expected bike rentals and weather conditions. The same effects as in the partial dependence plots can be observed.'}
 set.seed(42)
-data("bike.data")
-bike.subset.index = sample(1:nrow(bike.data), size = 300)
-bike.subset = bike.data[bike.subset.index,]
-bike.task = makeRegrTask(data = bike.data, target = "cnt")
+data("bike")
+bike.subset.index = sample(1:nrow(bike), size = 300)
+bike.subset = bike[bike.subset.index,]
+bike.task = makeRegrTask(data = bike, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
 pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE)
 mlr::plotPartialDependence(pd.data) + my_theme()+ scale_x_continuous('',limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, NA))
@@ -76,9 +76,9 @@ mlr::plotPartialDependence(pd1) + my_theme() + scale_color_discrete(guide='none'
 
 ```{r ice-bike-centered, fig.cap='Centred individual conditional expectation plots of expected bike rentals by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at 0.'}
 set.seed(43)
-bike.subset.index = sample(1:nrow(bike.data), size = 100)
-bike.subset = bike.data[bike.subset.index,]
-pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE, center = list(temp = min(bike.data$temp), hum = min(bike.data$hum), windspeed = min(bike.data$windspeed)))
+bike.subset.index = sample(1:nrow(bike), size = 100)
+bike.subset = bike[bike.subset.index,]
+pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE, center = list(temp = min(bike$temp), hum = min(bike$hum), windspeed = min(bike$windspeed)))
 mlr::plotPartialDependence(pd.data) + my_theme() + scale_y_continuous('Difference in predicted rentals to at value zero') + scale_x_continuous('')
 ```
 

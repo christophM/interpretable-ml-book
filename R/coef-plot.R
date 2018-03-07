@@ -14,6 +14,7 @@ coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   if(remove_intercept){
     df = df[!(df$Features == '(Intercept)'),]
   }
+  require("ggplot2")
   ggplot(df) +
     geom_vline(xintercept=0, linetype=4) +
     geom_point(aes(x=Estimate, y=Features)) +

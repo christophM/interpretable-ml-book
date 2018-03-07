@@ -1,1 +1,0 @@
-rmarkdown::render('index.Rmd', output_format = "md_document")
