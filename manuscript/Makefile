@@ -1,4 +1,4 @@
-all : html
+all : html leanpub
 
 package: ../DESCRIPTION ../R/*.R
 	Rscript --vanilla -e "devtools::install('../')"
@@ -12,4 +12,4 @@ leanpub : index.md 01-introduction.md 01.1-expectation.md 01.2-short-stories.md 
 
 
 %.md : %.Rmd
-	Rscript --vanilla render_leanpub.R $<
+	Rscript --vanilla -e "rmarkdown::render('$<', output_format = 'md_document', envir = new.env())" 
