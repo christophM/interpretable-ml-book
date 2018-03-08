@@ -49,6 +49,7 @@ if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
   cd ../
   rm -r out
   git add -f manuscript/*.md
+  git add -f images/*
   git commit -m "${BUILD_COMMIT_MSG}"
   git push origin $LEANPUB_BRANCH
 
