@@ -6,13 +6,20 @@ set -e # Exit with nonzero exit code if anything fails
 
 SOURCE_BRANCH="master"
 TARGET_BRANCH="gh-pages"
+LEANPUB_BRANCH="leanpub"
 
 BUILD_COMMIT_MSG="Update book (travis build ${TRAVIS_BUILD_NUMBER})"
 
 BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 
-# Compile book
-Rscript --vanilla -e "setwd('manuscript'); bookdown::render_book('./', 'bookdown::gitbook')"
+
+
+cd manuscript
+# Compile html version of book for gh-pages
+make -B html
+# Compile md version of book for leanpub
+make -B leanpub
+cd ..
 
 ## Only deploy when on master branch of main repository
 if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
@@ -22,12 +29,12 @@ if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
   # Create a new empty branch if gh-pages doesn't exist yet (should only happen on first deply)
   git clone -b $TARGET_BRANCH https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git out
   cd out
-  git rm -rf *
+  git rm -rf ./*
   cp -r ../manuscript/_book/* ./
   touch .nojekyll
   git add .nojekyll
 
-  git add --all *
+  git add --all ./*
 
   # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
   git config credential.helper "store --file=.git/credentials"
@@ -36,6 +43,14 @@ if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
 
   # Now that we're all set up, we can push.
   git push origin $TARGET_BRANCH
+  
+  
+  echo "Deploying master to leanpub branch."
+  cd ../
+  rm -r out
+  git add -f manuscript/*.md
+  git commit -m "${BUILD_COMMIT_MSG}"
+  git push origin $LEANPUB_BRANCH
 
 else
   echo "Changes are not being deployed, since this is a fork / branch."
