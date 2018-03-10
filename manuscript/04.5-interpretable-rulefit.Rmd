@@ -13,9 +13,11 @@ These new features capture interactions between the original features.
 RuleFit generates these features automatically from decision trees.
 Each path through a tree can be turned into a decision rule by combining the split decisions to a rule, as in Figure \@ref(fig:rulefit-split).
 The node predictions are thrown away and only the splits are used in the decision rules.
+
 ```{r rulefit-split, fig.cap="4 rules can be generated from a tree with 3 terminal nodes."}
 knitr::include_graphics("images/rulefit.jpg")
 ```
+
 Where do the decision trees come from?
 These are trees that are trained to predict the outcome of interest, so that the splits are meaningful for the task at hand and not arbitrary.
 Any algorithm that creates a lot of trees can be used for RuleFit, like a Random Forest for example.
@@ -79,6 +81,7 @@ col.names = c('Description', 'Weight', 'Importance', 'Std. Dev'),
 row.names=FALSE)
 
 ```
+
 Computing the global feature importances reveals that temperature and the time trend are the most important features, see Figure \@ref(fig:rulefit-importance).
 The feature importance measurement includes the importance of the raw feature term and all the decision rules the feature appears in.
 
@@ -152,14 +155,18 @@ It is desirable to generate a lot of diverse and meaningful rules.
 Gradient boosting is used to fit an ensemble of decision trees (by regressing or classifying $y$ with your original features $X$).
 Each resulting tree is turned into multiple rules.
 Not only boosted trees, but any type of ensemble of trees can be used to generate the trees for RuleFit:
+
 $$f(x)=a_0+\sum_{m=1}^M{}a_m{}f_m(X)$$
+
 where $M$ is the number of trees and $f_m(x)$ represents the prediction function of the $m$-th tree.
 Bagged ensembles, Random forests, AdaBoost and MART yield ensemble of trees and can be used for RuleFit.
 
 From all of the trees of the ensemble, we produce the rules.
 See again Figure \@ref(fig:rulefit-split).
 Each rule $r_m$ takes on the form:
+
 $$r_m(x)=\prod_{j\in\text{T}_m}I(x_j\in{}s_{jm})$$
+
 where $\text{T}_{m}$ is the set of features used in $m$-th tree, $I(\cdot)$ is the indicator function, which is 1 if the feature $x_j$ is in the specified subset of values $s_{jm}$ for $x_j$ (as specified by the tree splits) and otherwise 0.
 For numerical features, $s_{jm}$ is one to multiple intervals in the value range of the feature $x_j$, depending on the number of splits in that feature.
 In case of a single split, the $s_{jm}$ looks like one of the two cases:
@@ -168,11 +175,15 @@ Further splits in that feature create more complicated intervals.
 For categorical features the subset $s_{jm}$ contains some specific categories of $x_j$.
 
 A made up example for the bike rental data set:
+
 $$r_{17}(x)=I(x_{\text{temp}}<15)\cdot{}I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\})\cdot{}I(10\leq{}x_{\text{windspeed}}<20)$$
+
 This rule will only be equal to 1 if all of the three conditions are met, otherwise 0.
 RuleFit extracts all possible rules from a tree, not only from the leaf nodes.
 So another rule that would be created is:
+
 $$r_{18}(x)=I(x_{\text{temp}}<15)\cdot{}I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\}$$
+
 In total, $K=\sum_{m=1}^M2(t_m-1)$ rules are created from the ensemble of $M$ trees, with $t_m$ terminal nodes each.
 A trick that is introduced by the RuleFit authors is to fit trees with random depth, so that a lot of diverse rules are generated with different lengths.
 Note that we throw away the predicted value in each node and only keep the conditions that lead us to the node and create a rule from it.
@@ -202,9 +213,13 @@ $$l_j(x_j)=0.4\cdot{}l^*_j(x_j)/std(l^*_j(x_j))$$
 The $0.4$ is the average standard deviation of rules with a uniform support distribution $s_k \sim U(0,1)$.
 
 We combine both types of features to generate a new feature matrix and estimate a sparse linear model with Lasso, with the following structure:
+
 $$\hat{f}(x)=\hat{\beta}_0+\sum_{k=1}^K\hat{\alpha}_k{}r_k(x)+\sum_{j=1}^p\hat{\beta}_j{}l_j(x_j)$$
+
 where $\hat{\alpha}$ are the estimated weights for the rule features and $\hat{\beta}$ for the original features. Since RuleFit uses Lasso, the loss function gets the additional constraint that forces some of the weights to get a zero estimate:
+
 $$(\{\hat{\alpha}\}_1^K,\{\hat{\beta}\}_0^p)=argmin_{\{\hat{\alpha}\}_1^K,\{\hat{\beta}\}_0^p}\sum_{i=1}^n{}L(y_i,f(x))+\lambda\cdot(\sum_{k=1}^K|\alpha_k|+\sum_{j=1}^p|b_j|)$$
+
 The outcome is a linear model that has linear effects for all of the original features and for the rules.
 The interpretation is the same as with linear models, the only difference is that some features are now binary rules.
 
