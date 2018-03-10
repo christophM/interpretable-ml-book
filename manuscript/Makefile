@@ -13,3 +13,4 @@ leanpub : index.md 01-introduction.md 01.1-expectation.md 01.2-short-stories.md 
 
 %.md : %.Rmd
 	Rscript --vanilla -e "knitr::knit('$<', envir = new.env())" 
+	R --no-save --args $@ < fixmath.R
