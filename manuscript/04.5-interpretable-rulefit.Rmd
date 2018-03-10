@@ -204,12 +204,16 @@ Next to the rules, also all your 'raw' features from your original dataset will 
 Every rule and original feature becomes a feature in Lasso and gets a weight estimate.
 The original, raw features are added because trees suck at representing simple linear relationships between y and x.
 Before we put everything into Lasso to get a sparse linear model, we winsorise the original features, so that they are more robust against outliers:
+
 $$l_j^*(x_j)=min(\delta_j^+,max(\delta_j^-,x_j))$$
+
 where $\delta_j^-$ and $\delta_j^+$ are the $\delta$ quantiles of the data distribution of $x_j$.
 A choice of $0.05$ for $\delta$ means that every value of $x_j$ that is in the 5% lowest or 5% highest values will be set to the values at 5% or 95% respectively.
 As a rule of thumb, you can choose $\delta=0.025$.
 In addition, the linear terms have to be normalised so that they have the same prior influence as a typical decision rule:
+
 $$l_j(x_j)=0.4\cdot{}l^*_j(x_j)/std(l^*_j(x_j))$$
+
 The $0.4$ is the average standard deviation of rules with a uniform support distribution $s_k \sim U(0,1)$.
 
 We combine both types of features to generate a new feature matrix and estimate a sparse linear model with Lasso, with the following structure:
@@ -226,18 +230,26 @@ The interpretation is the same as with linear models, the only difference is tha
 
 **Step 3 (optional): Feature importance**
 For the linear terms of the original features, the feature importance is measured with the standardised predictor:
+
 $$I_j=|\hat{\beta}_j|\cdot{}std(l_j(x_j))$$
+
 where $\beta_j$ is the weight from the Lasso model and $std(l_j(x_j))$ the standard deviation of the linear term over the data.
 
 For the decision rule terms, the importance is calculated with:
+
 $$I_k=|\hat{\alpha}_k|\cdot\sqrt{s_k(1-s_k)}$$
+
 where $\hat{\alpha}_k$ is the associated Lasso weight of the decision rule and $s_k$ is the support of the feature in the data, which is the percentage of data points for which the decision rule applies (where $r_k(x)=0$): $s_k=\frac{1}{n}\sum_{i=1}^n{}r_k(x_i)$
 
 A feature $x_j$ occurs as a linear term and possibly also within many decision rules.
 How do we measure the total importance of the feature $x_j$?
 The importance $J_j(x)$ of feature $x_j$ can be measured at each individual prediction:
+
 $$J_j(x)=I_l(x)+\sum_{x_j\in{}r_k}I_k(x)/m_k$$
+
 where $I_l$ is the importance of the linear term and $I_k$ the importance of the decision rules in which $x_j$ appears, and $m_k$ is the number of features that constitute rule $r_k$.
 Summing the feature importance over all instances gives us the global feature importance:
+
 $$J_j(X)=\sum_{i=1}^n{}J_j(x_i)$$
+
 It is possible to choose a subset of instances and calculate the feature importance for this group.
