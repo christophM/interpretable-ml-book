@@ -12,4 +12,4 @@ leanpub : index.md 01-introduction.md 01.1-expectation.md 01.2-short-stories.md 
 
 
 %.md : %.Rmd
-	Rscript --vanilla -e "rmarkdown::render('$<', output_format = 'md_document', envir = new.env())" 
+	Rscript --vanilla -e "knitr::knit('$<', envir = new.env())" 

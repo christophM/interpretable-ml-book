@@ -11,12 +11,11 @@ library('pre')
 library('iml')
 
 opts_chunk$set(
-  echo=FALSE,
-  message=FALSE,
-  warning=FALSE,
-  out.width='80%',
-  fig.align='center', 
-  fig.path = "images/"
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  fig.path = "images/", 
+  collapse = TRUE
 )
 
 output <- opts_knit$get("rmarkdown.pandoc.to")
