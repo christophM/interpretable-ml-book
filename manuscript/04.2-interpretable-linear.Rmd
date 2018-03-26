@@ -20,6 +20,7 @@ The $\epsilon_{i}$ is the error we are still making, i.e. the difference between
 
 Different methods can be used to estimate the optimal weight vector $\hat{\boldsymbol{\beta}}$.
 The ordinary least squares method is commonly used to find the weights that minimise the squared difference between the actual and the estimated outcome:
+
 $$\hat{\boldsymbol{\beta}}=\arg\!\min_{\beta_0,\ldots,\beta_p}\sum_{i=1}^n\left(y_i-\left(\beta_0+\sum_{j=1}^p\beta_jx_{ij}\right)\right)^{2}$$
 
 We won't go into detail about how the optimal weights can be found, but if you are interested you can read Chapter 3.2 of the book "Elements of Statistical Learning" [@Hastie2009] or one of the other zillions of sources about linear regression models.
@@ -62,7 +63,14 @@ The interpretation of a weight in the linear model depends on the type of the co
 Another important measurement for interpreting linear models is the $R^2$ measurement.
 $R^2$ tells you how much of the total variance of your target outcome is explained by the model.
 The higher $R^2$ the better your model explains the data.
-The formula to calculate $R^2$ is: $R^2=1-SSE/SST$, where SSE is the squared sum of the error terms ($SSE=\sum_{i=1}^n(y_i-\hat{y}_i)^2$) and SST is the squared sum of the data variance ($SST=\sum_{i=1}^n(y_i-\bar{y})^2$).
+The formula to calculate $R^2$ is: $R^2=1-SSE/SST$, where SSE is the squared sum of the error terms:
+
+$$SSE=\sum_{i=1}^n(y_i-\hat{y}_i)^2$$ 
+
+and SST is the squared sum of the data variance:
+
+$$SST=\sum_{i=1}^n(y_i-\bar{y})^2$$.
+
 The SSE tells you how much variance remains after fitting the linear model, which is measured by looking at the squared differences between the predicted and actual target values.
 SST is the total variance of the target around the mean.
 So $R^2$ tells you how much of your variance can be explained by the linear model.
@@ -70,7 +78,11 @@ $R^2$ ranges between 0 for models that explain nothing and 1 for models that exp
 
 There is a catch, because $R^2$ increases with the number of features in the model, even if they carry no information about the target value at all.
 So it is better to use the adjusted R-squared ($\bar{R}^2$), which accounts for the number of features used in the model.
-Its calculation is $\bar{R}^2=R^2-(1-R^2)\frac{p}{n-p-1}$, where $p$ is the number of features and $n$ the number of instances.
+Its calculation is 
+
+$$\bar{R}^2=R^2-(1-R^2)\frac{p}{n-p-1}$$, 
+
+where $p$ is the number of features and $n$ the number of instances.
 
 It isn't helpful to do interpretation on a model with very low $R^2$ or $\bar{R}^2$, because basically the model is not explaining much of the variance, so any interpretation of the weights are not meaningful.
 
@@ -201,11 +213,15 @@ The example used has six instances and one categorical feature with 3 levels.
 For the first two instances, the feature takes on category A, for instances three and four category B and for the last two instances category C.
 
 - **Treatment coding**: The $\beta$ per level is the estimated difference in $y$ compared to the reference level. The intercept of the linear model is the mean of the reference group (given all other features stay the same). The first column of the design matrix is the intercept, which is always 1. Column two is an indicator whether instance $i$ is in category B, column three is an indicator for category C. There is no need for a column for category A, because then the linear equation would be overspecified and no unique solution (= unique $\beta$'s) can be found. Knowing that an instance is neither in category B or C is enough.
+
 $$\begin{pmatrix}1&0&0\\1&0&0\\1&1&0\\1&1&0\\1&0&1\\1&0&1\\\end{pmatrix}$$
+
 - **Effect coding**: The $\beta$ per level is the estimated $y$-difference from the level to the overall mean (again, given all other features are zero or the reference level). The first column is again used to estimate the intercept. The weight $\beta_{0}$ which is associated with the intercept represents the overall mean and $\beta_{1}$, the weight for column two is the difference between the overall mean and category B. The overall effect of category B is $\beta_{0}+\beta_{1}$. The interpretation for category C is equivalent. For the reference category A, $-(\beta_{1}+\beta_{2})$ is the difference to the overall mean and $\beta_{0}-(\beta_{1}+\beta_{2})$ the overall effect.
-$$\begin{pmatrix}1&-1&-1\\1&-1&-1\\1&1&0\\1&1&0\\1&0&1\\1&0&1\\\end{pmatrix}
-$$
+
+$$\begin{pmatrix}1&-1&-1\\1&-1&-1\\1&1&0\\1&1&0\\1&0&1\\1&0&1\\\end{pmatrix}$$
+
 - **Dummy coding**: The $\beta$ per level is the estimated mean of $y$ for each level (given all feature are at value zero or reference level). Note that the intercept was dropped here, so that a unique solution for the linear model weights can be found.
+
 $$\begin{pmatrix}1&0&0\\1&0&0\\0&1&0\\0&1&0\\0&0&1\\0&0&1\\\end{pmatrix}$$
 
 If you want to dive a bit deeper into different encodings of categorical features, checkout [this webpage](http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/) and
@@ -266,9 +282,12 @@ The good news is that there are ways to introduce sparsity (= only keeping a few
 The most automatic and convenient way to introduce sparsity is to use the Lasso method.
 Lasso stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs feature selection and regularisation of the selected feature weights.
 Let's review the minimization problem, the $\beta$s optimise:
+
 $$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2\right)$$
+
 Lasso adds a term to this optimisation problem:
-$$min_{\boldsymbol{\beta}}\left( \frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2+\lambda||\boldsymbol{\beta}||_1\right)$$
+
+$$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2+\lambda||\boldsymbol{\beta}||_1\right)$$
 The term $||\boldsymbol{\beta}||_1$, the L1-norm of the feature vector,  leads to a penalisation of large  $\boldsymbol{\beta}$-values.
 Since the L1-norm is used, many of the weights for the features will get an estimate of 0 and the others are shrunk.
 The parameter $\lambda$ controls the strength of the regularising effect and is usually tuned by doing cross-validation.
