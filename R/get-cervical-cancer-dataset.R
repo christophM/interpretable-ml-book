@@ -22,6 +22,7 @@ get.cervical.data = memoise(function(){
 
   cervical_impute = mlr::impute(cervical, classes = list(numeric = imputeMode()))
   cervical = cervical_impute$data
+  cervical
 })
 
 get.cervical.task = memoise(function(){
