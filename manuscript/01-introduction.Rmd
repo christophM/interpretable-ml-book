@@ -4,7 +4,7 @@ This book will teach you how to make (supervised) machine learning models interp
 It contains one or the other mathematical formula, but it's kept at a manageable level of math.
 This book is not for people who are trying to learn machine learning from scratch.
 If you are new to machine learning, there are loads of books and other resources for learning the basics.
-I recommend the book [Elements of Statistical Learning](https://web.stanford.edu/~hastie/ElemStatLearn/) from @Hastie2009 and [Andrew Ng's "Machine Learning" online course on coursera](https://www.coursera.org/learn/machine-learning) to get started with machine learning.
+I recommend the book [Elements of Statistical Learning](https://web.stanford.edu/~hastie/ElemStatLearn/) from Hastie, Tibshirani, and Friedman (2009) [^Hastie] and [Andrew Ng's "Machine Learning" online course on coursera](https://www.coursera.org/learn/machine-learning) to get started with machine learning.
 Both the book and the course are available for free!
   
 This book starts with some [short stories](#storytime), which are not required to understand the book, but hopefully entertaining!
@@ -21,3 +21,4 @@ You can either read the book from start to end or directly jump to the methods y
 I hope you will enjoy the read!
 
 
+[^Hastie]: Hastie, T, R Tibshirani, and J Friedman. 2009. The elements of statistical learning. http://link.springer.com/content/pdf/10.1007/978-0-387-84858-7.pdf.
