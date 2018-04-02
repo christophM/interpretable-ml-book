@@ -11,8 +11,8 @@ RuleFit fills this gap.
 RuleFit fits a sparse linear model with the original features and also a set of new features which are decision rules.
 These new features capture interactions between the original features.
 RuleFit generates these features automatically from decision trees.
-Each path through a tree can be turned into a decision rule by combining the split decisions to a rule, as in Figure \@ref(fig:rulefit-split).
-The node predictions are thrown away and only the splits are used in the decision rules.
+Each path through a tree can be turned into a decision rule by combining the split decisions to a rule.
+The node predictions are thrown away and only the splits are used in the decision rules:
 
 ```{r rulefit-split, fig.cap="4 rules can be generated from a tree with 3 terminal nodes."}
 knitr::include_graphics("images/rulefit.jpg")
@@ -67,13 +67,7 @@ coefs = filter(coefs, !is.na(description))
 ```
 
 In this example, we use RuleFit to predict the number of [bike rentals](#bike-data) on a given day.
-The rules generated for the bike rental prediction task can be seen in Figure \@ref(fig:rulefit-example).
-The most important rule was: "`r coefs[1, 'description']`" and the associated weight is `r round(coefs[1, 'coefficient'], 1)`.
-The interpretation is:
-If `r coefs[1, 'description']`, then the predicted number of bike rentals increases by `r round(coefs[1, 'coefficient'], 1)`, given all other features values stay fixed.
-In total,  `r nrow(coef(mod))` such rules were created from the original `r ncol(X)` features.
-Quite a lot!
-But thanks to Lasso, only `r nrow(coefs[coefs$coefficient != 0,])` of the `r nrow(coef(mod))` got a weight different from zero.
+Some of the genereated rules for the bike rental prediction task are:
 
 ```{r rulefit-example, fig.cap="The table shows 5 of the generated rules and weights after fitting 'RuleFit' on the bike dataset."}
 kable(coefs[1:5, c('description', 'coefficient', 'imp')],
@@ -83,12 +77,25 @@ kable(coefs[1:5, c('description', 'coefficient', 'imp')],
 
 ```
 
-Computing the global feature importances reveals that temperature and the time trend are the most important features, see Figure \@ref(fig:rulefit-importance).
-The feature importance measurement includes the importance of the raw feature term and all the decision rules the feature appears in.
+
+The most important rule was: "`r coefs[1, 'description']`" and the associated weight is `r round(coefs[1, 'coefficient'], 1)`.
+The interpretation is:
+If `r coefs[1, 'description']`, then the predicted number of bike rentals increases by `r round(coefs[1, 'coefficient'], 1)`, given all other features values stay fixed.
+In total,  `r nrow(coef(mod))` such rules were created from the original `r ncol(X)` features.
+Quite a lot!
+But thanks to Lasso, only `r nrow(coefs[coefs$coefficient != 0,])` of the `r nrow(coef(mod))` got a weight different from zero.
+
+
+
+Computing the global feature importances reveals that temperature and the time trend are the most important features:
 
 ```{r rulefit-importance, fig.cap = 'Feature importance measures for a RuleFit model predicting bike rentals. The most important features for the predictions were temperature and the time trend.'}
 pre::importance(mod)
 ```
+
+The feature importance measurement includes the importance of the raw feature term and all the decision rules the feature appears in.
+
+
 
 ### Guidelines
 In this section we will talk about the advantages and disadvantages of RuleFit and how to interpret it.
@@ -150,7 +157,6 @@ The rules are constructed by disassembling decision trees:
 Each path to a node in a tree can be turned into a decision rule.
 The trees used for the rules are fitted to predict the target outcome.
 The splits and resulting rules are optimised to predict the outcome you are interested in.
-Figure \@ref(fig:rulefit-split) illustrates the rule generation.
 You simply chain the binary decisions that lead to a certain node with a logical "AND", and voilà, you have a rule.
 It is desirable to generate a lot of diverse and meaningful rules.
 Gradient boosting is used to fit an ensemble of decision trees (by regressing or classifying $y$ with your original features $X$).
@@ -163,7 +169,6 @@ where $M$ is the number of trees and $f_m(x)$ represents the prediction function
 Bagged ensembles, Random forests, AdaBoost and MART yield ensemble of trees and can be used for RuleFit.
 
 From all of the trees of the ensemble, we produce the rules.
-See again Figure \@ref(fig:rulefit-split).
 Each rule $r_m$ takes on the form:
 
 $$r_m(x)=\prod_{j\in\text{T}_m}I(x_j\in{}s_{jm})$$

@@ -15,7 +15,7 @@ Assume the following scenario:
 
 You trained a machine learning model to predict apartment prices.
 For a certain apartment it predicts 300.000 € and you need to explain this prediction.
-The apartment has a size of 50 m^2^, is located on the 2nd floor, with a park nearby and cats are forbidden (see Figure \@ref(fig:shapley-instance)).
+The apartment has a size of 50 m^2^, is located on the 2nd floor, with a park nearby and cats are forbidden:
 
 ```{r shapley-instance, fig.cap = "The predicted price for our apartment is 300.000€. It's a 50 square meter apartment on the second floor. There is a park nearby and cats are forbidden. Our goal is to explain how each of these features values contributed towards the predicted price of 300k€."}
 knitr::include_graphics("images/shapley-instance.jpg")
@@ -42,7 +42,7 @@ What's the connection to machine learning prediction and interpretability?
 The 'game' is the prediction task for a single instance of the dataset.
 The 'gain' is the actual prediction for this instance minus the average prediction of all instances.
 The 'players' are the feature values of the instance, which collaborate to receive the gain (= predict a certain value).
-In our apartment example from Figure \@ref(fig:shapley-instance), the feature values 'park-allowed', 'cat-forbidden', 'area-50m^2^' and 'floor-2nd' worked together to achieve the prediction of 300.000€.
+In our apartment example, the feature values 'park-allowed', 'cat-forbidden', 'area-50m^2^' and 'floor-2nd' worked together to achieve the prediction of 300.000€.
 Our goal is to explain the difference of the actual prediction (300.000€) and the average prediction (310.000€): a difference of -10.000€.
 
 The answer might be:
@@ -53,7 +53,7 @@ The contributions add up to -10.000€: the final prediction minus the average p
 
 The Shapley value is the average marginal contribution of a feature value over all possible coalitions.
 All clear now?
-Have a look at Figure \@ref(fig:shapley-instance-intervened) to learn how to compute the contribution of a feature value to a coalition.
+How to compute the contribution of a feature value to a coalition:
 
 ```{r shapley-instance-intervened, fig.cap = "We assess the contribution of the 'cat-forbidden' feature value when added to a coalition of 'park-nearby', 'size-50m^2^'. We simulate that only 'park-nearby', 'cat-forbidden' and 'size-50m^2^' are in a coalition by randomly drawing the value for the floor feature. Then we predict the price of the apartment with this combination (301.000€). In a second step we remove 'cat-forbidden' from the coalition by replacing it with a random value of the cat allowed/forbidden feature from the randomly drawn apartment. In the example it was 'cat-allowed', but it could have been 'cat-forbidden' again. We predict the apartment price for the coalition of 'park-nearby' and 'size-50m^2^' (320.000€). The contribution of 'cat-forbidden' was 301.000€ - 320.000€ = -19.000€. This estimation depends on the sampled non-participating feature values and we get better estimates by repeating this procedure. This figure shows the computation of the marginal contribution for only one coalition. The Shapley value is the weighted average of marginal contributions over all coalitions."}
 knitr::include_graphics("images/shapley-instance-intervention.jpg")
@@ -62,14 +62,13 @@ knitr::include_graphics("images/shapley-instance-intervention.jpg")
 We repeat this computation for all possible coalitions.
 The computation time increases exponentially with the number of features, so we have to sample from all possible coalitions.
 The Shapley value is the average over all the marginal contributions.
-Figure \@ref(fig:shapley-coalitions) shows all coalitions for computing the Shapley value of the 'cat-forbidden' feature value.
-When we repeat the Shapley value for all feature values, we get the complete distribution of the prediction (minus the average) among the feature values.
+Here are all coalitions for computing the Shapley value of the 'cat-forbidden' feature value:
 
 ```{r shapley-coalitions, fig.cap = "All coalitions of feature values that are needed to assess the Shapley value for 'cat-forbidden'. The first row shows the coalition without any feature values. The 2nd, 3rd and 4th row show different coalitions - separated by '|' - with increasing coalition size. For each of those coalitions we compute the predicted apartment price with and without the 'cat-forbidden' feature value and take the difference to get the marginal contribution. The Shapley value is the (weighted) average of marginal contributions. We replace the feature values of features that are not in a coalition with random feature values from the apartment dataset to get a prediction from the machine learning model."}
 knitr::include_graphics("images/shapley-coalitions.jpg")
 ```
 
-
+When we repeat the Shapley value for all feature values, we get the complete distribution of the prediction (minus the average) among the feature values.
 
 
 ### Examples and Interpretation
@@ -78,10 +77,7 @@ The interpretation of the Shapley value $\phi_{ij}$ for feature $j$ and instance
 
 The Shapley value works for both classification (if we deal with probabilities) and regression.
 
-We use the Shapley value to analyse the predictions of a Random Forest model predicting [cervical cancer](#cervical).
-Table \@ref(tab:shapley-cervical-instance) shows the feature values for the cancer risk factors of a woman in the dataset.
-Figure \@ref(fig:shapley-cervical-plot) visualizes the Shapley values, that are also listed in Table \@ref(tab:shapley-cervical-table).
-
+We use the Shapley value to analyse the predictions of a Random Forest model predicting [cervical cancer](#cervical):
 
 ```{r shapley-cervical-prepare}
 data("cervical")
@@ -106,10 +102,6 @@ diff.prediction = actual.prediction - avg.prediction
 ```
 
 
-```{r shapley-cervical-instance}
-kable(t(x.interest), caption = sprintf("Risk factors (feature values) of one woman in the cervical cancer dataset with a predicted %.2f cancer probability.", actual.prediction))
-```
-
 ```{r shapley-cervical-plot, fig.cap = sprintf("Feature value contributions for woman %i in the cervical cancer dataset. With a prediction of %.2f, this woman's cancer probability is %.2f above the average prediction of %.2f. The feature value that increased the probability the most is the number of diagnosed STDs. The feature contributions sum up to the difference of actual and average prediction (%.2f).", instance_indices, actual.prediction,diff.prediction, avg.prediction, diff.prediction)}
 # shapley1 = shapley(model, bike.train.x, x.interest = bike.train.x[instance_indices[1],], class = 2)
 shapley2 = Shapley$new(predictor, x.interest = x.interest)
@@ -123,9 +115,7 @@ kable(shapley2$results[c('feature', 'phi')], caption = sprintf("The Shapley valu
 
 
 For the [bike rental dataset](#bike-data) we also train a Random Forest to predict the number of rented bikes for a day  given the weather conditions and calendric information.
-Table \@ref(tab:shapley-bike-instance) displays the feature values of the day for which we want to explain the prediction.
-Figure \@ref(fig:shapley-bike-plot) shows the explanations created for the  Random Forest prediction of one specific day; the raw Shapley values are displayed in  Table \@ref(tab:shapley-bike-table)
-
+The explanations created for the  Random Forest prediction of one specific day:
 
 ```{r shapley-bike-prepare}
 data("bike")
@@ -146,21 +136,12 @@ x.interest = bike.train.x[instance_indices[2],]
 ```
 
 
-```{r shapley-bike-instance}
-kable(t(x.interest), caption = sprintf("Instance (day) for which to explain the predicted outcome (%.0f bikes)", actual.prediction))
-```
-
 ```{r shapley-bike-plot, fig.cap = sprintf("Feature value contributions for instance %i. With a predicted %.0f rented bikes, this day is %.0f below the average prediction of %.0f. The feature values that had the most negative effects were the weather situation, humidity and the time trend (years since 2011). The temperature on that day had a positive effect compared to the average prediction. The feature contributions sum up to the difference of actual and average prediction (%.0f).", instance_indices[2], actual.prediction, diff.prediction, avg.prediction, diff.prediction)}
 shapley2 = Shapley$new(predictor, x.interest = x.interest)
 plot(shapley2) +  scale_y_continuous("Feature value contribution") +
   ggtitle(sprintf("Actual prediction: %.0f\nAverage prediction: %.0f\nDifference: %.0f", actual.prediction, avg.prediction, diff.prediction))
 ```
 
-```{r shapley-bike-table}
-table.dat = shapley2$results[c('feature', 'phi')]
-kable(table.dat, digits = 2,
-  caption = sprintf("The Shapley values for data point %i from the bike rental dataset.", instance_indices[2]))
-```
 
 Be careful to interpret the Shapley value correctly:
 The Shapley value is the average contribution of a feature value towards the prediction in different coalitions.

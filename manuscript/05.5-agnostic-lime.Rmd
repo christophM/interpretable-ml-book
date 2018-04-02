@@ -1,5 +1,6 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all("../")
+set.seed(42)
 ```
 
 
@@ -61,8 +62,7 @@ Tabular data means any data that comes in tables, where each row represents an i
 LIME sampling is not done around the instance of interest, but from the training data's mass centre, which is problematic.
 But it increases the likelihood that the outcome for some of the sampled points predictions differ from the data point of interest and that LIME can learn at least some explanation.
 
-Figure \@ref(fig:lime-fitting) explains how the sampling and local model fitting works.
-
+It's best to visually explain how the sampling and local model fitting works:
 
 ```{r lime-fitting, fig.cap='How LIME sampling works: A) The black box model predicts one of two classes given feature x1 and x2. Most data points have class 0 (darker colour), and the ones with class 1 are grouped in an upside-down V-shape (lighter colour). The plot displays the decision boundaries learned by a machine learning model. In this case it was a Random Forest, but it does not matter, because LIME is model-agnostic and we only care about the decision boundaries. B) The yellow point is the instance of interest, which we want to explain. The black dots are data sampled from a normal distribution around the means of the features in the training sample. This needs to be done only once and can be reused for other explanations. C) Introducing locality by giving points near the instance of interest higher weights. D) The colours and signs of the grid display the classifications of the locally learned model form the weighted samples. The white line marks the decision boundary (P(class) = 0.5) at which the classification of the local model changes.', fig.height=9, fig.width=9}
 ## Creating dataset ###########################################################
@@ -229,16 +229,21 @@ model <- caret::train(bike.train.x,
 instance_indices = c(295, 285)
 
 probs = predict(model, newdata = bike[instance_indices, ], type='prob')
+
+
+n_features_lime = 3
+n_labels = 2
 ```
 First we train a Random Forest with `r ntree` trees on the classification task. Given seasonal and weather information, on which day will the number of bike rentals be above the trend-free average?
+
+The explanations are created with `r n_features_lime` features.
+The results of the sparse local linear model that was fitted for two instances with different predicted classes:
 
 ```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset.  Temperature and good weather situation have a positive effect on the prediction, the day of the week and increasing humidity a negative one. The effect of temperature is roughly the same in both cases. One problem becomes clear: This plot shows the weights and not the effects, which would be weights times actual feature values, which would be more informative. ') }
 library("lime")
 set.seed(44)
 explanation <- lime::lime(bike.train.x, model, bin_continuous=FALSE)
 
-n_features_lime = 3
-n_labels = 2
 # Explain new instance
 explainer <- lime::explain(bike.train.x[instance_indices, ],
                        explanation,
@@ -248,12 +253,9 @@ explainer <- lime::explain(bike.train.x[instance_indices, ],
 explainer = filter(explainer, label == 'above')
 lime::plot_features(explainer, ncol=1)
 ```
-The explanations are created with `r n_features_lime` features.
-Figure  \@ref(fig:lime-tabular-example-explain-plot-1) shows the results of the sparse local linear model that was fitted for two instances with different predicted classes.
+
 It becomes clear from the figure, that it is easier to interpret categorical features than numerical features.
-Figure  \@ref(fig:lime-tabular-example-explain-plot-2) shows a variant where the numerical features are turned into categorical features by putting them into bins along the quantiles.
-
-
+The next plot shows a variant where the numerical features are turned into categorical features by putting them into bins along the quantiles:
 
 ```{r lime-tabular-example-explain-plot-2, fig.cap=sprintf('LIME explanations for two instances of the bike rental classification task. This time numerical features were turned into categorical features by binning them.')}
 # An can be visualised directly
@@ -270,6 +272,12 @@ explanation <- lime::explain(bike.train.x[instance_indices, ],
 explanation = filter(explanation, label == 'above')
 lime::plot_features(explanation, ncol=1)
 ```
+
+
+
+
+
+
 
 
 ### LIME for Text
@@ -335,9 +343,7 @@ kable(variations)
 Each column corresponds to one word in the sentence.
 Each row is a variation, 1 indicates that the word is part of this variation and 0 indicates that the word has been removed.
 The corresponding sentence for the first variation is "```r example_sentence```".
-Figure \@ref(fig:lime-text-explanations) shows for two sentences (one spam, one no spam) the estimated local weights found by the LIME algorithm.
-
-
+See two sentences (one spam, one no spam) and the estimated local weights found by the LIME algorithm:
 
 ```{r lime-text-explanations, fig.cap=sprintf('LIME explanations of spam predictions for two Youtube comments. Comment 1: "%s", comment 2: "%s"', texts[1], texts[2])}
 set.seed(42)

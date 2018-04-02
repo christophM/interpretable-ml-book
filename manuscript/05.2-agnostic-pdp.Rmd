@@ -5,7 +5,6 @@ devtools::load_all("../")
 
 ## Partial Dependence Plot (PDP) {#pdp}
 The partial dependence plot shows the marginal effect of a feature on the predicted outcome  (J. H. Friedman 2001[^Friedman2001]).
-Have a glance at Figure \@ref(fig:pdp-cervical) to get some intuition before diving into the theory of partial dependencies.
 A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or something else.
 Applied to a linear regression model, partial dependence plots will always show a linear relationship, for example.
 
@@ -40,19 +39,7 @@ Even 3D on a 2D paper or monitor is already challenging.
 Let's turn to the regression example with the [bike counts](#bike-data) and have a look at how the weather affects the predicted bike rentals.
 We first fit a machine learning model on the dataset, for which we want to analyse the partial dependencies.
 In this case, we fitted a RandomForest to predict the bike rentals and make use of the partial dependence method to understand what relationships the model learned.
-Figure \@ref(fig:pdp-bike) shows the influence of the weather features on the predicted bike counts.
-For warm (but not too hot) weather, the model predicts a high number of bike rentals on average.
-The potential bikers are increasingly inhibited in engaging in cycling when humidity reaches above 60%.
-Also, the more wind the less people like to bike, which makes sense.
-Interestingly, the predicted bike counts don't drop between 25 and 35 km/h windspeed, but maybe there is just not enough training data.
-At least intuitively I would expect the bike rentals to drop with any increase in windspeed, especially when the windspeed is very high.
-
-Figure \@ref(fig:pdp-cervical) shows a partial dependence plot example for [cervical cancer classification](#cervical) for the data).
-Again, we fit a RandomForest to predict whether a woman has cervical cancer given some risk factors.
-Any other type of model would have worked as well.
-The interpretation is analogue to the partial dependence plots for regression.
-
-Figure \@ref(fig:pdp-cervical-2d) shows an example of a partial dependence plot with two features.
+The influence of the weather features on the predicted bike counts:
 
 ```{r pdp-bike, fig.cap = 'Partial dependence plot of rental bike count and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in different temperatures: With rising temperatures, on average the bike rentals rise, until 20C degrees, where it stays the same also for hotter temperatures and drops a bit again towards 30C degrees.'}
 data(bike)
@@ -62,9 +49,17 @@ bike.task = makeRegrTask(data = bike, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
 pd1 = mlr::generatePartialDependenceData(mod.bike, bike.task, c('temp', 'hum', 'windspeed'))
 mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous('', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, NA))
-
 ```
 
+For warm (but not too hot) weather, the model predicts a high number of bike rentals on average.
+The potential bikers are increasingly inhibited in engaging in cycling when humidity reaches above 60%.
+Also, the more wind the less people like to bike, which makes sense.
+Interestingly, the predicted bike counts don't drop between 25 and 35 km/h windspeed, but maybe there is just not enough training data.
+At least intuitively I would expect the bike rentals to drop with any increase in windspeed, especially when the windspeed is very high.
+
+We also compute the partial dependence for [cervical cancer classification](#cervical).
+Again, we fit a RandomForest to predict whether a woman has cervical cancer given some risk factors. 
+Given the model, we compute and visualize the partial dependence of the cancer probability on different features: 
 
 ```{r pdp-cervical, fig.cap = 'Partial dependence plot of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the models partial dependence shows that on average, the cancer probability is low before 45, spikes between age 45 and 55 and plateaus after that. The number of years on hormonal contraceptives is associated with a higher cancer risk especially after 15 years.'}
 data(cervical)
@@ -74,6 +69,9 @@ pd1 = mlr::generatePartialDependenceData(mod, cervical.task, c('Age', "Hormonal.
 
 mlr::plotPartialDependence(pd1) + my_theme()+ scale_x_continuous('', limits = c(0, NA))  + scale_color_discrete(guide='none') + scale_y_continuous('Predicted cancer probability')
 ```
+
+
+We can also visualizes the partial dependence of two features at once:
 
 ```{r pdp-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of number of years on hormonal contraceptives and number of sexual partners. Interestingly, there is some odd interaction between the two features when the number of sexual partners is 1 and the years of on hormonal contraceptives larger than 12. There are actually only two women in that group, who both happen to have cancer. So my best guess is that this was random and the model did overfit on those two women, but only more data could answer this question.'}
 pd1 = mlr::generatePartialDependenceData(mod, cervical.task, c("Number.of.sexual.partners", "Hormonal.Contraceptives..years."), interaction = TRUE)
