@@ -17,7 +17,8 @@ opts_chunk$set(
   fig.path = "images/", 
   collapse = TRUE, 
   fig.width = 4, 
-  fig.height = 4
+  fig.height = 4, 
+  dpi = 300
 )
 
 output <- opts_knit$get("rmarkdown.pandoc.to")
