@@ -19,8 +19,8 @@ opts_chunk$set(
   dev = "png",
   dpi = 150, 
   fig.height = 5, 
-  fig.width = 8,
-  dev.args = list(pointsize = 16)
+  fig.width = 7,
+  dev.args = list(pointsize = 20)
 )
 
 output <- opts_knit$get("rmarkdown.pandoc.to")
