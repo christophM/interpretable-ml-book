@@ -15,11 +15,12 @@ opts_chunk$set(
   message = FALSE,
   warning = FALSE,
   fig.path = "images/", 
-  collapse = TRUE, 
-  fig.width = 4, 
-  fig.height = 4, 
-  dpi = 300, 
-  dev.args = list(pointsize = 7)
+  collapse = TRUE,
+  dev = "png",
+  dpi = 150, 
+  fig.height = 5, 
+  fig.width = 8,
+  dev.args = list(pointsize = 16)
 )
 
 output <- opts_knit$get("rmarkdown.pandoc.to")
