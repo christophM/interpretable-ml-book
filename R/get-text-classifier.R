@@ -35,8 +35,6 @@ prepare_data = function(comments, trained_corpus = NULL){
 }
 
 
-
-
 get_predict_fun = function(model, train_corpus){
   function(comments){
     terms = prepare_data(comments, train_corpus)
@@ -45,11 +43,8 @@ get_predict_fun = function(model, train_corpus){
 }
 
 
-
-
-
 # Text data is not yet implemented in LIME
-# Doing it myself now
+# Doing it myself here
 
 
 #' Tokenize sentence into words
@@ -123,7 +118,7 @@ create_variations = function(text, pred_fun, prob=0.5, n_variations = 100, class
 #'@param class The class for which to create the explanations
 explain_text = function(text, pred_fun, prob=0.9, n_variations=500, K = 3, case=1, class){
   stopifnot(K >= 1)
-  df = create_variations(text, pred_fun = predict_fun, prob = prob, n_variations = n_variations, class=class)
+  df = create_variations(text, pred_fun = pred_fun, prob = prob, n_variations = n_variations, class=class)
   mod = glm(pred ~ . - weights, data =df , weights=df$weights, family = 'binomial')
 
   coefs = coef(mod)
