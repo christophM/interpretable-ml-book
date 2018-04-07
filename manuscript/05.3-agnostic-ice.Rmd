@@ -73,8 +73,10 @@ where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions 
 Taking for example the cervical cancer ICE plot for age and centring the lines at the youngest observed age yields:
 
 ```{r ice-cervical-centered, fig.cap=sprintf("Centred ICE plot for predicted cervical cancer risk probability by age. The lines are fixed to 0 at age %i and each point shows the difference to the prediction with age %i. Compared to age 18, the predictions for most instances stay the same and see an increase up to 20 percent. A few cases show the opposite behaviour: The predicted probability decreases with increasing age.", min(cervical_subset$Age), min(cervical_subset$Age))}
-pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE, center = list(Age=min(cervical_subset$Age)))
-mlr::plotPartialDependence(pd1) + my_theme() + scale_color_discrete(guide='none') +
+library("iml")
+predictor = Predictor$new(mod, data = cervical_subset)
+ice = Ice$new(predictor, feature = "Age", center.at = min(cervical_subset$Age))
+ice$plot() + my_theme() + scale_color_discrete(guide='none') +
     scale_y_continuous('Cancer probability difference to age 18')
 ```
 
@@ -84,11 +86,18 @@ This can be useful when we are not interested in seeing the absolute change of a
 The same for the bike data set and count prediction model:
 
 ```{r ice-bike-centered, fig.cap='Centred individual conditional expectation plots of expected bike rentals by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at 0.'}
+data(bike)
 set.seed(43)
 bike.subset.index = sample(1:nrow(bike), size = 100)
 bike.subset = bike[bike.subset.index,]
-pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE, center = list(temp = min(bike$temp), hum = min(bike$hum), windspeed = min(bike$windspeed)))
-mlr::plotPartialDependence(pd.data) + my_theme() + scale_y_continuous('Difference in predicted rentals to at value zero') + scale_x_continuous('')
+
+predictor = Predictor$new(mod.bike, data = bike.subset)
+ice1 = Ice$new(predictor, feature = "temp", center.at = min(bike$temp))$plot() + my_theme()
+ice2 = Ice$new(predictor, feature = "hum", center.at = min(bike$hum))$plot() + my_theme()
+ice3 = Ice$new(predictor, feature = "windspeed", center.at = min(bike$windspeed))$plot() + my_theme()
+
+library("gridExtra")
+grid.arrange(ice1, ice2, ice3, nrow = 1)
 ```
 
 #### Derivative ICE Plot
@@ -103,23 +112,5 @@ $$\hat{f}(x)=\hat{f}(x_S,x_C)=g(x_S)+h(x_C),\quad\text{with}\quad\frac{\delta\ha
 Without interactions, the individual partial derivatives should be the same for all instances.
 If they differ, it is because of interactions and it will become visible in the d-ICE plot.
 In addition to displaying the individual curves for derivative $\hat{f}$, showing the standard deviation of derivative $\hat{f}$ helps to highlight regions in $x_S$ with heterogeneity in the estimated derivatives.
+The derivative ICE plot takes a long time to compute and is rather impractical.
 
-#### Example
-As we have seen, the most changes in estimated cancer probability happen around age 45.
-This is confirmed by the derivative ICE plot:
-
-```{r ice-cervical-derivative, fig.cap="Derivative ICE plot of predicted cancer probability by age. Between age 14 and the early forties, a few instance see changes in prediction both upwards and downwards, but the majorities derivatives are near zero. Between age 45 and 50, most women's prediction curves have a positive derivative, indicating an increase in predicted cancer probability."}
-# takes to much time ... maybe precompute and save results.
-pd1 = mlr::generatePartialDependenceData(mod, cervical_subset[1:60,], 'Age', individual = TRUE, derivative = TRUE, method = 'simple')
-mlr::plotPartialDependence(pd1) + my_theme() + scale_y_continuous('Derivative cancer probability')+ scale_color_discrete(guide='none')
-```
-
-The derivative ICE plot for the bike rental model:
-
-```{r ice-bike-derivative, fig.cap = 'Derivative individual conditional expectation plot of expected bike rentals and weather conditions.'}
-pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset[50:60,], c('temp', 'hum', 'windspeed'), individual = TRUE, derivative = TRUE, method = 'simple')
-mlr::plotPartialDependence(pd.data) + my_theme() + scale_y_continuous('Derivative of predicted bike counts')
-```
-
-
-[^Goldstein2015]: Goldstein, Alex, Adam Kapelner, Justin Bleich, and Emil Pitkin. 2015. "Peeking Inside the Black Box: Visualizing Statistical Learning with Plots of Individual Conditional Expectation." Journal of Computational and Graphical Statistics 24 (1). Taylor & Francis: 44–65.
