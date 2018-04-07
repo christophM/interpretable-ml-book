@@ -64,13 +64,18 @@ coefs$imp = round(coefs$imp, 1)
 coefs$coefficient = round(coefs$coefficient, 1)
 coefs$sd = round(coefs$sd, 2)
 coefs$rule = NULL
-coefs = filter(coefs, !is.na(description))
+coefs = coefs[!is.na(coefs$imp), ]
+coefs = coefs[order(coefs$imp, decreasing = TRUE), ]
 ```
 
 In this example, we use RuleFit to predict the number of [bike rentals](#bike-data) on a given day.
 Some of the genereated rules for the bike rental prediction task are:
+The table shows five of the generated rules with their Lasso weights and importances (measured as a function of the weight, see later in the chapter) after fitting 'RuleFit' on the bike dataset: 
 
-```{r rulefit-example, fig.cap="The table shows 5 of the generated rules and weights after fitting 'RuleFit' on the bike dataset."}
+```{r rulefit-example}
+# Making the table a bit prettier
+coefs$description = gsub("\\%", "", coefs$description)
+coefs$description = gsub("c\\(", "(", coefs$description)
 kable(coefs[1:5, c('description', 'coefficient', 'imp')],
   col.names = c('Description', 'Weight', 'Importance'),
   row.names=FALSE, 
@@ -110,7 +115,7 @@ If all conditions of a decision rule $r_k$ apply, the predicted outcome changes 
 And, respectively, for classification: If all conditions of decision rule $r_k$ apply, the odds for event vs. no-event changes by a factor of $\alpha_k$.
 
 
-**The Good**:
+**Advantages**:
 
 - RuleFit adds **feature interactions** automatically to linear models.
 Therefore it solves the problem of linear models that you have to add interaction terms manually and it helps a bit with the issue of modeling non-linear relationships.
@@ -125,7 +130,7 @@ This improves local interpretability.
 - RuleFit comes with a bunch of tools, namely an importance measurement, interaction effects calculation and partial dependence plots.
 
 
-**The Bad**:
+**Disadvantages**:
 
 - Sometimes RuleFit creates many rules which get a non-zero weight in the Lasso model.
 The interpretability degrades with higher number of features in the model.
@@ -191,7 +196,11 @@ So another rule that would be created is:
 
 $$r_{18}(x)=I(x_{\text{temp}}<15)\cdot{}I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\}$$
 
-In total, $K=\sum_{m=1}^M2(t_m-1)$ rules are created from the ensemble of $M$ trees, with $t_m$ terminal nodes each.
+In total, 
+
+$$K=\sum_{m=1}^M2(t_m-1)$$ 
+
+rules are created from the ensemble of $M$ trees, with $t_m$ terminal nodes each.
 A trick that is introduced by the RuleFit authors is to fit trees with random depth, so that a lot of diverse rules are generated with different lengths.
 Note that we throw away the predicted value in each node and only keep the conditions that lead us to the node and create a rule from it.
 The weighting of the decision rules will happen in step 2 of fitting RuleFit.
@@ -246,7 +255,9 @@ For the decision rule terms, the importance is calculated with:
 
 $$I_k=|\hat{\alpha}_k|\cdot\sqrt{s_k(1-s_k)}$$
 
-where $\hat{\alpha}_k$ is the associated Lasso weight of the decision rule and $s_k$ is the support of the feature in the data, which is the percentage of data points for which the decision rule applies (where $r_k(x)=0$): $s_k=\frac{1}{n}\sum_{i=1}^n{}r_k(x_i)$
+where $\hat{\alpha}_k$ is the associated Lasso weight of the decision rule and $s_k$ is the support of the feature in the data, which is the percentage of data points for which the decision rule applies (where $r_k(x)=0$): 
+
+$$s_k=\frac{1}{n}\sum_{i=1}^n{}r_k(x_i)$$
 
 A feature $x_j$ occurs as a linear term and possibly also within many decision rules.
 How do we measure the total importance of the feature $x_j$?
