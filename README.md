@@ -44,9 +44,16 @@ browseURL('_book/index.html')
 ## Changelog
 All notable changes to the book will be documented here.
 
-### v0.3 IN PROGRESS
+### v0.3 (2018-04-24)
 - Reworked the Feature Importance Chapter
 - Added third short story
+- Removed xkcd comic
+- Merged introduction and about the book chapters
+- Addeds pros & cons to pdp and ice chapters
+- Started using the iml package for plots in ice and pdp
+- Restructured the book files for Leanpub
+- Added a cover
+- Added some CSS for nicer formatting
 
 ### v0.2 (2018-02-13)
 - Added chapter about Shapley value explanations
