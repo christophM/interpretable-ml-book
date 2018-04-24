@@ -6,34 +6,61 @@ set.seed(42)
 
 ## Global Surrogate Models  {#global}
 
-Global surrogate models - or solving machine learning model issues by adding adding more machine learning models - are simple/interpretable models that are trained on the predictions of the more complex model to mimic its behaviour. The simpler model can then be interpreted to draw some conclusions about the underlying complex model. 
+A global surrogate model - in the context of interpretable machine learning - is an interpretable model that is trained to mimick the behaviour of an opaque black box model.  We can draw conclusions from the interpretable surrogate model about the black box. (Solving machine learning interpretability by using more machine learning.)
 
 
+# Theory
 
-Other names: oracle, surrogate model, mimic, emulation, emulated model, distilled model. 
-No real magic to it. 
+<!-- origins -->
+Surrogate model models are used in engineering, when an outcome of interest is difficult or expensive to measure (e.g. because it comes from an computationally costly simulation), so a cheap surrogate model of the outcome is used instead. 
+The difference between the surrogate models used in engineering and for interpretabl machine learning is that the underlying model is a machine learning model (not a simulation) and that the surrogate model has to be interpretable. 
+The purpose of surrogate models is to make the interpretation easier. 
+Other names which talk about the same principle as surrogate models:
+Approximation model, metamodel, response surface model, emulator. 
 
 
-Arbitrary $\hat{f}(x)$ becomes some interpretable $\hat{f}^*(x)$.
-We treat the black box model as data generating process instead of the real world. 
+So, about the theory ... there is actually not much theory needed to understand surrogated models. 
+We want to approximate our black box prediction function $\hat{f}(x)$ as closely as possible with the surrogate model predictions function $\hat{f}^*(x)$, under the constraint that the replacement is interpretable.
+
+- With linear model
+$$\hat{f}^*(x)=\beta_0+\sum_{j=1}^p\beta_j{}x_j{}$$
+
+- With decision tree
+
+$$\hat{f}^*(x)=\sum_{m=1}^Mc_m{}I\{x\in{}R_m\}$$
+
+<!-- other way to think about it -->
+We kind of go a level more abstract: We treat the black box model as the data generating process instead of the real world. 
 If our original black box model sucks (performance wise), then of course, the simple model will also be garbate, even if the simple model would have been great when trained on the original data. 
+If you are very close with the interpretable model, you might want to consider to actually replace the complex model with the interpretable model.
 
+<!-- More ideas-->
 We could also build a surrogate models only based on a cluster or subset of the original data. 
 By changing the distribution, we shift our focus of the explaining surrogate model (and it is not truly global any more).
 Or re-weight the samples. 
 When we weight the instances local to one data point we have local surrogate models. 
 
-If you are very close with the interpretable model, you might want to consider to actually replace the complex model with the interpretable model.
 
-- With linear model
-$$\hat{f}^*(x)=\beta_0+\sum_{j=1}^p\beta_j{}x_j{}$$
-- With decision tree
 
-$$\hat{f}^*(x)=\sum_{m=1}^Mc_m{}I\{x\in{}R_m\}$$
+On which data do you train the model?
+Grid or training data is possible. 
+Difference is in the emphasis of the regions.
+If one ones to use a grid, then you you can dive deep into the field of design of experiments, which is occupied with designing grids (different distributions, random, rigid, quasi-random, adaptive, ...).
+
+
+Algorithm:
+
+1. Choose training data points
+1. For those training data points, get predictions $\hat{y}$ of the black box model
+1. Train the interpretable model on chosen data points and their predictions
+1. Interpret the interpretable surrogate model
+
+
+It is a model-agnostic method, since it requires no information about the inner workings of the black box model, only the relation of input and predicted output. 
+Of course, there is the choice of the surrogate model, which dictates the interpretation.
 
 
 ### Example
-TODO: Add variance explained
 Bike example with decision tree.
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, fig.cap = "The terminal nodes of a surrogate tree that mimicks the behaviour of a support vector machine trained on the bike rental dataset. The distribution in the nodes show that the surrogate tree predicts a higher number of bike rentals when the weather is above around 13 degrees and when the day was later in the 2 year period (cut point at 453 days)."}
 library("iml")
@@ -92,3 +119,4 @@ Now we do some interpretation.
 It could be, that the interpretable model is very close for a part of the data, but diverges in other areas. 
 In this case the interpretation for the simple model would not be equally good for all data points.
 - Dependig on the simple model you choose as a surrogate, the model will come with all its advantages and disadvantages. 
+- If one argues that there are no real interpretable models per se (like not even linear models or decision trees) or that it is a danger to think something is interpretable, then this technique is not useful.
