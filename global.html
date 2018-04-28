@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="ice.html">
-<link rel="next" href="global.html">
+<link rel="prev" href="feature-importance.html">
+<link rel="next" href="lime.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
@@ -202,77 +202,85 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="feature-importance" class="section level2">
-<h2><span class="header-section-number">5.3</span> Feature Importance</h2>
-<p>A feature’s importance is the increase in the model’s prediction error after we permuted the feature’s values (breaks the relationship between the feature and the outcome).</p>
-<div id="the-theory" class="section level3">
-<h3><span class="header-section-number">5.3.1</span> The Theory</h3>
-<p>The concept is really straightforward: We measure a feature’s importance by calculating the increase of the model’s prediction error after permuting the feature. A feature is “important”, if permuting its values increases the model error, because the model relied on the feature for the prediction; A feature is “unimportant” if permuting its values keeps the model error unchanged, because the model ignored the feature for the prediction. The permutation feature importance measurement was introduced for Random Forests by Breiman (2001)[^Breiman2011]. Based on this idea, Fisher, Rudin, and Dominici (2018)<a href="#fn21" class="footnoteRef" id="fnref21"><sup>21</sup></a> proposed a model-agnostic version of the feature importance - they called it model reliance. They also introduce more advanced ideas about feature importance, for example a (model-specific) version that accounts for the fact that many prediction models may fit the data well. Their paper is worth a read.</p>
-<p><strong>The algorithm:</strong></p>
-<p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, feature matrix <span class="math inline">\(X\)</span>, target vector <span class="math inline">\(Y\)</span>, error measure <span class="math inline">\(L(Y,\hat{Y})\)</span></p>
+<div id="global" class="section level2">
+<h2><span class="header-section-number">5.4</span> Global Surrogate Models</h2>
+<p>A global surrogate model is an interpretable model that is trained to approximate the predictions of a black box model. We can draw conclusions about the black box model by interpreting the surrogate model. Solving machine learning interpretability by using more machine learning!</p>
+<div id="theory-1" class="section level3">
+<h3><span class="header-section-number">5.4.1</span> Theory</h3>
+<!-- origins -->
+<p>Surrogate models are also used in engineering: When an outcome of interest is expensive, time-consuming or otherwise difficult to measure (for example because it comes from a complex computational simulation), a cheap and fast surrogate model of the outcome is used instead. The difference between the surrogate models used in engineering and for interpretable machine learning is that the underlying model is a machine learning model (not a simulation) and that the surrogate model has to be interpretable. The purpose of (interpretable) surrogate models is to approximate the predictions of the underlying model as closely as possible while being interpretable. You will find the idea of surrogate models under a variety of names: Approximation model, metamodel, response surface model, emulator, …</p>
+<p>So, about the theory: there is actually not much theory needed to understand surrogate models. We want to approximate our black box prediction function <span class="math inline">\(\hat{f}(x)\)</span> as closely as possible with the surrogate model prediction function <span class="math inline">\(\hat{g}(x)\)</span>, under the constraint that <span class="math inline">\(g\)</span> is interpretable. Any interpretable model - for example from the <a href="simple.html#simple">interpretable models chapter</a> - can be used for the function <span class="math inline">\(g\)</span>:</p>
+<p>For example a linear model:</p>
+<p><span class="math display">\[\hat{g}(x)=\beta_0+\beta_1{}x_1{}+\ldots+\beta_p{}x_p\]</span></p>
+<p>Or a decision tree:</p>
+<p><span class="math display">\[\hat{g}(x)=\sum_{m=1}^Mc_m{}I\{x\in{}R_m\}\]</span></p>
+<p>Fitting a surrogate model is a model-agnostic method, since it requires no information about the inner workings of the black box model, only the relation of input and predicted output is used. If the underlying machine learning model would be exchanged for another, you could still apply the surrogate method. The choice of the black box model type and of the surrogate model type is decoupled.</p>
+<p>Perform the following steps to get a surrogate model:</p>
 <ol style="list-style-type: decimal">
-<li>Estimate the original model error <span class="math inline">\(e_{orig}(\hat{f})=L(Y,\hat{f}(X))\)</span> (e.g. mean squared error)</li>
-<li>For each feature <span class="math inline">\(j\in1,\ldots,p\)</span> do
-<ul>
-<li>Generate feature matrix <span class="math inline">\(X_{perm_{j}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in <span class="math inline">\(X\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
-<li>Estimate error <span class="math inline">\(e_{perm}=L(Y,\hat{f}(X_{perm_j}))\)</span> based on the predictions of the permuted data.</li>
-<li>Calculate permutation feature importance <span class="math inline">\(FI_j=e_{perm}(\hat{f})/e_{orig}(\hat{f})\)</span>. Alternatively, the difference can be used: <span class="math inline">\(FI_j=e_{perm}(\hat{f})-e_{orig}(\hat{f})\)</span></li>
-</ul></li>
-<li>Sort variables by descending <span class="math inline">\(FI\)</span>.</li>
+<li>Choose a dataset <span class="math inline">\(X\)</span>. This could be the same dataset that was used for training the black box model or a new dataset from the same distribution. You could even choose a subset of the data or a grid of points, depending on your application.</li>
+<li>For the chosen dataset <span class="math inline">\(X\)</span>, get the predictions <span class="math inline">\(\hat{y}\)</span> of the black box model.</li>
+<li>Choose an interpretable model (linear model, decision tree, …).</li>
+<li>Train the interpretable model on the dataset <span class="math inline">\(X\)</span> and its predictions <span class="math inline">\(\hat{y}\)</span>.</li>
+<li>Congratulations! You now have a surrogate model.</li>
+<li>Measure how well the surrogate model replicates the prediction of the black box model.</li>
+<li>Interpret / visualize the surrogate model.</li>
 </ol>
-<p>In their paper, Fisher, Rudin, and Dominici (2018) propose to split the dataset in half and exchange the <span class="math inline">\(X_j\)</span> values of the two halves instead of permuting <span class="math inline">\(X_j\)</span>. This is exactly the same as permuting the feature <span class="math inline">\(X_j\)</span> if you think about it. If you want to have a more accurate estimate, you can estimate the error of permuting <span class="math inline">\(X_j\)</span> by pairing each instance with the <span class="math inline">\(X_j\)</span> value of each other instance (except with itself). This gives you a dataset of size <span class="math inline">\(n(n-1)\)</span> to estimate the permutation error and it takes a big amount of computation time. I can only recommend using the <span class="math inline">\(n(n-1)\)</span> - method when you are serious about getting extremely accurate estimates.</p>
+<p>You might find approaches for surrogate models which have some extra steps or differ a bit, but the general idea is usually the same as described here.</p>
+<!-- measure fit -->
+<p>A way to measure how well the surrogate replicates the black box model is the R squared measure:</p>
+<p><span class="math display">\[R^2=1-\frac{SSE}{SST}=1 - \frac{\sum_{i=1}^n(\hat{y}^*_i-\hat{y}_i)^2}{\sum_{i=1}^n(\hat{y}_i-\bar{\hat{y}})^2}\]</span></p>
+<p>where <span class="math inline">\(\hat{y}^*_i\)</span> is the prediction for the i-th instance of the surrogate model and respectively <span class="math inline">\(\hat{y}_i\)</span> of the black box model. The mean of the black box model predictions is <span class="math inline">\(\bar{\hat{y}}\)</span>. <span class="math inline">\(SSE\)</span> stands for sum of squares error and <span class="math inline">\(SST\)</span> for sum of squares total. The R squared measure can be interpreted as the percentage of variance that is captured by the interpretable model. If the R squared is close to 1 (= low <span class="math inline">\(SSE\)</span>), then the interpretable model approximates the behaviour of the black box model very well. If the interpretable model is that close, you might want to replace the complex model with the interpretable model. If the R squared is close to 0 (= high <span class="math inline">\(SSE\)</span>), then the interpretable model fails to explain the black box model.<br />
+Note that we haven’t talked about the model performance of the underlying black box model, meaning how well or badly it performs at predicting the real outcome. For fitting the surrogate model, the performance of the black box model does not matter at all. The interpretation of the surrogate model is still valid, because it makes statements about the model and not about the real world. But of course, the interpretation of the surrogate model becomes irrelevant if the black box model sucks, because then the black box model itself is irrelevant.</p>
+<!-- More ideas-->
+<p>We could also build a surrogate model based on a subset of the original data or re-weight the instances. In this way, we change the distribution of the surrogate model’s input, which changes the focus of the interpretation (then it is not really global any longer). When we weight the data locally around a certain instance of the data (the closer the instances to the chosen instance, the higher their weight) we get a local surrogate model, which can be used to explain the instance’s individual prediction. Learn more about local models in the <a href="lime.html#lime">following chapter</a>.</p>
 </div>
-<div id="example-and-interpretation" class="section level3">
-<h3><span class="header-section-number">5.3.2</span> Example and Interpretation</h3>
-<p>We show examples for classification and regression.</p>
-<p><strong>Cervical cancer (Classification)</strong></p>
-<p>We fit an xgboost model to predict <a href="cervical.html#cervical">cervical cancer</a>. We measure the error increase by: <span class="math inline">\(1-AUC\)</span> (one minus the area under the ROC curve). Features that are associated model error increase by a factor of 1 (= no change) were not important for predicting cervical cancer.</p>
-<div class="figure"><span id="fig:importance-cervical"></span>
-<img src="images/importance-cervical-1.png" alt="The importance for each of the features in predicting cervical cancer with an xgboost model.  The importance is the factor by which the error is increased compared to the original model error." width="1050" />
+<div id="example-3" class="section level3">
+<h3><span class="header-section-number">5.4.2</span> Example</h3>
+<p>To demonstrate the surrogate models, we look at a regression and a classification example.</p>
+<p>First, we fit a support vector machine to predict the daily number of <a href="bike-data.html#bike-data">bike rentals</a> given weather and calendrical information. The support vector machine is not very interpretable, so we fit a surrogate with a CART decision tree as interpretable model to approximate the behaviour of the support vector machine.</p>
+<div class="figure"><span id="fig:unnamed-chunk-12"></span>
+<img src="images/unnamed-chunk-12-1.png" alt="The terminal nodes of a surrogate tree that approximates the behaviour of a support vector machine trained on the bike rental dataset. The distributions in the nodes show that the surrogate tree predicts a higher number of bike rentals when the weather is above around 13 degrees (Celsius) and when the day was later in the 2 year period (cut point at 435 days)." width="1050" />
 <p class="caption">
-FIGURE 5.9: The importance for each of the features in predicting cervical cancer with an xgboost model. The importance is the factor by which the error is increased compared to the original model error.
+FIGURE 5.11: The terminal nodes of a surrogate tree that approximates the behaviour of a support vector machine trained on the bike rental dataset. The distributions in the nodes show that the surrogate tree predicts a higher number of bike rentals when the weather is above around 13 degrees (Celsius) and when the day was later in the 2 year period (cut point at 435 days).
 </p>
 </div>
-<p>The feature with the highest importance was associated with an error increase of 1.26 after permutation.</p>
-<p><strong>Bike rentals (Regression)</strong></p>
-<p>We fit a random forest model to predict <a href="bike-data.html#bike-data">bike rentals</a>, given weather conditions and calendric information. As error measurement we use the mean absolute error.</p>
-<div class="figure"><span id="fig:importance-bike"></span>
-<img src="images/importance-bike-1.png" alt="The importance for each of the features in predicting bike rentals with a random forest." width="1050" />
+<p>The surrogate model has an R squared (variance explained) of 0.77 which means it approximates the underlying black box behaviour quite well, but not perfectly. If the fit would be perfect, we could actually throw away the support vector machine and use the tree instead.</p>
+<p>In our second example, we predict the probability for <a href="cervical.html#cervical">cervical cancer</a> with a random forest. Again we fit a decision tree, using the original dataset, but with the prediction of the random forest as outcome, instead of the real classes (healthy vs. cancer) from the data.</p>
+<div class="figure"><span id="fig:unnamed-chunk-13"></span>
+<img src="images/unnamed-chunk-13-1.png" alt="The terminal nodes of a surrogate tree that approximates the behaviour of a random forest trained on the cervical cancer dataset. The counts in the nodes show the distribution of the black box models classifications in the nodes." width="1050" />
 <p class="caption">
-FIGURE 5.10: The importance for each of the features in predicting bike rentals with a random forest.
+FIGURE 5.12: The terminal nodes of a surrogate tree that approximates the behaviour of a random forest trained on the cervical cancer dataset. The counts in the nodes show the distribution of the black box models classifications in the nodes.
 </p>
 </div>
-<p>A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are comparable across different problems. You can see that the importance of the most important features in the bike rental prediction task is 2 to 3 times higher than in the cervical cancer prediction task. This indicates that the features were much more informative in the bike rental prediction task and that the bike model does a better job at predicting bike rentals compared to the cancer model at predicting cancer.</p>
+<p>The surrogate model has an R squared (variance explained) of 0.2 which means it doesn’t approximate the random forest well and we should not over-interpret the tree, when drawing conclusions about the complex model.</p>
 </div>
-<div id="advantages-3" class="section level3">
-<h3><span class="header-section-number">5.3.3</span> Advantages</h3>
+<div id="advantages-4" class="section level3">
+<h3><span class="header-section-number">5.4.3</span> Advantages</h3>
 <ul>
-<li>Nice interpretation: Feature importance is the increase of model error when the feature’s information is destroyed.</li>
-<li>Feature importance provides a highly compressed, global insight into the model’s behavior.</li>
+<li>The surrogate model method is <strong>flexible</strong>: Any model from the <a href="simple.html#simple">interpretable models chapter</a> can be used. This also means that you can swap not only the interpretable model, but also the underlying black box model. Let’s say you build some complex model and you want to explain it to different teams in your company. One team is familiar with linear models; the other team prefers decision trees. You can fit two surrogate models (linear model and decision tree) for the original black box model and offer two kinds of explanations. If you find a better performing black box model, you don’t have to change the way you do interpretation, because you can use the same class of surrogate models.</li>
+<li>I’d argue that the approach is very <strong>intuitive</strong> and straightforward. This means it is easy to implement, but also easy to explain to people not familiar with data science or machine learning.</li>
+<li>With the R squard measure, we can easily <strong>measure</strong> how good our surrogate models are in terms of approximation of the black box predictions.</li>
 </ul>
 </div>
-<div id="disadvantages-3" class="section level3">
-<h3><span class="header-section-number">5.3.4</span> Disadvantages</h3>
+<div id="disadvantages-4" class="section level3">
+<h3><span class="header-section-number">5.4.4</span> Disadvantages</h3>
 <ul>
-<li>The feature importance measure is tied to the error of the model. This is not inherently bad, but in some cases not what you need. In some cases you would prefer to know how much the model’s output varies for one feature, ignoring what it means for the performance. For example: You want to find out how robust your model’s output is, given someone manipulates the features. In this case, you wouldn’t be interested in how much the model performance drops given the permutation of a feature, but rather how much of the model’s output variance is explained by each feature. Model variance (explained by the features) and feature importance correlate strongly, when the model generalizes well (i.e. it doesn’t overfit).</li>
-<li>You need access to the actual outcome target. If someone only gives you the model and unlabeled data - but not the actual target- you can’t compute the permutation feature importance.</li>
+<li>Be careful to draw <strong>conclusions about the model, not the data</strong>, since the surrogate model never sees the real outcome.</li>
+<li>It’s not clear what the best <strong>cut-off for R squared</strong> is in order to be confident that the surrogate model is close enough to the black box model. 80% of variance explained? 50%? 99%?</li>
+<li>We can measure how close the surrogate model is to the black box model. Let’s assume we are not very close, but close enough. It could happen that the interpretable model is very <strong>close for a subset of the dataset, but wildly diverges for another subset</strong>. In this case the interpretation for the simple model would not be equally good for all data points.</li>
+<li>The interpretable model you choose as a surrogate <strong>comes with all its advantages and disadvantages</strong>.</li>
+<li>Some people argue that there are - in general - <strong>no intrinsically interpretable models</strong> (including even linear models and decision trees) and that it would even be dangerous to have an illusion of interpretability. If you share this opinion, then this method is, of course, not for you.</li>
 </ul>
 
 </div>
-</div>
-<div class="footnotes">
-<hr />
-<ol start="21">
-<li id="fn21"><p>Fisher, Aaron, Cynthia Rudin, and Francesca Dominici. 2018. “Model Class Reliance: Variable Importance Measures for any Machine Learning Model Class, from the ‘Rashomon’ Perspective.” <a href="http://arxiv.org/abs/1801.01489" class="uri">http://arxiv.org/abs/1801.01489</a>.<a href="feature-importance.html#fnref21">↩</a></p></li>
-</ol>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="ice.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="global.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="feature-importance.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="lime.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -302,7 +310,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.4-agnostic-permfeatimp.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.5-agnostic-global-surrogate.Rmd",
 "text": "Edit"
 },
 "download": null,
