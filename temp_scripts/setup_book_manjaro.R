@@ -15,5 +15,7 @@ devtools::install_github("christophM/iml")
 install.packages('partykit')
 
 setwd("manuscript")
+file.remove("interpretable-ml.Rmd")
 bookdown::render_book('', 'bookdown::gitbook')
 
+browseURL('_book/index.html')
