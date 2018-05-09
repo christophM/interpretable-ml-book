@@ -1,0 +1,97 @@
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all("../")
+set.seed(42)
+```
+
+## Interaction strength
+
+The interaction statistic measures how strongly features interact with each other. 
+The most useful measures are: interaction strength between two features and interaction strength between a feature and all other features.
+
+
+### Some Theory
+
+If two features $j$ and $k$ do not interact, we can decompose the PDP [^Friedman2008] (assuming effects are centered at zero):
+$$PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)$$
+
+
+$$PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)$$
+
+Something similar can be shown for j vs all other features than j:
+When a feature $x_j$ does not interact with any other feature, we can split the prediction function $f(x)$ into a sum, where the first summand only depends on $x_j$ and the second on all other features excluding $x_j$.
+
+$$f(x)=PD_j(x_j)+PD_{P\setminus{}j}(x_{P\setminus{}j})$$
+
+The test statistic proposed in the paper is:
+$$H^2_{jk}=\sum_{i=1}^n[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)})-PD_k(x_{k}^{(i)})]/\sum_{i=1}^n{}PD_{jk}^2(x_j^{(i)},x_k^{(i)})$$
+
+
+For j vs not j it is:
+$$H^2_{j}=\sum_{i=1}^n[f(x^{(i)})-PD_j(x_j^{(i)})-PD_{P\setminus{}j}(x_{P\setminus{}j}^{(i)})]/\sum_{i=1}^nf^2(x^{(i)})$$
+This can be considered as the fraction of unexplained variance. 
+
+They also over a way to draw from the null distribution (no interactions) for creating a test. 
+But this is model-specific and as such not covered here. 
+
+The estimate described here is really expensive to evaluate, because it iterates over all datapoints and at each point the partial dependence has to be evaluated which is done using again all $n$ datapoints. 
+In the worst case we need $n*n*2$ calls to the predict function of the original model for the 1 vs. all interaction case and $n*n*3$ in the 2-interaction case. (worst case means we cannot reuse any calls, because each is uniqe. If some instances have the same values, we might be clever and save a few evaluations.)
+
+
+
+### Examples
+
+
+```{r interaction-bike, fig.cap = 'The interaction strength for each feature with all other features for a support vector machine predicting bike rentals.'}
+data(bike)
+library("mlr")
+library("iml")
+library("ggplot2")
+
+bike.task = makeRegrTask(data = bike, target = "cnt")
+mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.svm', id = 'bike-rf'), bike.task)
+
+pred.bike = Predictor$new(mod.bike, data = bike[setdiff(colnames(bike), "cnt")])
+ia = Interaction$new(pred.bike, grid.size = 50) 
+plot(ia)
+```
+
+
+
+
+```{r interaction-cervical, fig.cap = ''}
+data(cervical)
+cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
+mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
+
+pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
+ia = Interaction$new(pred.cervical, grid.size = 100) 
+plot(ia)
+```
+
+```{r interaction2-cervical-age, fig.cap = ''}
+ia = Interaction$new(pred.cervical, grid.size = 100, feature = "Num.of.pregnancies") 
+plot(ia)
+```
+
+### Advantages 
+
+- Not many way to test for interactions, so this is nice to have. 
+- Nice interpretation of the measure: Variance explained by the interaction.
+- Makes no assumption how the interaction looks like.
+- 
+
+### Disadvantages
+
+- Cannot create null hypothesis in a model-agnostic fashion and therefor not really test it.
+- Connected with missing test: We don't know if a number is high or not, only meaningful compared to other measures. 
+- Can become larger than 1, when the variance of estimating the partial dependencies in the numerator is high. 
+- Measure has lots of variance and different runs. 
+- We don't learn how the interactions look like.
+- Computationally expensive.
+- Not meaningful for images or text.
+- Assumes that we can independetly shuffle features (same problem as in partial dependence plots.)
+
+
+
+
+
