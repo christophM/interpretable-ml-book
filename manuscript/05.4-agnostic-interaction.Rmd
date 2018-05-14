@@ -5,28 +5,33 @@ set.seed(42)
 
 ## Interaction strength
 
-The interaction statistic measures how strongly features interact with each other. 
-The most useful measures are: interaction strength between two features and interaction strength between a feature and all other features.
+The interaction statistic measures how strongly features interact with each other, by analysing the amount of variance explained by the interaction.
 
 
 ### Some Theory
 
-If two features $j$ and $k$ do not interact, we can decompose the PDP [^Friedman2008] (assuming effects are centered at zero):
+
+When a machine learning model makes a prediction based on two features, we can decompose the prediction into 4 parts: a constant term, a term that depends only on the first feature, one for the second feature and one for the interaction effect of the two features.  
+
+If two features $j$ and $k$ do not interact, we can decompose the partial dependence function in the following way [^Friedman2008] (assuming effects are centered at zero):
 $$PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)$$
 
+where $PD_{jk}(x_j,x_k)$ is the 2D partial dependence and $PD_j(x_j)$ and $PD_k(x_k)$ the 1D partial dependence functions.
 
-$$PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)$$
-
-Something similar can be shown for j vs all other features than j:
-When a feature $x_j$ does not interact with any other feature, we can split the prediction function $f(x)$ into a sum, where the first summand only depends on $x_j$ and the second on all other features excluding $x_j$.
+And similarly, if feature $x_j$ has no interaction with any of the other features, we can split the prediction function $f(x)$ into a sum, where the first summand only depends on $x_j$ and the second on all other features excluding $x_j$.
 
 $$f(x)=PD_j(x_j)+PD_{P\setminus{}j}(x_{P\setminus{}j})$$
+where  $PD_{P\setminus{}j}(x_{P\setminus{}j})$ is the partial dependence function that depends on all features exluding $x_j$.
 
-The test statistic proposed in the paper is:
+With this we have a way to express the partial dependence when there is no interaction and we can measure how far away the real partial dependence function is (where there might or might not be interaction(s)).
+We measure this by analyzing the variance and to what amount of the total variance the interaction accounts for.
+
+
+The test statistic for the interaction between feature $x_j$ and $x_k$ proposed by Friedman [^Friedman2008] is:
 $$H^2_{jk}=\sum_{i=1}^n[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)})-PD_k(x_{k}^{(i)})]/\sum_{i=1}^n{}PD_{jk}^2(x_j^{(i)},x_k^{(i)})$$
+This measure is 0, when there is no interaction at all and 1 if 100 percent of the variance of the 2D partial dependence is explained by the sum of the 1D partial dependence functions.
 
-
-For j vs not j it is:
+Similarly for measuring the interaction between feature $x_j$ and all other features:
 $$H^2_{j}=\sum_{i=1}^n[f(x^{(i)})-PD_j(x_j^{(i)})-PD_{P\setminus{}j}(x_{P\setminus{}j}^{(i)})]/\sum_{i=1}^nf^2(x^{(i)})$$
 This can be considered as the fraction of unexplained variance. 
 
@@ -40,6 +45,7 @@ In the worst case we need $n*n*2$ calls to the predict function of the original 
 
 ### Examples
 
+We measure the interaction strength of features in a support vector machine that predicts the number of [bike rentals](#bike-data).
 
 ```{r interaction-bike, fig.cap = 'The interaction strength for each feature with all other features for a support vector machine predicting bike rentals.'}
 data(bike)
@@ -56,7 +62,7 @@ plot(ia)
 ```
 
 
-
+[cervical cancer classification](#cervical).
 
 ```{r interaction-cervical, fig.cap = ''}
 data(cervical)
