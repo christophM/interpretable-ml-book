@@ -3,51 +3,87 @@ devtools::load_all("../")
 set.seed(42)
 ```
 
-## Interaction strength
+## Feature Interaction Strength
 
-The interaction strength statistic measures how strongly features interact with each other, by analyzing the amount of variance explained by the interaction.
+The interaction strength statistic measures how strongly features interact with each other, by calculating the amount of variance that is explained by the interaction (Friedman 2008[^Friedman2008])
+
+### Feature Interaction?
+
+When a machine learning model makes a prediction based on two features, we can decompose the prediction into four parts: 
+a constant term, a term for the first feature, one for the second feature and one for the interaction effect of the two features.  
+The interaction between two features is defined as the change in the prediction function that occurs by varying the features, after having accounted for the individual feature effects.
+So it is the effect that comes on top of the individual feature effects. 
+For example: a model predicts the price of a house, using house size (big vs. small) and location (good vs. bad) as features. 
+Let's say our model output is this: 
+
+|               | Size: Small| Size: Big|
+|---------------|--------:|--------:|
+| **Location: Good**| 200,000 | 300,000 |
+| **Location: Bad** | 150,000 | 250,000 |
+
+We could decompose the table into following parts: 
+A constant term (100,000), an effect for the size feature (+100,00 if big, +0 if small) and effect for the location (+50,000 if good, +0 if bad). 
+This would completely explain the table.
+There is no interaction effect, because the model prediction is a sum of the single effects for size and location. 
+Making a small house big, always adds 100,000 to the price, no matter the location. 
+Also the price difference between a good and a bad location is 50,000, independent from the size.
+
+Now let's consider an example with interaction:
+
+|               | Size: Small| Size: Big|
+|---------------|--------:|--------:|
+| **Location: Good**| 200,000 | 400,000 |
+| **Location: Bad** | 150,000 | 250,000 |
+
+We could decompose the table into following parts: 
+A constant term (100,000), an effect for the size feature (+100,000 if big, +0 if small) and effect for the location (+50,000 if good, +0 if bad). 
+For this table, we need an extra term for the interaction: +100,000 if the house is big and in good location.
+This is an interaction between the size and the location, because in this case, the price difference between a big and a small house depends on the location. 
+
+The idea behind the interaction strength statistic is to measure how much of the variation of the predicted outcome depends on the interaction of the features.
 
 
 ### Some Theory
 
-When a machine learning model makes a prediction based on two features, we can decompose the prediction into 4 parts: a constant term, a term that depends only on the first feature, one for the second feature and one for the interaction effect of the two features.  
+If two features $x_j$ and $x_k$ do not interact, we can decompose the [partial dependence function](#pdp) in the following way (assuming that the partial dependence functions are centered at zero):
 
-If two features $j$ and $k$ do not interact, we can decompose the [partial dependence function](#pdp) in the following way [^Friedman2008] (assuming that the effects are centered at zero):
 $$PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)$$
 
-where $PD_{jk}(x_j,x_k)$ is the partial dependence for both features and $PD_j(x_j)$ and $PD_k(x_k)$ the single feature partial dependence functions.
+where $PD_{jk}(x_j,x_k)$ is the partial dependence for both features and $PD_j(x_j)$ and $PD_k(x_k)$ partial dependence functions for the single features.
 
-Similarly, if the feature $x_j$ has no interaction with any of the other features, we can split the prediction function $f(x)$ into a sum, where the first summand only depends on $x_j$ and the second on all other features excluding $x_j$:
+Similarly, if the feature $x_j$ has no interaction with any of the other features, we can split the prediction function $f(x)$ into a sum, where the first summand only depends on $x_j$ and the second depends on all other features excluding $x_j$:
 
-$$f(x)=PD_j(x_j)+PD_{-j}(x_{-j})$$
-where $PD_{-j}(x_{-j})$ is the partial dependence function that depends on all features exluding $x_j$.
+$$\hat{f}(x)=PD_j(x_j)+PD_{-j}(x_{-j})$$
+where $PD_{-j}(x_{-j})$ is the partial dependence function that depends on all features excluding $x_j$.
 
-This decomposition gives us a way to express the partial dependence when there is no interaction and in a next step we can measure how much the real partial dependence function (where there might or might not be interaction(s)) differs from the one without interactions.
-We calculate the variance of the function the partial dependence (for measuring the interaction of two features) or of the complete function (for measuring the interaction of a feature with all others). 
-The amount of the variance that is explained by the interaction (difference between real and no-interaction PD) is used as the interaction strength statistic.
-This measure is 0, when there is no interaction at all and 1 if 100 percent of the variance of the 2D partial dependence is explained by the sum of the 1D partial dependence functions.
-An interaction statistic of 1 between two features would mean, that knowing only one single feature is completely useless for the prediction (we are as good as random), only if we know both of them, then we are able to be better than random for the prediction.
+This decomposition expresses the partial dependence (or full prediction) function without interaction (between features $x_j$ and $x_k$ or $x_j$ and $x_{-j}$) and in a next step we measure the difference of the observed partial dependence function and the decomposed one without interactions.
+We calculate the variance of the output of the partial dependence (for measuring the interaction of two features) or of the complete function (for measuring the interaction of a feature with all others). 
+The amount of the variance that is explained by the interaction (difference between observed and no-interaction PD) is used as the interaction strength statistic.
+The statistic is 0 when there is no interaction at all and 1 if all of the variance of the variance is explained by the sum of the partial dependence functions.
+An interaction statistic of 1 between two features would mean, that knowing only one single feature is completely useless for the prediction (like using the mean of the data as prediction), only if we know both of them then we are achieve the prediction.
 
 
-Or in mathematical terms, the statistic for the interaction between feature $x_j$ and $x_k$, proposed by Friedman is:
-$$H^2_{jk}=\sum_{i=1}^n[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)})-PD_k(x_{k}^{(i)})]/\sum_{i=1}^n{}PD_{jk}^2(x_j^{(i)},x_k^{(i)})$$
+In mathematical terms, the statistic for the interaction between feature $x_j$ and $x_k$ proposed by Friedman is:
+
+$$H^2_{jk}=\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)})-PD_k(x_{k}^{(i)})\right]/\sum_{i=1}^n{}PD_{jk}^2(x_j^{(i)},x_k^{(i)})$$
 
 
 Similarly for measuring the interaction between feature $x_j$ and all other features:
-$$H^2_{j}=\sum_{i=1}^n[f(x^{(i)})-PD_j(x_j^{(i)})-PD_{-j}(x_{-j}^{(i)})]/\sum_{i=1}^nf^2(x^{(i)})$$
 
-The estimate described here is really expensive to evaluate, because it iterates over all datapoints and at each point the partial dependence has to be evaluated which is done using again all $n$ datapoints. 
-In the worst case we need $n*n*2$ calls to the predict function of the original model for the 1 vs. all interaction case and $n*n*3$ in the 2-interaction case. 
-We can also sample from the $n$ data points to speed up the computation. 
-This has the drawback that it introduces additional variance into the partial dependence estimates, which can bias the statistic upwards (because of more bias in the enumerator) and can even cause the interaction statistic to take on values larger than one. 
-So when sampling, make sure to not sample to little datapoints.
+$$H^2_{j}=\sum_{i=1}^n\left[\hat{f}(x^{(i)})-PD_j(x_j^{(i)})-PD_{-j}(x_{-j}^{(i)})\right]/\sum_{i=1}^n\hat{f}^2(x^{(i)})$$
 
-In his paper, Friedman also proposes a way to test if this statistics is significantly different from zero. 
-The Null-Hypothesis is that there is no interaction. 
-To generate data under the Null Hypothesis, you have to be able to adjust the model so that it produces no interaction between feature $x_j$ and $x_k$ or all others.
+The estimate described here is really expensive to evaluate, because it iterates over all data points and at each point the partial dependence has to be evaluated which is done using again all $n$ data points. 
+In the worst case we need $n*n*2$ calls to the machine learning models predict function for the 1 vs. all interaction case and $n*n*3$ in the 2-way interaction case. 
+We can sample from the $n$ data points to speed up the computation. 
+This has the drawback that it adds variance to the partial dependence estimates, which makes the statistic unstable.
+So when using sampling to reduce computational time, make sure to not sample to little data points.
+
+In his paper, Friedman also proposes a way to test if the interaction statistic is significantly different from zero:
+The Null hypothesis is the absence of interaction. 
+But to generate the interaction statistic under the Null hypothesis, you have to be able to adjust the model so that it has no interaction between feature $x_j$ and $x_k$ or all others.
 This is not possible for all types of models, so running this test is model-specific, not model-agnostic and as such not covered here.
 
-The interaction strenght statistics can also be applied in a classification setting, when the predicted outcome is the probability for a class.
+The interaction strength statistics can also be applied in a classification setting, when the predicted outcome is the probability for a class.
 
 
 ### Examples
@@ -55,7 +91,7 @@ The interaction strenght statistics can also be applied in a classification sett
 We measure the interaction strength of features in a support vector machine that predicts the number of [bike rentals](#bike-data).
 
 
-```{r interaction-bike, fig.cap = 'The interaction strength for each feature with all other features for a support vector machine predicting bike rentals. Overall the interaction effects between the features are very weak (below 1 percent of variance explained by each feature).'}
+```{r interaction-bike, fig.cap = 'The interaction strength for each feature with all other features for a support vector machine predicting bike rentals. Overall the interaction effects between the features are very weak (below 1 percent of variance explained by each feature).', cache = TRUE}
 data(bike)
 library("mlr")
 library("iml")
@@ -71,11 +107,14 @@ plot(ia)
 
 The interaction statistic can also be calculated for classification, when we deal with the partial dependence of the predicted probability.
 In the next example, we analyse the interactions between features in a random forest that is trained to predict [cervical cancer risk](#cervical).
-
-```{r interaction-cervical, fig.cap = 'The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features., followed by the number of pregnancies.'}
+```{r interaction-cervical-prep}
 data(cervical)
 cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
+```
+
+
+```{r interaction-cervical, fig.cap = 'The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features., followed by the number of pregnancies.', cache = TRUE}
 
 pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
 ia = Interaction$new(pred.cervical, grid.size = 100) 
@@ -84,7 +123,7 @@ plot(ia)
 
 After looking into the feature interactions of each feature with all other features, we can pick one of the features and specifically analyze all the 2-way interaction between the chosen feature with the other features:
 
-```{r interaction2-cervical-age, fig.cap = 'The 2-way interactions between number of pregnancies with each other feature. There is a strong interaction between the number of pregnancies and the age.'}
+```{r interaction2-cervical-age, fig.cap = 'The 2-way interactions between number of pregnancies with each other feature. There is a strong interaction between the number of pregnancies and the age.', cache = TRUE}
 ia = Interaction$new(pred.cervical, grid.size = 100, feature = "Num.of.pregnancies") 
 plot(ia)
 ```
@@ -92,31 +131,30 @@ plot(ia)
 
 
 ### Advantages 
-- The interaction statistic has an **underlying theory** with the partial dependence decomposition.
-- The statistic has a **meaningful intepretation**: The interaction is defined as the portion of variance explained by the interaction.
-- Since the statistics is **dimensionless and always between 0 and 1** and ,it is comparable across features and even across models.
-- The statistic detects for all kinds of interactions, meaning no special form or anything is assumed (like multiplicative or similar).
-- It is, theoretically, also possible to test arbitrary **higher interactions**: For example interaction strenght between 3 or more features.
-- I don't know of many ways to test for interactions, so this is nice to have. 
+
+- The interaction statistic has an **underlying theory** through the partial dependence decomposition.
+- The statistic has a **meaningful interpretation**: The interaction is defined as the portion of variance explained by the interaction.
+- Since the statistic is **dimensionless and always between 0 and 1**,it is comparable across features and even across models.
+- The statistic detects all kinds of interactions, regardless of the specific form.
+- It is, theoretically, also possible to test arbitrary **higher interactions**: For example the interaction strength between 3 or more features.
 
 
 ### Disadvantages
 
 - The first thing you will notice: The interaction statistic takes a long time to compute, because it's **computationally expensive**.
-- The computation involves estimating a marginal distributions. 
+- The computation involves estimating marginal distributions. 
 These **estimates also have some variance**, when we don't use all of the data points. 
-When the variance of the estimated partial dependence in the numerator is high, the interaction statistic is biased upwards and can become even larger than 1.
-- When we sample points, then the estimates will also vary from run to run. 
-This means that it **becomes instable, when data are sampled**.
+When we sample points, then the estimates will also vary from run to run. 
+This means that it **becomes unstable, when data are sampled**.
 I recommend repeating it a few times to see if you have enough data included for the sum.
 - It is unclear if an interaction is significantly bigger than 0. 
-We would need to create a formal test, but this is currently not possible in a model-agnostic fashion. 
+We would need to create a formal test, but this is currently not available in a model-agnostic fashion. 
 - Connected to the testing problem: It's hard to tell when an interaction statistics is large enough that we would consider it a strong interaction.
-- The interaction strenght tells us how strong the interactions is but, not how it looks like. 
-But that's what [partial dependence plots](#pdp) are form. 
+- The interaction strength tells us how strong the interactions is but, not how it looks like. 
+But that's what [partial dependence plots](#pdp) are for. 
 A meaningful workflow is to measure interaction strengths and then create 2D-partial dependence plots for interactions you are interested in.
-- There is no meaningful interactio measure for images or text.
-- The interaction statistic works under the assumption that we can independetly shuffle features (this is the same problem as for partial dependence plots.). When the features strongly correlate, the assumption is violated and we integrate over feature combinations that are very unlikely to occure in reality.
+- The interaction statistic can't be meaningfully applied if the inputs are pixels.
+- The interaction statistic works under the assumption that we can independently shuffle features (the same problem that partial dependence plots have). When the features strongly correlate, the assumption is violated and we integrate over feature combinations that are very unlikely in reality.
 
 
 
