@@ -47,6 +47,7 @@ All notable changes to the book will be documented here.
 ### v0.4 (IN PROGRESS)
 - Added chapter on global surrogate models
 - Added improved Shapley pictograms
+- Added acknowledgements chapter
 
 ### v0.3 (2018-04-24)
 - Reworked the Feature Importance Chapter
