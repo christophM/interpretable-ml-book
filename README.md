@@ -43,9 +43,12 @@ browseURL('_book/index.html')
 
 ## Changelog
 All notable changes to the book will be documented here.
+
 ### v0.4 (IN PROGRESS)
 - Added chapter on global surrogate models
-- 
+- Added improved Shapley pictograms
+- Added feature interaction chapter
+- Improved example in partial dependence plot chapter
 
 ### v0.3 (2018-04-24)
 - Reworked the Feature Importance Chapter
