@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="feature-importance.html">
-<link rel="next" href="lime.html">
+<link rel="prev" href="ice.html">
+<link rel="next" href="feature-importance.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
@@ -211,85 +211,187 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="global" class="section level2">
-<h2><span class="header-section-number">5.5</span> Global Surrogate Models</h2>
-<p>A global surrogate model is an interpretable model that is trained to approximate the predictions of a black box model. We can draw conclusions about the black box model by interpreting the surrogate model. Solving machine learning interpretability by using more machine learning!</p>
-<div id="theory-1" class="section level3">
-<h3><span class="header-section-number">5.5.1</span> Theory</h3>
-<!-- origins -->
-<p>Surrogate models are also used in engineering: When an outcome of interest is expensive, time-consuming or otherwise difficult to measure (for example because it comes from a complex computational simulation), a cheap and fast surrogate model of the outcome is used instead. The difference between the surrogate models used in engineering and for interpretable machine learning is that the underlying model is a machine learning model (not a simulation) and that the surrogate model has to be interpretable. The purpose of (interpretable) surrogate models is to approximate the predictions of the underlying model as closely as possible while being interpretable. You will find the idea of surrogate models under a variety of names: Approximation model, metamodel, response surface model, emulator, …</p>
-<p>So, about the theory: there is actually not much theory needed to understand surrogate models. We want to approximate our black box prediction function <span class="math inline">\(\hat{f}(x)\)</span> as closely as possible with the surrogate model prediction function <span class="math inline">\(\hat{g}(x)\)</span>, under the constraint that <span class="math inline">\(g\)</span> is interpretable. Any interpretable model - for example from the <a href="simple.html#simple">interpretable models chapter</a> - can be used for the function <span class="math inline">\(g\)</span>:</p>
-<p>For example a linear model:</p>
-<p><span class="math display">\[\hat{g}(x)=\beta_0+\beta_1{}x_1{}+\ldots+\beta_p{}x_p\]</span></p>
-<p>Or a decision tree:</p>
-<p><span class="math display">\[\hat{g}(x)=\sum_{m=1}^Mc_m{}I\{x\in{}R_m\}\]</span></p>
-<p>Fitting a surrogate model is a model-agnostic method, since it requires no information about the inner workings of the black box model, only the relation of input and predicted output is used. If the underlying machine learning model would be exchanged for another, you could still apply the surrogate method. The choice of the black box model type and of the surrogate model type is decoupled.</p>
-<p>Perform the following steps to get a surrogate model:</p>
-<ol style="list-style-type: decimal">
-<li>Choose a dataset <span class="math inline">\(X\)</span>. This could be the same dataset that was used for training the black box model or a new dataset from the same distribution. You could even choose a subset of the data or a grid of points, depending on your application.</li>
-<li>For the chosen dataset <span class="math inline">\(X\)</span>, get the predictions <span class="math inline">\(\hat{y}\)</span> of the black box model.</li>
-<li>Choose an interpretable model (linear model, decision tree, …).</li>
-<li>Train the interpretable model on the dataset <span class="math inline">\(X\)</span> and its predictions <span class="math inline">\(\hat{y}\)</span>.</li>
-<li>Congratulations! You now have a surrogate model.</li>
-<li>Measure how well the surrogate model replicates the prediction of the black box model.</li>
-<li>Interpret / visualize the surrogate model.</li>
-</ol>
-<p>You might find approaches for surrogate models which have some extra steps or differ a bit, but the general idea is usually the same as described here.</p>
-<!-- measure fit -->
-<p>A way to measure how well the surrogate replicates the black box model is the R squared measure:</p>
-<p><span class="math display">\[R^2=1-\frac{SSE}{SST}=1-\frac{\sum_{i=1}^n(\hat{y}^*_i-\hat{y}_i)^2}{\sum_{i=1}^n(\hat{y}_i-\bar{\hat{y}})^2}\]</span></p>
-<p>where <span class="math inline">\(\hat{y}^*_i\)</span> is the prediction for the i-th instance of the surrogate model and respectively <span class="math inline">\(\hat{y}_i\)</span> of the black box model. The mean of the black box model predictions is <span class="math inline">\(\bar{\hat{y}}\)</span>. <span class="math inline">\(SSE\)</span> stands for sum of squares error and <span class="math inline">\(SST\)</span> for sum of squares total. The R squared measure can be interpreted as the percentage of variance that is captured by the interpretable model. If the R squared is close to 1 (= low <span class="math inline">\(SSE\)</span>), then the interpretable model approximates the behaviour of the black box model very well. If the interpretable model is that close, you might want to replace the complex model with the interpretable model. If the R squared is close to 0 (= high <span class="math inline">\(SSE\)</span>), then the interpretable model fails to explain the black box model.</p>
-<p>Note that we haven’t talked about the model performance of the underlying black box model, meaning how well or badly it performs at predicting the real outcome. For fitting the surrogate model, the performance of the black box model does not matter at all. The interpretation of the surrogate model is still valid, because it makes statements about the model and not about the real world. But of course, the interpretation of the surrogate model becomes irrelevant if the black box model sucks, because then the black box model itself is irrelevant.</p>
-<!-- More ideas-->
-<p>We could also build a surrogate model based on a subset of the original data or re-weight the instances. In this way, we change the distribution of the surrogate model’s input, which changes the focus of the interpretation (then it is not really global any longer). When we weight the data locally around a certain instance of the data (the closer the instances to the chosen instance, the higher their weight) we get a local surrogate model, which can be used to explain the instance’s individual prediction. Learn more about local models in the <a href="lime.html#lime">following chapter</a>.</p>
+<div id="interaction" class="section level2">
+<h2><span class="header-section-number">5.3</span> Feature Interaction</h2>
+<p>When features in a prediction model interact with each other, then the influence of the features on the prediction is not additive but more complex. It follows that Aristotle’s predicate “the whole is greater than the sum of its parts.” only applies in the presence of feature interactions.</p>
+<div id="feature-interaction" class="section level3">
+<h3><span class="header-section-number">5.3.1</span> Feature Interaction?</h3>
+<p>When a machine learning model makes a prediction based on two features, we can decompose the prediction into four terms: a constant term, one term for the first feature, one for the second feature and one for the interaction effect between the two features.<br />
+The interaction between two features is the change in the prediction that occurs by varying the features, after having accounted for the individual feature effects. It’s the effect that comes on top of the sum of the individual feature effects.</p>
+<p>For example: a model predicts the value of a house, using house size (big or small) and location (good or bad) as features, amounting to four possible predictions:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="right">Location</th>
+<th align="right">Size</th>
+<th align="right">Predicted value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">good</td>
+<td align="right">big</td>
+<td align="right">300,000</td>
+</tr>
+<tr class="even">
+<td align="right">good</td>
+<td align="right">small</td>
+<td align="right">200,000</td>
+</tr>
+<tr class="odd">
+<td align="right">bad</td>
+<td align="right">big</td>
+<td align="right">250,000</td>
+</tr>
+<tr class="even">
+<td align="right">bad</td>
+<td align="right">small</td>
+<td align="right">150,000</td>
+</tr>
+</tbody>
+</table>
+<p>We decompose the model prediction into the following parts: A constant term (150,000), an effect for the size feature (+100,000 if big, +0 if small) and an effect for the location (+50,000 if good, +0 if bad). This decomposition fully explains the model predictions. There is no interaction effect, because the model prediction is a sum of the single feature effects for size and location. Making a small house big always adds 100,000 to the predicted value, no matter the location. Also the difference in predicted value between a good and a bad location is 50,000, independent of the size.</p>
+<p>Now let’s consider an example with interaction:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="right">Location</th>
+<th align="right">Size</th>
+<th align="right">Predicted value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">good</td>
+<td align="right">big</td>
+<td align="right">400,000</td>
+</tr>
+<tr class="even">
+<td align="right">good</td>
+<td align="right">small</td>
+<td align="right">200,000</td>
+</tr>
+<tr class="odd">
+<td align="right">bad</td>
+<td align="right">big</td>
+<td align="right">250,000</td>
+</tr>
+<tr class="even">
+<td align="right">bad</td>
+<td align="right">small</td>
+<td align="right">150,000</td>
+</tr>
+</tbody>
+</table>
+<p>We decompose the prediction table into the following parts: A constant term (150,000), an effect for the size feature (+100,000 if big, +0 if small) and an effect for the location (+50,000 if good, +0 if bad). For this table, we need an extra term for the interaction: +100,000 if the house is big and in a good location. This is an interaction between the size and the location, because in this case, the difference in predicted value between a big and a small house depends on the location.</p>
+<p>One way to estimate the interaction strength is to measure how much of the variation of the predicted outcome depends on the interaction of the features. This measurement is called H-statistic, introduced by Friedman and Popescu (2008)<a href="#fn21" class="footnoteRef" id="fnref21"><sup>21</sup></a></p>
 </div>
-<div id="example-3" class="section level3">
-<h3><span class="header-section-number">5.5.2</span> Example</h3>
-<p>To demonstrate the surrogate models, we look at a regression and a classification example.</p>
-<p>First, we fit a support vector machine to predict the daily number of <a href="bike-data.html#bike-data">bike rentals</a> given weather and calendrical information. The support vector machine is not very interpretable, so we fit a surrogate with a CART decision tree as interpretable model to approximate the behaviour of the support vector machine.</p>
-<div class="figure"><span id="fig:surrogate-bike"></span>
-<img src="images/surrogate-bike-1.png" alt="The terminal nodes of a surrogate tree that approximates the behaviour of a support vector machine trained on the bike rental dataset. The distributions in the nodes show that the surrogate tree predicts a higher number of bike rentals when the weather is above around 13 degrees (Celsius) and when the day was later in the 2 year period (cut point at 435 days)." width="1050" />
+<div id="theory-friedmans-h-statistic" class="section level3">
+<h3><span class="header-section-number">5.3.2</span> Theory: Friedman’s H-statistic</h3>
+<p>We will look into two cases: The interaction between two features, which tells us if and how strongly two specific features interact with each other in the model; The interaction between a feature and all other features, which tells us if and how strongly (in total) the specific feature interacts in the model with all the other features. In theory, arbitrary interactions between any number of features can be measured, but those two cases represent the most interesting interaction cases.</p>
+<p>If two features <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> don’t interact, we can decompose the <a href="pdp.html#pdp">partial dependence function</a> in the following way (assuming that the partial dependence functions are centered at zero):</p>
+<p><span class="math display">\[PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)\]</span></p>
+<p>where <span class="math inline">\(PD_{jk}(x_j,x_k)\)</span> is the 2-way partial dependence function of both features and <span class="math inline">\(PD_j(x_j)\)</span> and <span class="math inline">\(PD_k(x_k)\)</span> the partial dependence functions of the single features.</p>
+<p>Similarly, if a feature <span class="math inline">\(x_j\)</span> has no interaction with any of the other features, we can express the prediction function <span class="math inline">\(\hat{f}(x)\)</span> as a sum of partial dependence functions, where the first summand only depends on <span class="math inline">\(x_j\)</span> and the second depends on all other features excluding <span class="math inline">\(x_j\)</span>:</p>
+<p><span class="math display">\[\hat{f}(x)=PD_j(x_j)+PD_{-j}(x_{-j})\]</span> where <span class="math inline">\(PD_{-j}(x_{-j})\)</span> is the partial dependence function that depends on all features excluding <span class="math inline">\(x_j\)</span>.</p>
+<p>This decomposition expresses the partial dependence (or full prediction) function without interactions (between features <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> or, respectively, <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_{-j}\)</span>). In a next step we measure the difference between the observed partial dependence function and the decomposed one without interactions. We calculate the variance of the output of the partial dependence (for measuring the interaction between two features) or of the complete function (for measuring the interaction between a feature and all other features). The amount of the variance that is explained by the interaction (difference between observed and no-interaction PD) is used as the interaction strength statistic. The statistic is 0 when there is no interaction at all and 1 if all of the variance of the <span class="math inline">\(PD_{jk}\)</span> or <span class="math inline">\(\hat{f}\)</span> is explained by the sum of the partial dependence functions. An interaction statistic of 1 between two features means that each single <span class="math inline">\(PD\)</span> function is constant and the effect on the prediction only comes through the interaction.</p>
+<p>In mathematical terms, the H-statistic for the interaction between feature <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> proposed by Friedman and Popescu is:</p>
+<p><span class="math display">\[H^2_{jk}=\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)})-PD_k(x_{k}^{(i)})\right]/\sum_{i=1}^n{PD}^2_{jk}(x_j^{(i)},x_k^{(i)})\]</span></p>
+<p>Similarly for measuring if a feature <span class="math inline">\(x_j\)</span> interacts with any other feature:</p>
+<p><span class="math display">\[H^2_{j}=\sum_{i=1}^n\left[\hat{f}(x^{(i)})-PD_j(x_j^{(i)})-PD_{-j}(x_{-j}^{(i)})\right]/\sum_{i=1}^n\hat{f}^2(x^{(i)})\]</span></p>
+<p>The H-statistic is expensive to evaluate, because it iterates over all data points and at each point the partial dependence has to be evaluated which is done using - again - all <span class="math inline">\(n\)</span> data points. In the worst case, we need <span class="math inline">\(2n^2\)</span> calls to the machine learning models predict function to compute the <span class="math inline">\(H^2_j\)</span>-statistic and <span class="math inline">\(3n^2\)</span> for the <span class="math inline">\(H^2_{jk}\)</span>-statistic. To speed up the computation, we can sample from the <span class="math inline">\(n\)</span> data points . This has the drawback that it adds variance to the partial dependence estimates, which makes the statistic unstable. So when you are using sampling to reduce the computational burden, make sure to sample enough data points.</p>
+<p>In their paper, Friedman and Popescu also propose a test for the H-statistic being significantly different from zero: The Null hypothesis is the absence of interaction. To generate the interaction statistic under the Null hypothesis, you have to be able to adjust the model so that it has no interaction between feature <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> or all others. This is not possible for all types of models, so running this test is model-specific and not model-agnostic and as such not covered here.</p>
+<p>The interaction strength statistic can also be applied in a classification setting, when the predicted outcome is the probability for a class.</p>
+</div>
+<div id="examples-1" class="section level3">
+<h3><span class="header-section-number">5.3.3</span> Examples</h3>
+<p>Let’s see how feature interactions look like in practice! We measure the interaction strength of features in a support vector machine that predicts the number of <a href="bike-data.html#bike-data">bike rentals</a>, given weather and calendrical features. The following plot shows the results of the feature interaction analysis:</p>
+<div class="figure"><span id="fig:interaction-bike"></span>
+<img src="images/interaction-bike-1.png" alt="The interaction strength for each feature with all other features for a support vector machine predicting bike rentals. Overall the interaction effects between the features are very weak (below 1 percent of variance explained by each feature)." width="1050" />
 <p class="caption">
-FIGURE 5.14: The terminal nodes of a surrogate tree that approximates the behaviour of a support vector machine trained on the bike rental dataset. The distributions in the nodes show that the surrogate tree predicts a higher number of bike rentals when the weather is above around 13 degrees (Celsius) and when the day was later in the 2 year period (cut point at 435 days).
+FIGURE 5.9: The interaction strength for each feature with all other features for a support vector machine predicting bike rentals. Overall the interaction effects between the features are very weak (below 1 percent of variance explained by each feature).
 </p>
 </div>
-<p>The surrogate model has an R squared (variance explained) of 0.77 which means it approximates the underlying black box behaviour quite well, but not perfectly. If the fit would be perfect, we could actually throw away the support vector machine and use the tree instead.</p>
-<p>In our second example, we predict the probability for <a href="cervical.html#cervical">cervical cancer</a> with a random forest. Again we fit a decision tree, using the original dataset, but with the prediction of the random forest as outcome, instead of the real classes (healthy vs. cancer) from the data.</p>
-<div class="figure"><span id="fig:surrogate-cervical"></span>
-<img src="images/surrogate-cervical-1.png" alt="The terminal nodes of a surrogate tree that approximates the behaviour of a random forest trained on the cervical cancer dataset. The counts in the nodes show the distribution of the black box models classifications in the nodes." width="1050" />
+<p>In this next example we calculate the interaction statistic for a classification problem, where we deal with the partial dependence of the predicted probability. We analyse the interactions between features in a random forest that is trained to predict <a href="cervical.html#cervical">cervical cancer</a>, given some risk factors.</p>
+<div class="figure"><span id="fig:interaction-cervical-include"></span>
+<img src="images/interaction-cervical-1.png" alt="The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features, followed by the number of pregnancies."  />
 <p class="caption">
-FIGURE 5.15: The terminal nodes of a surrogate tree that approximates the behaviour of a random forest trained on the cervical cancer dataset. The counts in the nodes show the distribution of the black box models classifications in the nodes.
+FIGURE 5.10: The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features, followed by the number of pregnancies.
 </p>
 </div>
-<p>The surrogate model has an R squared (variance explained) of 0.2 which means it doesn’t approximate the random forest well and we should not over-interpret the tree, when drawing conclusions about the complex model.</p>
+<p>After looking into the feature interactions of each feature with all other features, we can pick one of the features and specifically dive deeper into all the 2-way interactions between the chosen feature with the other features:</p>
+<div class="figure"><span id="fig:interaction2-cervical-age-include"></span>
+<img src="images/interaction2-cervical-age-1.png" alt="The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features, followed by the number of pregnancies."  />
+<p class="caption">
+FIGURE 5.11: The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features, followed by the number of pregnancies.
+</p>
 </div>
-<div id="advantages-5" class="section level3">
-<h3><span class="header-section-number">5.5.3</span> Advantages</h3>
+</div>
+<div id="advantages-3" class="section level3">
+<h3><span class="header-section-number">5.3.4</span> Advantages</h3>
 <ul>
-<li>The surrogate model method is <strong>flexible</strong>: Any model from the <a href="simple.html#simple">interpretable models chapter</a> can be used. This also means that you can swap not only the interpretable model, but also the underlying black box model. Let’s say you build some complex model and you want to explain it to different teams in your company. One team is familiar with linear models; the other team prefers decision trees. You can fit two surrogate models (linear model and decision tree) for the original black box model and offer two kinds of explanations. If you find a better performing black box model, you don’t have to change the way you do interpretation, because you can use the same class of surrogate models.</li>
-<li>I’d argue that the approach is very <strong>intuitive</strong> and straightforward. This means it is easy to implement, but also easy to explain to people not familiar with data science or machine learning.</li>
-<li>With the R squard measure, we can easily <strong>measure</strong> how good our surrogate models are in terms of approximation of the black box predictions.</li>
+<li>The interaction statistic has an <strong>underlying theory</strong> through the partial dependence decomposition.</li>
+<li>The H-statistic has a <strong>meaningful interpretation</strong>: The interaction is defined as the portion of variance explained by the interaction.</li>
+<li>Since the statistic is <strong>dimensionless and always between 0 and 1</strong>, it is comparable across features and even across models.</li>
+<li>The statistic <strong>detects all kinds of interactions</strong>, regardless of a specific form.</li>
+<li>With the H-statistic it is also possible to analyze arbitrary <strong>higher interactions</strong>: For example the interaction strength between 3 or more features.</li>
 </ul>
 </div>
-<div id="disadvantages-5" class="section level3">
-<h3><span class="header-section-number">5.5.4</span> Disadvantages</h3>
+<div id="disadvantages-3" class="section level3">
+<h3><span class="header-section-number">5.3.5</span> Disadvantages</h3>
 <ul>
-<li>Be careful to draw <strong>conclusions about the model, not the data</strong>, since the surrogate model never sees the real outcome.</li>
-<li>It’s not clear what the best <strong>cut-off for R squared</strong> is in order to be confident that the surrogate model is close enough to the black box model. 80% of variance explained? 50%? 99%?</li>
-<li>We can measure how close the surrogate model is to the black box model. Let’s assume we are not very close, but close enough. It could happen that the interpretable model is very <strong>close for a subset of the dataset, but wildly diverges for another subset</strong>. In this case the interpretation for the simple model would not be equally good for all data points.</li>
-<li>The interpretable model you choose as a surrogate <strong>comes with all its advantages and disadvantages</strong>.</li>
-<li>Some people argue that there are - in general - <strong>no intrinsically interpretable models</strong> (including even linear models and decision trees) and that it would even be dangerous to have an illusion of interpretability. If you share this opinion, then this method is, of course, not for you.</li>
+<li>The first thing you will notice: The interaction H-statistic takes a long time to compute, because it’s <strong>computationally expensive</strong>.</li>
+<li>Sometimes the results are weird and for small simulations <strong>don’t yield the expected results</strong>. But this is more anecdotal evidence.</li>
+<li>The computation involves estimating marginal distributions. These <strong>estimates also have some variance</strong>, when we don’t use all of the data points. This means when we sample points, the estimates will also vary from run to run and the results might <strong>become unstable</strong>. I recommend repeating it a few times to see if you have enough data included for a stable result.</li>
+<li>It is unclear whether an interaction is significantly bigger than 0. We would need to conduct a statistical test, but this <strong>test is not (yet) available in a model-agnostic version</strong>.</li>
+<li>Connected to the testing problem: It’s hard to tell when the H-statistic is large enough that we would consider it a strong interaction.</li>
+<li>The H-statistic tells us how strong the interactions are, but it doesn’t tell us how the interaction is shaped. That’s what <a href="pdp.html#pdp">partial dependence plots</a> are for. A meaningful workflow is to measure the interaction strengths and then create 2D-partial dependence plots for the interactions in which you are interested.</li>
+<li>The H-statistic can’t be meaningfully applied if the inputs are pixels.</li>
+<li>The interaction statistic works under the assumption that we can independently shuffle features (the same problem that partial dependence plots have). When the features strongly correlate, the assumption is violated and <strong>we integrate over feature combinations that are very unlikely in reality</strong>.</li>
+</ul>
+</div>
+<div id="implementations" class="section level3">
+<h3><span class="header-section-number">5.3.6</span> Implementations</h3>
+<ul>
+<li>For the examples in this book, I used the R package <code>iml</code>, which is available on <a href="https://cran.r-project.org/web/packages/iml">CRAN</a> and the development version on <a href="https://github.com/christophM/iml">Github</a>.</li>
+<li>There are other implementations, which focus on a specific model:
+<ul>
+<li>The R package <a href="https://cran.r-project.org/web/packages/pre/index.html">pre</a> implements the <a href="rulefit.html#rulefit">RuleFit algorithm</a> plus the H-statistic.</li>
+<li>The R package <a href="https://github.com/gbm-developers/gbm3">gbm</a> implements gradient boosted models plus the H-statistic.</li>
+</ul></li>
+</ul>
+</div>
+<div id="alternatives" class="section level3">
+<h3><span class="header-section-number">5.3.7</span> Alternatives</h3>
+<p>The H-statistic is not the only way to measure interactions, there is also:</p>
+<ul>
+<li>Variable Interaction Networks (VIN) by Hooker (2004)<a href="#fn22" class="footnoteRef" id="fnref22"><sup>22</sup></a>: An approach that decomposes the prediction function into main effects and feature interactions. The interactions between features are then visualized as a network. Unfortunately, there is no software available yet.</li>
+</ul>
+<div class="figure">
+<img src="images/vin.png" />
+
+</div>
+<ul>
+<li>Partial dependence based feature interaction by Greenwell et. al (2018)<a href="#fn23" class="footnoteRef" id="fnref23"><sup>23</sup></a>: For measuring the interaction between two features, this approach measures the feature importance (defined as the variance of the 1D partial dependence function) of one feature conditional on different, fixed points of the other feature. When the variance is high, then the features interact with each other, if it is zero, they don’t interact. The R package <code>vip</code> is available on <a href="https://github.com/koalaverse/vip">Github</a>. They also cover partial dependence plots and feature importance.</li>
 </ul>
 
 </div>
+</div>
+<div class="footnotes">
+<hr />
+<ol start="21">
+<li id="fn21"><p>Friedman, Jerome H, and Bogdan E Popescu. 2008. “Predictive Learning via Rule Ensembles.” The Annals of Applied Statistics. JSTOR, 916–54.<a href="interaction.html#fnref21">↩</a></p></li>
+<li id="fn22"><p>Hooker, G. (2004). Discovering Additive Structure in Black Box Functions. Knowledge Discovery and Data Mining, 575–580. <a href="http://doi.org/10.1145/1014052.1014122" class="uri">http://doi.org/10.1145/1014052.1014122</a><a href="interaction.html#fnref22">↩</a></p></li>
+<li id="fn23"><p>Greenwell, B. M., Boehmke, B. C., &amp; McCarthy, A. J. (2018). A Simple and Effective Model-Based Variable Importance Measure, 1–27. Retrieved from <a href="http://arxiv.org/abs/1805.04755" class="uri">http://arxiv.org/abs/1805.04755</a><a href="interaction.html#fnref23">↩</a></p></li>
+</ol>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="feature-importance.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="lime.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="ice.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="feature-importance.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -319,7 +421,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.6-agnostic-global-surrogate.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.4-agnostic-interaction.Rmd",
 "text": "Edit"
 },
 "download": null,
