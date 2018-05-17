@@ -224,60 +224,29 @@ bike.train.x = bike[names(bike) != 'cnt']
 model <- caret::train(bike.train.x,
                bike.train.resid,
                method = 'rf', ntree=ntree, maximise = FALSE)
-
-
-instance_indices = c(295, 285)
-
-probs = predict(model, newdata = bike[instance_indices, ], type='prob')
-
-
-n_features_lime = 3
-n_labels = 2
+n_features_lime = 2
 ```
 First we train a Random Forest with `r ntree` trees on the classification task. Given seasonal and weather information, on which day will the number of bike rentals be above the trend-free average?
 
 The explanations are created with `r n_features_lime` features.
 The results of the sparse local linear model that was fitted for two instances with different predicted classes:
 
-```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset.  Temperature and good weather situation have a positive effect on the prediction, the day of the week and increasing humidity a negative one. The effect of temperature is roughly the same in both cases. One problem becomes clear: This plot shows the weights and not the effects, which would be weights times actual feature values, which would be more informative. ') }
-library("lime")
+```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset. Warmer temperature and good weather situation have a positive effect on the prediction. The x-axis shows the feature effect: The weight times the actual feature value.') }
+library("iml")
+library("gridExtra")
+instance_indices = c(295, 8)
 set.seed(44)
-explanation <- lime::lime(bike.train.x, model, bin_continuous=FALSE)
+pred = Predictor$new(model, data = bike.train.x, class = "above")
+lim = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[1],], k = n_features_lime)
 
-# Explain new instance
-explainer <- lime::explain(bike.train.x[instance_indices, ],
-                       explanation,
-                       n_labels=n_labels, n_features = n_features_lime, n_permutations = 3000)
-
-
-explainer = filter(explainer, label == 'above')
-lime::plot_features(explainer, ncol=1)
+a = plot(lim)
+lim = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[2],], k = n_features_lime)
+b = plot(lim)
+grid.arrange(a, b, ncol = 2)
 ```
 
 It becomes clear from the figure, that it is easier to interpret categorical features than numerical features.
-The next plot shows a variant where the numerical features are turned into categorical features by putting them into bins along the quantiles:
-
-```{r lime-tabular-example-explain-plot-2, fig.cap=sprintf('LIME explanations for two instances of the bike rental classification task. This time numerical features were turned into categorical features by binning them.')}
-# An can be visualised directly
-# Create explanation function
-set.seed(44)
-explainer <- lime::lime(bike.train.x, model, bin_continuous=TRUE)
-
-# Explain new instance
-explanation <- lime::explain(bike.train.x[instance_indices, ],
-                       explainer,
-                       n_labels=n_labels, n_features = n_features_lime, n_permutations = 3000)
-
-
-explanation = filter(explanation, label == 'above')
-lime::plot_features(explanation, ncol=1)
-```
-
-
-
-
-
-
+A solution is to categorize the numerical features into bins.
 
 
 ### LIME for Text
@@ -335,7 +304,8 @@ kable(variations)
 Each column corresponds to one word in the sentence.
 Each row is a variation, 1 indicates that the word is part of this variation and 0 indicates that the word has been removed.
 The corresponding sentence for the first variation is "```r example_sentence```".
-See two sentences (one spam, one no spam) and the estimated local weights found by the LIME algorithm:
+
+And here are the two sentences (one spam, one no spam) with their estimated local weights found by the LIME algorithm:
 
 ```{r lime-text-explanations, fig.cap = "LIME explanations for text classification."}
 set.seed(42)
@@ -345,8 +315,10 @@ explanations  = data.table::rbindlist(lapply(seq_along(texts), function(i) {
  })
 )
 explanations = data.frame(explanations)
-explanations$model_type = 'classification'
-lime::plot_features(explanations, ncol=1)
+kable(explanations[c("case", "label_prob", "feature", "feature_weight")])
 ```
+
+The word "channel" points to a high probability of spam.
+
 
 [^Ribeiro2016lime]: Ribeiro, M.T., Singh, S. and Guestrin, C., 2016, August. Why should i trust you?: Explaining the predictions of any classifier. In Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (pp. 1135-1144). ACM.
