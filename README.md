@@ -47,6 +47,7 @@ All notable changes to the book will be documented here.
 ### v0.4 (IN PROGRESS)
 - Added chapter on global surrogate models
 - Added improved Shapley pictograms
+- Added acknowledgements chapter
 - Added feature interaction chapter
 - Improved example in partial dependence plot chapter
 - The weights in LIME text chapter where shown with the wrong words. This has been fixed.

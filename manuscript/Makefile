@@ -9,7 +9,7 @@ html : *.Rmd
 	Rscript --vanilla -e "bookdown::render_book('./', 'bookdown::gitbook')"
 
 
-leanpub : index.md 01-introduction.md 01.2-short-stories.md 01.3-ml-definitions.md 02-interpretability.md 03-datasets.md 04.1-interpretable-models.md 04.2-interpretable-linear.md 04.3-interpretable-logistic.md 04.4-interpretable-tree.md 04.5-interpretable-rulefit.md 04.6-interpretable-other.md 05.1-agnostic.md 05.2-agnostic-pdp.md 05.3-agnostic-ice.md 05.4-agnostic-interaction.md 05.5-agnostic-permfeatimp.md 05.6-agnostic-global-surrogate.md 05.7-agnostic-lime.md 05.8-agnostic-shapley.md 06-contribute.md
+leanpub : index.md 01-introduction.md 01.2-short-stories.md 01.3-ml-definitions.md 02-interpretability.md 03-datasets.md 04.1-interpretable-models.md 04.2-interpretable-linear.md 04.3-interpretable-logistic.md 04.4-interpretable-tree.md 04.5-interpretable-rulefit.md 04.6-interpretable-other.md 05.1-agnostic.md 05.2-agnostic-pdp.md 05.3-agnostic-ice.md 05.4-agnostic-interaction.md 05.5-agnostic-permfeatimp.md 05.6-agnostic-global-surrogate.md 05.7-agnostic-lime.md 05.8-agnostic-shapley.md 06-contribute.md 08-acknowledgements.md
 
 %.md : %.Rmd
 	Rscript --vanilla -e "knitr::knit('$<', envir = new.env())" 
