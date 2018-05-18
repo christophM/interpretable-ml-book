@@ -350,15 +350,24 @@ lime::plot_features(explanations, ncol=1)
 ```
 
 ### LIME for images
-LIME for images works different than for tabular data and text.
-Variations of the data are created by performing superpixel segmentation and switching superpixels off. A superpixel can be turned OFF by replacing each pixel by the average of the pixels or by a user provided value (e.g., a reasonable value would by gray). 
 
-TODO: check if average is also possible in R package (it's default in python lime)
+LIME for images works different than for tabular data and text. Intuitively it would not make much sense to perturb single pixels, since a lot more than one pixel contribute to one class. By randomly changing individual pixels the predictions would probably not change much.
+Therefore, variations of the samples (i.e. images) are created by performing superpixel segmentation and switching superpixels off. Superpixels are connected pixels with similar colors and can be turned OFF by replacing each pixel by a user provided color (e.g., a reasonable value would by gray). The user can also provide a probability for turning of a superpixel in each permutation.
+
+#### Example
+
+Since the computation of image explanations is rather slow, the R package contains a precomputed example which we will also use to show the output of the method. Image data is great for visualization, the explanations can be displayed directly on the image samples. Since we can have several predicted labels per image (ordered by probability), we can explain the top `n_labels`. For the following image the top 3 predictions were *strawberry*; *candle, taper, wax light*; and *Granny Smith*. The prediction and the explanation in the first case are very reasonable. For the second prediction it is quite interesting to see which part of the image contributed to this class. We could conclude that there were objects labeled as *candle, taper, wax light* in the training set that looked shiny like the tomato.
 
 ```{r lime-images-package-example, fig.cap="LIME expalanations for image classification."}
 explanation <- .load_image_example()
 
 plot_image_explanation(explanation)
+```
+
+The explanations can also be looked at in tabular form.
+
+```{r lime-images-example-output}
+head(explanation[,c("model_type","case","label","label_prob","model_r2","model_intercept","model_prediction","feature","feature_weight","feature_desc")])
 ```
 
 [^Ribeiro2016lime]: Ribeiro, M.T., Singh, S. and Guestrin, C., 2016, August. Why should i trust you?: Explaining the predictions of any classifier. In Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (pp. 1135-1144). ACM.
