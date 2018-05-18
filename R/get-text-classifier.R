@@ -120,11 +120,10 @@ explain_text = function(text, pred_fun, prob=0.9, n_variations=500, K = 3, case=
   stopifnot(K >= 1)
   df = create_variations(text, pred_fun = pred_fun, prob = prob, n_variations = n_variations, class=class)
   mod = glm(pred ~ . - weights, data =df , weights=df$weights, family = 'binomial')
-
   coefs = coef(mod)
   coefs = coefs[names(coefs) != '(Intercept)']
-  coefs = coefs[base::order(abs(coefs), decreasing = TRUE)]
   names(coefs) = tokenize(text)
+  coefs = coefs[base::order(abs(coefs), decreasing = TRUE)]
   coefs = coefs[1:K]
   # Create explanation compatible to R-LIME format
   tibble(case = case,
