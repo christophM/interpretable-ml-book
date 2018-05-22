@@ -53,6 +53,7 @@ All notable changes to the book will be documented here.
 - The weights in LIME text chapter where shown with the wrong words. This has been fixed.
 - Improved introduction text
 - Added chapter about the future of interpretability
+- Added Criteria for Intepretability Methods
 
 ### v0.3 (2018-04-24)
 - Reworked the Feature Importance Chapter
