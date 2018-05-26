@@ -12,6 +12,9 @@ IF it rains today (condition), THEN it will rain tomorrow (prediction).
 
 keywords: decision rules/sets/lists, association rules
 
+There are lots of algorithms how to produces rules. 
+This chapters purpose is to help you how to think about rules and understand them fundamentally, but not to go through all possibilities. 
+For this I recommend XXX.
 
 ## What are decision rules?
 
@@ -86,6 +89,13 @@ We can distinguish between:
 While there are many different ways to induce decision rules, I want to present a rather simple procedure which sequentially searches for rules that cover parts of the feature space, using the separate-and-conquer approach.
 
 
+A very simple approach: 
+Find a really good rule on the dataset. 
+Remove all datapoints covered by the rule (no matter if classified correctly or not). 
+Repeat with remaining points until no points are left or some other stop condition is met.
+Results in disjunct rules.
+
+
 ### Learn 1 Rule
 First let's start with a simple algorithm to learn a single rule in a classification setting:
 
@@ -111,9 +121,23 @@ Repeat until all data points are covered or some other stopping criterium is rea
 TODO: Add artificial example with rent or value of a house
 
 
+TODO: Concepts of coverage and accuracy: 
+A rule applies to a certain region of the feature space. 
+This is called the coverage of the rule. 
+It can also expressed to how many instances in the dataset it applies, or if you know the distribution, then it can even be measured as percentage of the population it covers. 
+For example a rule for house value that says: 
+A house that is in a nice area costs 400k. 
+And 10% percent of all houses are in nice areas. 
+Then the rule has a coverage of 10%. 
+
+The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
+Different for regression and classification. 
+In classification you can measure the missclassification rate of the rule. 
+In regression the mean squared error of the rule.
+
 This second part of repeating the single rule fitting is also called covering algorithm. 
 
-### Covering algorithm
+## Covering algorithm
 
 Algorithm for rule set:
 
@@ -122,6 +146,28 @@ Algorithm for rule set:
 - remove all samples (positive and negative) that are covered by this rule
 - for each new rule, compute the new description lenght of the set. stop adding new rules when the description lenght is d bits longer than the smalles description length obtained so far.
 
+```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. The approach is called separate-and-conquer."}
+set.seed(42)
+n = 100
+dat = data.frame(x1 = rnorm(n), x2 = rnorm(n))
+dat$class = rbinom(n = 100, size = 1, p = exp(dat$x1 + dat$x2) / (1 + exp(dat$x1 + dat$x2)))
+dat$class = factor(dat$class)
+
+min.x1 = min(dat$x1)
+min.x2 = min(dat$x2)
+ggplot(dat) + geom_point(aes(x = x1, y = x2, color = class))
+ggplot(dat) + 
+  geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA) + geom_point(aes(x = x1, y = x2, color = class)) 
+
+dat.reduced = filter(dat, !(x1 <= 0 & x2 <= -0.5))
+
+ggplot(dat.reduced) + 
+  geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA)  + 
+  geom_point(aes(x = x1, y = x2, color = class)) + 
+  scale_x_continuous(limits = c(min.x1, NA)) + 
+  scale_y_continuous(limits = c(min.x2, NA)) 
+
+```
 
 
 Optimize the ruleset:
@@ -151,6 +197,16 @@ Tree based for example.
 Example: C4.5 rules. Extract rules from an unpruned decision tree that was induced by C4.5 algorithm (TODO: Cite both tree paper and rule paper)
 From association rules (unsupervised method), by only allowing rules that have the class on the right hand side.
 
+An approach inspired powered by Bayesian statistics:
+SBRL: Scalable bayesian rules list
+Consists of two steps: 
+
+1. Mine IF-THEN rules from the data
+1. Combine the rules into a model by maximizing the posterior probability of the rule.
+It's pretty fast. 
+The mathematical details are pretty tough, so skipping it here. 
+TODO: Link paper and R package.
+TODO: Maybe as alternative to covering? or alternative to learn1rule+covering?
 
 ## Examples
 
@@ -166,7 +222,10 @@ TODO: Classification example with RIPPER
 - Straightforward to generate
 - Fast to do the prediction
 - Rule set can be more clearer than decision trees, because decision tree has replicated subtrees often.
-
+- Compared to logistic regression and linear models: 
+No assumption about distributions of features or target.
+- For trees: No need to transform the features.
+- Feature selection: Has integrated sparsity of results
 
 ## Disadvantages
 
