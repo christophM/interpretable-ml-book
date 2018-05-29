@@ -74,6 +74,19 @@ Mutually exclusive rules: Rules are independent of each other and every recored 
 Exhaustive rules: For every possible combination of feature values there is a rule. exhaustive coverage.
 
 
+A rule applies to a certain region of the feature space. 
+This is called the coverage of the rule. 
+It can also expressed to how many instances in the dataset it applies, or if you know the distribution, then it can even be measured as percentage of the population it covers. 
+For example a rule for house value that says: 
+A house that is in a nice area costs 400k. 
+And 10% percent of all houses are in nice areas. 
+Then the rule has a coverage of 10%. 
+
+The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
+Different for regression and classification. 
+In classification you can measure the missclassification rate of the rule. 
+In regression the mean squared error of the rule.
+
 Methods to learn:
 - Directly from data
 - Decision tree converted to rules
@@ -157,7 +170,7 @@ The following rule is created:
 ```{r oner-cervical}
 library("OneR")
 data("cervical")
-rule = OneR(Biopsy ~ ., data = cervical)
+rule = OneR::OneR(Biopsy ~ ., data = cervical)
 
 rule.to.table = function(rule){
   dt = data.frame(x = names(rule$rules), prediction = unlist(rule$rules))
@@ -178,7 +191,7 @@ That's what we do with the regression task of predicting [bike rentals](#bike):
 ```{r oner-bike}
 data("bike")
 bike$days_since_2011 = max(0, bike$days_since_2011)
-rule = OneR(cnt ~ ., data = bike)
+rule = OneR::OneR(cnt ~ ., data = bike)
 
 kable(rule.to.table(rule), row.names = FALSE)
 ```
@@ -203,67 +216,33 @@ While there are many different ways to induce decision rules, I want to present 
 
 This approach can be seen as fitting trees with only depth of only one, and splits are not necessarily binary as in CART.
 
-### Learning a single rule
-First let's start with a simple algorithm to learn a single rule in a classification setting:
 
-Difference to OneR algorithm: 
-We want to learn a very accurate rule, that is allowed to cover only part of the feature space. 
-Therefor we allow it to have many conjunction (AND), which the OneR does not include.
+- Start with an empty list of rules ($rlist$)
+- Learn a rule $r$ using learn-one-rule with all the data
+- while the the accuracy is bigger than a threshold:
+  - Add rule $r$ to $rlist$
+  - Remove the data that is covered by rule $r$
+  - use learn-one-rule on the reamining data
+- Return set of rules (sometimes called cover), ordered by accuracy
 
+Alternatives: 
+Use other performance measure than accuracy, like entropy or information gain. 
+Do some pruning of the rules.
 
-Learning a single rule
-- Add conditions as long as they improve the information gain heuristic.
-This heuristic evaluates  the improvement of a rule with respect to its predecessors:
-- this is an exhaustive search over all possible features and split points. For categorical features, test combination of levels as rule. 
-For numerical features, try different cut-offs as condition for a rule.
-- add the condition that improves the rule the most according to a quality criterion.
-
-- Start with an empty rule
-- As long as the instances are not completely covered by the rules or until stopping criterium is reached:
-- Use a rule learning algorithm to find a good rule
-- Stop when the rules does not cover negative samples
-- prune rule using incremental reduced error pruning
-- measure for pruning v = (p-n) / (p+n), where p is the number of positive examples covered by the rule in the validation set and n for negative samples. 
-- delete any finals sequence of conditaions that maximizes v.
+For example: 
+We have a house value dataset and no rules learned yet. 
+We learn the first rule, which turns out to be: 
+'If the house is big and in a good neighbourhood, then the value of the house is high'. 
+Then we remove all the big houses in a good neighbourhood.
+With the remaining data we search the next rule: 
+Maybe: 'If the house is in a good neighbourhood, then the value is medium' (Note that this rule is learned on data with big houses in good neighbourhoods removed, so only medium and small houses in good neighbourhoods remain).
 
 
 
-
-
-
-The simplest way to learn decision rules: 
-Take some algorithm that can learn a single rule on a dataset. 
-Apply that algorithm to a dataset. 
-Remove from that dataset all the examples where the rule applies. 
-Repeat until all data points are covered or some other stopping criterium is reached.
-
-TODO: Add artificial example with rent or value of a house
-
-
-TODO: Concepts of coverage and accuracy: 
-A rule applies to a certain region of the feature space. 
-This is called the coverage of the rule. 
-It can also expressed to how many instances in the dataset it applies, or if you know the distribution, then it can even be measured as percentage of the population it covers. 
-For example a rule for house value that says: 
-A house that is in a nice area costs 400k. 
-And 10% percent of all houses are in nice areas. 
-Then the rule has a coverage of 10%. 
-
-The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
-Different for regression and classification. 
-In classification you can measure the missclassification rate of the rule. 
-In regression the mean squared error of the rule.
 
 This second part of repeating the single rule fitting is also called covering algorithm. 
 
-### Theory and Example: Covering algorithm
 
-Algorithm for rule set:
-
-- use sequential covering algorithm
-- find best rle that covers current set of positive examples
-- remove all samples (positive and negative) that are covered by this rule
-- for each new rule, compute the new description lenght of the set. stop adding new rules when the description lenght is d bits longer than the smalles description length obtained so far.
 
 ```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. The approach is called separate-and-conquer."}
 set.seed(42)
@@ -274,39 +253,52 @@ dat$class = factor(dat$class)
 
 min.x1 = min(dat$x1)
 min.x2 = min(dat$x2)
-ggplot(dat) + geom_point(aes(x = x1, y = x2, color = class))
-ggplot(dat) + 
-  geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA) + geom_point(aes(x = x1, y = x2, color = class)) 
+p1 = ggplot(dat) + geom_point(aes(x = x1, y = x2, color = class))+ 
+  scale_color_discrete(guide = "none")
+p2 = ggplot(dat) + 
+  geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA) + geom_point(aes(x = x1, y = x2, color = class)) + 
+  scale_color_discrete(guide = "none")
 
 dat.reduced = filter(dat, !(x1 <= 0 & x2 <= -0.5))
 
-ggplot(dat.reduced) + 
+p3 = ggplot(dat.reduced) + 
   geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA)  + 
   geom_point(aes(x = x1, y = x2, color = class)) + 
   scale_x_continuous(limits = c(min.x1, NA)) + 
-  scale_y_continuous(limits = c(min.x2, NA)) 
+  scale_y_continuous(limits = c(min.x2, NA)) + 
+  scale_color_discrete(guide = "none")
+
+grid.arrange(p1, p2, p3, ncol = 2)
 
 ```
 
 
-Optimize the ruleset:
+But how do we get a single rule?
+There are many ways, one is using a greedy depth search in a decision tree.
+a simple algorithm to learn a single rule in a classification setting:
 
-- for each rule r in the rule set:
-- consider 2 alternative rules:
-- replacement rule: grow ne rule from scratch
-- revised rule: add conjuncts to extend the rule r
-- compare original with replacement and revised 
-- choose rule set that minimizes the minimum description length principle
-- repeat rule generation and optimization for the remaining positive examples.
+Learning a single rule with beam search:
+- Build a decision tree (can be CART or some other algorithm) on the input data. 
+- Start at the root node and always choose the node that is the most pure (e.g. lowest missclassification rate)
+- The majority class of the node we end up in is selected as the rule's prediction, the split conditions in the features leading to that node are the rule conditions.
+
+To avoid local optima, a beam search can be performed which searches the search more exhaustively.
+
+```{r learn-one-rule, fig.cap = "Learning one rule by using a decision tree. A decision tree is grown to predict the target of interest. To extract a single, accurate rule, we go at each split to the node which locally produces the purest subset (i.e. with highest accuracy of target classes) and add the split value to the  rule condition. The prediction of the rule is the majority class of the node we land in. This examples shows how we learn a rule for predicting the value of a house. A decision tree is grown and we follow each time the node with the highest accuracy. In this case we end up with: 'If the location is the house is big and in a good location, we predict that the value is high (assuming high as the most common class in that node)'"}
+knitr::include_graphics("images/learn-one-rule.png")
+```
 
 
-This whole procedure is prone to overfit the data. 
-There are many variants of this to improve this simple idea. 
-One is RIPPER, which was invented 1995 and is used a lot.
-The RIPPER algorithm introduces some pruning of the rules and different stopping criteria. 
-The examples will be shown with the RIPPER algorithm.
+Difference to OneR algorithm: 
+We want to learn a very accurate rule, that is allowed to cover only part of the feature space. 
+Therefor we allow it to have many conjunction (AND), which the OneR does not include.
 
-TODO: R example
+
+One implementation is called M5rules:
+
+```{r m5rules}
+
+```
 
 ## Theory and Example: From trees
 
@@ -374,4 +366,8 @@ No assumption about distributions of features or target.
 - OneR
 
 
+
+[^oner]: R. C. Holte (1993). Very simple classification rules perform well on most commonly used datasets. Machine Learning, 11, 63–91.
+
+[^m5rules]: M. Hall, G. Holmes, and E. Frank (1999). Generating rule sets from model trees. Proceedings of the Twelfth Australian Joint Conference on Artificial Intelligence, Sydney, Australia, pages 1–12. Springer-Verlag. http://citeseer.ist.psu.edu/holmes99generating.html
 
