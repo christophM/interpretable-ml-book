@@ -12,6 +12,9 @@ IF it rains today (condition), THEN it will rain tomorrow (prediction).
 
 keywords: decision rules/sets/lists, association rules
 
+There are lots of algorithms how to produces rules. 
+This chapters purpose is to help you how to think about rules and understand them fundamentally, but not to go through all possibilities. 
+For this I recommend XXX.
 
 ## What are decision rules?
 
@@ -49,6 +52,11 @@ We can make following distinctions:
 - 
 - predictive rule learning: 
 
+## Interpretation
+
+Very easy: IF THEN
+depending if rules overlap or not some differences. 
+
 There are many ways how to induce those kind of rules from a training dataset.
 The induction algorithms differ in how they create the rules:
 - Do they allow overlapping rules and how are conflicts handled?
@@ -79,28 +87,149 @@ And use that within sequential covering, where training records covered by this 
 
 We can distinguish between: 
 
+## Theory: OneR
+
+Simplest imaginable, which also covers the whole space: 
+Find the best (single) feature that explains the classification the best. 
+Continuous features are binned to make the categorical features.
+For all features, a cross table between feature and outcome classes are built. 
+It's like a decision tree with only one split.
 
 
-## Theory: Learn1Rule and the Covering Algorithm
+OneR Algorithm		
+- For each feature
+  - For each value of that feature:
+  - Create a rule which predicts the most frequent class for each level of the feature.
+  - Calculate the total error of the rule.
+- Choose the feature with the smallest total error.
+
+It's that easy.
+And it is guaranteed that it always covers the whole feature space. 
+
+http://www.saedsayad.com/oner.htm
+https://cran.r-project.org/web/packages/OneR/
+https://github.com/vonjd/OneR
+
+
+
+TODO: Example with table for how to compute the accuracy. Something similar to: http://www.saedsayad.com/oner.htm
+
+```{r OneR-freq-table1}
+df = data.frame(
+  location = c("good", "good", "good", "bad", "good", "good", "bad", "bad", "bad", "bad"),
+  size = c("small", "big", "big", "medium", "medium", "small", "medium", "small", "medium", "small"), 
+  pets = c("yes", "no", "no", "no", "only cats", "only cats", "yes", "yes", "yes", "no")
+)
+value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
+```
+From this table we create all the cross tables for each feature with the class to predict:
+```{r OneR-freq-table2}
+kable(table(df[,"location"], value))
+kable(table(df[,"size"], value))
+kable(table(df[,"pets"], value))
+```
+
+For a feature, we go through the table row by row: 
+We use the class that has the highest occurence per feature value as the prediction and count how often it would be wrong.
+For example, the location has possible values, bad and good. 
+The predicted price class for houses in bad locations would be `low` and with this we make 2 mistakes, because two houses are actually medium priced.
+The predicted price class for houses in good locations would be `high` and with this we make 2 mistakes, because two houses are actually medium priced.
+All in all the accuracy of using the location feature is 6/10. 
+For the other rules it is 7/10 for the size feature and 6/10 for the pets feature 
+
+Strictly speaking, we produce more than one rule: 
+It's actually one rule per unique feature value of the chosen best feature. 
+The name 'OneR' (which stands for one rule) is actually misleading.
+A better name might be OneFeatureClassifier or something.
+
+OneR favors features with many possible levels, because it can more easily overfit the target: 
+Imagine a dataset with only noise and no signal, meaning that all features take on random values and have no predictive value for the target.
+Some features have more levels than others. 
+The features with more levels can now more easily overfit. 
+The most extreme feature would be one that has a unique level for each instance from the data. 
+Now the OneR rule can perfectly overfit on the data. 
+Keep that in mind. 
+TODO: Explain strategy for ties.
+TODO: List strategies for binning of continuous features. There was some blogpost about it.
+
+We use the [cervical cancer classification task](#cervical) to test out the OneR algorithm. 
+The following rule is created:
+```{r oner-cervical}
+library("OneR")
+data("cervical")
+rule = OneR(Biopsy ~ ., data = cervical)
+
+rule.to.table = function(rule){
+  dt = data.frame(x = names(rule$rules), prediction = unlist(rule$rules))
+  colnames(dt) = c(rule$feature, "prediction")
+  dt
+}
+
+kable(rule.to.table(rule))
+```
+The age feature is chosen as the best predictive rule feature. 
+Since cancer is rare and the features just increase the risk a little, the prediction is still always 'Healthy'. 
+Using the OneR algorithm is not useful in this case.
+
+We can also use the OneR algorithm for regression task by binning the continuous outcome into a few levels.
+This turns the regression problem into a classification problem.
+That's what we do with the regression task of predicting [bike rentals](#bike):
+
+```{r oner-bike}
+data("bike")
+bike$days_since_2011 = max(0, bike$days_since_2011)
+rule = OneR(cnt ~ ., data = bike)
+
+kable(rule.to.table(rule), row.names = FALSE)
+```
+
+The chosen feature is the year (which covers a time trend).
+In 2012 there are more bike rentals than in 2011, probably because the rental service became more popular.
+
+It should also be possible to use a continuous featue as outcome and predict the mean value per feature level instead of most frequent class. 
+The best feature can be chosen by selecting the one with the lowest mse.
+
+## Theory: Sequential Covering
+
+A simple algorithm to learn a single rule + a procedure to sequentially learn rules with the simple algorithm sequentially to eventually cover the whole feature space:
+
+A very simple approach: 
+Find a really good rule on the dataset. 
+Remove all datapoints covered by the rule (no matter if classified correctly or not). 
+Repeat with remaining points until no points are left or some other stop condition is met.
+Results in disjunct rules.
 
 While there are many different ways to induce decision rules, I want to present a rather simple procedure which sequentially searches for rules that cover parts of the feature space, using the separate-and-conquer approach.
 
+This approach can be seen as fitting trees with only depth of only one, and splits are not necessarily binary as in CART.
 
-### Learn 1 Rule
+### Learning a single rule
 First let's start with a simple algorithm to learn a single rule in a classification setting:
 
-- Start with empty rule
+Difference to OneR algorithm: 
+We want to learn a very accurate rule, that is allowed to cover only part of the feature space. 
+Therefor we allow it to have many conjunction (AND), which the OneR does not include.
+
+
+Learning a single rule
 - Add conditions as long as they improve the information gain heuristic.
 This heuristic evaluates  the improvement of a rule with respect to its predecessors:
 - this is an exhaustive search over all possible features and split points. For categorical features, test combination of levels as rule. 
 For numerical features, try different cut-offs as condition for a rule.
 - add the condition that improves the rule the most according to a quality criterion.
+
+- Start with an empty rule
+- As long as the instances are not completely covered by the rules or until stopping criterium is reached:
+- Use a rule learning algorithm to find a good rule
 - Stop when the rules does not cover negative samples
 - prune rule using incremental reduced error pruning
 - measure for pruning v = (p-n) / (p+n), where p is the number of positive examples covered by the rule in the validation set and n for negative samples. 
 - delete any finals sequence of conditaions that maximizes v.
 
-The quality criterion can be XXX.
+
+
+
+
 
 The simplest way to learn decision rules: 
 Take some algorithm that can learn a single rule on a dataset. 
@@ -111,9 +240,23 @@ Repeat until all data points are covered or some other stopping criterium is rea
 TODO: Add artificial example with rent or value of a house
 
 
+TODO: Concepts of coverage and accuracy: 
+A rule applies to a certain region of the feature space. 
+This is called the coverage of the rule. 
+It can also expressed to how many instances in the dataset it applies, or if you know the distribution, then it can even be measured as percentage of the population it covers. 
+For example a rule for house value that says: 
+A house that is in a nice area costs 400k. 
+And 10% percent of all houses are in nice areas. 
+Then the rule has a coverage of 10%. 
+
+The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
+Different for regression and classification. 
+In classification you can measure the missclassification rate of the rule. 
+In regression the mean squared error of the rule.
+
 This second part of repeating the single rule fitting is also called covering algorithm. 
 
-### Covering algorithm
+### Theory and Example: Covering algorithm
 
 Algorithm for rule set:
 
@@ -122,6 +265,28 @@ Algorithm for rule set:
 - remove all samples (positive and negative) that are covered by this rule
 - for each new rule, compute the new description lenght of the set. stop adding new rules when the description lenght is d bits longer than the smalles description length obtained so far.
 
+```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. The approach is called separate-and-conquer."}
+set.seed(42)
+n = 100
+dat = data.frame(x1 = rnorm(n), x2 = rnorm(n))
+dat$class = rbinom(n = 100, size = 1, p = exp(dat$x1 + dat$x2) / (1 + exp(dat$x1 + dat$x2)))
+dat$class = factor(dat$class)
+
+min.x1 = min(dat$x1)
+min.x2 = min(dat$x2)
+ggplot(dat) + geom_point(aes(x = x1, y = x2, color = class))
+ggplot(dat) + 
+  geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA) + geom_point(aes(x = x1, y = x2, color = class)) 
+
+dat.reduced = filter(dat, !(x1 <= 0 & x2 <= -0.5))
+
+ggplot(dat.reduced) + 
+  geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA)  + 
+  geom_point(aes(x = x1, y = x2, color = class)) + 
+  scale_x_continuous(limits = c(min.x1, NA)) + 
+  scale_y_continuous(limits = c(min.x2, NA)) 
+
+```
 
 
 Optimize the ruleset:
@@ -135,33 +300,44 @@ Optimize the ruleset:
 - repeat rule generation and optimization for the remaining positive examples.
 
 
-
-TODO: Recreate 2D graphic where x is feature 1, y is feature 2, shape of points is the class y. Two steps: In first step draws rectangle (rule) and in the second step removes all points from rectangle.
-
 This whole procedure is prone to overfit the data. 
 There are many variants of this to improve this simple idea. 
 One is RIPPER, which was invented 1995 and is used a lot.
 The RIPPER algorithm introduces some pruning of the rules and different stopping criteria. 
 The examples will be shown with the RIPPER algorithm.
 
+TODO: R example
 
-### Other approaches
+## Theory and Example: From trees
 
 Tree based for example.
 Example: C4.5 rules. Extract rules from an unpruned decision tree that was induced by C4.5 algorithm (TODO: Cite both tree paper and rule paper)
+
+TODO: R example
+
+## Theory and Example: From assocation rules
 From association rules (unsupervised method), by only allowing rules that have the class on the right hand side.
 
-## Interpretation
+TODO: Shortly! explain the assocation rules algo. 
+TODO: Explain step from assocation rules to predictive rules.
+TODO: R example
 
-Very easy: IF THEN
-depending if rules overlap or not some differences. 
+## Theory and Example: SBRL
 
-## Examples
+TODOL: Explain very shortly, not many formulas or anything.
 
 
-TODO: Classification example with RIPPER
+An approach inspired powered by Bayesian statistics:
+SBRL: Scalable bayesian rules list
+Consists of two steps: 
+1. Mine IF-THEN rules from the data
+1. Combine the rules into a model by maximizing the posterior probability of the rule.
+It's pretty fast. 
+The mathematical details are pretty tough, so skipping it here. 
+TODO: Link paper and R package.
+TODO: Maybe as alternative to covering? or alternative to learn1rule+covering?
 
-TODO: Classification example with SBRL?
+TODO: R example
 
 ## Advantages
 
@@ -170,13 +346,18 @@ TODO: Classification example with SBRL?
 - Straightforward to generate
 - Fast to do the prediction
 - Rule set can be more clearer than decision trees, because decision tree has replicated subtrees often.
-
+- Compared to logistic regression and linear models: 
+No assumption about distributions of features or target.
+- For trees: No need to transform the features.
+- Feature selection: Has integrated sparsity of results
+- Simple rules like from OneR can be used as baseline for more complex algorithms
 
 ## Disadvantages
 
 - Research focused on classification and not regression.
 - Prone to overfitting (at least the older decision rule algorithm like XXX)
-- In multi-class siutations, the covering algorithm concentrates on one class at a time whereas decision tree learner takes into account all the classes
+- In multi-class siutations, the covering algorithm concentrates on one class at a time whereas decision tree learner takes into account all the classes.
+- Rules created from decision trees may be harder to interpret. 
 
 ## Software and Alternatives
 
@@ -190,6 +371,7 @@ TODO: Classification example with SBRL?
 - Rule Set (Wang et al. 2016)
 - 1Rule (Malioutov et al. 2017)
 - https://github.com/Jasamba/Rule-Extraction-in-Python
+- OneR
 
 
 
