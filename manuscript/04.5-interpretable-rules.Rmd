@@ -5,75 +5,40 @@ set.seed(42)
 
 # IF-THEN rules
 
-IF-THEN rules (aka decision rules) are simple statements consisting of a series of conditions and a prediction:
-IF the all of the conditions apply, THEN we make a certain prediction.
+IF-THEN rules (also called decision rules) are simple statements consisting of a series of conditions and a prediction:
 An example: 
-IF it rains today (condition), THEN it will rain tomorrow (prediction). 
+IF it rains today (condition) if it's April (another condition), THEN it will rain tomorrow (prediction). 
 
 keywords: decision rules/sets/lists, association rules
 
-There are lots of algorithms how to produces rules. 
-This chapters purpose is to help you how to think about rules and understand them fundamentally, but not to go through all possibilities. 
-For this I recommend XXX.
 
-## What are decision rules?
-
-Decision rules are models that consists of if X then Y statements. 
-Within the if statement there are sets of features and conditions on them (like X > 4) and Y is a statement about the outcome of interest.
-
-Simple if-then statements can and are often written manually. 
-In machine learning, these types of rules are learned automatically.
-Can be derived from decision trees, but don't have to.
+Decision rules are the most interpretable prediction models.
+They are very close to natural language and the way we think. 
+Assuming we use sensible, understandable features and keep the number of conditions within the if statement short.
+In programming it's very natural to write IF-THEN rules.
+What's new in machine learning is that these types of rules are learned by the machine.
 
 They have the following general structure:
-RULE: IF CONDITIONS THEN TARGET
-
+RULE: IF all conditions apply THEN make prediction.
 
 One decision rule from a model predicting rents could be:
-If a flat is bigger than 100 square meters and has a garden the average rent is 2000 Euro per month.
+If a flat is bigger than 100 square meters and has a garden the value is high.
 
 Let's split that up:
-- 'Flat is bigger than 100 square meters' is the first part of the IF statement
-- 'Flat has a garden' is a second conditions in the IF.
-- Both are connected with an 'AND', so both have to be true for the rule to apply
-- Predicted outcome (THEN) is that the average rent is 2000 Euro per month.
+- 'Flat is bigger than 100 square meters' is the first condition in the IF-part.
+- 'Flat has a garden' is the second condition in the IF-part.
+- Both are connected with an 'AND', so both have to be true for the rule to apply.
+- Predicted outcome (THEN) is that the value is high.
 
+How good is a rule?
+For this we can look at two measures: accuracy and coverage.
 
-
-Arguably decision rules are the most simple classifier in terms of understandability. They are very close to natural language and the way we think. Of course it relies on using sensible, understandable features and the number of conditions within the if statement.
-
-Usually there is more then one rule to describe the associations of the features with the outcome. In our example we only have one rule covering big appartments with flats, but what about a smaller apartment?
-
-Rules can be induced from trees. Each path through the tree is one rule. 
-Rules made from trees have the nice attribute of covering the whole feature space and being mutually exclusive.
-
-We can make following distinctions:
-- descriptive rule discovery: concerned with finding single rules 
-- 
-- predictive rule learning: 
-
-## Interpretation
-
-Very easy: IF THEN
-depending if rules overlap or not some differences. 
-
-There are many ways how to induce those kind of rules from a training dataset.
-The induction algorithms differ in how they create the rules:
-- Do they allow overlapping rules and how are conflicts handled?
-- Do they cover the whole training set? Or can there be a situation where none of the rules apply?
-
-
-Conflict resolution if many rules are triggered:
-- size ordering: use rule with the toughest requierements
-- class based: based on cost of missclass
--rule-based (decision list): by quality of rule
-
-
-Mutually exclusive rules: Rules are independent of each other and every recored is covered at most by one rule. 
-
-Exhaustive rules: For every possible combination of feature values there is a rule. exhaustive coverage.
-
-
+- **Accuracy of a rule**: 
+The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
+Different for regression and classification. 
+In classification you can measure the missclassification rate of the rule. 
+In regression the mean squared error of the rule.
+- **Coverage of a rule**:
 A rule applies to a certain region of the feature space. 
 This is called the coverage of the rule. 
 It can also expressed to how many instances in the dataset it applies, or if you know the distribution, then it can even be measured as percentage of the population it covers. 
@@ -82,42 +47,67 @@ A house that is in a nice area costs 400k.
 And 10% percent of all houses are in nice areas. 
 Then the rule has a coverage of 10%. 
 
-The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
-Different for regression and classification. 
-In classification you can measure the missclassification rate of the rule. 
-In regression the mean squared error of the rule.
+This example is very nice and clean, because it contains only one rule.  
+Usually you need more rules to cover the prediction problem at hand. 
+To predict appartment you might not want to learn only one rule, but maybe 10, or 20.
+Then things can become more complicated: 
 
-Methods to learn:
-- Directly from data
-- Decision tree converted to rules
-- Learn other model, then extract rules
+1. Rules can be overlapping: 
+What if I want to predict the value for a new flat and two or more rules apply, giving conflicting predictions?
+1. No rule applies:
+What if I want to predict the value for a new flat and none of the rules apply?
 
-Making a prediction:
-Easy if it is an ordere decision list, because the rules are tied in order. 
+In case of multiple rules, we distinguish lists (ordered) and sets (unordered) of rules:  
+
+- **Decision list**: 
+An ordered list of conjunctive rules (order is important). 
+They are basically one-sided decision trees. 
+The first rule is the root node. 
+One of the child nodes is already the terminal node with the prediction when the first rule applies. 
+The second child is the second rule. 
+This repeats for all the rules. 
+Decision lists solve the problem of rule overlaps by introducing an order to the rules.
+Easy to make a prediction if it is an ordered decision list, because the rules are tied in order. 
 The first rule where the conditions apply to the instance that shall be classified is used. 
 And usually there is some default rule when none of the other rules fires which predicts the majority class of the uncovered instances for example.
-It becomes difficult when there is an unordered set of decision rules, because two problems can occur:
-
-1. The rules might be overlapping  and giving conflicting predictions. 
-1. It might happen that no rule applies at all to an instance. 
-
-These problems can be solved by 1) introducing a voting mechanism and 2) introducing a default rule. 
-
-
-You can use a rule-learning algorithm that learns a single rule. 
-And use that within sequential covering, where training records covered by this rule are removed.
+- **Decision set**: 
+A bunch of rules without an order (in contrast to a decision list). 
+In a set, the rules are either mutually exclusive, or there is some strategy to resolve conflicts.
+  - Mutually exclusive rules: Rules are independent of each other and every recored is covered at most by one rule. 
+Conflict resolution if many rules are triggered is often done by some measurement of the quality of the rule (accuracy, coverage, cost-based missclassification, etc.)
+To make a prediction, either a single rule applies and we use that prediction or, with multiple rules applying, we use the conflict resolution (e.g. majority vote) to make the prediction.
+Interpretability suffers potentially when multiple rules apply.
 
 
+Both decision rules and decision lists can suffer from the problem that no rule applies to an instance. 
+This can be solved by introducing a default rule. 
+The default rule is the rule the applies when no other rule applies.
+This can be used in both decision lists and decision sets.
+The default rule can be the most common outcome of the training data that is not covered by other rules.
+If a set or list of rules covers the whole feature space, we call it exhaustive.
 
-We can distinguish between: 
+
+There are many ways how to induce those kind of rules from a training dataset.
+
+Methods to learn:
+- Directly from data. 
+This bullet point covers the most algorithms.
+- Decision tree converted to rules.
+Each path through the tree is one rule.
+Rules made from trees have the nice attribute of covering the whole feature space and being mutually exclusive.
+- Learn other model, then extract rules
+- Learn assocation rules, then filter for the ones that have the target on the right hand side.
+
+Let's start with a VERY simple strategy: Using the single, best feature to learn rules.
 
 ## Theory: OneR
 
-Simplest imaginable, which also covers the whole space: 
+The OneR algorithm ist the most simplest imaginable rule induction algorithm.
 Find the best (single) feature that explains the classification the best. 
 Continuous features are binned to make the categorical features.
 For all features, a cross table between feature and outcome classes are built. 
-It's like a decision tree with only one split.
+It's a decision tree with only one split.
+It covers the whole feature space.
 
 
 OneR Algorithm		
@@ -313,8 +303,6 @@ knitr::include_graphics("images/learn-one-rule.png")
 Difference to OneR algorithm: 
 We want to learn a very accurate rule, that is allowed to cover only part of the feature space. 
 Therefor we allow it to have many conjunction (AND), which the OneR does not include.
-
-
 
 
 Let's look at one implementation of the Sequential covering algorithm: RIPPER (Repeated Incremental Pruning to Produce Error Reduction; Cohen, 1995). 
