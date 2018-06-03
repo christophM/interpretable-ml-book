@@ -73,7 +73,7 @@ And usually there is some default rule when none of the other rules fires which 
 - **Decision set**: 
 A bunch of rules without an order (in contrast to a decision list). 
 In a set, the rules are either mutually exclusive, or there is some strategy to resolve conflicts.
-  - Mutually exclusive rules: Rules are independent of each other and every recored is covered at most by one rule. 
+- Mutually exclusive rules: Rules are independent of each other and every recored is covered at most by one rule. 
 Conflict resolution if many rules are triggered is often done by some measurement of the quality of the rule (accuracy, coverage, cost-based missclassification, etc.)
 To make a prediction, either a single rule applies and we use that prediction or, with multiple rules applying, we use the conflict resolution (e.g. majority vote) to make the prediction.
 Interpretability suffers potentially when multiple rules apply.
@@ -112,9 +112,9 @@ It covers the whole feature space.
 
 OneR Algorithm		
 - For each feature
-  - For each value of that feature:
-  - Create a rule which predicts the most frequent class for each level of the feature.
-  - Calculate the total error of the rule.
+- For each value of that feature:
+- Create a rule which predicts the most frequent class for each level of the feature.
+- Calculate the total error of the rule.
 - Choose the feature with the smallest total error.
 
 It's that easy.
@@ -222,9 +222,9 @@ The covering algorithm for two classes (one positive, one negative):
 - Start with an empty list of rules ($rlist$)
 - Learn a rule $r$ using learn-one-rule with all the data
 - while the rule set has not reached a quality threshold or some positive examples are not covered yet:
-  - Add rule $r$ to $rlist$
-  - Remove the data that is covered by rule $r$
-  - use learn-one-rule on the reamining data
+- Add rule $r$ to $rlist$
+- Remove the data that is covered by rule $r$
+- use learn-one-rule on the reamining data
 - Return set of rules (sometimes called cover)
 
 In case of more than two target classes, we repeate the covering algorithm for each class, where the current class is treated as the positive class and all the others as the negative class.
@@ -378,15 +378,12 @@ TODO: Explain step from assocation rules to predictive rules.
 TODO: R example
 
 ## Theory and Example: SBRL
-```{r sbrl}
-library("sbrl")
-data("cervical")
-cervical2 = cervical
-cervical2$label = cervical2$Biopsy
-cervical2$Biopsy = NULL
-sbrl(cervical2)
 
-```
+Scalable bayesian rule lists is as the name suggest an example for a decision list.
+The other examples where decision sets.
+
+
+
 TODOL: Explain very shortly, not many formulas or anything.
 TODO: Discretize input features or remove method
 
@@ -400,7 +397,48 @@ The mathematical details are pretty tough, so skipping it here.
 TODO: Link paper and R package.
 TODO: Maybe as alternative to covering? or alternative to learn1rule+covering?
 
-TODO: R example
+
+For the examples I had to discretize all input features first to make the SBRL algorithm work. 
+I used frequency based binnning for that (aka quantiles).
+
+```{r sbrl-cervical, eval = FALSE}
+library("sbrl")
+library("arules")
+data("cervical")
+
+cervical2 = as.data.frame(lapply(cervical, function(x) {
+  if(is.factor(x) || length(unique(x)) < 3) {
+    as.factor(x)
+  } else {
+    discretize(x, breaks = 3, method = "interval")
+    #discretize(x, breaks = max(length(unique(x))-1, 5))
+  }
+}))
+cervical2$label = cervical2$Biopsy
+cervical2$Biopsy = NULL
+sbrl(cervical2[c("label", "Age")], pos_sign = "Cancer")
+```
+
+
+```{r sbrl-bike}
+library("sbrl")
+library("arules")
+data("bike")
+
+bike2 = bike
+bike2$label = bike2$cnt > 5000
+bike2 = as.data.frame(lapply(bike2, function(x) {
+  if(is.factor(x) || length(unique(x)) < 3) {
+    as.factor(x)
+  } else {
+    discretize(x, breaks = 3, method = "interval")
+    #discretize(x, breaks = max(length(unique(x))-1, 5))
+  }
+}))
+bike2$label = bike2$cnt
+bike2$cnt = NULL
+sbrl(bike2, pos_sign = TRUE)
+```
 
 ## Advantages
 
