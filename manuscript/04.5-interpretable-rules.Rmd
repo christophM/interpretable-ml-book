@@ -377,7 +377,42 @@ TODO: Shortly! explain the assocation rules algo.
 TODO: Explain step from assocation rules to predictive rules.
 TODO: R example
 
-## Theory and Example: SBRL
+## Bayesian Rule Lists
+
+An example for a decision list made from some pre-mined rules.
+Priori distribution for rule length, number of conditions and so on encourage the rules to be sparse.
+Setting: Multi-class classification. 
+First: Antecedents (= conditions) are mined.
+The Bayesian Rule List uses the FB-Growth algorithm. 
+Continuous features can be used if cut into intervals and made into a categorical feature (either fixed intervals or by distribution, i.e. quantiles).
+
+The labels have a distribution: 
+
+$$y\sim\text{Multinomial}(\theta)$$
+
+**if** conditions1 **then** $y\sim\text{Multinomial}(\theta_1)$, $\theta_1\sim\text{Dirichlet}(\alpha+N_1)$
+
+**else if** conditions2 **then** $y\sim\text{Multinomial}(\theta_2)$, $\theta_2\sim\text{Dirichlet}(\alpha+N_2)$
+
+...
+
+**else if** conditionsm **then** $y\sim\text{Multinomial}(\theta_m)$, $\theta_m\sim\text{Dirichlet}(\alpha+N_m)$
+
+**else**  $y\sim\text{Multinomial}(\theta_0)$, $\theta_0\sim\text{Dirichlet}(\alpha+N_0)$
+
+The for sampling a decision list:
+
+- Pre-mine rules
+- sample a decision list from the rules
+- sample default rule parameter $\theta_0$
+- for all rules: sample cardinality of antecedent, sample antecedent of that cardinality from pre-mined, sample $\theta_j$
+- For each observation, find the antecedent that first applies. sample y from priori.
+
+
+The goal is to sample from: 
+
+$$p(d|x,y,A,\alpha,\lambda,\eta)\propto{}p(y|x,d,\alpha)p(d|A,\lambda,\eta)$$
+
 ```{r sbrl}
 library("sbrl")
 data("cervical")
@@ -453,3 +488,6 @@ Foundations of Rule Learning. Extensive book on rule learning.
 [^c4.5]: Quinlan, J. R. (1987). Generating production rules from decision trees. Proceedings of the Tenth International Joint Conference on Artificial Intelligence, 30107, 304–307. Retrieved from http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.98.9054&amp;rep=rep1&amp;type=pdf
 
 
+[^brl]: Letham, B., Rudin, C., McCormick, T. H., & Madigan, D. (2015). Interpretable classifiers using rules and bayesian analysis: Building a better stroke prediction model. Annals of Applied Statistics, 9(3), 1350–1371. https://doi.org/10.1214/15-AOAS848
+
+[^sbrl]: Yang, H., Rudin, C., & Seltzer, M. (2016). Scalable Bayesian Rule Lists, 31. Retrieved from http://arxiv.org/abs/1602.08610
