@@ -98,9 +98,19 @@ Rules made from trees have the nice attribute of covering the whole feature spac
 - Learn other model, then extract rules
 - Learn assocation rules, then filter for the ones that have the target on the right hand side.
 
-Let's start with a VERY simple strategy: Using the single, best feature to learn rules.
 
-## Learn one rule (OneR)
+
+There are lots of ways to build decision rule (lists/sets).
+This chapter will show you three of them:
+
+1. Building rules from a single feature.
+1. Covering algorithm: Covering the dataset sequentially with rules.
+1. Pre-mined rules combination: Pre-mining rules and combining them into a decision list.
+
+Another way is ripping apart decision trees as used in the [RuleFit algorithm](#rulefit).
+Let's start with the simplest: Using the single, best feature to learn rules.
+
+## Learn One Rule (OneR)
 
 The OneR algorithm is one of the simplest rule induction algorithm.
 It finds the feature that produces the best rules and uses this single feature to create decision rules.
@@ -247,21 +257,12 @@ Then the covering algorithm for two classes (one positive, one negative) goes li
   - Learn another rule on the remaining data.
 - Return the decision list.
 
-In case of more than two target classes, we repeate the covering algorithm for each class, where the current class is treated as the positive class and all the others as the negative class.
+In case of more than two target classes:
+First the classes are ordered by increasing prevalence.
+RIPPER starts with the least prevalent class, learns a rule for it, removes all instances covered, then moves on to the second least prevalent class and so on. 
+The current class is always treated as the positive class and all classes with higher prevalence as the single negative class.
+The last class is the default rule.
 This is also called the one-versus-all strategy in classification.
-This also leads (possibly) to overlapping rules. 
-A solution: Assign weights to each rule and apply the rules with higher weights.
-
-
-For example: 
-We have a house value dataset and no rules learned yet. 
-We learn the first rule, which turns out to be: 
-'If the house is big and in a good neighbourhood, then the value of the house is high'. 
-Then we remove all the big houses in a good neighbourhood.
-With the remaining data we search the next rule: 
-Maybe: 'If the house is in a good neighbourhood, then the value is medium' (Note that this rule is learned on data with big houses in good neighbourhoods removed, so only medium and small houses in good neighbourhoods remain).
-
-
 
 
 This second part of repeating the single rule fitting is also called covering algorithm. 
@@ -295,62 +296,61 @@ p3 = ggplot(dat.reduced) +
 gridExtra::grid.arrange(p1, p2, p3, ncol = 2)
 
 ```
+For example: 
+We have a house value dataset and no rules learned yet. 
+We learn the first rule, which turns out to be: 
+'If the house is big and in a good neighbourhood, then the value of the house is high'. 
+Then we remove all the big houses in a good neighbourhood.
+With the remaining data we search the next rule: 
+Maybe: 'If the house is in a good neighbourhood, then the value is medium' (Note that this rule is learned on data with big houses in good neighbourhoods removed, so only medium and small houses in good neighbourhoods remain).
 
 
-But how do we get a single rule?
-There are many ways, one is using a greedy depth search in a decision tree.
-a simple algorithm to learn a single rule in a classification setting:
+But how do we generate a single rule? 
+The OnR algorithm would not work, since it would already cover the whole feature space.
+But ther are many other ways. 
+One is learning a single rule with beam search:
 
-Learning a single rule with beam search:
-- Build a decision tree (can be CART or some other algorithm) on the input data. 
-- Start at the root node and always choose the node that is the most pure (e.g. lowest missclassification rate)
-- The majority class of the node we end up in is selected as the rule's prediction, the split conditions in the features leading to that node are the rule conditions.
+- Build a decision tree (can be a CART or some other algorithm).
+- Start at the root node and recursively choose the purest node (e.g. lowest missclassification rate)
+- The majority class of the node we end up in is selected as the rule's prediction and the split conditions in the features leading to that node are the rule conditions.
 
-To avoid local optima, a beam search can be performed which searches the search more exhaustively.
-
-Learning a single rule is equivalent to a search problem.
-The search space is the space of all possible rules. 
-And the search is for the best rule (according to some criteria).
-There are many different search strategies: 
-hill-climbing, beam search, exhaustive search, best-first search, ordered search, stochastic search, top-down search, bottom-up search, ...
-Here is not the place to go into details. 
+The following figure visualizes the search:
 
 ```{r learn-one-rule, fig.cap = "Learning one rule by using a decision tree. A decision tree is grown to predict the target of interest. To extract a single, accurate rule, we go at each split to the node which locally produces the purest subset (i.e. with highest accuracy of target classes) and add the split value to the  rule condition. The prediction of the rule is the majority class of the node we land in. This examples shows how we learn a rule for predicting the value of a house. A decision tree is grown and we follow each time the node with the highest accuracy. In this case we end up with: 'If the location is the house is big and in a good location, we predict that the value is high (assuming high as the most common class in that node)'"}
 knitr::include_graphics("images/learn-one-rule.png")
 ```
 
+Learning a single rule is equivalent to a search problem, where the search space is the space of all possible rules. 
+The goal of the search is to find the best rule (according to some criteria).
+There are many different search strategies: 
+hill-climbing, beam search, exhaustive search, best-first search, ordered search, stochastic search, top-down search, bottom-up search, ...
 
-Difference to OneR algorithm: 
-We want to learn a very accurate rule, that is allowed to cover only part of the feature space. 
-Therefor we allow it to have many conjunction (AND), which the OneR does not include.
 
-
-Let's look at one implementation of the Sequential covering algorithm: RIPPER (Repeated Incremental Pruning to Produce Error Reduction; Cohen, 1995). 
+RIPPER (Repeated Incremental Pruning to Produce Error Reduction) by Cohen (1995)[^ripper] is a variant of the Sequential Covering algorithm.
 RIPPER is a bit more sophisticated and uses as post-processing phase (rule pruning) for the optimization of the rule-set.
-RIPPER learns unordered rule sets. 
-For rule conflict resolution it employs weighting of rules. 
-The rules are weighted by the Laplace-value of a rule, which is used for making the final prediction.
-The laplace estimate is a corrected estimate of the accuracy of a rule: 
 
-$$ Laplace(rule) = \frac{pos + 1}{(pos + 1) + (neg + 1)}$$
+RIPPER can run in ordered or unordered mode, either producing a decision list or decision set.
 
-where pos are the positive instances covered by the rule. 
-The usual estimate 
 
-$\frac{pos}{neg + pos}$
-
-has the problem that when the rule covers only one instance, which is positive it has 100% accuracy, and a rule that covers 100 positive instances (and no negative) has the same but is obviously a better rule. 
-The Laplace estimate puts a prior on the accuracy which affects especially the smaller rules.  
-
+Let's turn to the data examples.
 On the classification task for [cervical cancer](#cervical), the RIPPER algorithm does not find any rule:
 ```{r jrip-cervical}
 library("RWeka")
 library(rJava)
 
-rule = JRip(Biopsy ~ ., data = cervical)
-rules = as.matrix(scan(text=.jcall(rule$classifier, "S", "toString"), sep="\n", what="") )[-c(1:2, 6), ,drop=FALSE]
+extract.rules.jrip = function (rule) {
+rules = scan(text=.jcall(rule$classifier, "S", "toString"), sep="\n", what="")
+# removes text
+rules = rules[-c(1, 2, length(rules))]
+rules = gsub("\\([0-9]*\\.[0-9]\\/[0-9]*\\.[0-9]\\)", "", rules)
+rules = as.matrix(rules)[-c(1:2, 6), ,drop=FALSE]
 rules  = data.frame(rules)
 kable(rules)
+}
+
+rule = JRip(Biopsy ~ ., data = cervical)
+extract.rules.jrip(rule)
+
 ```
 
 
@@ -367,43 +367,14 @@ bike2$cnt = round(bike2$cnt)
 bike2$cnt =  cut(bike$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
 
 rule = JRip(cnt  ~ ., data = bike2)
-rules = scan(text=.jcall(rule$classifier, "S", "toString"), sep="\n", what="")
-# removes text
-rules = rules[-c(1, 2, length(rules))]
-rules = gsub("\\([0-9]*\\.[0-9]\\/[0-9]*\\.[0-9]\\)", "", rules)
-rules = as.matrix(rules)[-c(1:2, 6), ,drop=FALSE]
-rules  = data.frame(rules)
-kable(rules)
+extract.rules.jrip(rule)
 ```
 The interpretation is straightforward:
-If the conditions happen, then the predicted (interval) of bike rentals is the right hand side.
+If the conditions apply, then the predicted (interval) of bike rentals is the interval on the right hand side.
 The last rule is the default rule when none of the other rules fires for an instance. 
 For predicting a new instance, start at the top of the list and check if a rule fires. 
 When all conditions match, then the right hand side of the rule is the prediction for this instance. 
 Because of the default rule it is guaranteed that there will always be a prediction.
-
-
-## Decision rules from decision trees
-There are also many other ways to create single rules. 
-Also there are many othe ways to create rule sets. 
-One is to grow a tree and turn it into rules. 
-This always works. 
-There are more sophisticated versions 
-For example the C4.5 RULES algorithm  (Quinlan, 1987)[^c4.5] adds some pruning and ranking of the rules
-See RuleFit chapter.
-
-
-## Building decision rules from pre-mined rules
-
-In this section I will show you another approch to learn decision rules:
-
-- Use some algorithm to pre-mine lots of rules
-- Use another algorithm to build to aggregate those rules to a decision list (or a decision set)
-
-Scalable bayesian rule lists is as the name suggest an example for a decision list.
-The other examples where decision sets.
-Specifically we will learn about Bayesian Rule Lists (Letham et. al, 2015)[^brl], which are decision lists that use methods from Bayesian statistics to learn decision lists from rules pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree] 
-But let's start slowly:
 
 ### Pre-mining
 
@@ -616,3 +587,5 @@ Foundations of Rule Learning. Extensive book on rule learning.
 [^sbrl]: Yang, H., Rudin, C., & Seltzer, M. (2016). Scalable Bayesian Rule Lists, 31. Retrieved from http://arxiv.org/abs/1602.08610
 
 [^fp-tree]: Borgelt, C. (2005). An implementation of the FP-growth algorithm. Proceedings of the 1st International Workshop on Open Source Data Mining Frequent Pattern Mining Implementations - OSDM ’05, 1–5. http://doi.org/10.1145/1133905.1133907
+
+[^ripper]: Cohen, W. (1995). Fast effective rule induction. Icml. Retrieved from http://www.inf.ufrgs.br/~alvares/CMP259DCBD/Ripper.pdf
