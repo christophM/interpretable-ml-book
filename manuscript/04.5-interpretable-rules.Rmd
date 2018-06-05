@@ -376,72 +376,133 @@ For predicting a new instance, start at the top of the list and check if a rule 
 When all conditions match, then the right hand side of the rule is the prediction for this instance. 
 Because of the default rule it is guaranteed that there will always be a prediction.
 
-### Pre-mining
 
-Before the theory, think about a recommendation system. 
-Like on a shopping website "People that bought this bycicle also bought this helmet" or for movies "People how watched 'Princess Mononoke' also watched 'Spirited Away'". 
-These are association rules and are a kind of IF-THEN rule ("IF someone watched 'Princess Mononoke' THEN also 'Spirited Away'").
-Association rule mining or frequent pattern mining extracts association rules from a dataset. 
-These algorithms are categorized under unsupervised machine learning algorithm, meaning it does not need any label.
-That also means that we get all kinds of rules in the IF-THEN format, where the things that are in the THEN-part are not necessarily from the target we are interested in. 
-In the appartment example, there might also be an association rule that says: IF the value=high and location=medium THEN the size=big.
+## Building a decision list from pre-mined rules
+
+In this section I will show you another approach to learn a decision list, which follows this general recipe:
+
+1. Pre-mine lots of rules from the data (potentially unsupervised).
+1. Construct a decision list from a selection of the pre-mined rules.
+
+One specific approach that uses this general recipe is called (Scalable) Bayesian Rule Lists (Letham et. al, 2015)[^brl], which are decision lists that use methods from Bayesian statistics to learn decision lists from rules pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree]
+
+But let's start slowly:
+
+### Pre-mining of rules
+
+When we dive into the theory of association rule or frequent pattern mining, it is useful to keep the idea of a recommender system in your mind.
+For example many shopping websites show "People that bought this bycicle also bought this helmet" or movie recommder systems say something like "People who watched 'Princess Mononoke' and 'My Neighbor Totoro' also watched 'Spirited Away'". 
+These are association rules, which are a special kind of IF-THEN rule ("IF someone watched 'Princess Mononoke' THEN also 'Spirited Away'").
+Association rule mining or frequent pattern mining is the process of extracting lots of those rules from a dataset. 
+These algorithms are unsupervised machine learning algorithms meaning they don't need any label.
+An association rule is a decision rule when on the THEN-part the prediction is for the target outcome of interest.
+In our context, a pattern is the same as a feature value (e.g. size=medium), which is the combination of a feature (e.g. house size) and some level of that feature (e.g. medium).
+In the context of baskets or movies, the features are all binary, a user has watched a movie or not, so it's a bit easier there.
+
+Probably the most popular pattern mining algorithm is the Apriori algorithm. 
+The Apriori algorithm works with to measurements to create assocations rules:
+
+Support, which is the frequency of a condition (feature level) in the dataset:
+
+$$Support(x_j=A)=\frac{\sum_{i=1}^nI(x_{ji}=A)}{n}$$
+
+where $x_j=A$ is the feature level, $n$ the number of data points in the dataset and $I$ the indicator function which is $1$ if the feature has level $A$ else $0$.
+For example we if 20% of the houses have no balcony (and 80% one or more), then the support for $x_{balcony}=0$ would be 20%.
+The support can also be measured for combinations of feature levels, for example the support for $x_{balcony}=0\land{}x_{pets}="allowed"$.
+
+The other measure is the accuracy of a rule (usually called the 'confidence', but in our context of rule learning it makes sense to say accuracy). 
+The accuracy is the probability that the prediction of a rule (THEN-part) is true, given that the conditions apply:
+
+$$Accuracy((x_j=A)\rightarrow(y=B))=\frac{Support(x_j=A\land{}y=B)}{Support(x_j=A)}$$
+
+
+The Apriori algorithm gets as input the dataset with categorical features (where the target is also treated like a categorical feature), the minimal support as decided by the user and the minimal confidence as decided by the user.
+The algorithm works in two steps:
+1) Find frequent combination of feature levels 2) construct assocation rules from the frequent combinations.
+
+For the first step, the Apriori algorithm starts with all feature levels that have a support larger than the minimal support set by the user. 
+If the use says minimal support should be 10% and there are only 5% big houses, we would remove that feature value and only keep house=medium and house=big as patterns. 
+This does not mean that the houses are removed, it just means that $\text{size=big}$ will not be considered for an association rule.
+From the patterns with a single feature value, the Apriori algorithm tries to find iteratively combinations of higher order 2 to number of features.
+Patterns are constructed by adding a feature value a logical AND, e.g. $\text{size=medium}\land\text{location=bad}$.
+Generated patterns with a support below the minimum support are removed.
+In the end we have all the frequent patterns.
+Any subset of a frequent pattern is again frequent, that's the the apriori property. 
+Makes sense: By removing a condition from a pattern, the reduced pattern can  only cover more or the same number of data points (support), but never less. 
+For example, if 20% of the houses are $\text{size=medium}\land\text{location=good}$, then the support of houses that are only $\text{size=medium}$ is 20% or larger.
+The apriori property is used to reduce the number of patterns we have to check. 
+Only for frequent patterns we have to check patterns of higher order.
+
+
+In the second step we create association rules from the frequent item sets that have at least the minimal support and the minimal accuracy. 
+Assocation rules have one item on the right hand side (THEN-part) and arbitrary number of conditions.
+For example from the frequent pattern 'size=medium AND location=bad AND value=medium' we would create 3 rule candidates and check them for support and accuracy:
+$\text{size=medium}\land\text{location=bad}\rightarrow\text{value=medium}$, 
+$\text{size=medium}\land\text{value=medium}}\rightarrow\text{location=bad}$ and 
+$\text{value=medium}\land\text{location=bad}\rightarrow\text{size=medium}$ 
+But since we are interested in only predicting the value we would only consider the first rule.
+This second part produces lots of association rules.
+When we use those in the context of a supervised machine learning problem like classification, where we know the label, we are not interested in all the rules that are created.
 We can still use those rules by keeping only the ones that have the target outcome on the right hand side (the THEN-part).
-
-A popular and effective method in assocation rule mining is the FP-Growth Algorithm. 
-It's a data structure that represents the patterns found in a dataset.
-It assumes that each feature is categorical.
-The user has to define the minimum support of a feature value at which it is considered 'frequent'.
-If 50% of the houses had a medium size, then 50% would be the support of this feature value, also sometimes called 'item' in the context of pattern mining.
-Infrequent items are discarded. 
-At which threshold the occurence of a feature value is 'infrequent' is up to the user (1%? 10%? 0.0032%?). 
-Let's say we discard feature values with less then 10% frequency. 
-If a feature in the dataset would be number of balconies with following distribution: 50% no balcony, 45% one balcony, 5% no balcony, then we would discard the no balcony feature value. 
-This doesn't mean we delete the instances, just that we disregard this feature value for IF-THEN rules.
-
-The FP-Growth algorithm then grows a FP-tree, which can be used to extract frequent patterns in the dataset (IF-THEN rules). 
-These have to be filtered to contain only those where the target outcome is included (which, because the pattern mining is unsupervised is treated like the other features).
-I want go into details about FP-Growth, so if you want to learn about FP-Growth, I recommend [Data Mining Algorithms in R](https://en.wikibooks.org/wiki/Data_Mining_Algorithms_In_R/Frequent_Pattern_Mining/The_FP-Growth_Algorithm).
-
-Alternatives to the FP-Growth algorithm is for example the Apriori algorithm, which is slower but easier to understand.
-
+Once we have mined those rules, filtered for those that have the outcome of interest in the THEN-part, we already have a decision set. 
+We would only need some mechanism how to average predictions in the case of overlapping rules
 The outcome of this procedure is a lot of rules, which might be overlapping. 
 We could now simply build a decision set (with majority vote for example), but this is not necessarily interpretable, since the rules might be heavily overlapping and there could be hundreds or thousands of rules. 
 
-So we need something to cut the number of rules, prefer shorter rules over the long ones and also have a decision list (=with order) and not a decision set.
-One way to do this is by introducing a likelihood function with some prior distributions for the length of rules (preferring shorter ones) and the number of rules (also preferring less rules over more). 
-Say hello to Bayesian Rule List algorithm!
-It can be used in any multi-class classification task and requires all input features to be categorized.
+So there are more elaborate approaches:
+
+## (Scalable) Bayesian Rule Lists
+
+We want to reduce the number of the pre-mined rules, prioritize short rules over long ones and get have a decision list (=with order) and not a decision set.
+The Bayesian Rule List (BRL) approach solves this by introducing a likelihood function with some prior distributions for the length of rules (preferring shorter ones) and the number of rules (also preferring less rules over more). 
+
+BRL can be used in any multi-class classification setting and requires all input features to be categorized.
 Continuous features can be used if cut into intervals and made into a categorical feature (either fixed intervals or by distribution, i.e. quantiles).
+The BRL approach defines a probability distribution of lists (kind of meta, right?), which let's us attach a likelihood to a list and we try to find the most likely list according to the distribution which incorporates both the assumptions of shortness and how well a list fits the data.
+Since it's not so trivial to sample lists from the distributions of lists directly, the BRL has the following recipe:
+1) Generate a (somewhat random) initial decision list 2) Iteratively change the list by adding/switching/removing rules, while making sure that the lists are from the distribution of lists and 3) choose the decision list from the sampled lists which has the highest likelihood.
 
-The algorithm starts with premining rules, for example with the FB-Growth algorithm, but theoretically any rule-mining algorithm would work.
+Let's go through the the algorithm in more detail:
+The algorithm starts with pre-mining rules with the FB-Growth algorithm, but theoretically any rule-mining algorithm would work.
+Why didn't I present you the FP-Growth algorithm, but instead the Apriori algorithm?
+Well, because they will yield the same results. 
+The Apriori is easier to convey and the FP-Growth algorithm runs faster.
+FP-Growth uses FP-trees a data structure that represents the patterns found in a dataset.
 
-BRL makes the following distribution assumption of the rules:
+BRL makes the a bunch of assumptions about the distribution of the target and the distribution of the parameters that define the distribution of the target.
+Well, that's Bayesian statistic. 
+If you are unfamiliar with Bayesian statistic, don't get too caught up in the following explanations. 
+It's important to know that the Bayesian approach is a way to combine in a model pre-existing knowlegde or requirements (called priori distributions) while also fitting the data.
+In the decision list case, the Bayesian approach is useful because through the prior assumptions, it nudges the decision list to be short with also short rules.
+The distribution assumption of the target looks like this:
 
-**if** conditions1 **then** $y\sim\text{Multinomial}(\theta_1)$, $\theta_1\sim\text{Dirichlet}(\alpha+N_1)$
+**if** $\text{conditions}_1$ **then** $y\sim\text{Multinomial}(\theta_1)$, $\theta_1\sim\text{Dirichlet}(\alpha+N_1)$
 
-**else if** conditions2 **then** $y\sim\text{Multinomial}(\theta_2)$, $\theta_2\sim\text{Dirichlet}(\alpha+N_2)$
+**else if** $\text{conditions}_2$ **then** $y\sim\text{Multinomial}(\theta_2)$, $\theta_2\sim\text{Dirichlet}(\alpha+N_2)$
 
 ...
 
-**else if** conditionsm **then** $y\sim\text{Multinomial}(\theta_m)$, $\theta_m\sim\text{Dirichlet}(\alpha+N_m)$
+**else if** $\text{conditions}_m$ **then** $y\sim\text{Multinomial}(\theta_m)$, $\theta_m\sim\text{Dirichlet}(\alpha+N_m)$
 
 **else**  $y\sim\text{Multinomial}(\theta_0)$, $\theta_0\sim\text{Dirichlet}(\alpha+N_0)$
 
 
-But the real meat is the assumptions about the distributions of the rules and the rule list:
+The goal is to sample decision lists $d$ from: 
 
-
-TODO: a-priori distributions.
+$$p(d|x,y,A,\alpha,\lambda,\eta)\propto{}p(y|x,d,\alpha)\cdot{}p(d|A,\lambda,\eta)$$
+where $d$ is a decision list, $x$ are the features, $y$ is the target, $A$ the set of pre-mined rules, $\lambda$, the prior expected decision list length, $\eta$, the prior expected number of conditions in a rule, $\alpha$, the prior pseudo-count for the positive and negative classes (best fixed at $(1,1)$).
+The term on the left side of the equation says how likely a list is, given the observed data and the priori assumptions. 
+This is proportional to the likelihood of the outcome of interest given the list and the data times the likelihood of the list given prior assumptions and the pre-mined rules.
+This means a decision list has a high likelihood if it explains the outcome $y$ well and is also likely according to the prior assumptions.
 
 Bayesian statistics is always a bit tricky, because we usually can't simply compute the correct answer, but we have to draw candidates and evaluate them and update our posteriori estimates (usually and also here with Monte Carlo Markov Chains)
 Here it is even more tricky, because we have to draw from the distribution of decision lists. 
-The authors suggest following recipe to sequentially draw new decision lists:
-
-The for sampling a decision list:
+The authors suggest following recipe to sequentially draw an initial decision lists. 
+This recipe also shows the prior assumptions we make about the list length and the rule lengths.
 
 - Pre-mine rules.
 - Sample the length $m$ for the list from a truncated Poisson distribution.
-- For the default rule: Sample the parameter for the distribution of the target value  (i.e. the rule that applies when nothing else applies).
+- For the default rule: Sample the parameter $\theta_0$ for the distribution of the target value (i.e. the rule that applies when nothing else applies).
 - For decision list rule $j=1,\ldots,m$, do:
   - Sample the length of the rule $l_j$ (i.e. number of conditions) for rule $j$
   - Sample a rule of length $l_j$ from the pre-mined rules.
@@ -449,16 +510,6 @@ The for sampling a decision list:
 - For each observation in the dataset:
   - Find the rule from the decision list that fires first
   - Draw the predicted outcome from the probability distributiion suggested by the rule that applies.
-
-The estimation needs three parameters as input: 
-
-- $\lambda$, the prior expected decision list length.
-- $\eta$, the prior expected number of conditions in a rule.
-- $\alpha$, the prior pseudo-count for the positive and negative classes. Best fixed at $(1,1)$.
-
-The goal is to sample from: 
-
-$$p(d|x,y,A,\alpha,\lambda,\eta)\propto{}p(y|x,d,\alpha)p(d|A,\lambda,\eta)$$
 
 
 Once we can sample from the distribution of the decision lists, we can find the decision list that maximizes the posteriori likelihood, meaning it explains the data well (acccuracy), but is also interpretable because it has few and short rules, which is due to the priori distributions.
@@ -472,8 +523,6 @@ This procedure gives us lots of samples from the distribution of decision lists.
 We end up with the posterior distribution of decision lists, but of course we would like to have a single decision list and not a distribution. 
 The BRL algorithm selects the decision list of the samples with the highte posterior probability.
 
-The mathematical details are pretty tough, so skipping it here. 
-
 
 
 It's pretty fast. 
@@ -481,6 +530,7 @@ TODO: Link paper and R package.
 
 For the examples I had to discretize all input features first to make the SBRL algorithm work. 
 I used frequency based binnning for that (aka quantiles).
+The examples are using a faster variant of BRL called Scalable Bayesian Rule Lists by Yang et. al (2016) [^sbrl].
 
 ```{r sbrl-cervical, eval = FALSE}
 library("sbrl")
