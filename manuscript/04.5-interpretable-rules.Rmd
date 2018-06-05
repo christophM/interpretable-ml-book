@@ -5,8 +5,8 @@ set.seed(42)
 
 # IF-THEN rules
 
-IF-THEN rules (also called decision rules) are simple statements consisting of a series of conditions and a prediction:
-An example: 
+IF-THEN rules (also called decision rules) are simple statements consisting of a series of conditions and a prediction.
+For example: 
 IF it rains today (condition) if it's April (another condition), THEN it will rain tomorrow (prediction). 
 
 keywords: decision rules/sets/lists, association rules
@@ -100,33 +100,37 @@ Rules made from trees have the nice attribute of covering the whole feature spac
 
 Let's start with a VERY simple strategy: Using the single, best feature to learn rules.
 
-## Theory: OneR
+## Learn one rule (OneR)
 
-The OneR algorithm ist the most simplest imaginable rule induction algorithm.
-Find the best (single) feature that explains the classification the best. 
-Continuous features are binned to make the categorical features.
-For all features, a cross table between feature and outcome classes are built. 
-It's a decision tree with only one split.
-It covers the whole feature space.
+The OneR algorithm is one of the simplest rule induction algorithm.
+It finds the feature that produces the best rules and uses this single feature to create decision rules.
+OneR can do classification but not regression.
 
+Despite the name OneR, the algorithm produces more than one rule: 
+It's actually one rule per unique feature value of the chosen best feature. 
+The name 'OneR' (which stands for one rule) is actually misleading.
+A better name might be OneFeatureClassifier or something.
 
-OneR Algorithm		
-- For each feature
-- For each value of that feature:
-- Create a rule which predicts the most frequent class for each level of the feature.
-- Calculate the total error of the rule.
+The algorithm is simple and fast:
+
+- Bin all continuous features.
+- For each feature, do:
+  - Create a cross table between feature levels and outcome classes. 
+  - For each feature level:
+    - Create a rule which predicts the most frequent class for each level of the feature (can simply be read from the cross table).
+  - Calculate the total error of the rules for the feature.
 - Choose the feature with the smallest total error.
 
-It's that easy.
-And it is guaranteed that it always covers the whole feature space. 
-
-http://www.saedsayad.com/oner.htm
-https://cran.r-project.org/web/packages/OneR/
-https://github.com/vonjd/OneR
+OneR always covers all instances of the dataset, since it uses all levels of the chosen feature.
+Missing values can be either treated as its own level or be imputed before.
 
 
+Another way to see OneR: 
+It's a decision tree with only one split.
 
-TODO: Example with table for how to compute the accuracy. Something similar to: http://www.saedsayad.com/oner.htm
+Let's look at an example how the best feature is chosen.
+The following table shows an artificial dataset about houses, containing information about location, size and if pets are allowed. 
+We are interested in learning a simple model to predict the value of a house.
 
 ```{r OneR-freq-table1}
 df = data.frame(
@@ -136,25 +140,30 @@ df = data.frame(
 )
 value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
 ```
-From this table we create all the cross tables for each feature with the class to predict:
+
+
+From this table, OneR creates the cross tables between each feature and the outcome:
 ```{r OneR-freq-table2}
 kable(table(df[,"location"], value))
 kable(table(df[,"size"], value))
 kable(table(df[,"pets"], value))
 ```
 
-For a feature, we go through the table row by row: 
-We use the class that has the highest occurence per feature value as the prediction and count how often it would be wrong.
+For each feature, we go through the table row by row: 
+Each feature level is the IF-part of a rule and the class with the highest occurence for the instances with this feature level is the prediction, the THEN-part of the rule.
+For example, a feature with 5 different levels produces 5 rules.
+Then, for each feature we compute the total error rate of the rules that are produced, which is simply the sum of the errors each rule of that feature makes.
 For example, the location has possible values, bad and good. 
 The predicted price class for houses in bad locations would be `low` and with this we make 2 mistakes, because two houses are actually medium priced.
 The predicted price class for houses in good locations would be `high` and with this we make 2 mistakes, because two houses are actually medium priced.
-All in all the accuracy of using the location feature is 6/10. 
-For the other rules it is 7/10 for the size feature and 6/10 for the pets feature 
+All in all the accuracy of using the location feature is 6/10.
+The accuracy is 7/10 for the size feature and 6/10 for the pets feature. 
+The size feature produces the rules with the lowest error (3/10) and will be used as the final model:
 
-Strictly speaking, we produce more than one rule: 
-It's actually one rule per unique feature value of the chosen best feature. 
-The name 'OneR' (which stands for one rule) is actually misleading.
-A better name might be OneFeatureClassifier or something.
+- IF size=small THEN PREDICT value=small
+- IF size=medium THEN PREDICT value=medium
+- IF size=big THEN PREDICT value=high
+
 
 OneR favors features with many possible levels, because it can more easily overfit the target: 
 Imagine a dataset with only noise and no signal, meaning that all features take on random values and have no predictive value for the target.
@@ -163,11 +172,13 @@ The features with more levels can now more easily overfit.
 The most extreme feature would be one that has a unique level for each instance from the data. 
 Now the OneR rule can perfectly overfit on the data. 
 Keep that in mind. 
-TODO: Explain strategy for ties.
-TODO: List strategies for binning of continuous features. There was some blogpost about it.
 
+An issue can be ties, i.e. when two features produce the same error rates.
+Solutions for ties are either to simply take the first feature with the best performance or the one with the lowest p-value of a chi-squared test.
+
+Let's try it out with some real data.
 We use the [cervical cancer classification task](#cervical) to test out the OneR algorithm. 
-The following rule is created:
+The following rules are created:
 ```{r oner-cervical}
 library("OneR")
 data("cervical")
@@ -181,9 +192,15 @@ rule.to.table = function(rule){
 
 kable(rule.to.table(rule))
 ```
-The age feature is chosen as the best predictive rule feature. 
-Since cancer is rare and the features just increase the risk a little, the prediction is still always 'Healthy'. 
+The age feature was chosen by OneR as the best predictive feature. 
+Since cancer is rare and for each rule, the majority is still healthy, the prediction is still always 'Healthy'. 
 Using the OneR algorithm is not useful in this case.
+The cross table between age category and cancer/healthy looks like this:
+
+```{r oner-cervical}
+kable(table(bin(cervical$Age), cervical$Biopsy))
+```
+
 
 We can also use the OneR algorithm for regression task by binning the continuous outcome into a few levels.
 This turns the regression problem into a classification problem.
@@ -200,18 +217,19 @@ kable(rule.to.table(rule), row.names = FALSE)
 The chosen feature is the year (which covers a time trend).
 In 2012 there are more bike rentals than in 2011, probably because the rental service became more popular.
 
-It should also be possible to use a continuous featue as outcome and predict the mean value per feature level instead of most frequent class. 
-The best feature can be chosen by selecting the one with the lowest mse.
+Now we move from a very simple algorithm to a more complex procedure (but still handable though).
 
-## Theory: Sequential Covering
 
-A simple algorithm to learn a single rule + a procedure to sequentially learn rules with the simple algorithm sequentially to eventually cover the whole feature space:
+
+## Sequential Covering
+
+Sequential covering is a procedure that uses an algorithm that can learn single rules to seequentially produce a decision list that covers the whole feature space:
 
 A very simple approach: 
-Find a really good rule on the dataset. 
-Remove all datapoints covered by the rule (no matter if classified correctly or not). 
-Repeat with remaining points until no points are left or some other stop condition is met.
-Results in disjunct rules.
+Find a really good rule for the data, which covers part of it. 
+Remove all datapoints covered by the rule, that is, any data point for which the conditions apply, no matter if classified correctly or not. 
+Repeat rule learning and removal of covered points with the remaining points until no points are left or some other stop condition is met.
+The result is a decision list.
 
 While there are many different ways to induce decision rules, I want to present a rather simple procedure which sequentially searches for rules that cover parts of the feature space, using the separate-and-conquer approach.
 
@@ -363,15 +381,13 @@ When all conditions match, then the right hand side of the rule is the predictio
 Because of the default rule it is guaranteed that there will always be a prediction.
 
 
+## Decision rules from decision trees
 There are also many other ways to create single rules. 
 Also there are many othe ways to create rule sets. 
 One is to grow a tree and turn it into rules. 
 This always works. 
 There are more sophisticated versions 
 For example the C4.5 RULES algorithm  (Quinlan, 1987)[^c4.5] adds some pruning and ranking of the rules
-
-## Decision rules from decision trees
-
 See RuleFit chapter.
 
 
@@ -519,6 +535,7 @@ data("bike")
 
 bike2 = bike
 bike2$label = bike2$cnt > 5000
+bike2$cnt = NULL
 bike2 = as.data.frame(lapply(bike2, function(x) {
   if(is.factor(x) || length(unique(x)) < 3) {
     as.factor(x)
@@ -527,12 +544,11 @@ bike2 = as.data.frame(lapply(bike2, function(x) {
     #discretize(x, breaks = max(length(unique(x))-1, 5))
   }
 }))
-bike2$label = bike2$cnt
-bike2$cnt = NULL
-sbrl(bike2, pos_sign = TRUE)
+rules = sbrl(bike2, pos_sign = TRUE, neg_sign = FALSE)
+rules
 ```
 
-## Advantages
+## Advantages of IF-THEN rules
 
 - Ultra easy to interpret: Probably the easiest from all interpretable models.
 - Can be as expressive as decision trees
@@ -545,9 +561,16 @@ No assumption about distributions of features or target.
 - Feature selection: Has integrated sparsity of results
 - Simple rules like from OneR can be used as baseline for more complex algorithms
 
-## Disadvantages
+## Disadvantages of IF-THEN rules
 
 - Research focused on classification and not regression.
+- Often the features also have to be categorical.
+That means numerical features have to be binned, if you want to use them. 
+There are lots of ways to bin a continuous feature:
+How many splits do you have? 
+Do you use fixed intervals? 
+Do you use quantiles?
+This is a non-trivial issue that is often neglected and one of the option simply applied (like I did in my examples).
 - Prone to overfitting (at least the older decision rule algorithm like XXX)
 - In multi-class siutations, the covering algorithm concentrates on one class at a time whereas decision tree learner takes into account all the classes.
 - Rules created from decision trees may be harder to interpret. 
@@ -568,7 +591,10 @@ No assumption about distributions of features or target.
 - Rule Set (Wang et al. 2016)
 - 1Rule (Malioutov et al. 2017)
 - https://github.com/Jasamba/Rule-Extraction-in-Python
-- OneR
+- OneR http://www.saedsayad.com/oner.htm
+https://cran.r-project.org/web/packages/OneR/
+https://github.com/vonjd/OneR
+
 
 
 Further readings: 
