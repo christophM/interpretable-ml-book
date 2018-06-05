@@ -127,6 +127,8 @@ Missing values can be either treated as its own level or be imputed before.
 
 Another way to see OneR: 
 It's a decision tree with only one split.
+This approach can be seen as fitting trees with only depth of only one, and splits are not necessarily binary as in CART.
+
 
 Let's look at an example how the best feature is chosen.
 The following table shows an artificial dataset about houses, containing information about location, size and if pets are allowed. 
@@ -197,7 +199,7 @@ Since cancer is rare and for each rule, the majority is still healthy, the predi
 Using the OneR algorithm is not useful in this case.
 The cross table between age category and cancer/healthy looks like this:
 
-```{r oner-cervical}
+```{r oner-cervical-confusion}
 kable(table(bin(cervical$Age), cervical$Biopsy))
 ```
 
@@ -231,19 +233,19 @@ Remove all datapoints covered by the rule, that is, any data point for which the
 Repeat rule learning and removal of covered points with the remaining points until no points are left or some other stop condition is met.
 The result is a decision list.
 
-While there are many different ways to induce decision rules, I want to present a rather simple procedure which sequentially searches for rules that cover parts of the feature space, using the separate-and-conquer approach.
+The approach of covering a part of the data, removing it and repeating is also called separate-and-conquer.
 
-This approach can be seen as fitting trees with only depth of only one, and splits are not necessarily binary as in CART.
 
-The covering algorithm for two classes (one positive, one negative):
+For now, let's assume we already have an algorithm that can produce a single rule that covers part of the data. 
+Then the covering algorithm for two classes (one positive, one negative) goes like this:
 
-- Start with an empty list of rules ($rlist$)
-- Learn a rule $r$ using learn-one-rule with all the data
-- while the rule set has not reached a quality threshold or some positive examples are not covered yet:
-- Add rule $r$ to $rlist$
-- Remove the data that is covered by rule $r$
-- use learn-one-rule on the reamining data
-- Return set of rules (sometimes called cover)
+- Start with an empty list of rules ($rlist$).
+- Learn a rule $r$.
+- While the rule set has not reached a quality threshold or some positive examples are not covered yet:
+  - Add rule $r$ to $rlist$.
+  - Remove the data that is covered by rule $r$.
+  - Learn another rule on the remaining data.
+- Return the decision list.
 
 In case of more than two target classes, we repeate the covering algorithm for each class, where the current class is treated as the positive class and all the others as the negative class.
 This is also called the one-versus-all strategy in classification.
