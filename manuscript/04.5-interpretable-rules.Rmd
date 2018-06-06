@@ -514,25 +514,26 @@ This recipe also shows the prior assumptions we make about the list length and t
 
 Once we can sample from the distribution of the decision lists, we can find the decision list that maximizes the posteriori likelihood, meaning it explains the data well (acccuracy), but is also interpretable because it has few and short rules, which is due to the priori distributions.
 
-Since we can't directly optimize this problem, we do Metropolis-Hastings algorithm: 
+Since we can't directly optimize this problem, we do Metropolis-Hastings sampling: 
 Starting from a random draw, we randomly either 1) move a rule to a different position in the list or 2) add a rule to the current decision list from the pre-mined rules 3) Remove a rule from the decision list. 
 Which of the rules is switched/added/deleted is also random.
 At each of this step, the algorithm evaluates the posteriori probability of the decision list (mix of how accuract it is and how much it satisfies the priori distributions).
 The Metropolis Hastings algorithm ensures that we sample more heavily the decision lists that are likely in terms of accuracy and prior.
-This procedure gives us lots of samples from the distribution of decision lists. 
+This procedure gives us lots of samples from the distribution of decision lists (a list of decision lists). 
 We end up with the posterior distribution of decision lists, but of course we would like to have a single decision list and not a distribution. 
-The BRL algorithm selects the decision list of the samples with the highte posterior probability.
+The BRL algorithm selects the decision list of the samples with the highest posterior probability.
 
+The examples are using a faster variant of BRL called Scalable Bayesian Rule Lists (SBRL) by Yang et. al (2016) [^sbrl].
 
+Let's see the SBRL in action.
+First we apply the SBRL algorithm to predict [risk for cervical cancer](#cervical).
+I had to discretize all input features first to make the SBRL algorithm work. 
+For that I binned the continuous features based on the frequency of the values (by quantiles): 
+If a continuous features is binned into 3 intervals by frequency, then the first interval contains 33% of the instances with the lowest feature value, then the second interval with the ones higher, then the rest with the heighest values.
 
-It's pretty fast. 
-TODO: Link paper and R package.
+We get the following rules:
 
-For the examples I had to discretize all input features first to make the SBRL algorithm work. 
-I used frequency based binnning for that (aka quantiles).
-The examples are using a faster variant of BRL called Scalable Bayesian Rule Lists by Yang et. al (2016) [^sbrl].
-
-```{r sbrl-cervical, eval = FALSE}
+```{r sbrl-cervical}
 library("sbrl")
 library("arules")
 data("cervical")
@@ -545,11 +546,42 @@ cervical2 = as.data.frame(lapply(cervical, function(x) {
     #discretize(x, breaks = max(length(unique(x))-1, 5))
   }
 }))
+
+get.sbrl.rules = function(x) {
+    res = lapply(1:nrow(x$rs), function(i) {
+        if (i == 1) 
+            sprintf("If      %s (rule[%d]) then positive probability = %.8f\n", 
+                x$rulenames[x$rs$V1[i]], x$rs$V1[i], x$rs$V2[i])
+        else if (i == nrow(x$rs)) 
+            sprintf("else  (default rule)  then positive probability = %.8f\n", 
+                x$rs$V2[nrow(x$rs)])
+        else sprintf("else if %s (rule[%d]) then positive probability = %.8f\n", 
+            x$rulenames[x$rs$V1[i]], x$rs$V1[i], x$rs$V2[i])
+    })
+    data.frame(rules = unlist(res))
+}
+
+
 cervical2$label = cervical2$Biopsy
 cervical2$Biopsy = NULL
-sbrl(cervical2[c("label", "Age")], pos_sign = "Cancer")
+rules = sbrl(cervical2, pos_sign = "Cancer", neg_sign = "Healthy", rule_maxlen = 2)
+kable(get.sbrl.rules(rules))
+```
+Notice how we get meaningful rules, since the prediction on the THEN-part is not the class outcome, but the predicted probability for cancer.
+
+The conditions were chosen from patterns that were pre-mined with the FP-Growth algorithm. 
+The following table displays the pool of conditions from which the SBRL algorithm could choose from by building a decision list.
+The maximum length allowed by me as a user was patterns with two conditions. 
+Here is a sample of ten patterns:
+
+```{r sbrl-cervical-premined}
+set.seed(1)
+kable(sample(rules$rulenames, size = 10), col.names = "pre-mined conditions")
 ```
 
+Next we apply the SBRL algorithm to the [bike rental prediction task](#bike).
+This only works by turning the regression problem of predicting bike counts into a binary classification task. 
+I arbitrarily created a classification task by creating a label that says if the bike counter was larger than 4000 bikes.
 
 ```{r sbrl-bike}
 library("sbrl")
@@ -557,7 +589,7 @@ library("arules")
 data("bike")
 
 bike2 = bike
-bike2$label = bike2$cnt > 5000
+bike2$label = bike2$cnt > 4000
 bike2$cnt = NULL
 bike2 = as.data.frame(lapply(bike2, function(x) {
   if(is.factor(x) || length(unique(x)) < 3) {
@@ -567,9 +599,11 @@ bike2 = as.data.frame(lapply(bike2, function(x) {
     #discretize(x, breaks = max(length(unique(x))-1, 5))
   }
 }))
-rules = sbrl(bike2, pos_sign = TRUE, neg_sign = FALSE)
-rules
+rules = sbrl(bike2, pos_sign = TRUE, neg_sign = FALSE, rule_maxlen = 3)
+kable(get.sbrl.rules(rules))
 ```
+
+
 
 ## Advantages of IF-THEN rules
 
