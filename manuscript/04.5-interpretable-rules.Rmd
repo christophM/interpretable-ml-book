@@ -99,7 +99,6 @@ Rules made from trees have the nice attribute of covering the whole feature spac
 - Learn assocation rules, then filter for the ones that have the target on the right hand side.
 
 
-
 There are lots of ways to build decision rule (lists/sets).
 This chapter will show you three of them:
 
@@ -379,48 +378,37 @@ Because of the default rule it is guaranteed that there will always be a predict
 
 ## Building a decision list from pre-mined rules
 
-In this section I will show you another approach to learn a decision list, which follows this general recipe:
+In this section I will show you another approach to learn a decision list, which follows this rough recipe:
 
-1. Pre-mine lots of rules from the data (potentially unsupervised).
+1. Pre-mine frequent patterns from the data (unsupervised), which can be used as conditions (IF-part) for IF-THEN rules.
 1. Construct a decision list from a selection of the pre-mined rules.
 
-One specific approach that uses this general recipe is called (Scalable) Bayesian Rule Lists (Letham et. al, 2015)[^brl], which are decision lists that use methods from Bayesian statistics to learn decision lists from rules pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree]
+One specific approach that uses this recipe is called (Scalable) Bayesian Rule Lists (Letham et. al, 2015)[^brl], which are decision lists that use methods from Bayesian statistics to learn decision lists from rules pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree]
 
 But let's start slowly:
 
-### Pre-mining of rules
+### Pre-mining of frequent patterns
 
-When we dive into the theory of association rule or frequent pattern mining, it is useful to keep the idea of a recommender system in your mind.
-For example many shopping websites show "People that bought this bycicle also bought this helmet" or movie recommder systems say something like "People who watched 'Princess Mononoke' and 'My Neighbor Totoro' also watched 'Spirited Away'". 
-These are association rules, which are a special kind of IF-THEN rule ("IF someone watched 'Princess Mononoke' THEN also 'Spirited Away'").
-Association rule mining or frequent pattern mining is the process of extracting lots of those rules from a dataset. 
-These algorithms are unsupervised machine learning algorithms meaning they don't need any label.
-An association rule is a decision rule when on the THEN-part the prediction is for the target outcome of interest.
-In our context, a pattern is the same as a feature value (e.g. size=medium), which is the combination of a feature (e.g. house size) and some level of that feature (e.g. medium).
-In the context of baskets or movies, the features are all binary, a user has watched a movie or not, so it's a bit easier there.
+A frequent pattern is the frequent (co-)occurence of feature levels.
+As a pre-processing step for the BRL algorithm, we use the features (at this step we don't need the target outcome) and extract freqently ocurring patterns from them.
+A pattern can be a single feature value (e.g. $\text{size=medium}$) or a combination of feature values, like $\text{size=medium}\land\text{location=bad}$.
 
-Probably the most popular pattern mining algorithm is the Apriori algorithm. 
-The Apriori algorithm works with to measurements to create assocations rules:
-
-Support, which is the frequency of a condition (feature level) in the dataset:
+The frequency of a pattern is measured with its support in the dataset:
 
 $$Support(x_j=A)=\frac{\sum_{i=1}^nI(x_{ji}=A)}{n}$$
 
 where $x_j=A$ is the feature level, $n$ the number of data points in the dataset and $I$ the indicator function which is $1$ if the feature has level $A$ else $0$.
-For example we if 20% of the houses have no balcony (and 80% one or more), then the support for $x_{balcony}=0$ would be 20%.
-The support can also be measured for combinations of feature levels, for example the support for $x_{balcony}=0\land{}x_{pets}="allowed"$.
+For example we if 20% of the houses have no balcony (and 80% one or more), then the support for the pattern $x_{balcony}=0$ would be 20%.
+The support can also be measured for combinations of feature levels, for example the support for $\text{balcony=0}\land\text{pets=allowed}$.
 
-The other measure is the accuracy of a rule (usually called the 'confidence', but in our context of rule learning it makes sense to say accuracy). 
-The accuracy is the probability that the prediction of a rule (THEN-part) is true, given that the conditions apply:
+There are many algorithms to find such frequent patterns, for example the Apriori algorithm or the FP-Growth tree. 
+Which one you use does not matter much, only the speed at which the patterns are found is different, but the resulting patterns are always the same.
 
-$$Accuracy((x_j=A)\rightarrow(y=B))=\frac{Support(x_j=A\land{}y=B)}{Support(x_j=A)}$$
+I'll give you a rough idea how the Apriori algorithm works for finding frequent patterns.
+Actually the Apriori algorithm has two parts, where the first part finds frequent patterns and the second part creates association rules.
+For this application, we are only interested in the frequent patterns generated in the first part. It is also possible to use the Apriori  
 
-
-The Apriori algorithm gets as input the dataset with categorical features (where the target is also treated like a categorical feature), the minimal support as decided by the user and the minimal confidence as decided by the user.
-The algorithm works in two steps:
-1) Find frequent combination of feature levels 2) construct assocation rules from the frequent combinations.
-
-For the first step, the Apriori algorithm starts with all feature levels that have a support larger than the minimal support set by the user. 
+For the first step, the Apriori algorithm starts with all feature levels that have a support larger than the minimal support defined by the user. 
 If the use says minimal support should be 10% and there are only 5% big houses, we would remove that feature value and only keep house=medium and house=big as patterns. 
 This does not mean that the houses are removed, it just means that $\text{size=big}$ will not be considered for an association rule.
 From the patterns with a single feature value, the Apriori algorithm tries to find iteratively combinations of higher order 2 to number of features.
@@ -428,33 +416,25 @@ Patterns are constructed by adding a feature value a logical AND, e.g. $\text{si
 Generated patterns with a support below the minimum support are removed.
 In the end we have all the frequent patterns.
 Any subset of a frequent pattern is again frequent, that's the the apriori property. 
-Makes sense: By removing a condition from a pattern, the reduced pattern can  only cover more or the same number of data points (support), but never less. 
+It intuitively makes sense: By removing a condition from a pattern, the reduced pattern can only cover more or the same number of data points (support), but never less. 
 For example, if 20% of the houses are $\text{size=medium}\land\text{location=good}$, then the support of houses that are only $\text{size=medium}$ is 20% or larger.
 The apriori property is used to reduce the number of patterns we have to check. 
 Only for frequent patterns we have to check patterns of higher order.
 
+Now we are done with pre-mining conditions for the Bayesian Rule List algorithm.
+But before we go into the details of BRL, I want to show you another way. 
+Other approaches suggest including the outcome of interest into the frequent pattern mining process and also executing the second part of the Apriori algorithm, which builds IF-THEN rules. 
+Since the algorithm is unsupervised, the THEN-part also contains feature values we are not interested in. 
+But we can filter for rules that only have the outcome of interest in the THEN-part.
+These rules already form a decision set, but it would also be possible to rank the rules, prune them, delete some or re-combine them somehow. 
 
-In the second step we create association rules from the frequent item sets that have at least the minimal support and the minimal accuracy. 
-Assocation rules have one item on the right hand side (THEN-part) and arbitrary number of conditions.
-For example from the frequent pattern 'size=medium AND location=bad AND value=medium' we would create 3 rule candidates and check them for support and accuracy:
-$\text{size=medium}\land\text{location=bad}\rightarrow\text{value=medium}$, 
-$\text{size=medium}\land\text{value=medium}}\rightarrow\text{location=bad}$ and 
-$\text{value=medium}\land\text{location=bad}\rightarrow\text{size=medium}$ 
-But since we are interested in only predicting the value we would only consider the first rule.
-This second part produces lots of association rules.
-When we use those in the context of a supervised machine learning problem like classification, where we know the label, we are not interested in all the rules that are created.
-We can still use those rules by keeping only the ones that have the target outcome on the right hand side (the THEN-part).
-Once we have mined those rules, filtered for those that have the outcome of interest in the THEN-part, we already have a decision set. 
-We would only need some mechanism how to average predictions in the case of overlapping rules
-The outcome of this procedure is a lot of rules, which might be overlapping. 
-We could now simply build a decision set (with majority vote for example), but this is not necessarily interpretable, since the rules might be heavily overlapping and there could be hundreds or thousands of rules. 
+In the current approach however, we only need the frequent patterns and the learn the THEN-part and how to arrange the patterns into a decision list using Bayesian statistics.
 
-So there are more elaborate approaches:
 
 ## (Scalable) Bayesian Rule Lists
 
-We want to reduce the number of the pre-mined rules, prioritize short rules over long ones and get have a decision list (=with order) and not a decision set.
-The Bayesian Rule List (BRL) approach solves this by introducing a likelihood function with some prior distributions for the length of rules (preferring shorter ones) and the number of rules (also preferring less rules over more). 
+We want to reduce the number of the pre-mined conditions, prioritize short conditions over long ones and create a decision list (=with order).
+The Bayesian Rule List (BRL) approach solves this by introducing a likelihood function with some prior distributions for the length of conditions (preferring shorter ones) and the number of rules (also preferring less rules over more). 
 
 BRL can be used in any multi-class classification setting and requires all input features to be categorized.
 Continuous features can be used if cut into intervals and made into a categorical feature (either fixed intervals or by distribution, i.e. quantiles).
@@ -605,59 +585,78 @@ kable(get.sbrl.rules(rules))
 
 
 
-## Advantages of IF-THEN rules
+## Advantages
 
-- Ultra easy to interpret: Probably the easiest from all interpretable models.
-- Can be as expressive as decision trees
-- Straightforward to generate
-- Fast to do the prediction
-- Rule set can be more clearer than decision trees, because decision tree has replicated subtrees often.
+This section covers the advantages of IF-THEN rules in general.
+
+- IF-THEN rules are **easy to interpret**.
+They are probably the easiest from all interpretable models.
+This statement applies only if the number of rules is short, the conditions of the rules are short (maximum 3 I would say) and if the rules are organized in a decision list or a non-overlapping decision set.
+- Decision rules can be **as expressive as decision trees, while being more compact**. 
+Decision tree often has replicated subtrees.
+- There are many ways to create decision rules.
+- The **prediction with IF-THEN rules is fast**, since only a few binary statements have to be checked to see which rules apply.
 - Compared to logistic regression and linear models: 
 No assumption about distributions of features or target.
-- For trees: No need to transform the features.
-- Feature selection: Has integrated sparsity of results
-- Simple rules like from OneR can be used as baseline for more complex algorithms
+- Decision rules are **robust** against monotone transformations of the input features, because the only thing that changes is the threshold in the condition.
+They are also robust against outliers, since the only thing that matters is if a condition applies or not.
+- IF-THEN rules usually generate very sparse models, meaning not many features are included.
+They **select only the relevant features** for the model.
+A linear model for example, by default, assigns a weight to every input feature.
+Features that are irrelevant can simply be ignored by IF-THEN rules.
+- Simple rules like from OneR **can be used as baseline** for more complex algorithms.
 
-## Disadvantages of IF-THEN rules
+## Disadvantages 
 
-- Research focused on classification and not regression.
-- Often the features also have to be categorical.
+This section covers the disadvantages of IF-THEN rules in general.
+
+
+- The research and literature for IF-THEN rules is focused on classification and almost **completely neglecting regression**.
+While it's always possible to categorize a continuous target and turn it into a regression problem, it's always a loss of information.
+In general approaches a more attractive when they can be used for both regression and classification.
+- Often the **features also have to be categorical**.
 That means numerical features have to be binned, if you want to use them. 
-There are lots of ways to bin a continuous feature:
-How many splits do you have? 
-Do you use fixed intervals? 
-Do you use quantiles?
-This is a non-trivial issue that is often neglected and one of the option simply applied (like I did in my examples).
-- Prone to overfitting (at least the older decision rule algorithm like XXX)
-- In multi-class siutations, the covering algorithm concentrates on one class at a time whereas decision tree learner takes into account all the classes.
-- Rules created from decision trees may be harder to interpret. 
-- Are bad at describing linear relationships between the features and the output.
+There are many ways to cut a continuous feature into intervals, but this is not as trivial and comes with many questions, where there is usually not a correct answer:
+Into how many intervals should the feature be split? 
+What's the splitting criteria: Fixed interval lengths or quantiles or something else?
+Dealing with binning of continuous features is a non-trivial issue that is often neglected and one of the option simply applied (like I did in my examples).
+- Many of the older rule fitting algorithms are prone to overfitting. 
+The algorithms presented here all have at least some safeguards to prevent overfitting: 
+OneR is limited because it can only use a single feature (only problematic if the feature has too many levels or if there are lots of features, which equates to the multiple testing problem), RIPPER does pruning and Bayesian Rule Lists impose a prior distribution on the decision lists.
+- Decision rules are **bad at describing linear relationships** between the features and the output.
+That's an issue they share with decision trees. 
+Decision trees and rules can only produce step-like prediction functions, where the prediction sharply changes when a feature changes and not linearly with a features.
+This is related with the issue that the inputs have to be categorical (in decision trees they are implicitly made categorical by finding split points in them).
 
-## Software and Alternatives
+
+
+
+
+
+
+## Software
 
 (Notice how they all have fancy abbreviations in caps lock.)
-- RIPPER
-- OPUS
-- CPAR (Yin et. al 2003)
-- FRL (Wang et al. 2015)
-- BRL (Letham et al. 2015) 
-- SBRL: Only classification and only categorial features. Uses Bayesian statistics for learning the rules and a clever bit-wise implementation. Builds a one-sided tree or decision list.
-- CORELS https://github.com/nlarusstone/corels
-- TLBR (Su et al. 2015)
-- IDS (Lakkaraju et al. 2016)
-- Rule Set (Wang et al. 2016)
-- 1Rule (Malioutov et al. 2017)
-- https://github.com/Jasamba/Rule-Extraction-in-Python
-- OneR http://www.saedsayad.com/oner.htm
-https://cran.r-project.org/web/packages/OneR/
-https://github.com/vonjd/OneR
+- OneR. There is an [R package `OneR`](https://cran.r-project.org/web/packages/OneR/). 
+- RIPPER: In Weka, available for Java, R, Python and so on. I used the R implementation of JRIP RWeka package. TODO: Cite
+- SBRL: Only classification and only categorial features. Uses Bayesian statistics for learning the rules and a clever bit-wise implementation. Builds a one-sided tree or decision list. Available as R package and in Python or the [pure C implementation](https://github.com/Hongyuy/sbrlmod).
+
+
+## Alternatives
+
+I want even attempt to create an exhaustive list of alternatives, but rather point towards some more recent research and summarizing work. 
+
+- I recommend the book 'Foundations of Rule Learning' from Fuernkranz et. al (2012)[^fuernkranz]. 
+It's an extensive work on rule learning, for the ones who want to dive deeper into the topic.
+It gives a holistic framework for thinking about rule learning and features many rule learning algorithms.
+- I also recommend to checkout [Weka rule learners](https://www.eecs.yorku.ca/tdb/_doc.php/userg/sw/weka/doc/weka/classifiers/rules/package-summary.html), which implements RIPPER, M5Rules, OneR, PART and many more.
+- Another approach for building decision lists, that have some guarantee to deliver an optimal decision list structure, is called [CORELS](https://github.com/nlarusstone/corels) Certifiable Optimal RulE ListS).
 
 
 
-Further readings: 
-Foundations of Rule Learning. Extensive book on rule learning.
+[^corels]: Angelino, Elaine, et al. "Learning Certifiably Optimal Rule Lists." Proceedings of the 23rd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining. ACM, 2017.
 
-
+[^fuernkranz]: Fuernkranz, J., Gamberger, D., & Lavrač, N. (2012). Foundations of Rule Learning. Foundations of Rule Learning. https://doi.org/10.1007/978-3-540-75197-7_2
 
 [^oner]: R. C. Holte (1993). Very simple classification rules perform well on most commonly used datasets. Machine Learning, 11, 63–91.
 
