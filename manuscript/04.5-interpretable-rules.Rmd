@@ -3,140 +3,133 @@ devtools::load_all("../")
 set.seed(42)
 ```
 
-## IF-THEN decision rules
+## Decision rules (IF-THEN)
 
-IF-THEN rules (also called decision rules) are simple statements consisting of a series of conditions and a prediction.
+A decision rule is a simple IF-THEN statement consisting of a condition (sometimes called antecedents) and a prediction.
 For example: 
-IF it rains today (condition) if it's April (another condition), THEN it will rain tomorrow (prediction). 
+IF it rains today if it's April (condition), THEN it will rain tomorrow (prediction). 
+A single decision rule or a combination of multiple rules can be used to make predictions.
 
-keywords: decision rules/sets/lists, association rules
+keywords: decision rules, decision sets, decision lists, association rules, IF-THEN rules
 
-
-Decision rules are the most interpretable prediction models.
-They are very close to natural language and the way we think. 
-Assuming we use sensible, understandable features and keep the number of conditions within the if statement short.
+Decision rules follow a general structure:
+IF the condition applies THEN make prediction.
+Decision rules are arguably the most interpretable prediction models.
+Their IF-THEN structure semantically resembles natural language and the way we think, assuming the condition is constructed from intelligble features and the length of the condition (number of $feature=value$ pairs connected with an AND) and assuming there are not too many rules.
 In programming it's very natural to write IF-THEN rules.
-What's new in machine learning is that these types of rules are learned by the machine.
+New with machine learning is that these types of rules are learned by an algorithm.
 
-They have the following general structure:
-RULE: IF all conditions apply THEN make prediction.
+Imagine using an algorithm to learn decision rules fro predicting the value of a house ($low$, $medium$ or $high$)
+One decision rule learned by that model could be:
+If a flat is bigger than 100 square meters and has a garden the value is high or more formally:
+IF $size>100\land{}garden=1$ THEN $value=high$.
+Sometimes decision rules are also written like this:
+$(size>100)\land(garden=1)\Rightarrow{}(value=high)$.
 
-One decision rule from a model predicting rents could be:
-If a flat is bigger than 100 square meters and has a garden the value is high.
 
 Let's split that up:
-- 'Flat is bigger than 100 square meters' is the first condition in the IF-part.
-- 'Flat has a garden' is the second condition in the IF-part.
+
+- $size>100$ is the first condition in the IF-part.
+- $garden=1$ is the second condition in the IF-part.
 - Both are connected with an 'AND', so both have to be true for the rule to apply.
-- Predicted outcome (THEN) is that the value is high.
+- The predicted outcome (THEN) is that $value=high$.
 
-How good is a rule?
-For this we can look at two measures: accuracy and coverage.
 
-- **Accuracy of a rule**: 
-The accuracy of a rule is a measurement for how good the rule is for the instances it covers. 
-Different for regression and classification. 
-In classification you can measure the missclassification rate of the rule. 
-In regression the mean squared error of the rule.
-- **Coverage of a rule**:
-A rule applies to a certain region of the feature space. 
-This is called the coverage of the rule. 
-It can also expressed to how many instances in the dataset it applies, or if you know the distribution, then it can even be measured as percentage of the population it covers. 
-For example a rule for house value that says: 
-A house that is in a nice area costs 400k. 
-And 10% percent of all houses are in nice areas. 
-Then the rule has a coverage of 10%. 
+A decision rule uses at least one $feature=value$ statement in the conditions, without any upper limit how many more can be added with an 'AND'.
+An exception is the default rule, which has no explicit IF-part applies when no other rule applies, but more on that later.
 
-This example is very nice and clean, because it contains only one rule.  
-Usually you need more rules to cover the prediction problem at hand. 
-To predict appartment you might not want to learn only one rule, but maybe 10, or 20.
+How do we judge if a given decision rule is useful?
+The usefulness of a decision rule is usually summarized with two numbers: accuracy and support.
+
+
+**Support (or coverage) of a rule**:
+The percentage of the number of instances for which the condition of a rule applies is called the support of a rule.
+For example, let's take the rule $(size=big)\land(location=good)\Rightarrow(value=high)$ for predicting house values.
+Let's say for 100 of 1000 houses the rule applies, because they are big and in a good location, then the support of the rule is 10%.
+The prediction (IF-part) is not important for computing the support.
+
+**Accuracy (or confidence) of a rule**: 
+The accuracy of a rule is a measurement for how accurate the rule is in predicting the correct class for the instances for which the condition of the rule applies. 
+For example: 
+Let's say from the 100 houses, where the rule with condition $size=big$ applies, 85 have $value=high$, 14 $value=medium$ and 1 $value=low$, then the accuracy of the rules is 85%.
+
+
+There is usually a tradeoff between accuracy and support:
+By adding more features in the condition, we can achieve higher accuracy, but lose support.
+For creating a good classifier, you need more than one rule.
+To predict the value of a house you might need to learn not only one rule, but maybe 10 or 20.
 Then things can become more complicated: 
 
-1. Rules can be overlapping: 
-What if I want to predict the value for a new flat and two or more rules apply, giving conflicting predictions?
+1. Rules can overlap: 
+What if I want to predict the value for a new flat and two or more rules apply, implying conflicting predictions?
 1. No rule applies:
 What if I want to predict the value for a new flat and none of the rules apply?
 
-In case of multiple rules, we distinguish lists (ordered) and sets (unordered) of rules:  
+There are two major strategies for dealing with multiple rules:
+decision lists (ordered) and decision sets (unordered). 
+Both strategies imply different solutions for solving the problem of overlapping rules. 
 
-- **Decision list**: 
-An ordered list of conjunctive rules (order is important). 
-They are basically one-sided decision trees. 
+A **decision list** is an ordered list of rules. 
+When the first rule applies to an instance, we use the prediction of the first rule. 
+If not, we go to the next rule and check if it applies and so on.
+Decision lists are one-sided decision trees. 
 The first rule is the root node. 
-One of the child nodes is already the terminal node with the prediction when the first rule applies. 
-The second child is the second rule. 
-This repeats for all the rules. 
-Decision lists solve the problem of rule overlaps by introducing an order to the rules.
-Easy to make a prediction if it is an ordered decision list, because the rules are tied in order. 
-The first rule where the conditions apply to the instance that shall be classified is used. 
-And usually there is some default rule when none of the other rules fires which predicts the majority class of the uncovered instances for example.
-- **Decision set**: 
-A bunch of rules without an order (in contrast to a decision list). 
-In a set, the rules are either mutually exclusive, or there is some strategy to resolve conflicts.
-- Mutually exclusive rules: Rules are independent of each other and every recored is covered at most by one rule. 
-Conflict resolution if many rules are triggered is often done by some measurement of the quality of the rule (accuracy, coverage, cost-based missclassification, etc.)
-To make a prediction, either a single rule applies and we use that prediction or, with multiple rules applying, we use the conflict resolution (e.g. majority vote) to make the prediction.
+Decision lists solve the problem of overlapping rules by introducing an order.
+
+A **decision set** is a bunch of rules without an order (in contrast to a decision list). 
+In a set, the rules are either mutually exclusive, or there is some strategy to resolve conflicts, like majority voting, potentially weighted by the individual rule accuracies or other quality measures.
+To make a prediction, either a single rule applies and we use the attached prediction or when multiple rules apply, we use the conflict resolution (e.g. majority vote) to make the prediction.
 Interpretability suffers potentially when multiple rules apply.
 
 
-Both decision rules and decision lists can suffer from the problem that no rule applies to an instance. 
-This can be solved by introducing a default rule. 
-The default rule is the rule the applies when no other rule applies.
+Both decision lists and sets can suffer from the problem that no rule applies to an instance. 
+This can be resolved by introducing a default rule. 
+The default rule is the rule that applies when no other rule applies.
 This can be used in both decision lists and decision sets.
-The default rule can be the most common outcome of the training data that is not covered by other rules.
-If a set or list of rules covers the whole feature space, we call it exhaustive.
+The prediction of the default rule is often the most frequent class of the data points which are not covered by other rules.
+If a set or list of rules covers the whole feature space, we call it exhaustive. 
+By adding a default rule, a set or list is automatically exhaustive.
 
 
-There are many ways how to induce those kind of rules from a training dataset.
+There are many ways to learn rules from data and the book does (by far not) not cover all of them.
+This chapter will show you three of them.
+The algorithms are chosen to cover a broad range of general ideas for learning rules, so all three are very different approaches.
 
-Methods to learn:
-- Directly from data. 
-This bullet point covers the most algorithms.
-- Decision tree converted to rules.
-Each path through the tree is one rule.
-Rules made from trees have the nice attribute of covering the whole feature space and being mutually exclusive.
-- Learn other model, then extract rules
-- Learn assocation rules, then filter for the ones that have the target on the right hand side.
+1. **OneR**: Learning rules from a single feature.
+OneR is great for its simplicity, interpretability and use as a benchmark.
+1. **Sequential covering**: Covering the data sequentially with rules.
+Sequential covering is a general procedure used by many rule learning algorithms and as such important as basic knowledge.
+1. **Bayesian Rule Lists**: Combining pre-mined frequent feature values into a decision list using Bayesian statistics. 
+This is a more sophisticated approach. 
+It's interesting because it uses pre-mined patterns, a common approach used by many rule learning algorithms.
+Additionally, in contrast to the other examples, it's using a statistical approach.
 
-
-There are lots of ways to build decision rule (lists/sets).
-This chapter will show you three of them:
-
-1. Building rules from a single feature.
-1. Covering algorithm: Covering the dataset sequentially with rules.
-1. Pre-mined rules combination: Pre-mining rules and combining them into a decision list.
-
-Another way is ripping apart decision trees as used in the [RuleFit algorithm](#rulefit).
 Let's start with the simplest: Using the single, best feature to learn rules.
 
 ### Learn One Rule (OneR)
 
 The OneR algorithm is one of the simplest rule induction algorithm.
-It finds the feature that produces the best rules and uses this single feature to create decision rules.
-OneR can do classification but not regression.
+It chooses a single feature which produces the best decision rules.
 
 Despite the name OneR, the algorithm produces more than one rule: 
 It's actually one rule per unique feature value of the chosen best feature. 
-The name 'OneR' (which stands for one rule) is actually misleading.
-A better name might be OneFeatureClassifier or something.
+A better name would be OneFeatureRules.
 
 The algorithm is simple and fast:
 
-- Bin all continuous features.
-- For each feature, do:
-  - Create a cross table between feature levels and outcome classes. 
-  - For each feature level:
-    - Create a rule which predicts the most frequent class for each level of the feature (can simply be read from the cross table).
-  - Calculate the total error of the rules for the feature.
-- Choose the feature with the smallest total error.
+1. Bin all continuous features.
+1. For each feature, do:
+    -Create a cross table between the feature levels and the outcome classes. 
+    - For each feature level: Create a rule which predicts the most frequent class for each level of the feature (can simply be read from the cross table).
+    - Calculate the total error of the rules for that feature.
+1. Choose the feature with the smallest total error.
 
 OneR always covers all instances of the dataset, since it uses all levels of the chosen feature.
-Missing values can be either treated as its own level or be imputed before.
+Missing values can be either treated as an additional level or be imputed before.
 
 
-Another way to see OneR: 
-It's a decision tree with only one split.
-This approach can be seen as fitting trees with only depth of only one, and splits are not necessarily binary as in CART.
+OneR can be seen as a decision tree with only one split.
+The split is not necessarily binary as in CART, but depends on the number of unique feature values.
 
 
 Let's look at an example how the best feature is chosen.
@@ -150,45 +143,48 @@ df = data.frame(
   pets = c("yes", "no", "no", "no", "only cats", "only cats", "yes", "yes", "yes", "no")
 )
 value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
+value.f = factor(paste("value=", value, sep = ""), levels = c("value=low", "value=medium", "value=high"))
+kable(df)
 ```
 
 
-From this table, OneR creates the cross tables between each feature and the outcome:
+OneR creates the cross tables between each feature and the outcome:
+
 ```{r OneR-freq-table2}
-kable(table(df[,"location"], value))
-kable(table(df[,"size"], value))
-kable(table(df[,"pets"], value))
+kable(table(paste0("location=", df[,"location"]), value.f))
+kable(table(paste0("size=", df[,"size"]), value.f))
+kable(table(paste0("pets=", df[,"pets"]), value.f))
 ```
 
 For each feature, we go through the table row by row: 
-Each feature level is the IF-part of a rule and the class with the highest occurence for the instances with this feature level is the prediction, the THEN-part of the rule.
-For example, a feature with 5 different levels produces 5 rules.
-Then, for each feature we compute the total error rate of the rules that are produced, which is simply the sum of the errors each rule of that feature makes.
-For example, the location has possible values, bad and good. 
-The predicted price class for houses in bad locations would be `low` and with this we make 2 mistakes, because two houses are actually medium priced.
-The predicted price class for houses in good locations would be `high` and with this we make 2 mistakes, because two houses are actually medium priced.
-All in all the accuracy of using the location feature is 6/10.
-The accuracy is 7/10 for the size feature and 6/10 for the pets feature. 
-The size feature produces the rules with the lowest error (3/10) and will be used as the final model:
+Each feature level is the IF-part of a rule;
+the most frequent class for the instances with this feature level is the prediction, the THEN-part of the rule.
+For example, the size feature with the levels $small$, $medium$ and $big$ procuces three rules.
+For each feature we compute the total error rate of the rules that are produced, which is the sum of the errors.
+For example, the location feature has possible values, $bad$ and $good$. 
+The most frequent value for houses in bad locations is $low$ and by using $low$ as the prediction, we make two mistakes, because two houses have a $medium$ value.
+The predicted price class for houses in good locations is $high$ and again we make two mistakes, because two houses have a $medium$ value.
+The error we make by of using the location feature is 4/10, for the size feature it's 3/10  and 4/10 for the pets feature. 
+The size feature produces the rules with the lowest error and will be used for the final OneR model:
 
-- IF size=small THEN PREDICT value=small
-- IF size=medium THEN PREDICT value=medium
-- IF size=big THEN PREDICT value=high
+- IF $size=small$ THEN  $value=small$
+- IF $size=medium$ THEN  $value=medium$
+- IF $size=big$ THEN  $value=high$
 
 
-OneR favors features with many possible levels, because it can more easily overfit the target: 
+OneR favors features with many possible levels, because those features can more easily overfit the target.
 Imagine a dataset with only noise and no signal, meaning that all features take on random values and have no predictive value for the target.
 Some features have more levels than others. 
 The features with more levels can now more easily overfit. 
-The most extreme feature would be one that has a unique level for each instance from the data. 
-Now the OneR rule can perfectly overfit on the data. 
-Keep that in mind. 
+A feature that has a unique level for each instance from the data would perfectly predict the whole training dataset.
+A solutiion would be to split the data into training and validation sets, learn the rules on the training data and evaluate the total error for choosing the feature on the validation set.
 
-An issue can be ties, i.e. when two features produce the same error rates.
-Solutions for ties are either to simply take the first feature with the best performance or the one with the lowest p-value of a chi-squared test.
+Another issue are ties, i.e. when two features produce the same total error.
+OneR solves ties by either taking the first feature with the lowest error or the one with the lowest p-value of a chi-squared test.
 
-Let's try it out with some real data.
+Let's try out OneR with real data.
 We use the [cervical cancer classification task](#cervical) to test out the OneR algorithm. 
+All continuous input features were binned into five intervals by frequency.
 The following rules are created:
 ```{r oner-cervical}
 library("OneR")
@@ -201,21 +197,26 @@ rule.to.table = function(rule){
   dt
 }
 
-kable(rule.to.table(rule))
+kable(rule.to.table(rule), row.names = FALSE)
 ```
+
 The age feature was chosen by OneR as the best predictive feature. 
-Since cancer is rare and for each rule, the majority is still healthy, the prediction is still always 'Healthy'. 
+Since $Cancer$ is rare and for each rule, the majority is still $Healthy$, the prediction is still always $Healthy$. 
 Using the OneR algorithm is not useful in this case.
-The cross table between age category and cancer/healthy looks like this:
+The cross table between the 'Age' intervals and $Cancer$/$Healthy$ looks like this:
 
 ```{r oner-cervical-confusion}
-kable(table(bin(cervical$Age), cervical$Biopsy))
+tt = table(paste0("Age=", bin(cervical$Age)), cervical$Biopsy)
+kable(tt, col.names = paste0("# ", colnames(tt)))
 ```
 
+The output would be more informative if OneR would return the percentage of instances with the majority class as a prediction instead of only the label of the majority class.
 
-We can also use the OneR algorithm for regression task by binning the continuous outcome into a few levels.
-This turns the regression problem into a classification problem.
-That's what we do with the regression task of predicting [bike rentals](#bike):
+
+OneR can't do regression. 
+But we can turn a regression task into a classification task by cutting the continuous outcome into intervals.
+We apply this trick to predict the number of [bike rentals](#bike) with OneR, by cutting the bike count into it's four quartiles.
+The following table shows the chosen feature:
 
 ```{r oner-bike}
 data("bike")
@@ -227,50 +228,47 @@ rule = OneR::OneR(cnt ~ ., data = bike2)
 kable(rule.to.table(rule), row.names = FALSE)
 ```
 
-The chosen feature is the year (which covers a time trend).
-In 2012 there are more bike rentals than in 2011, probably because the rental service became more popular.
+The chosen feature is the month.
+The month feature has (surprise!) 12 feature levels, which is more than levels than most other features.
+So there is some danger of overfitting. 
+On the more optimistic side: the month feature can handle the seasonal trend (e.g. low rental numbers in winter) and seems reasonable.
 
-Now we move from a very simple algorithm to a more complex procedure (but still handable though).
-
-
+Now we move from the simple OneR algorithm to a more complex procedure involving rules with more complex conditions from multiple features: Sequential Covering.
 
 ### Sequential Covering
 
-Sequential covering is a procedure that uses an algorithm that can learn single rules to seequentially produce a decision list that covers the whole feature space:
+Sequential covering is a general procedure that repeatedly applies an algorithm that learns a single rule to produce a decision list (or set) that covers the whole feature space rule by rule.
+Many rule learning algorithms are variants of the sequntial covering algorithm.
+This chapter introduces the main recipe and uses a variant, the RIPPER algorithm, for the examples.
 
-A very simple approach: 
-Find a really good rule for the data, which covers part of it. 
-Remove all datapoints covered by the rule, that is, any data point for which the conditions apply, no matter if classified correctly or not. 
-Repeat rule learning and removal of covered points with the remaining points until no points are left or some other stop condition is met.
-The result is a decision list.
-
-The approach of covering a part of the data, removing it and repeating is also called separate-and-conquer.
+The idea is simple:
+First, find a good rule for the data, which applies to a part of the data.
+Remove all data points which are covered by the rule, that is, any data point for which the conditions apply, no matter if the points are classified correctly or not. 
+Repeat the rule learning and removal of covered points with the remaining points until no points are left or some other stop condition is met.
+The result is a decision list. 
+This approach of covering a part of the data, removing it and repeating is called 'separate-and-conquer'.
 
 
 For now, let's assume we already have an algorithm that can produce a single rule that covers part of the data. 
-Then the covering algorithm for two classes (one positive, one negative) goes like this:
+The sequential covering algorithm for two classes (one positive, one negative) works like this:
 
 - Start with an empty list of rules ($rlist$).
 - Learn a rule $r$.
-- While the rule set has not reached a quality threshold or some positive examples are not covered yet:
-  - Add rule $r$ to $rlist$.
-  - Remove the data that is covered by rule $r$.
-  - Learn another rule on the remaining data.
+- While the list of rules is below some quality threshold or while some positive examples are not covered yet:
+    - Add rule $r$ to $rlist$.
+    - Remove all data points that are covered by rule $r$.
+    - Learn another rule on the remaining data.
 - Return the decision list.
 
-In case of more than two target classes:
+For multi-class settings, the approach has to be modified.
 First the classes are ordered by increasing prevalence.
-RIPPER starts with the least prevalent class, learns a rule for it, removes all instances covered, then moves on to the second least prevalent class and so on. 
-The current class is always treated as the positive class and all classes with higher prevalence as the single negative class.
+The sequential covering algorithm starts with the least prevalent class, learns a rule for it, removes all instances covered, then moves on to the second least prevalent class and so on. 
+The current class is always treated as the positive class and all classes with higher prevalence as the negative class.
 The last class is the default rule.
 This is also called the one-versus-all strategy in classification.
 
 
-This second part of repeating the single rule fitting is also called covering algorithm. 
-
-
-
-```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. The approach is called separate-and-conquer."}
+```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. The approach is called separate-and-conquer. For visualization purposes, the features x1 and x2 are continuous, but most rule learning algorithms require categorical features."}
 set.seed(42)
 n = 100
 dat = data.frame(x1 = rnorm(n), x2 = rnorm(n))
@@ -280,10 +278,12 @@ dat$class = factor(dat$class)
 min.x1 = min(dat$x1)
 min.x2 = min(dat$x2)
 p1 = ggplot(dat) + geom_point(aes(x = x1, y = x2, color = class))+ 
-  scale_color_discrete(guide = "none")
+  scale_color_discrete(guide = "none") + 
+  ggtitle("Step 0: Data")
 p2 = ggplot(dat) + 
   geom_rect(xmin = -3, xmax = 0,   ymin = -2, ymax = -0.5, color = "black", fill = NA) + geom_point(aes(x = x1, y = x2, color = class)) + 
-  scale_color_discrete(guide = "none")
+  scale_color_discrete(guide = "none")+ 
+  ggtitle("Step 1: Find rule")
 
 dat.reduced = filter(dat, !(x1 <= 0 & x2 <= -0.5))
 
@@ -292,32 +292,38 @@ p3 = ggplot(dat.reduced) +
   geom_point(aes(x = x1, y = x2, color = class)) + 
   scale_x_continuous(limits = c(min.x1, NA)) + 
   scale_y_continuous(limits = c(min.x2, NA)) + 
-  scale_color_discrete(guide = "none")
+  scale_color_discrete(guide = "none")+ 
+  ggtitle("Step 2: Remove covered instances")
 
-gridExtra::grid.arrange(p1, p2, p3, ncol = 2)
+
+p4 = p3 + 
+  geom_rect(xmin = 0.8, xmax = 2.5, ymin = -1.5, ymax = 1.5, color = "black", fill = NA)  + 
+  ggtitle("Step 3: Find next rule")
+
+gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
 
 ```
 For example: 
-We have a house value dataset and no rules learned yet. 
+We have a task and dataset for predicting the values of houses from size, locatiion and if pets are allowed.
 We learn the first rule, which turns out to be: 
-'If the house is big and in a good neighbourhood, then the value of the house is high'. 
-Then we remove all the big houses in a good neighbourhood.
-With the remaining data we search the next rule: 
-Maybe: 'If the house is in a good neighbourhood, then the value is medium' (Note that this rule is learned on data with big houses in good neighbourhoods removed, so only medium and small houses in good neighbourhoods remain).
+'If $size=big$ and $location=good$, then $value=high$'.
+Then we remove all the big houses in a good neighbourhood from the dataset.
+With the remaining data we learn the next rule: 
+Maybe: 'If $location=good$, then $value=medium$' (Note that this rule is learned on data with big houses in good neighbourhoods removed, so only medium and small houses in good neighbourhoods remain).
 
 
-But how do we generate a single rule? 
-The OnR algorithm would not work, since it would already cover the whole feature space.
-But ther are many other ways. 
-One is learning a single rule with beam search:
+How do we learn a single rule? 
+The OnR algorithm would be useless here, since it would always cover the whole feature space.
+But there are many other ways. 
+One way is learning a single rule from a decision tree with beam search:
 
-- Build a decision tree (can be a CART or some other algorithm).
-- Start at the root node and recursively choose the purest node (e.g. lowest missclassification rate)
-- The majority class of the node we end up in is selected as the rule's prediction and the split conditions in the features leading to that node are the rule conditions.
+- Build a decision tree (withCART or some other tree learning algorithm).
+- Start at the root node and recursively choose the purest node (e.g. with the lowest missclassification rate).
+- The majority class of the node we end up in is used as the rule's prediction; the path leading to that node is used as the rule condition.
 
-The following figure visualizes the search:
+The following figure visualizes the beam search in a tree:
 
-```{r learn-one-rule, fig.cap = "Learning one rule by using a decision tree. A decision tree is grown to predict the target of interest. To extract a single, accurate rule, we go at each split to the node which locally produces the purest subset (i.e. with highest accuracy of target classes) and add the split value to the  rule condition. The prediction of the rule is the majority class of the node we land in. This examples shows how we learn a rule for predicting the value of a house. A decision tree is grown and we follow each time the node with the highest accuracy. In this case we end up with: 'If the location is the house is big and in a good location, we predict that the value is high (assuming high as the most common class in that node)'"}
+```{r learn-one-rule, fig.cap = "Learning a rule by search a path through a decision tree. A decision tree is grown to predict the target of interest. To extract a single, accurate rule, start at the root node and greedily and iteratively follow the path which locally produces the purest subset (i.e. with highest accuracy of target classes) and add all the the split value to the rule condition. The prediction of the rule is the majority class of the node we land in. This example shows how we learn a rule for predicting the value of a house. We end up with: 'If $location=good$ and $size=big$, then $value=high$' (assuming high as the most common class in that node)/"}
 knitr::include_graphics("images/learn-one-rule.png")
 ```
 
@@ -328,12 +334,11 @@ hill-climbing, beam search, exhaustive search, best-first search, ordered search
 
 
 RIPPER (Repeated Incremental Pruning to Produce Error Reduction) by Cohen (1995)[^ripper] is a variant of the Sequential Covering algorithm.
-RIPPER is a bit more sophisticated and uses as post-processing phase (rule pruning) for the optimization of the rule-set.
-
+RIPPER is a bit more sophisticated and uses as post-processing phase (rule pruning) for the optimization of the list (or set) of rules.
 RIPPER can run in ordered or unordered mode, either producing a decision list or decision set.
 
 
-Let's turn to the data examples.
+We will use RIPPER to predict our data examples.
 On the classification task for [cervical cancer](#cervical), the RIPPER algorithm does not find any rule:
 ```{r jrip-cervical}
 library("RWeka")
@@ -346,33 +351,38 @@ rules = rules[-c(1, 2, length(rules))]
 rules = gsub("\\([0-9]*\\.[0-9]\\/[0-9]*\\.[0-9]\\)", "", rules)
 rules = as.matrix(rules)[-c(1:2, 6), ,drop=FALSE]
 rules  = data.frame(rules)
-kable(rules)
+if (nrow(rules) == 0) {
+  return(NULL)
+} else {
+  kable(rules)
+}
 }
 
 rule = JRip(Biopsy ~ ., data = cervical)
 extract.rules.jrip(rule)
-
 ```
 
 
 When we use RIPPER on the regression task for predicting [bike rentals](#bike) some rules are found. 
-Since RIPPER only works for classification, the bike counts has to be turned into a categorial outcome. 
+Since RIPPER only works for classification, the bike counts have to be turned into a categorial outcome. 
 I achieved this by binning the bike counts into the quartiles.
-
-The following table shows the resulting rules. 
-The conditions are followed behind the arrow by the predicted interval. 
 For example $(4548, 5956)$ is the interval that covers predicted bike rentals between $4548$ and $5956$.
+The following table shows the learned rules. 
+
 ```{r jrip-bike}
 bike2 = bike
 bike2$cnt = round(bike2$cnt)
 bike2$cnt =  cut(bike$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
+bike2$temp = round(bike2$temp)
+bike2$windspeed = round(bike2$windspeed)
+bike2$hum = round(bike2$hum)
 
 rule = JRip(cnt  ~ ., data = bike2)
 extract.rules.jrip(rule)
 ```
 The interpretation is straightforward:
-If the conditions apply, then the predicted (interval) of bike rentals is the interval on the right hand side.
-The last rule is the default rule when none of the other rules fires for an instance. 
+If the conditions apply, then we predict as number of bike rentals the interval on the right hand side.
+The last rule is the default rule which applies when none of the other rules fires applies for an instance. 
 For predicting a new instance, start at the top of the list and check if a rule fires. 
 When all conditions match, then the right hand side of the rule is the prediction for this instance. 
 Because of the default rule it is guaranteed that there will always be a prediction.
@@ -382,10 +392,11 @@ Because of the default rule it is guaranteed that there will always be a predict
 
 In this section I will show you another approach to learn a decision list, which follows this rough recipe:
 
-1. Pre-mine frequent patterns from the data (unsupervised), which can be used as conditions (IF-part) for IF-THEN rules.
-1. Construct a decision list from a selection of the pre-mined rules.
+1. Pre-mine frequent patterns from the data (unsupervised), which can be used as conditions (IF-part) for the decision rules.
+1. Learn a decision list from a selection of the pre-mined rules.
 
-One specific approach that uses this recipe is called (Scalable) Bayesian Rule Lists (Letham et. al, 2015)[^brl], which are decision lists that use methods from Bayesian statistics to learn decision lists from rules pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree]
+One specific approach that uses this recipe is called Bayesian Rule Lists (Letham et. al, 2015)[^brl] or short BRL.
+BRL uses Bayesian statistics to learn decision lists from frequent patterns which ar pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree]
 
 But let's start slowly:
 
@@ -397,27 +408,27 @@ A pattern can be a single feature value (e.g. $\text{size=medium}$) or a combina
 
 The frequency of a pattern is measured with its support in the dataset:
 
-$$Support(x_j=A)=\frac{\sum_{i=1}^nI(x_{ji}=A)}{n}$$
+$$Support(x_j=A)=\frac{1}n{}\sum_{i=1}^nI(x_{ji}=A)$$
 
-where $x_j=A$ is the feature level, $n$ the number of data points in the dataset and $I$ the indicator function which is $1$ if the feature has level $A$ else $0$.
-For example we if 20% of the houses have no balcony (and 80% one or more), then the support for the pattern $x_{balcony}=0$ would be 20%.
+where $x_j=A$ is the feature level, $n$ the number of data points in the dataset and $I$ the indicator function which returns $1$ if the feature $x_j$ of instance $i$ has level $A$ else $0$.
+In a dataset of house values, if 20% of the houses have no balcony (and 80% have one or more), then the support for the pattern $balcony=0$ would be 20%.
 The support can also be measured for combinations of feature levels, for example the support for $\text{balcony=0}\land\text{pets=allowed}$.
 
-There are many algorithms to find such frequent patterns, for example the Apriori algorithm or the FP-Growth tree. 
+There are many algorithms to find such frequent patterns, for example Apriori or the FP-Growth. 
 Which one you use does not matter much, only the speed at which the patterns are found is different, but the resulting patterns are always the same.
 
 I'll give you a rough idea how the Apriori algorithm works for finding frequent patterns.
-Actually the Apriori algorithm has two parts, where the first part finds frequent patterns and the second part creates association rules.
-For this application, we are only interested in the frequent patterns generated in the first part. It is also possible to use the Apriori  
+Actually the Apriori algorithm consists of two parts, where the first part finds frequent patterns and the second part creates association rules.
+For this application, we are only interested in the frequent patterns generated in the first part.
 
-For the first step, the Apriori algorithm starts with all feature levels that have a support larger than the minimal support defined by the user. 
-If the use says minimal support should be 10% and there are only 5% big houses, we would remove that feature value and only keep house=medium and house=big as patterns. 
-This does not mean that the houses are removed, it just means that $\text{size=big}$ will not be considered for an association rule.
-From the patterns with a single feature value, the Apriori algorithm tries to find iteratively combinations of higher order 2 to number of features.
-Patterns are constructed by adding a feature value a logical AND, e.g. $\text{size=medium}\land\text{location=bad}$.
+For the first step, the Apriori algorithm starts with all feature levels that have a support larger than the minimal support as defined by the user. 
+If the user says minimal support should be 10% and only 5% of the houses have $size=big$, we would remove that feature value and only keep $size=medium$ and $size=big$ as patterns. 
+This does not mean that the houses are removed from the data, it just means that $\text{size=big}$ will not be considered for finding frequent patterns.
+Starting with frequent patterns with a single feature value, the Apriori algorithm tries to iteratively find combinations of feature values of higher order.
+Patterns are constructed by combining $feature=value$ statements with a logical AND, e.g. $\text{size=medium}\land\text{location=bad}$.
 Generated patterns with a support below the minimum support are removed.
 In the end we have all the frequent patterns.
-Any subset of a frequent pattern is again frequent, that's the the apriori property. 
+Any subset of a frequent pattern is again frequent, which is called the apriori property. 
 It intuitively makes sense: By removing a condition from a pattern, the reduced pattern can only cover more or the same number of data points (support), but never less. 
 For example, if 20% of the houses are $\text{size=medium}\land\text{location=good}$, then the support of houses that are only $\text{size=medium}$ is 20% or larger.
 The apriori property is used to reduce the number of patterns we have to check. 
@@ -425,76 +436,76 @@ Only for frequent patterns we have to check patterns of higher order.
 
 Now we are done with pre-mining conditions for the Bayesian Rule List algorithm.
 But before we go into the details of BRL, I want to show you another way. 
-Other approaches suggest including the outcome of interest into the frequent pattern mining process and also executing the second part of the Apriori algorithm, which builds IF-THEN rules. 
+Other rule learning approaches suggest including the outcome of interest into the frequent pattern mining process and also executing the second part of the Apriori algorithm, which builds IF-THEN rules. 
 Since the algorithm is unsupervised, the THEN-part also contains feature values we are not interested in. 
 But we can filter for rules that only have the outcome of interest in the THEN-part.
 These rules already form a decision set, but it would also be possible to rank the rules, prune them, delete some or re-combine them somehow. 
 
-In the current approach however, we only need the frequent patterns and the learn the THEN-part and how to arrange the patterns into a decision list using Bayesian statistics.
+In the BRL approach however, we only need the frequent patterns and learn the THEN-part and how to arrange the patterns into a decision list using Bayesian statistics.
 
 
-**(Scalable) Bayesian Rule Lists**
+**Learning Bayesian Rule Lists**
 
-We want to reduce the number of the pre-mined conditions, prioritize short conditions over long ones and create a decision list (=with order).
-The Bayesian Rule List (BRL) approach solves this by introducing a likelihood function with some prior distributions for the length of conditions (preferring shorter ones) and the number of rules (also preferring less rules over more). 
+The goal of the BRL algorithm is to learn an accurate decision list using a selection of the pre-mined conditions, while prioritizing lists with few rules and short conditions.
+BRL tackles this goal by defining a distribution of decision lists with prior distributions for the length of conditions (preferring shorter ones) and the number of rules (also preferring less rules over more). 
 
-BRL can be used in any multi-class classification setting and requires all input features to be categorized.
-Continuous features can be used if cut into intervals and made into a categorical feature (either fixed intervals or by distribution, i.e. quantiles).
-The BRL approach defines a probability distribution of lists (kind of meta, right?), which let's us attach a likelihood to a list and we try to find the most likely list according to the distribution which incorporates both the assumptions of shortness and how well a list fits the data.
-Since it's not so trivial to sample lists from the distributions of lists directly, the BRL has the following recipe:
-1) Generate a (somewhat random) initial decision list 2) Iteratively change the list by adding/switching/removing rules, while making sure that the lists are from the distribution of lists and 3) choose the decision list from the sampled lists which has the highest likelihood.
+The posteriro probability distribution of lists (kind of meta, right?), enables to tell how likely  a decision list is given assumptions of shortness and how well the list fits the data.
+Our goal is to find the list that maximizes this posterior probability.
+Since it's not possible to find the exact best list from the distributions of lists directly, BRL suggests the following recipe:
+1) Generate an initial decision list, randomly drawn from the priori distribution.
+2) Iteratively change the list by adding/switching/removing rules, while making sure that the lists are from the distribution of lists and 
+3) choose the decision list from the sampled lists which has the highest likelihood according to the posteriori distribution.
 
-Let's go through the the algorithm in more detail:
-The algorithm starts with pre-mining rules with the FB-Growth algorithm, but theoretically any rule-mining algorithm would work.
-Why didn't I present you the FP-Growth algorithm, but instead the Apriori algorithm?
-Well, because they will yield the same results. 
-The Apriori is easier to convey and the FP-Growth algorithm runs faster.
-FP-Growth uses FP-trees a data structure that represents the patterns found in a dataset.
+Let's go through the algorithm in more detail:
+The algorithm starts with pre-mining feature value patterns with the FB-Growth algorithm.
+BRL makes a bunch of assumptions about the distribution of the target and the distribution of the parameters that define the distribution of the target.
+(Well, that's Bayesian statistic.)
+If you are unfamiliar with Bayesian statistics, don't get too caught up in the following explanations. 
+It's important to know that the Bayesian approach is a way to combine pre-existing knowlegde or requirements (called priori distributions) while also fitting the data.
+In the decision list case, the Bayesian approach is useful, because through the prior assumptions, it nudges the decision list to be short with also short rules.
 
-BRL makes the a bunch of assumptions about the distribution of the target and the distribution of the parameters that define the distribution of the target.
-Well, that's Bayesian statistic. 
-If you are unfamiliar with Bayesian statistic, don't get too caught up in the following explanations. 
-It's important to know that the Bayesian approach is a way to combine in a model pre-existing knowlegde or requirements (called priori distributions) while also fitting the data.
-In the decision list case, the Bayesian approach is useful because through the prior assumptions, it nudges the decision list to be short with also short rules.
-The distribution assumption of the target looks like this:
+The goal is to sample decision lists $d$ from the posteriori distribution: 
 
-**if** $\text{conditions}_1$ **then** $y\sim\text{Multinomial}(\theta_1)$, $\theta_1\sim\text{Dirichlet}(\alpha+N_1)$
-
-**else if** $\text{conditions}_2$ **then** $y\sim\text{Multinomial}(\theta_2)$, $\theta_2\sim\text{Dirichlet}(\alpha+N_2)$
-
-...
-
-**else if** $\text{conditions}_m$ **then** $y\sim\text{Multinomial}(\theta_m)$, $\theta_m\sim\text{Dirichlet}(\alpha+N_m)$
-
-**else**  $y\sim\text{Multinomial}(\theta_0)$, $\theta_0\sim\text{Dirichlet}(\alpha+N_0)$
+$$\underbrace{p(d|x,y,A,\alpha,\lambda,\eta)}_{posteriori}\propto\underbrace{p(y|x,d,\alpha)}_{liklihood}\cdot\underbrace{p(d|A,\lambda,\eta)}_{priori}$$
+where $d$ is a decision list, $x$ are the features, $y$ is the target, $A$ the set of pre-mined conditions, $\lambda$ the prior expected decision list length, $\eta$ the prior expected number of conditions in a rule, $\alpha$, the prior pseudo-count for the positive and negative classes (best fixed at $(1,1)$).
 
 
-The goal is to sample decision lists $d$ from: 
+$$p(d|x,y,A,\alpha,\lambda,\eta)$$
 
-$$p(d|x,y,A,\alpha,\lambda,\eta)\propto{}p(y|x,d,\alpha)\cdot{}p(d|A,\lambda,\eta)$$
-where $d$ is a decision list, $x$ are the features, $y$ is the target, $A$ the set of pre-mined rules, $\lambda$, the prior expected decision list length, $\eta$, the prior expected number of conditions in a rule, $\alpha$, the prior pseudo-count for the positive and negative classes (best fixed at $(1,1)$).
-The term on the left side of the equation says how likely a list is, given the observed data and the priori assumptions. 
-This is proportional to the likelihood of the outcome of interest given the list and the data times the likelihood of the list given prior assumptions and the pre-mined rules.
-This means a decision list has a high likelihood if it explains the outcome $y$ well and is also likely according to the prior assumptions.
+quantifies how likely a decision list is, given the observed data and the priori assumptions. 
+This is proportional to the likelihood of the outcome of interest given the list and the data times the likelihood of the list given prior assumptions and the pre-mined conditions.
 
-Bayesian statistics is always a bit tricky, because we usually can't simply compute the correct answer, but we have to draw candidates and evaluate them and update our posteriori estimates (usually and also here with Monte Carlo Markov Chains)
+$$p(y|x,d,\alpha)$$
+is the likelihood of the obseved $y$, given the decision list and the data. 
+BRL assumes that $y$ is generated by a Dirichlet-Multinomial distribution.
+The better the decision list $d$ explains the data, the higher the likelihood.
+
+$$p(d|A,\lambda,\eta)$$
+is the prior distribution of the decision lists. 
+It multiplicatively incorporates a truncated Poisson distribution (parameter $\lambda$) for the number of rules in the list, and a truncated Poisson distriubtion (parameter $\eta$) for the number of feature values in the conditions of the rules.
+
+A decision list has a high posterior probability if it explains the outcome $y$ well and is also likely according to the prior assumptions.
+
+
+Estimations in Bayesian statistics are always a bit tricky, because we usually can't directly compute the correct answer, but we have to draw candidates, evaluate them and update our posteriori estimates (using Markov chain Monte Carlo).
 Here it is even more tricky, because we have to draw from the distribution of decision lists. 
-The authors suggest following recipe to sequentially draw an initial decision lists. 
-This recipe also shows the prior assumptions we make about the list length and the rule lengths.
+The authors suggest to first draw an initial decision list and to then to change it iteratively to generate samples of decision lists from the posterior distribution of the lists (a Markov chain of decision lists).
+The results are potentially dependent on the initial decision list, so it is advisable to repeat this procedure to get a broad sample of lists (default in the software implementation is 10 times).
+The following recipe tells us how to draw an initial decision list:
 
-- Pre-mine rules.
+- Pre-mine patterns with FP-Growth.
 - Sample the length $m$ for the list from a truncated Poisson distribution.
-- For the default rule: Sample the parameter $\theta_0$ for the distribution of the target value (i.e. the rule that applies when nothing else applies).
+- For the default rule: Sample the Dirichlet-Multinomial distribution parameter $\theta_0$ n of the target value (i.e. the rule that applies when nothing else applies).
 - For decision list rule $j=1,\ldots,m$, do:
-  - Sample the length of the rule $l_j$ (i.e. number of conditions) for rule $j$
-  - Sample a rule of length $l_j$ from the pre-mined rules.
-  - Sample the distribution parameter of the THEN-part given the sampled rule (i.e. for the distribution of the target outcome given the rule)
+    - Sample the length of the rule $l_j$ (i.e. number of conditions) for rule $j$
+    - Sample a condition of length $l_j$ from the pre-mined conditions.
+    - Sample the Dirichlet-Multinomial distribution parameter for the THEN-part (i.e. for the distribution of the target outcome given the rule)
 - For each observation in the dataset:
-  - Find the rule from the decision list that fires first
-  - Draw the predicted outcome from the probability distributiion suggested by the rule that applies.
+    - Find the rule from the decision list that applies first (top to bottom).
+    - Draw the predicted outcome from the probability distribution (Binomial) suggested by the rule that applies.
 
-
-Once we can sample from the distribution of the decision lists, we can find the decision list that maximizes the posteriori likelihood, meaning it explains the data well (acccuracy), but is also interpretable because it has few and short rules, which is due to the priori distributions.
+The next step is to generate many new lists starting from this initials sample in order to get lots of samples from the posterior distribution of decision lists.
+From these samples we can pick the decision list with the highest posterior probability.
 
 Since we can't directly optimize this problem, we do Metropolis-Hastings sampling: 
 Starting from a random draw, we randomly either 1) move a rule to a different position in the list or 2) add a rule to the current decision list from the pre-mined rules 3) Remove a rule from the decision list. 
@@ -637,6 +648,9 @@ This is related with the issue that the inputs have to be categorical (in decisi
 
 
 ### Software and Alternatives
+
+ADD Another way is ripping apart decision trees as used in the [RuleFit algorithm](#rulefit).
+
 
 - There is an [R package `OneR`](https://cran.r-project.org/web/packages/OneR/). 
 OneR is also implemented in the [Weka machine learning library]((https://www.eecs.yorku.ca/tdb/_doc.php/userg/sw/weka/doc/weka/classifiers/rules/package-summary.html)) and as such available in Java, R and Python.
