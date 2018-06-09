@@ -1,27 +1,27 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
-devtools::load_all("../")
+devtools::load_all(".")
 set.seed(42)
 ```
 
-## Decision rules (IF-THEN)
+## Decision Rules (IF-THEN)
 
-A decision rule is a simple IF-THEN statement consisting of a condition (sometimes called antecedents) and a prediction.
+A decision rule is a simple IF-THEN statement consisting of a condition (also called antecedent) and a prediction.
 For example: 
 IF it rains today AND if it's April (condition), THEN it will rain tomorrow (prediction). 
 A single decision rule or a combination of several rules can be used to make predictions.
 
-Keywords: decision rules, decision sets, decision lists, association rules, IF-THEN rules
+*Keywords: decision rules, decision sets, decision lists, association rules, IF-THEN rules*
 
 Decision rules follow a general structure:
-IF the condition is true THEN make prediction.
-Decision rules are probably the best interpretable prediction models.
-Their IF-THEN structure semantically resembles natural language and the way we think, provided that the condition is built from intelligible features and the length of the condition (number of $feature=value$ pairs combined with an AND) and there are not too many rules.
+IF the condition is true THEN make a particular prediction.
+Decision rules are probably the most interpretable prediction models.
+Their IF-THEN structure semantically resembles natural language and the way we think, provided that the condition is built from intelligible features, the length of the condition is short (number of $feature=value$ pairs combined with an AND) and there are not too many rules.
 In programming it's very natural to write IF-THEN rules.
-New in machine learning is that these types of rules are learned through an algorithm.
+New in machine learning is that the decision rules are learned through an algorithm.
 
-Imagine using an algorithm to learn decision rules fro predicting the value of a house ($low$, $medium$ or $high$)
+Imagine using an algorithm to learn decision rules for predicting the value of a house ($low$, $medium$ or $high$).
 One decision rule learned by this model could be:
-If a house is bigger than 100 square meters and has a garden the value is high.
+If a house is bigger than 100 square meters and has a garden, then its value is high.
 More formally:
 IF $size>100\land{}garden=1$ THEN $value=high$.
 Sometimes decision rules are also written like this:
@@ -32,59 +32,59 @@ Let's break down the decision rule:
 
 - $size>100$ is the first condition in the IF-part.
 - $garden=1$ is the second condition in the IF-part.
-- Both are connected with an 'AND', so both must be true for the rule to apply.
-- The predicted outcome (THEN) is that $value=high$.
+- The two conditions are connected with an 'AND' to create a new condition. 
+Both must be true for the rule to apply.
+- The predicted outcome (THEN-part) is that $value=high$.
 
 
 A decision rule uses at least one $feature=value$ statement in the condition, with no upper limit on how many more can be added with an 'AND'.
-An exception is the default rule, which has no explicit IF-part applies when no other rule applies, but more about this later.
+An exception is the default rule that has no explicit IF-part and that applies when no other rule applies, but more about this later.
 
 How do we assess whether a particular decision rule makes sense?
-The usefulness of a decision rule is usually summarized in two numbers: Accuracy and support.
+The usefulness of a decision rule is usually summarized in two numbers: Support and accuracy.
 
 
 **Support (or coverage) of a rule**:
 The percentage of instances to which the condition of a rule applies is called the support.
 Take for example the rule $(size=big)\land(location=good)\Rightarrow(value=high)$ for predicting house values.
 Suppose 100 of 1000 houses are big and in a good location, then the support of the rule is 10%.
-The prediction (IF-part) is not important for the calculation of support.
+The prediction (THEN-part) is not important for the calculation of support.
 
 **Accuracy (or confidence) of a rule**: 
 The accuracy of a rule is a measure of how accurate the rule is in predicting the correct class for the instances to which the condition of the rule applies. 
 For example: 
-Let's say of the 100 houses, where the rule with condition $size=big$ applies, 85 have $value=high$, 14 $value=medium$ and 1 $value=low$, then the accuracy of the rule is 85%.
+Let's say of the 100 houses, where the rule $(size=big)\land(location=good)\Rightarrow(value=high)$ applies, 85 have $value=high$, 14 $value=medium$ and 1 $value=low$, then the accuracy of the rule is 85%.
 
 
 Usually there is a trade-off between accuracy and support:
 By adding more features in the condition, we can achieve higher accuracy, but lose support.
+
 To create a good classifier for predicting the value of a house you might need to learn not only one rule, but maybe 10 or 20.
 Then things can get more complicated: 
 
-1. Rules can overlap: 
-What if I want to predict the value of a new house and two or more rules apply that imply contradictory predictions?
-1. No rule applies:
-What if I want to predict the value for a new house and none of the rules apply?
+- Rules can overlap: 
+What if I want to predict the value of a house and two or more rules apply and they give me contradictory predictions?
+- No rule applies:
+What if I want to predict the value of a house and none of the rules apply?
 
 There are two main strategies for dealing with multiple rules:
 Decision lists (ordered) and decision sets (unordered). 
 Both strategies imply different solutions to the problem of overlapping rules. 
 
-A **decision list** is an ordered list of rules. 
-If the first rule applies to an instance, we use the prediction of the first rule. 
+A **decision list** introduces an order to the decision rules.
+If the condition of the first rule is true for an instance, we use the prediction of the first rule. 
 If not, we go to the next rule and check if it is true and so on.
 Decision lists are one-sided decision trees, where the first rule is the root node and with each rule, the tree grows in one direction.
-Decision lists solve the problem of overlapping rules by introducing an order.
+Decision lists solve the problem of overlapping rules by only returning the prediction of the first rule in the list that applies.
 
-A **decision set** is a set of rules without an order (as opposed to a decision list). 
+A **decision set** resembles a democracy of the rules, except that some rules might have a higher voting power.
 In a set, the rules are either mutually exclusive, or there is a strategy for resolving conflicts, such as majority voting, which may be weighted by the individual rule accuracies or other quality measures.
-To make a prediction, either a single rule applies and we use the attached prediction, or if several rules apply, we resolve the conflict with e.g. majority vote to make the prediction.
 Interpretability suffers potentially when several rules apply.
 
 
 Both decision lists and sets can suffer from the problem that no rule applies to an instance. 
 This can be resolved by introducing a default rule. 
 The default rule is the rule that applies when no other rule applies.
-This can be used in both decision lists and decision sets.
 The prediction of the default rule is often the most frequent class of the data points which are not covered by other rules.
 If a set or list of rules covers the entire feature space, we call it exhaustive. 
 By adding a default rule, a set or list automatically becomes exhaustive.
@@ -92,16 +92,16 @@ By adding a default rule, a set or list automatically becomes exhaustive.
 
 There are many ways to learn rules from data and this book is far from covering them all.
 This chapter shows you three of them.
-The algorithms are chosen to cover a wide range of general ideas for learning rules, so all three are very different approaches.
+The algorithms are chosen to cover a wide range of general ideas for learning rules, so all three of them represent very different approaches.
 
 1. **OneR** learns rules from a single feature.
-OneR is characterised by its simplicity, interpretability and its use as a benchmark.
-1. **Sequential covering** is a general procedure used by many rule learning algorithms and as such important as basic knowledge.
-1. **Bayesian Rule Lists** combines re-mined frequent feature values into a decision list using Bayesian statistics. 
+OneR is characterized by its simplicity, interpretability and its use as a benchmark.
+1. **Sequential covering** is a general procedure that iteratively learns rules and removes the data points that are covered by the new rule. 
+This procedure is used by many rule learning algorithms.
+1. **Bayesian Rule Lists** combine pre-mined frequent patterns into a decision list using Bayesian statistics. 
 Using pre-mined patterns is a common approach used by many rule learning algorithms.
-I contrast to the other examples, a statistical approach is used.
 
-Let's start with the simplest: Using the single, best feature to learn rules.
+Let's start with the simplest approach: Using the single, best feature to learn rules.
 
 ### Learn One Rule (OneR)
 
@@ -121,7 +121,7 @@ The algorithm is simple and fast:
     - Calculate the total error of the rules for that feature.
 1. Select the feature with the smallest total error.
 
-OneR always covers all instances of the dataset, since it uses all levels of the selectd feature.
+OneR always covers all instances of the dataset, since it uses all levels of the selected feature.
 Missing values can be either treated as an additional level or be imputed beforehand.
 
 
@@ -169,7 +169,7 @@ The size feature produces the rules with the lowest error and will be used for t
 - IF $size=big$ THEN  $value=high$
 
 
-OneR prefers features with many possible levels, because those features can moverfit the target more easily.
+OneR prefers features with many possible levels, because those features can overfit the target more easily.
 Imagine a dataset that contains only noise and no signal, which means that all features take on random values and have no predictive value for the target.
 Some features have more levels than others. 
 The features with more levels can now more easily overfit. 
@@ -230,7 +230,7 @@ The month feature has (surprise!) 12 feature levels, which is more than for most
 So there is a danger of overfitting. 
 On the more optimistic side: the month feature can handle the seasonal trend (e.g. low rental numbers in winter) and the predictions seem sensible.
 
-Now we move from the simple OneR algorithm to a more complex procedure using rules with more complex conditions consisting ofseveral features: Sequential Covering.
+Now we move from the simple OneR algorithm to a more complex procedure using rules with more complex conditions consisting of several features: Sequential Covering.
 
 ### Sequential Covering
 
@@ -310,7 +310,7 @@ Maybe: 'If $location=good$, then $value=medium$' (Note that this rule is learned
 
 
 How do we learn a single rule? 
-The OnR algorithm would be useless here, since it would always cover the whole feature space.
+The OneR algorithm would be useless here, since it would always cover the whole feature space.
 But there are many other possibilities. 
 One possibility is to learn a single rule from a decision tree with beam search:
 
@@ -321,7 +321,7 @@ the path leading to that node is used as the rule condition.
 
 The following figure illustrates the beam search in a tree:
 
-```{r learn-one-rule, fig.cap = "Learning a rule by search a path through a decision tree. A decision tree is grown to predict the target of interest. To extract a single, accurate rule, start at the root node and greedily and iteratively follow the path which locally produces the purest subset (i.e. with highest accuracy of target classes) and add all the the split value to the rule condition. The prediction of the rule is the majority class of the node we land in. This example shows how we learn a rule for predicting the value of a house. We end up with: 'If $location=good$ and $size=big$, then $value=high$' (assuming high as the most common class in that node)/"}
+```{r learn-one-rule, fig.cap = "Learning a rule by search a path through a decision tree. A decision tree is grown to predict the target of interest. To extract a single, accurate rule, start at the root node and greedily and iteratively follow the path which locally produces the purest subset (i.e. with highest accuracy of target classes) and add all the split value to the rule condition. The prediction of the rule is the majority class of the node we land in. This example shows how we learn a rule for predicting the value of a house. We end up with: 'If $location=good$ and $size=big$, then $value=high$' (assuming high as the most common class in that node)/"}
 knitr::include_graphics("images/learn-one-rule.png")
 ```
 
@@ -448,11 +448,11 @@ In the BRL approach however, we work with the frequent patterns and learn the TH
 The goal of the BRL algorithm is to learn an accurate decision list using a selection of the pre-mined conditions, while prioritizing lists with few rules and short conditions.
 BRL addresses this goal by defining a distribution of decision lists with prior distributions for the length of conditions (preferably shorter rules) and the number of rules (preferably shorter list). 
 
-The posteriori probability distribution of lists (kind of meta, right?), makes it possible to say how likelya decision list is, given assumptions of shortness and how well the list fits the data.
+The posteriori probability distribution of lists (kind of meta, right?), makes it possible to say how likely a decision list is, given assumptions of shortness and how well the list fits the data.
 Our goal is to find the list that maximizes this posterior probability.
 Since it's not possible to find the exact best list directly from the distributions of lists, BRL suggests the following recipe:
 1) Generate an initial decision list, which is randomly drawn from the priori distribution.
-2) Iteratively modify the list by adding, switching orremoving rules, ensuring that the lists originate the distribution of lists and 
+2) Iteratively modify the list by adding, switching or removing rules, ensuring that the lists originate the distribution of lists and 
 3) Select the decision list from the sampled lists with the highest probability according to the posteriori distribution.
 
 Let's go over the algorithm more closely:
