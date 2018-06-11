@@ -9,6 +9,8 @@ fixmath <- function(infile) {
   doc <- sub("^\\\\\\]$", "{\\/\\$\\$}", doc, perl = TRUE)
   doc <- gsub("\\$\\$(\\S+)\\$\\$", "\\$\\1\\$", doc, perl = TRUE)
   doc <- gsub("\\$(\\S+)\\$", "{\\$\\$}\\1{\\/\\$\\$}", doc, perl = TRUE)
+  # Adds pagebreaks for leanpub
+  doc = c(doc, "", "{pagebreak}")
   writeLines(doc, infile)
 }
 
