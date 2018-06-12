@@ -46,7 +46,11 @@ All notable changes to the book will be documented here.
 
 ### v0.5 (IN PROGRESS)
 - Added section about LIME images (by Verena Haunschmid)
-- 
+- Added chapter about Decision Rules
+- Added a section about when we don't need interpretability
+- Renamed chapter: Human-style Explanations -> Human-friendly Explanations
+
+
 
 ### v0.4 (2018-05-23)
 - Added chapter on global surrogate models
