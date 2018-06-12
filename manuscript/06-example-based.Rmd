@@ -125,15 +125,25 @@ ggplot(dat, aes(x = x1, y = x2)) + geom_point() +
 
 ```
 
-Now for some heavy theory:
+Now we only need a function that can tell us how close the distribution of the prototypes is to the distribution of the data (the closer the better) and a way to find criticisms using the same function.
+We want to test whether the distributions are different, based on samples from them.
 
-The MMD function is defined is:
 
-$$MMD(F,P,Q)=sup_{f\in{}F}\left(E_{X\sim{}P}[f(X)]-E_{Y\sim{}}Q[f(Y)]\right)$$
-F is a reproducing kernel Hilbert space (RKHS) with kernel function . 
+So now, a bit of theory.
+The function we are looking for is called maximum mean discrepancy, which measures the difference between two distributions. 
+
+
+I'lls spare you with the theoretical construct and jump right into how we can actually measure it.
+
+
+$$MMD(G,P,Q)=sup_{g\in{}G}\left(E_{X\sim{}P}[g(X)]-E_{Y\sim{}}Q[g(Y)]\right)$$
+F is a reproducing kernel Hilbert space (RKHS) with kernel function k.
+A choice for the kernel is the radial basis function kernel.
 
 $$f(x)=E_{X'\sim{}P}[k(x,X')]-E_{X'\sim{}Q}[k(x,X')]$$
-f(x) is also known as the witness function.
+g(x) is also known as the witness function. 
+They call it f(x), but since in this book f(x) is reserved for the relationship between features and target in supervised learning, I am using g here.
+
 It measures the maximum discrepancy between two expectations in F.
 The witness function is positive when Q underfits the density of P and negative if Q overfits P.
 
@@ -143,6 +153,14 @@ Aaaaand now you can forget about this, because we can empirically estimate this 
 $$MMD^2=\frac{1}{m}\sum_{i,j=1}^m{}k(x_i,x_j)-\frac{2}{mn}\sum_{i,j=1}^{m,n}k(x_i,y_j)+\frac{1}{n^2}\sum_{i,j=1}^n{}k(y_i,y_j)$$
 
 k measures the similarity of two points.
+m samples from Q as $z_i$.
+n samples from P as $x_i$.
+
+The goal is to minimize MMD2, but for convenenience it is turned into a maximisation problem with some additivie bias (not so important here).
+
+The witness function g is approximated as:
+
+$$g(x)=\frac{1}{n}\sum_{i=1}^nk(x,x_i)-\frac{1}{m}\sum_{j=1}^mk(x,z_j)$$
 
 Criticisms are searched for so that the points are where there are no prototypes, but many data points still. 
 An additional term in the optimization function enforces diversity in the points, which is needed so that the points are not all from the same pile, but different types of criticisms.
