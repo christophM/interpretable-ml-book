@@ -1,4 +1,4 @@
-## Example-based explanations {#example}
+# Example-based explanations {#example}
 
 Example-based explanations are methods that return instances from the dataset to explain the behaviour of a black box machine learning model.
 
@@ -27,6 +27,11 @@ A data scientist gets a new client with a new task:
 Analyzing the risk factors that lead to a breakdown of machines. 
 The data scientist remembers a similar task he solved and re-uses parts of the code from the old project, because he thinks that the client might want to have the same analysis as the other client.
 
+A firefighter sees a kitty in a burning house and decided whether he should go in and rescue it.
+He remembers a few houses that were similar to this one: old wooden houses, with two levels. 
+At a similar stage of the fire they were unstable and collapsed at some points. 
+Based on the similarity of this case, he decides not to go in, because the risk of the house breaking down is too high. 
+Fortunately the kitty jumps out of the window and nobody is harmed in the fire (happy end!).
 
 
 These are examples how we humans think in examples.
@@ -44,7 +49,7 @@ Hundreds of abstract measurements would not pass this test for example.
 
 
 
-This chapter covers: 
+This chapter covers interpretable models using example-based methods, methods for analysing the data to make it interpretable and interpretability methods that work on models, but return examples as explanations. 
 - k-nearest neighbours as a machine learning model that is based on examples.
 - Prototypes: Which instances from the data are stereotypical for certain classes?
 - Criticisms: Which instances from the data are a bit unusual for certain classes?
@@ -56,25 +61,128 @@ This chapter covers:
 
 
 
-### Prototypes and criticisms
+## Prototypes and criticisms
 
 A prototype is a typical data point for a class. 
 In the context of interpretabl machine learning, a prototype is a typical data point given the predicted class.
 A criticism is the opposite: A data point that is atypical for a predicted class.
-
-
-
 Bayesian Case Model [^bcm] (data only) and [^critique] (on ML model)
 
 
+Prototypes are already nice, but they may not be sufficient to explain the data.
+They are only sufficient when the data distribution within the classes is very homogenuous.
+In real world datasets the situation is often more complicated.
+The purpose of criticisms is to deliver insights together with prototypes, and especially where prototypes don't tell the full story of a data subset.
 
-### Criticisms
 
-### Counterfactuals and adverserial examples
+#### Approach: MMD-critic
+
+Measure the maximum mean discrepancy (MMD) between to sample datasets.
+MMD and its associated witness function is used in MMD critique for selecting data points that are either prototypes or criticisms.
+MMD-critic measures the similarity between the training data and potential prototypes and selects prototypes that maximizes the similarity.
+Samples that are not explained well by the prototypes are selected as criticisms.
+
+Side effect: The MMD-critic approach can also be used to build a neares-prototype classifier, that classifies new data points according to the prototype that is closest to this point.
+
+
+The main idea of MMD-critic:
+We compare the density distributions of the prototypes and the actual data. 
+Good prototypes are at points of the dataset with a high density, because then they are representative for the data.
+
+
+Selecting prototypes create a density distribution of prototypes.
+The goal is to minimize the discrepancy between this distribution of the prototypes and the data distribution. 
+Once these prototypes are found, we can choose the points from the data distribution, where the prototypes and the data are the most different. 
+Let's say we have a image dataset for classifying animals and find a bunch of prototypes, including two prototypes for the dog class, one prototype shows dogs inside the house and the other is representative for dogs in the park. 
+But there are a few outliers, that are not well covered by theses prototypes, and these are dogs that are dressed in costumes. 
+They might be selected as criticisms.
+
+Prototypes and criticisms are actual data points.
+
+Algorithm:
+
+1. select the number of prototypes and criticisms you want
+1. select prototypes using greedy search
+1. selecte criticisms using greedy search.
+
+greedy search works, because the loss function is submodular, that means that the greedy method will at least get 63% of the optimal solution.
+
+```{r, fig.cap = "Illustration for criticisms and prototypes of a data set."}
+set.seed(1)
+dat1 = data.frame(x1 = rnorm(20, mean = 4, sd = 0.3), x2 = rnorm(20, mean = 1, sd = 0.3))
+dat2 = data.frame(x1 = rnorm(30, mean = 2, sd = 0.2), x2 = rnorm(30, mean = 2, sd = 0.2))
+dat3 = data.frame(x1 = rnorm(40, mean = 3, sd = 0.2), x2 = rnorm(40, mean = 3))
+dat4 = data.frame(x1 = rnorm(7, mean = 4, sd = 0.1), x2 = rnorm(7, mean = 2.5, sd = 0.1))
+
+dat = rbind(dat1, dat2, dat3, dat4)
+dat$type = "data"
+dat$type[c(7, 23, 77)] = "prototype"
+dat$type[c(81,95)] = "criticism"
+
+ggplot(dat, aes(x = x1, y = x2)) + geom_point() +
+  geom_point(data = filter(dat, type!='data'), aes(color = type, shape = type), size = 6, alpha = 0.8) + 
+  scale_shape_discrete(solid = TRUE)
+
+```
+
+Now for some heavy theory:
+
+The MMD function is defined is:
+
+$$MMD(F,P,Q)=sup_{f\in{}F}\left(E_{X\sim{}P}[f(X)]-E_{Y\sim{}}Q[f(Y)]\right)$$
+F is a reproducing kernel Hilbert space (RKHS) with kernel function . 
+
+$$f(x)=E_{X'\sim{}P}[k(x,X')]-E_{X'\sim{}Q}[k(x,X')]$$
+f(x) is also known as the witness function.
+It measures the maximum discrepancy between two expectations in F.
+The witness function is positive when Q underfits the density of P and negative if Q overfits P.
+
+
+Aaaaand now you can forget about this, because we can empirically estimate this with data samples (measuring MMD squared here):
+
+$$MMD^2=\frac{1}{m}\sum_{i,j=1}^m{}k(x_i,x_j)-\frac{2}{mn}\sum_{i,j=1}^{m,n}k(x_i,y_j)+\frac{1}{n^2}\sum_{i,j=1}^n{}k(y_i,y_j)$$
+
+k measures the similarity of two points.
+
+Criticisms are searched for so that the points are where there are no prototypes, but many data points still. 
+An additional term in the optimization function enforces diversity in the points, which is needed so that the points are not all from the same pile, but different types of criticisms.
+
+How it can be used:
+
+1. Find prototypes and criticisms
+1. Train machine learning model as usual
+1. Predict the prototypes and criticisms
+1. Analyse the predictions: In which cases was the algorithm wrong? Now you have an interpretable set of examples, where you know that it represents the data well and it can help you find the weaknesses of the machine learning model.
+
+
+Another way in which it can be used: 
+
+Build an intepretable classifier with it.
+Nearest prototype based classifier.
+Criticisms are not used for this.
+Interpretability comes from retrieving the closest prototype and showing it to the user.
+
+
+### Examples:
+
+```{r, prototypes-and-criticisms, fig.cap = "Prototypes and criticisms for two types of dog breeds from the ImageNet dataset. Prototypes mostly show the face of the dog, whereas criticisms are without the dogs face or in other coloring. Right hand side dog criticisms show the dog in a costume."}
+knitr::include_graphics("images/proto-critique.png")
+```
+
+```{r, prototypes-and-criticisms, fig.cap = "Prototypes and criticisms for a digit recognition dataset. Interestingly the number of prototypes differ per class. Criticisms include digits drawn with unusually thick or thin lines amongst others. Or also unrecognizable digits."}
+knitr::include_graphics("images/proto-critique2.png")
+```
+
+
+### Code
+
+https://github.com/BeenKim/MMD-critic
+
+## Counterfactuals and adverserial examples
 
 Difference here: Data points are not from training data, but artificially created or modified from existing points.
 
-### k-Nearest Neighbors {#knn}
+## k-Nearest Neighbors {#knn}
 k-nearest neighbours retrieves the k most similar data points as measured with the distance to the data point to be predicted.
 
 k-nearest neighbours is probably the most classic method for using examples to make predictions. 
@@ -82,9 +190,9 @@ k-nearest neighbours is probably the most classic method for using examples to m
 
 ## Influence functions
 
-### Archetypes?
+## Archetypes?
 
-### Anchors?
+## Anchors?
 
 
 
