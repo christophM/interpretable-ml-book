@@ -1,22 +1,28 @@
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+```
+
 # Example-based explanations {#example}
 
-Example-based explanations are methods that return instances from the dataset to explain the behaviour of a black box machine learning model.
+Example-based explanations are interpretability methods that return instances from the dataset to explain the behaviour of a black box machine learning model.
 
 *Keywords: example-based explanations, case-based reasoning, CBR, solving by analogy, intra-domain analogy*
 
-Difference to model-agnostic methods:
-The methods always yield an instance, not a summary; 
-The methods might be applied before fitting a model to explain the dataset, by which the behaviour of the model can be understood better.
-Example-based explanations are only meaningful if we can represent an example in a humanly understandable way.
-It works very well for images, because we can simply visualize images.
+Example-based explanations are mostly model-agnostic, because they can be applied to make any machine learning model more interpretable.
+The difference to model-agnostic methods is that the example-based methods return as an interpretation an instance from the dataset and not a summary of a feature (like the feature importance or the partial dependence).
+It follows that example-based explanations are only meaningful if we can represent an example in a humanly understandable way.
+It works well for images, because we can simply visualize images.
 It's harder with tabular data, where an instance can consist of hundreds or thousands of features.
 Listing the values of all those features to describe an instance is nonsense.
 It works well if there are just a handful of features or if we have a way to summarize an instance.
 
+
+The methods might be applied before fitting a model to explain the dataset, by which the behaviour of the model can be understood better.
+
+
 Example-based explanations helps the humans to construct mental models of the machine learning model. 
 Also it helps to understand the complex data distributions.
-
-
 What are example-based explanations?
 Let's start with a few real world exampels [^cbr]:
 
@@ -33,35 +39,31 @@ At a similar stage of the fire they were unstable and collapsed at some points.
 Based on the similarity of this case, he decides not to go in, because the risk of the house breaking down is too high. 
 Fortunately the kitty jumps out of the window and nobody is harmed in the fire (happy end!).
 
-
 These are examples how we humans think in examples.
 The structure his: A is similar to B, B caused Y to happen, so I predict A to cause Y as well.
 We humans love these explanations, because they make things seem plausible.
 In an implicit way, some machine learning approaches work example-based.
 Decision trees group data points together into a node, when they are similar in the features that are important for predicting the target.
-The same is true for a random forest.
-Predicting the outcome for a new data point accounts to finding the data points that are similar (in the same terminal node) and predicting the average of those points (instead of returning all points).
+Predicting the outcome for a new data point amounts to finding the data points that are similar (in the same terminal node) and predicting the average of those points (instead of returning all points).
 The k-nearest neighbours algorithm works directly with example-based predictions. 
 knn predicts new data points by asking what the k nearest data points predicted.
 Explaining the prediction of a knn can be done by returning the k neighbours.
 Only meaningful if single data points can be interpreted, i.e. they don't have too many features and the features are interpretable.
 Hundreds of abstract measurements would not pass this test for example.
 
-
-
 This chapter covers interpretable models using example-based methods, methods for analysing the data to make it interpretable and interpretability methods that work on models, but return examples as explanations. 
-- k-nearest neighbours as a machine learning model that is based on examples.
-- Prototypes: Which instances from the data are stereotypical for certain classes?
-- Criticisms: Which instances from the data are a bit unusual for certain classes?
-- Counterfactuals: How would the instance look like if we want to flip the prediction?
-- Adverserial examples: Same as counterfactuals, but with the purpose to maliciously fooling the machine learning algorithm.
-- Archetypes?
-- Anchors?
+- **k-nearest neighbours**: An (interpretable) machine learning model that is based on examples.
+- [Prototypes and criticisms](proto): Which instances from the data are stereotypical for the data?
+Which instances from the data are a not well explained by the prototypes?
+- **Counterfactuals**: How would the instance look like if we want to flip the prediction?
+- **Adverserial examples**: Same as counterfactuals, but with the purpose to maliciously fooling the machine learning algorithm.
+- **Archetypes**: What are the most extreme cases in my dataset?
+- **Influence Functions**: Identifying the points most responsible for a particular prediction. [^koh]
 
 
 
 
-## Prototypes and criticisms
+## Prototypes and criticisms {#proto}
 
 A prototype is a data point that is representative for the data.
 Choosing a set of prototypes can be used to understand the data better.
@@ -87,9 +89,9 @@ dat$type = "data"
 dat$type[c(7, 23, 77)] = "prototype"
 dat$type[c(81,95)] = "criticism"
 
-ggplot(dat, aes(x = x1, y = x2)) + geom_point() +
-  geom_point(data = filter(dat, type!='data'), aes(color = type, shape = type), size = 6, alpha = 0.8) + 
-  scale_shape_discrete(solid = TRUE)
+ggplot(dat, aes(x = x1, y = x2)) + geom_point(alpha = 0.7) +
+  geom_point(data = filter(dat, type!='data'), aes(shape = type), size = 9, alpha = 1, color = "blue") + 
+  scale_shape_manual(breaks = c("prototype", "criticism"), values = c(19, 18)) 
 
 ```
 
@@ -138,10 +140,10 @@ The square of the measure is optimized.
 
 $$MMD^2=\frac{1}{m}\sum_{i,j=1}^m{}k(z_i,z_j)-\frac{2}{mn}\sum_{i,j=1}^{m,n}k(z_i,x_j)+\frac{1}{n^2}\sum_{i,j=1}^n{}k(x_i,x_j)$$
 
-k measures the similarity of two points.
+k is a kernel that measures the similarity of two points, but more on that later.
 m samples from Q as $z_i$, here the prototypes (which come from the data).
 n samples from P as $y_i$, here the data.
-Each point is multi-dimensional, i.e. it can have many features.
+Each point is multidimensional, i.e. it can have many features.
 The goal is to minimize MMD2, but for convenenience it is turned into a maximisation problem with some additivie bias (not so important here).
 
 The following graphic illustrates the measure. 
@@ -157,7 +159,8 @@ n = 40
 dt1 = data.frame(x1 = rnorm(n, mean = 1, sd = 0.1), x2 = rnorm(n, mean = 1, sd = 0.3))
 dt2 = data.frame(x1 = rnorm(n, mean = 4, sd = 0.3), x2 = rnorm(n, mean = 2, sd = 0.3))
 dt3 = data.frame(x1 = rnorm(n, mean = 3, sd = 0.5), x2 = rnorm(n, mean = 3, sd = 0.3))
-dt = rbind(dt1, dt2, dt3)
+dt4 = data.frame(x1 = rnorm(n, mean = 2.6, sd = 0.1), x2 = rnorm(n, mean = 1.7, sd = 0.1))
+dt = rbind(dt1, dt2, dt3, dt4)
 
 
 radial = function(x1, x2, sigma = 1) {
@@ -182,12 +185,14 @@ mmd2 = function(d1, d2) {
 }
 
 # create 3 variants of prototypes
-pt1 = dt1[c(1,2,3),]
+pt1 = rbind(dt1[c(1,2),], dt4[1,])
 pt2 = rbind(dt1[1,], dt2[3,], dt3[19,])
 pt3 = rbind(dt2[3,], dt3[19,])
 
 # create plot with all data and density estimation
-p = ggplot(dt, aes(x = x1, y = x2)) + stat_density_2d(geom = "tile", aes(fill = ..density..), contour = FALSE, alpha = 0.5) + geom_point() + 
+p = ggplot(dt, aes(x = x1, y = x2)) + 
+  stat_density_2d(geom = "tile", aes(fill = ..density..), contour = FALSE, alpha = 0.9) + 
+  geom_point() + 
   scale_fill_gradient2(low = "white", high = "blue", guide = "none") + 
   scale_x_continuous(limits = c(0, NA)) + 
   scale_y_continuous(limits = c(0, NA))
@@ -216,7 +221,6 @@ $\gamma$ is a scaling parameter.
 The value of the kernel decreases with the distance of the two points and ranges between zero, when the points are infinitely far apart and one, when the points are the same.
 
 
-
 We combine the MMD measure and the kernel with greedy search in an algorithm for finding prototypes:
 
 - Start with empty list of prototypes
@@ -224,18 +228,43 @@ We combine the MMD measure and the kernel with greedy search in an algorithm for
     - Check for each point in the dataset how much it decreases the MMD. Choose the data point as prototype that minimizes the MMD and add it to the list of prototypes.
 - Return the list of prototypes
 
-
 Greedy search works, because the loss function is submodular, that means that the greedy method will at least get 63% of the optimal solution.
 
 
-The remaining ingredient we need for finding criticisms is the witness function, which can be estimated using:
+The remaining ingredient we need for finding criticisms is the witness function, which tells us how much two probability distributions differ at a particular point. 
+It can be estimated using:
 
 $$g(x)=\frac{1}{n}\sum_{i=1}^nk(x,x_i)-\frac{1}{m}\sum_{j=1}^mk(x,z_j)$$
 
 For a point x, we can check the difference between two kernel estimates.
 The witness function shows where the estimated densities of p and q differ the most.
-The witness function is positive when x fits better into the distribution of the x, and it is negative when the x fits better with the distribution of the z's.
+The witness function is positive when x fits better into the distribution of the $x_i$, and it is negative when the x fits better with the distribution of the $z_i$'s.
+For finding critcisms we look at both extreme values in negative and positive direction. 
+A negative witness function means that we overestimate the probability at point x compared to the data distribution (for example when we put a prototype at a place where actually not many data points are) and it turns positive when we underestimate the probability at point x (for example when there are many data points, but we don't put any prototype near it).
+When the witness function is close to zero for a point x, it means that the density function of the data and the prototypes are close to each other, which means that we found good prototypes for this area.
 
+To give you more intuition, let's re-use the prototypes from before which had the least MMD from the three we tested and display the witness function for a few points.
+The plot shows the density of the data in the background, plus the contour lines for the distribution generated by the three prototypes. 
+The labels in the plot show the value of the witness function for different points  marked as triangles
+These are candidates for criticisms, though only the point in the middle has a high value and the algorithm tests all points, not only a couple.
+
+```{r witness, fig.cap = ""}
+witness = function(x, dist1, dist2, sigma = 1) {
+  k1 = apply(dist1, 1, function(z) radial(x, z, sigma = sigma))
+  k2 = apply(dist2, 1, function(z) radial(x, z, sigma = sigma))
+  mean(k1) - mean(k2)
+}
+
+w.points.indices = c(125, 2, 60, 19, 100)
+wit.points = dt[w.points.indices,]
+wit.points$witness = apply(wit.points, 1, function(x) round(witness(x[c("x1", "x2")], pt2, dt, sigma = 1), 3))
+
+p + geom_point(data = pt2, color = "red") + 
+  geom_density_2d(data = pt2, color = "red") + 
+  ggtitle(sprintf("%.3f MMD^2", mmd2(dt, pt2))) + 
+  geom_label(data = wit.points, aes(label = witness), alpha = 0.8, vjust = "top") + 
+    geom_point(data = wit.points, color = "black", shape = 17, size = 4) 
+```
 
 Once the prototypes are found, we can choose the points from the data distribution, where the prototypes and the data are the most different. 
 Let's say we have a image dataset for classifying animals and find a bunch of prototypes, including two prototypes for the dog class, one prototype shows dogs inside the house and the other is representative for dogs in the park. 
@@ -282,11 +311,19 @@ The examples all show image classification examples, since here we can easily in
 For calculating the kernel distances, each image is represented using image embeddings with 2048 dimensions. 
 An image embedding is an abstract representation of an image by a vector, which is extracted from the weights of a neural network that has been trained to solve an image recognition task, in this case the Imagenet classification dataset.
 
-```{r, prototypes-and-criticisms, fig.cap = "Prototypes and criticisms for two types of dog breeds from the ImageNet dataset. Prototypes mostly show the face of the dog, whereas criticisms are without the dogs face or in other coloring. Right hand side dog criticisms show the dog in a costume."}
+
+The first dataset contains different breeds of dogs from the ImageNet dataset.
+MMD-critic is applied on it for two dog breed classes.
+The resulting prototypes mostly show the face of the dog, whereas criticisms are without the dogs face or in other coloring. Right hand side dog criticisms show the dog in a costume
+```{r, prototypes-and-criticisms, fig.cap = "Prototypes and criticisms for two types of dog breeds from the ImageNet dataset.."}
 knitr::include_graphics("images/proto-critique.png")
 ```
 
-```{r, prototypes-and-criticisms2, fig.cap = "Prototypes and criticisms for a digit recognition dataset. Interestingly the number of prototypes differ per class. Criticisms include digits drawn with unusually thick or thin lines amongst others. Or also unrecognizable digits."}
+Another example is a digit dataset. 
+
+Interestingly the number of prototypes differ per class. Criticisms include digits drawn with unusually thick or thin lines amongst others. Or also unrecognizable digits.
+
+```{r, prototypes-and-criticisms2, fig.cap = "Prototypes and criticisms for a digit recognition dataset. "}
 knitr::include_graphics("images/proto-critique2.png")
 ```
 
@@ -303,6 +340,8 @@ knitr::include_graphics("images/proto-critique2.png")
 ### Disadvantages
 - Unclear which kernel is best
 - Kernel parameter has to be tuned, and there is no instructions how to.
+Even for drafting the illustrations I wasn't sure how to choose the parameter. 
+Changing it had quite an influence on the results.
 - It takes all the features as input, disregarding the fact that some features might not be relevant in the context of a supervised problem.
 
 
@@ -337,3 +376,5 @@ k-nearest neighbours is probably the most classic method for using examples to m
 
 
 [^cbr]: Aamodt, A., & Plaza, E. (1994). Case-based reasoning : Foundational issues, methodological variations, and system approaches. AI Communications, 7(1), 39–59.
+
+[^koh]: Koh, P. W., & Liang, P. (2017). Understanding Black-box Predictions via Influence Functions. Retrieved from http://arxiv.org/abs/1703.04730
