@@ -66,17 +66,17 @@ The emphasis is on flipping the prediction and not explaining it. (WORK IN PROGR
 
 ## Prototypes and criticisms {#proto}
 
-A **prototype** is a data instance that is representative for all the data.
+A **prototype** is a data instance that is representative of all the data.
 Prototypes can improve the interpretability of complex data distributions, but they may not be sufficient to explain the data.
-They are only sufficient when the data distribution within the classes is very homogeneous.
-A **criticism** is a data instance that is not represented well by the set of prototypes.
-The purpose of criticisms is to deliver insights together with prototypes, especially for data points which the prototypes don't represent well.
-Prototypes and criticisms can be used independently from machine learning to just describe the data, but it can also be used to build an interpretable model or to make a black box model interpretable.
+They are only sufficient if the data distribution within the classes is very homogeneous.
+A **criticism** is a data instance that is not well represented by the set of prototypes.
+The purpose of criticisms is to provide insights together with prototypes, especially for data points which the prototypes don't represent well.
+Prototypes and criticisms can be used independently from machine learning to describe only the data, but they can also be used to create an interpretable model or to make a black box model interpretable.
 
-Throughout this chapter I will also be using the word '(data) point' to refer to a single instance, to emphasize the interpretation that an instance is also a point in a coordinate system where each feature is a dimension.
-The following plots shows an artificial data distribution, with some of the instances chosen as prototypes and some as criticisms.
-The small dots are the data, the big dots the prototypes and the big triangles the criticisms.
-The prototypes are (manually) chosen to cover the centers of the data distribution and the criticisms are points in a cluster without a prototype.
+In this chapter I use the word '(data) point' to refer to a single instance, to emphasize the interpretation that an instance is also a point in a coordinate system where each feature is a dimension.
+The following figures show an artificial data distribution, with some of the instances chosen as prototypes and some as criticisms.
+The small points are the data, the large points the prototypes and the large triangles are the criticisms.
+The prototypes are selected (manually) to cover the centers of the data distribution and the criticisms are points in a cluster without a prototype.
 Prototypes and criticisms are always actual instances from the data.
 
 ```{r, fig.cap = "Prototypes and criticisms."}
@@ -97,64 +97,64 @@ ggplot(dat, aes(x = x1, y = x2)) + geom_point(alpha = 0.7) +
 
 ```
 
-I have chosen the prototypes manually, which doesn't scale well and probably delivers bad results.
+I selected the prototypes manually, which doesn't scale well and probably leads to poor results.
 There are many approaches to find prototypes in the data. 
-One is called k-medoids, a clustering algorithm which is related to the k-means algorithm.
-Actually any clustering algorithm which returns actual data points as cluster centers would qualify for selecting prototypes.
-But most of these methods only find prototypes, but no criticisms.
-This chapter presents MMD-critic by Kim et. al (2016)[^critique], an approach that combines finding prototypes and criticisms within a single framework.
+One of these is k-medoids, a clustering algorithm related to the k-means algorithm.
+Any clustering algorithm that returns actual data points as cluster centers would qualify for selecting prototypes.
+But most of these methods find only prototypes, but no criticisms.
+This chapter presents MMD-critic by Kim et. al (2016)[^critique], an approach that combines finding prototypes and criticisms in a single framework.
 
-MMD-critic compares the distribution of the data and the distribution of the chosen prototypes.
+MMD-critic compares the distribution of the data and the distribution of the selected prototypes.
 This is the central concept for understanding the MMD-critic method.
-MMD-critic selects prototypes that minimize the discrepancy of the two distributions.
-Data points in areas of high data density are good prototypes, especially when points from different 'data clusters' are selected.
-Data points from regions that are not explained well by the prototypes are selected as criticisms.
+MMD-critic selects prototypes that minimize the discrepancy between the two distributions.
+Data points in areas with high data density are good prototypes, especially when points  are selected from different 'data clusters'.
+Data points from regions that are not vwell explained  by the prototypes are selected as criticisms.
 
 Let's delve deeper into the theory.
 
 #### Theory
 
-The high-level MMD-critic procedure is simple.
+The MMD-critic procedure on a high-level can be summarized briefly:
 
 1. Set the number of prototypes and criticisms you want to find.
-1. Select prototypes using greedy search. 
-Prototypes are chosen so that the distribution of prototypes is close to the data distribution.
-1. Select criticisms using greedy search. 
-Points are chose as criticisms when the distribution of prototypes and of the data differ the most.
+1. Select prototypes with greedy search. 
+Prototypes are selected so that the distribution of the prototypes is close to the data distribution.
+1. Select criticisms with greedy search. 
+Points are selected as criticisms when the distribution of prototypes and of the data differ the most.
 
 We need a couple of ingredients to find prototypes and criticisms for a dataset with MMD-critic.
 As the most basic ingredient, we need a **kernel function** to estimate the data densities.
 A kernel is a function that weights two data points according to their distance.
-Based on density estimates, we need a measure that tells us how different two distributions are, so that we can tell if the distribution of prototypes we have chosen is close to the data distribution.
-This is solved using the **maximum mean discrepancy (MMD)** measure.
-Also built upon the kernel function, we need the **witness function** to tell us how different two distribution are at a specific data point. 
-With the witness function we can choose criticisms of the data points, which are points where the distribution of prototypes and data diverges and the witness function takes on large absolute values.
+Based on density estimates, we need a measure that tells us how different two distributions are so that we can determine whether the distribution of the prototypes we select is close to the data distribution.
+This is solved by measuring the **maximum mean discrepancy (MMD)**.
+Also based on the kernel function, we need the **witness function** to tell us how different two distribution are at a particular data point. 
+With the witness function, we can select criticisms, i.e. data points at which the distribution of prototypes and data diverges and the witness function takes on large absolute values.
 The last ingredient is a search strategy for good prototypes and criticisms, which is solved with a simple **greedy search**.
 
 
 Let's start with the **maximum mean discrepancy (MMD)**, which measures the discrepancy between two distributions.
-Selecting prototypes create a density distribution of prototypes.
-The goal is to minimize the discrepancy between this distribution of the prototypes and the data distribution. 
-We want to test whether the distributions are different, based on their empirical distributions estimated by kernel densities.
-The maximum mean discrepancy measures the difference between two distributions which is the supremum over a function space of differences between the expectation according to the two distributions.
+The selection of prototypes creates a density distribution of prototypes.
+The aim of MMC-critic is to minimize the discrepancy between this distribution of the prototypes and the data distribution. 
+We want to evaluate whether the distributions are different, based on their empirical distributions which are with the help of the by kernel densities.
+The maximum mean discrepancy measures the difference between two distributions, which is the supremum over a function space of differences between the expectation according to the two distributions.
 All clear?
-I personally understand those concepts much better once I see the formulas for how something is calculated with data.
+Personally, I understand these concepts much better when I see the formulas, how something is calculated with data.
 The following formula shows how to calculate the squared MMD measure (MMD2):
 
 $$MMD^2=\frac{1}{m}\sum_{i,j=1}^m{}k(z_i,z_j)-\frac{2}{mn}\sum_{i,j=1}^{m,n}k(z_i,x_j)+\frac{1}{n^2}\sum_{i,j=1}^n{}k(x_i,x_j)$$
 
-k is a kernel function that measures the similarity of two points, but more on that later.
+k is a kernel function that measures the similarity of two points, but more about this later.
 m is the number of prototypes z, and n is the number of data points x in our original dataset.
 The prototypes z are a selection of data points x.
 Each point is multidimensional, that is it can have multiple features. 
 The goal of MMD-critic is to minimize MMD2.
-The closer MMD2 is to zero, the better the prototype distribution matches the data.
+The closer MMD2 is to zero, the better the distribution of the prototypes fits the data.
 
 The following graphic illustrates the MMD2 measure. 
-The first plot shows the data points with two features. where the data density estimate is indicated with a shaded background.
-Each of the other plots show different selections of prototypes, together with the MMD2 measure in the plot titles.
-The prototypes are the big red dots and their distribution is plotted as contour lines.
-The prototypes selection that covers the data the best in these scenarios (bottom left plot) has the lowest discrepancy value.
+The first plot shows the data points with two features, whereby the estimation of the data density is displayed with a shaded background.
+Each of the other plots shows different selections of prototypes, along with the MMD2 measure in the plot titles.
+The prototypes are the large red dots and their distribution is shown as contour lines.
+The selection of the prototypes that best cover the data in these scenarios (bottom left) has the lowest discrepancy value.
 
 ```{r mmd, fig.cap = "The squared maximum mean discrepancy measure (MMD2) for a dataset with two features and different selections of prototypes."}
 set.seed(42)
@@ -223,28 +223,30 @@ A choice for the kernel is the radial basis function kernel:
 $$k(x,x')=exp\left(\gamma||x-x'||^2\right)$$
 where ||x-x'|| is the Euclidean distance between two points.
 $\gamma$ is a scaling parameter. 
-The value of the kernel decreases with the distance of the two points and ranges between zero, when the two points are infinitely far apart, and one, when the two points are equal.
+The value of the kernel decreases with the distance between the two points and ranges between zero and one:
+Zero when the two points are infinitely far apart' 
+One when the two points are equal.
 
 We combine the MMD measure and the kernel with greedy search in an algorithm for finding prototypes:
 
 - Start with an empty list of prototypes.
 - While the number of prototypes is below the chosen number m:
-    - Check for each point in the dataset how much it decreases the MMD2 of the prototypes, when added to the list. Add the data point that minimizes the MMD2 to the list.
+    - For each point in the dataset, check how much the MMD2 of the prototypes is reduced the point is added to the list. Add the data point that minimizes the MMD2 to the list.
 - Return the list of prototypes.
 
-The remaining ingredient we need for finding criticisms is the witness function, which tells us how much two probability distributions differ at a particular point. 
+The remaining ingredient we need to find criticisms is the witness function, which tells us how much two probability distributions differ at a particular point. 
 It can be estimated using:
 
 $$g(x)=\frac{1}{n}\sum_{i=1}^nk(x,x_i)-\frac{1}{m}\sum_{j=1}^mk(x,z_j)$$
-The witness function checks the difference between two density estimates for a given point.
-For two datasets (with the same features), the witness function gives you the means to check in which empirical distribution the point x is more likely to fit in.
-For finding criticisms we look for extreme values of the witness function in both negative and positive direction.
-When the witness function is close to zero for a point x, it means that the density function of the data and the prototypes are close to each other, which means that we found good prototypes for this area.
-A positive witness function at point x means that the prototype distribution overestimates the data distribution (for example when we select a prototype with few data points nearby);
-a negative witness function at point x means that the prototype distribution underestimates the data distribution (for example when there are many data points, but we don't select prototype nearby).
+The witness function checks the difference between two density estimates for a particular point.
+For two datasets (with the same features), the witness function gives you the means of evaluating in which empirical distribution the point x fits more.
+To find criticisms, we look for extreme values of the witness function in both negative and positive directions.
+If the witness function for a point x is close to zero, the density function of the data and the prototypes are close together, which means that the distribution of prototypes resembles the distribution of the data at point x.
+A positive witness function at point x means that the prototype distribution overestimates the data distribution (for example if we select a prototype with few data points nearby);
+a negative witness function at point x means that the prototype distribution underestimates the data distribution (for example if there are many data points around x, but haven't selected any prototypes nearby).
 
-To give you more intuition, let's re-use the prototypes from the plot before with the lowest MMD2 and display the witness function for a few manually selected points.
-The labels in the following plot show the value of the witness function for different points marked as triangles
+To give you more intuition, let's reuse the prototypes from the plot beforehand with the lowest MMD2 and display the witness function for a few manually selected points.
+The labels in the following plot show the value of the witness function for various points marked as triangles
 Only the point in the middle has a high absolute value and is therefore a good candidate for a criticism.
 
 
@@ -266,18 +268,18 @@ p + geom_point(data = pt2, color = "red") +
     geom_point(data = wit.points, color = "black", shape = 17, size = 4) 
 ```
 
-The witness function allows us to explicitly search for data instances that are not represented well by the prototypes.
-Criticisms are points with large absolute value in the witness function.
-The procedure for finding criticisms is the same greedy search as for finding the prototypes. 
-But instead of finding the point that decreases the MMD2, we search points that maximizes a cost function that involves the witness function and a regularizer term.
-The additional term in the optimization function enforces diversity in the points, which is needed so that the points are not all from the same cluster, but different types of criticisms.
+The witness function allows us to explicitly search for data instances that are not ell represented by the prototypes.
+Criticisms are points with high absolute value in the witness function.
+The process of finding criticisms is the same greedy search as finding the prototypes. 
+But instead of reducing the overall MMD2, we are looking for points that maximize a cost function that includes the witness function and a regularizer term.
+The additional term in the optimization function enforces diversity in the points, which is needed so that the points come from the different cluster.
 
-This second step is completely agnostic of how the prototypes are found.
-I could have also hand-picked some prototypes and used the procedure described here to learn criticisms.
-Or the prototypes could have come from any clustering procedure, like k-medoids.
+This second step is independent of how the prototypes are found.
+I could also have handpicked some prototypes and used the procedure described here to learn criticisms.
+Or the prototypes could come from any clustering procedure, like k-medoids.
 
 That's it with the important parts of MMD-critic theory. 
-A question remains:
+One question remains:
 **How can MMD-critic be used for interpretable machine learning?**
 
 MMD-critic can add interpretability in three ways: 
