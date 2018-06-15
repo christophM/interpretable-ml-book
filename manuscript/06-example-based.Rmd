@@ -283,108 +283,109 @@ One question remains:
 **How can MMD-critic be used for interpretable machine learning?**
 
 MMD-critic can add interpretability in three ways: 
-1) By helping to understand the data distribution better; 2) By building an interpretable model; 3) By making a black box model interpretable.
+1) By helping to better understand the data distribution; 2) By building an interpretable model; 3) By making a black box model interpretable.
 
-If you only apply MMD-critic to your data to find prototypes and criticisms it will improve understanding of the data, especially when you have a complex distribution with some edge cases.
-Judging from that I would have to cover boxplots, summary statistics, scatter plots and all the other tools for descriptive statistics tools in this book (which I don't).
-But you can do more things with MMD-critic!
+If you apply MMD-critic to your data to find prototypes and criticisms, it will improve understanding of the data, especially if you have a complex data distribution with some edge cases.
+If I would include all methods into this book that helps to understand the data better,  I would have to cover boxplots, summary statistics, scatter plots and all the other tools for descriptive statistics tools in this book (which I don't).
+But with MMD-critic you can achieve more!
 
-For example, you can build an interpretable prediction model from the prototypes.
+For example, you can create an interpretable prediction model from the prototypes.
 The resulting model is a nearest prototype model. 
 After learning prototypes, the model returns the outcome of the nearest prototype as the prediction of a new data point.
-As an explanation for the prediction, the prototype itself is returned.
+The prototype itself is returned as an explanation for the prediction.
 The prediction function is defined as:
 
 $$\hat{f}(x)=argmax_{i\in{}S}k(x,x_i)$$
 
-meaning that we choose the prototype i from the set of prototypes S, that is closest to the new data point in the sense that produces the highest kernel function value.
+which means that we select the prototype i from the set of prototypes S that is closest to the new data point, in the sense that yields the highest value of the kernel function.
 This procedure has three tuning parameters: 
 The type of kernel, the kernel scaling parameter and the number of prototypes.
 All parameters can be optimized within a cross validation loop.
 The criticisms are not used for this approach.
 
-As a third option, we can use MMD-critic for making any machine learning model more explainable globally by studying prototypes and criticisms together with their model predictions.
+As a third option, we can use MMD-critic to make any machine learning model globally explainable by examining prototypes and criticisms along with their model predictions.
 The procedure is as follows:
 
 1. Find prototypes and criticisms with MMD-critic.
 1. Train a machine learning model as usual.
-1. Predict the prototypes and criticisms with the ML model.
-1. Analyse the predictions: In which cases was the algorithm wrong? Now you have an interpretable set of examples, where you know that it represents the data well and it can help you find the weaknesses of the machine learning model.
+1. Predict outcomes for the prototypes and criticisms with the ML model.
+1. Analyse the predictions: In which cases was the algorithm wrong? 
+Now you have a number of examples that represent the data well and help you to find the weaknesses of the machine learning model.
 
 How does that help?
-Remember when Google's image classifier tagged black people as Gorillas?
-Maybe they should have used the procedure described here before deploying their image recognition algorithm.
-Simply checking the performance of the model is not enough, because if it were 99% correct, this issue could still be in the 1%.
+Remember when Google's image classifier identified black people as gorillas?
+Perhaps they should have used the procedure described here before deploying their image recognition algorithm.
+It is noth enough just to check the performance of the model, because if it were 99% correct, this issue could still be in the 1%.
 And labels can also be wrong!
-Going through all the training data and doing a sanity check if the prediction is problematic might have uncovered the problem, but would be infeasible.
-But choosing - let's say a couple of thousands of - prototypes and criticisms is feasible and might have uncovered a problem with the data:
-It might have shown that for the image class 'human' there are only people with white skin, which indicates a problem with the diversity in the dataset.
-Or it might have shown one or more image of a person with dark skin as prototype or (probably) as criticism with the infamous 'Gorilla' model prediction.
-I am not promising that MMD-critic would catch these kind of errors for certain, but it's a good sanity check.
+Going through all the training data and performing a sanity check if the prediction is problematic might have revealed the problem, but would be infeasible.
+But the selection of - sazy a few thousand - prototypes and criticisms is feasible and could have revealed a problem with the data:
+It might have shown that there is a lack of people with dark skin in the human class, which indicates a problem with the diversity in the dataset.
+Or it could have shown one or more images of a person with dark skin as a prototype or (probably) as a criticism with the notorious 'gorilla' model prediction.
+I do not promise that MMD-critic would certainly intercept these kind of mistakes, but it's a good sanity check.
 
 ### Examples:
 
-I took the examples from the MMD-critic paper. 
-Both applications are with images.
-Each image was represented using image embeddings with 2048 dimensions. 
-An image embedding is an abstract representation of an image by a vector, which can be extracted from the weights of a neural network that has been trained to solve an image recognition task, in this case it was the ImageNet classification dataset.
-The kernel distances between images were calculated using these embedding vectors.
+I have taken the examples from the MMD-critic paper. 
+Both applications are based on image dataset.
+Each image was represented by image embeddings with 2048 dimensions. 
+An image embedding is an abstract representation of an image by a vector that can be extracted from the weights of a neural network trained to solve an image recognition task, in this case on the ImageNet classification dataset.
+The kernel distances between the images were calculated using these embedding vectors.
 
-The first dataset contains different breeds of dogs from the ImageNet dataset.
-MMD-critic is applied on data of two dog breed classes.
-For the dogs on the left, the resulting prototypes mostly show the face of the dog, whereas criticisms are images without the dog faces or in different coloring (like black and white). 
-On the right side, the prototypes contain images of dogs in various poses outdoors. 
+The first dataset contains different dog breeds from the ImageNet dataset.
+MMD-critic is applied on data from two dog breed classes.
+With the dogs on the left, the prototypes usually show the face of the dog, while the criticisms are images without the dog faces or in different colors (like black and white). 
+On the right side the prototypes contain images of dogs outdoors. 
 The criticisms contain dogs in costumes and other unusual cases.
 
 ```{r, prototypes-and-criticisms, fig.cap = "Prototypes and criticisms for two types of dog breeds from the ImageNet dataset."}
 knitr::include_graphics("images/proto-critique.png")
 ```
 
-Another application of MMD-critic features a hand-written digit dataset.
-Each image shows a hand-written digit and I would expect that the prototypes will show images of the most common ways of writing a digit and the criticisms some less common ways.
+Another application of MMD-critic features a handwritten digit dataset.
+Each image shows a handwritten digit and I would expect the prototypes to be images of the most common ways of writing a digit and the criticisms some less common ways.
 
-Looking at the actual prototypes and criticisms images you might notice that there are different numbers of images per digit. 
-That's because  a fixed number of prototypes and criticisms were searched for over the complete dataset and not with a fixed number per class.
+Looking at the actual prototypes and criticisms images you might notice that the number of images per digit is different. 
+This is because a fixed number of prototypes and criticisms were searched across the entire dataset and not with a fixed number per class.
 As expected, the prototypes show different ways of writing the digits.
-The criticisms include examples with unusually thick or thin lines but also unrecognizable digits.
+The criticisms include examples with unusually thick or thin lines, but also unrecognizable digits.
 
-```{r, prototypes-and-criticisms2, fig.cap = "Prototypes and criticisms for a hand-written digits dataset."}
+```{r, prototypes-and-criticisms2, fig.cap = "Prototypes and criticisms for a handwritten digits dataset."}
 knitr::include_graphics("images/proto-critique2.png")
 ```
 
 
 ### Advantages
 
-- In a user study, the authors of MMD-critic gave test subjects images they had to visually match to one of two sets of images, each representing one of two classes (e.g. two dog breed).
-The **subjects performed best when the sets where showing prototypes and criticisms** instead of random images of that class.
-- You can freely **choose the number of prototypes and criticisms**.
+- In a user study the authors of MMD-critic gave the test persons images, which they had to visually match to one of two sets of images, each representing one of two classes (e.g. two dog breed).
+The **participants performed best when the sets showed prototypes and criticisms** instead of random images of a class.
+- You are free to **choose the number of prototypes and criticisms**.
 - MMD-critic works by with density estimates of the data. 
 This **works with any type of data and any type of machine learning model**.
-- The algorithm is **straightforward to implement**.
-- MMD-critic is very flexible in how it is used to add interpretability: 
+- The algorithm is **easy to implement**.
+- MMD-critic is very flexible in the way it is used to increase interpretability: 
 It can be used to understand complex data distributions; 
-It can be an interpretable machine learning model by itself; 
-Or it can shed light on the workings of a black box machine learning model.
-- **Finding criticisms is agnostic to how the prototypes have been selected**.
-But it makes more sense to also select prototypes according to MMD-critic, because then both prototypes and criticisms are created by the same method of comparing the prototypes and data densities.
+It can itself be an interpretable machine learning model; 
+Or it can shed light on the decision making of a black box machine learning model.
+- **Finding criticisms is independent of the selection process of the prototypes.**.
+But it makes sense to select prototypes according to MMD-critic, because then both prototypes and criticisms are created using the same method of comparing prototypes and data densities.
 
 
 ### Disadvantages
 
 - You have to **choose the number of prototypes and criticisms**.
-As much as this can be a nice-to-have, this is also a disadvantage. 
+As much as this can be nice-to-have, it's also a disadvantage. 
 How many prototypes and criticisms do we actually need?
 The more the better? The less the better?
-The number of prototypes and criticisms has to be set in advance and there are no instructions how to choose a good number.
-Only in the case of using MMD-critic to build a classifier, we have a way to directly optimize it.
-A solution could be a screeplot, which would show on the x-axis the number of prototypes and the MMD2 measure on the y-axis. 
-We would choose the number of prototypes at which the MMD2 curve flattens.
+The number of prototypes and criticisms has to be determined by the user and there are no instructions how to choose a good number.
+Only when using MMD-critic to build a classifier do we have a way to optimize it directly.
+One solution could be a screeplot showing on the x-axis the number of prototypes and the MMD2 measure on the y-axis. 
+We would choose the number of prototypes where the MMD2 curve flattens.
 - The other parameters are the choice of the kernel and the kernel scaling parameter.
 We have the same problem as with the number of prototypes and criticisms:
 **How do we select a kernel and its scaling parameter?**
-Again, when we use MMD-critic as a nearest prototype classifier, we can tune the choice of kernel and the parameter.
-But for the unsupervised use cases of MMD-critic it is unclear =.
-(Maybe I am a bit harsh here, since all unsupervised problems have this issue.)
+Again, when we use MMD-critic as a nearest prototype classifier, we can tune the kernel parameters.
+For the unsupervised use cases of MMD-critic, however, it is unclear.
+(Maybe I am a bit harsh here, since all unsupervised problems have this problem.)
 - It takes all the features as input, **disregarding the fact that some features might not be relevant** in the context of a supervised problem.
 - There is some code available, but it is **not yet implemented as nicely packaged and documented software**.
 
@@ -392,8 +393,7 @@ But for the unsupervised use cases of MMD-critic it is unclear =.
 ### Code and Alternatives
 
 - An implementation of MMD-critic can be found here: [https://github.com/BeenKim/MMD-critic](https://github.com/BeenKim/MMD-critic).
-- The simplest alternative approach to finding prototypes is [k-medoids](https://en.wikipedia.org/wiki/K-medoids)
-, a classification technique for finding data points that represent others. Has similarities to k-means. [^medoids]
+- The simplest alternative to finding prototypes is [k-medoids](https://en.wikipedia.org/wiki/K-medoids) by Kaufman et. al (1987)[^medoids]
 
 
 [^medoids]: Kaufman, Leonard, and Peter Rousseeuw. Clustering by means of medoids. North-Holland, 1987.
