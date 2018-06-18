@@ -24,8 +24,8 @@ mad.dist = function(x, x.star, mads) {
 
 mod = function(x){sum(x)}
 
-loss.iris = function(x, x.initial = unlist(iris[1,1:4, drop = TRUE]), y.star = sum(iris[1, 1:4]), X = iris[1:4], f = mod, lambda = 1){
-  lambda * (f(x) - y.star) + mad.dist(x, x.initial, mad(X))
+loss.iris = function(x, x.initial = unlist(iris[1,1:4, drop = TRUE]), y.target = 2, X = iris[1:4], f = mod, lambda = 1){
+  lambda * (f(x) - y.target) + mad.dist(x, x.initial, mad(X))
 }
 
 
