@@ -1,6 +1,5 @@
 # Counterfactual explanations
 
-
 A counterfactual of an event describes what the result of the event would have been, if the input were different contrary to what we observed.
 For example: 
 If I had waited for my meal to cool down, I wouldn't have burned my tongue.
@@ -168,88 +167,71 @@ TODO: ALSO USE THE SECOND EXAMPLE?
 
 ### Advantages
 
-- The interpretation is very clear: 
+**The interpretation is very clear**:
 If the instance changes in the shown way, the prediction changes. 
 There is no assumptions involved or some magic happening in the background. 
 This also means it is not as dangerous as [local models like LIME](#lime), where it is unclear how good the local model is how much I am allowed to extrapolate the model in the neighborhood.
-- It creates both an instance as returned value, but since it is comparable to the instance of interest, we can also summarize it shortly by stating which features changed.
-This gives us two modes of reporting results:
+
+It creates both an instance as returned value, but since it is comparable to the instance of interest, we can also summarize it shortly by stating which features changed.
+This gives us **two modes of reporting results**.
 Simply returning the counterfactual and / or highlighting which features changed between instance of interest and counterfactual.
-- The counterfactual method does not need any access to the data itself nor does it need to know anything about the underlying model.
+
+The **counterfactual method doesn't need any access to the data or the model**.
 It only needs access to the prediction function of the model. 
 This can in theory be simply through an API. 
 This is attractive for companies, who are audited by a third party or for creating explanations to customers, without revealing the model or the data. 
 A company has an interest to protect the model and the data as trade secrets or because of data privacy.
-Counterfactuals over this balance between transparency and privacy.
-- The method works also without machine learning.
-We can create counterfactuals for any system that received inputs and creates outputs
-- It's relatively easy to implement.
-- Especially useful in critical explanations: Why was something not granted, or someone rejected?
+Counterfactuals offer this balance between transparency and privacy.
+
+The method **works also without machine learning**.
+We can create counterfactuals for any system that received inputs and creates outputs.
+For example let's say you apply for a job and you get rejections based on your CV.
+You know that the companies did not use machine learning for that.
+
+**It's relatively easy to implement**, since it's essentially one loss function that has to be implemented and which can be optimized with standard optimizer libraries. 
+Of course some details have to be take care of, like allowing also categorial features.
+
 
 ### Disadvantages
 
-- The counterfactuals are nowhere implemented as an easy to use software package.
-- A reality, which is often not desirable. 
-There is not one correct counterfactual, but many (the Rashomon effect).
-This is inconvenient - people love single, simple explanations for things and not being offered multiple different explanations.
-This poses a practical challenge: 
+The counterfactuals method **lacks a general software implementation**.
+And a method is only useful if it is implemented. 
+Fortunately, it should be easy to implement and hopefully I can remove that statement here soon.
+
+**There are usually many counterfactuals to a case (Rashomon effect)**.
+This is inconvenient - people love single, simple explanations for things and don't like being offered multiple different explanations.
+It also poses a practical challenge: 
 Let's say we generated 23 counterfactuals as explanations for an instance. 
 Do we report all of them?
 Just the best one?
 What if they are all relatively "good", but very different?
 These questions have to be answered individually per project.
-- It is unclear how to optimize for $\lambda$ in practice.
+
+It is **unclear how to optimize for $\lambda$** in practice.
 But this is also a question of the application: 
 Is it more important that the prediction of the counterfactual is the desired prediction or that the counterfactual is similar to the instance of interest?
 Maybe it's okay to create a counterfactual that changes the the predicted appartment rent from 900 Euros to 990 (of the desired 1000) by only changing one feature. 
 By increasing lambda, we find a counterfactual appartment with a predicted rent of 1001, which is closer to the desired outcome, but 4 features had to change dramatically for it. 
 Which one is the better counterfactual?
 Again, this has to be answered case by case
-- The proposed solution and distance function has no good solution for categorical features, which may have many different levels. 
+
+The proposed solution and distance function has **no real solution for categorical features**, which may have many different levels. 
 The solution in the paper is not meaningful for more factors and or factors with more levels, because then there are many combinations and the number of evaluations we have to do would explode.
 
 ### Software and Alternatives
 
-- Finding Counterfactuals through growing spheres around the point and searching within that. [^spheres]
-- Anchors: This is the opposite of counterfactuals. They ask, what should not change to keep the prediction the same. TODO CITE
-
-<!-- 
-## Counterfactuals and adverserial examples
-
-What are counterfactuals?
-What are adverserial examples?
-
-Counterfactuals and adverserial examples in real life. 
-Maybe include images.
+- Unfortunately there is no software available so far. 
+- An alternative way of searching for counterfactuals is by drawing a sphere around the point of interest, sampling points, checking if one of the sampled points has the desired outcome and either contract or expand the sphere. 
+This approach is presented by Laugel et. al (2017)[^spheres]. 
+They don't use the word counterfactual in their paper, but the method is rather similar.
+They also have a loss function that favors counterfactuals with changes in as few features as possible.
+This is a greedy search approach.
+![](images/spheres.png)
+- Anchors: This is the opposite of counterfactuals. They ask, what should not change to keep the prediction the same. Paper by Ribeiro et. al 2018 [^anchors]
+TODO: CONTINUE AND ADD IMAGE FROM PAPER
 
 
-Other ways ml algorithms can be attacked (keep it short)
-- poison the training data set
-
-### Theory
-
-- Sandra Waechter Paper?
-- Growing Spheres Paper?
-- Something from 
-
-
-### Examples
-
-If available: Add code example for flipping bike classification 
-
-
-### Advantages
-- You don't have to know anything about the inner workings for creating counterfactuals. 
-
-### Disadvantages
-- Don't reveal much about inner workings.
-
-
-
-
-Some links http://www.cleverhans.io/security/privacy/ml/2016/12/16/breaking-things-is-easy.html
-
--->
+[^anchors]: Ribeiro, M. T., & Guestrin, C. (n.d.). Anchors : High-Precision Model-Agnostic Explanations.
 
 [^spheres]: Laugel, T., Lesot, M.-J., Marsala, C., Renard, X., & Detyniecki, M. (2017). Inverse Classification for Comparison-based Interpretability in Machine Learning. Retrieved from http://arxiv.org/abs/1712.08443
 
