@@ -1,24 +1,23 @@
 ## Counterfactual explanations
 
-A counterfactual can explain a causal situation in the form "If X had not occured, Y would not have occured".
+A counterfactual describes a causal situation in the form "If X had not occured, Y would not have occured".
 For example, "If I hadn't taken a sip of this hot coffee, I wouldn't have burned my tongue".
-The event Y is that I burned my tongue.
+The event Y is that I burned my tongue;
 The cause X for this event is that I drank a hot coffee.
-Analysing these What-If-scenarios requires imagining a hypothetical reality that is contraire to the observed facts (e.g. a world in which I didn't drink the hot coffee), hence the name "counterfactual".
+Thinking in counterfactuals requires imagining a hypothetical reality that is contraire to the observed facts (e.g. a world in which I didn't drink the hot coffee), hence the name "counterfactual".
 Arguably, the ability to think in counterfactuals is - among other powers - what makes us humans so clever compared to other animals.
 
 In interpretable machine learning, counterfactual explanations can be used to explain predictions of single instances.
-The "event" is the predicted outcome of an instance, the "causes" are the particular feature values of that instance that were input to the model.
-We can easily simulate What-If-scenarios for machine learning model predictions:
+The "event" is the predicted outcome of an instance, the "causes" are the particular feature values of that instance that were input to the model and "caused" the particular prediction.
+We can easily simulate counterfactuals for machine learning model predictions:
 We simply change the feature values of an instance before making the predictions and analyse how the prediction changes.
-We are interested in scenarios, where the prediction changes in some relevant way, like a flip in predicted class (e.g. loan application accepted vs. rejected) or the prediction passes some threshold (e.g. probability for cancer reaches 10%).
-**A counterfactual explanation of a prediction of an instance describes the smallest change to the feature values that would change the prediction to some predefined output.**
+We are interested in scenarios, where the prediction changes in some relevant way, like a flip in predicted class (e.g. loan application accepted vs. rejected) or where the prediction reaches some threshold (e.g. probability for cancer reaches 10%).
+**A counterfactual explanation of a prediction of an instance describes the smallest change to the feature values that would change the prediction to a predefined output.**
 
-
-Counterfactual explanations are model-agnostic method, since they work only with the model input and output.
-Arguably, this method would also feel at home in the [model-agnostic chapter](#agnostic), since the output can be expressed as a summary for a feature ("change feature A and B to get prediction change").
-But a counterfactual explanation is always a new instance itself, that's why it lives in this chapter ("starting from instance X, change A and B to get instance X'").
-In contrast to [prototypes](#proto), counterfactuals don't have to be actual instances from the data, but can be an unseen combination of feature values.
+The counterfactual explanation method is model-agnostic, since it works only with the model inputs and output.
+Arguably, this method would also feel at home in the [model-agnostic chapter](#agnostic), since the interpretation can be expressed as a summary fof the differences in feature values ("change features A and B to change the prediction").
+But a counterfactual explanation is itself also a new instance, that's why it lives in this chapter ("starting from instance X, change A and B to get a counterfactual").
+In contrast to [prototypes](#proto), counterfactuals don't have to be actual instances from the training data, but can be an new combination of feature values.
 
 Before discussing how to generate counterfactuals, I want to discuss some example applications for counterfactuals and how a good counterfactual explanation looks like.
 
@@ -46,92 +45,96 @@ But counterfactuals also suffer from the 'Rashomon effect'.
 Rashomon is a Japanese movie in which the murder of a Samurai is told by different people.
 Each of the stories explains the outcome equally well, but the stories conflict with each other. 
 The same can happen with counterfactuals, because there are usually multiple different counterfactual explanation.
-All are valid counterfactuals, but each tells a different 'story' how to come to that outcome.
-One counterfactual might say to change feature A, the other counterfactuals says to leave A the same, which is a contradiction.
+Each counterfactual is valid, but tells a different 'story' how to come to that outcome.
+One counterfactual might say to change feature A, the other counterfactual says to leave A the same but change feature B, which is a contradiction.
 This issue of multiple truths can be dealt with by either reporting all counterfactual explanations or by having a criterion to rank counterfactuals and choosing the best one. 
 
 Speaking of criteria, how do we define a good counterfactual?
-The users define a relevant change in the prediction of an instance (= the alternative reality), so an obvious first requirement is that **a counterfactual instance produces the predefined prediction as closely as possible**.
-This is not always possible.
+The user of a counterfactual explanation defines a relevant change in the prediction of an instance (= the alternative reality), so an obvious first requirement is that **a counterfactual instance produces the predefined prediction as closely as possible**.
+It is not always possible to match the predefined output exactly.
 For example in a classification setting with two classes, one rare and one common, the model might always classify an instance as the common class.
-Searching for changes of the features of an instance, in order to switch the label from the common to the rare class might be impossible.
-So we might want to relax the requirement a bit that the predicted output of the counterfactual matches exactly the defined outcome.
-In the classification example we could look at the predicted probabilities and search for counterfactual where the probability of the rare class is increased, e.g. 10% instead of the 2% predicted probability an instance has.
-The question then is: What are the minimal changes to the features so that the predicted probability changes from 2% to 10% (or close to 10%)?
-Further, **a good counterfactual is as similar as possible to the instance regarding feature values**.
-This requires a measure of distance between the instance to be explained and other distances, which we want to minimize.
+Searching for changes of the feature values that would switch the label from the common to the rare class might be impossible.
+So we might want to relax the requirement that the predicted output of the counterfactual has to match the defined outcome exactly.
+In the classification example we could look at the predicted probability and search for a counterfactual where the probability of the rare class is increased to, for example, 10% instead of a 2% predicted probability an instance has.
+The question then is, what are the minimal changes to the features so that the predicted probability changes from 2% to 10% (or close to 10%)?
+A further quality criterium is that **a counterfactual should be as similar as possible to the instance regarding feature values**.
+This requires a measure of distance between the instance to be explained and other instances, which we want to minimize.
 The counterfactual should not only be close to the original instance, but also **as few features as possible should be changed**.
-This can be factored into the distance measure (for example by using the Manhatten norm).
+This can be factored into the distance measure, for example by relying the Manhatten norm.
 The last requirement is that **a counterfactual instance should have feature values that are likely**. 
-It wouldn't be useful to generate a counterfactual explanation for the rent example where an apartments size is negative or the number of rooms is set to 200.
+It wouldn't be useful to generate a counterfactual explanation for the rent example where an apartment's size is negative or the number of rooms is set to 200.
 Even better, counterfactuals should be likely according to the joint distribution of the data, e.g. an apartment with 10 rooms and 20 square meters should not be considered as counterfactual.
 
-### Finding counterfactual explanations.
+### Generating counterfactual explanations.
 
-The first natural instinct for finding counterfactuals is trial and error (a search method).
+The first natural instinct for finding counterfactuals is searching by trial and error.
 This approach involves randomly changing features of the instance of interest and stopping when the desired output is predicted.
-Like in the example about Anna trying to find a version of her apartment for which she can charge more rent.
-But there are better approaches than that.
-First, we define a loss function that takes an instance and a counterfactual and measures how far away the predicted outcome of the counterfactual is to the predefined outcome and how close the counterfactual is to the instance of interest.
-With this loss function, we can either try to optimize it directly with an optimization algorithm or by searching / sampling (like the method 'Growing Spheres', see [Software and Alternatives](#example-software)).
+Like in the example where Anna tried to find a version of her apartment for which she could charge more rent.
+But there are better approaches than trial and error.
+First, we define a loss function that takes as input the instance of interest, a counterfactual and the desired (counterfactual) outcome. 
+The loss measures how far away the predicted outcome of the counterfactual is to the predefined outcome and how close the counterfactual is to the instance of interest.
+We can either optimize the loss directly with an optimization algorithm or by searching around the instance, as suggested in the method 'Growing Spheres', see [Software and Alternatives](#example-software)).
 
-In this section I will present the approach suggested by Wachter et. al 2017[^wachter]
-They suggest a loss function that finds good counterfactuals by finding the ones that minimize the loss.
+In this section, I will present the approach suggested by Wachter et. al 2017[^wachter].
+They suggest minimizing the follwing loss.
 
 
-$$L(x, x', \lambda) = \lambda\cdot(\hat{f}(x')-y')^2+d(x,x')$$
+$$L(x, x', y', \lambda) = \lambda\cdot(\hat{f}(x')-y')^2+d(x,x')$$
 
 The first term is the quadratic distance between the model prediction for the counterfactual x' and the desired outcome y', which the user has to define in advance.
 The second term is the distance d between the instance x to be explained and the counterfactual x', but more about this later.
-The $\lambda$ balances the distance in prediction (first term) against the distance of the points (second term).
+The $\lambda$ balances the distance in prediction (first term) against the distance of the instances (second term).
 The loss is solved for a given $\lambda$ and returns a counterfactual x'.
-A higher value means that we favor counterfactuals that are close to the desired outcome y', a lower value means that we favor counterfactuals that are very similar to x in the feature values.
-If $\lambda$ is large, but there is no counterfactual with a prediction that comes close to y', then the one will be chosen that is closest, regardless how far it is away from x.
+A higher value of $\lambda$ means that we favor counterfactuals that are close to the desired outcome y', a lower value means that we favor counterfactuals x' that are very similar to x in the feature values.
+If $\lambda$ is large, but there is no counterfactual with a prediction that comes close to y', then the closest instance will be selected, regardless how far it is away from x.
 Ultimately, the user has to decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x.
 
 To minimize this loss function any suitable optimization algorithm can be used, like Nelder-Mead.
 If we have access to the gradients of the model $\hat{f}$, we can use gradient-based methods like ADAM.
+The instance to be explained (x), the desired output (y') and the control parameter ($\lambda$) have to be set in advance.
+The loss function is minimized for x' to find the best counterfactual.
+
+$$\arg \min_{x'}L(x,x',y',\lambda)$$
 
 The distance function d for measuring how far apart instance x and counterfactual x' are is the L1-norm of the Manhatten distance weighted by the inverse median absolute deviation (MAD).
 
 $$d(x,x')=\sum_{j=1}^p\frac{|x_j-x'_j|}{MAD_j}$$
 
-The distance is the sum over all features of the absolute distance between the counterfactual and the instance of interest.
-It is scaled by the inverse of the median absolute deviation of feature j over the dataset, which is defined as:
+The total distance is the sum over all p feature-wise distances, which are the absolute differences in feature values between instance x and counterfactual x'.
+The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset, which is defined as:
 
 
 $$MAD_j = median_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-median_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)$$
-The MAD is the equivalent to the variance of a variable, but instead of using the mean as a center and summing over the quadratic distance, we use the median as the center and sum over the absolute distance.
-The used distance function has the advantage over e.g. Euclidean distance of introducing sparsity to the explanations that are generated.
-This means that two points are closer to each other, when less features are different.
+The median of a vector is the value where half of the vector values are larger and the other half smaller.
+The MAD is the equivalent to the variance of a feature, but instead of using the mean as a center and summing over the quadratic distances, we use the median as the center and sum over the absolute distances.
+The suggested distance function has the advantage over the Euclidean distance that it introduces sparsity to the explanations that are generated.
+This means that two points are closer to each other when less features are different.
 And it is more robust to outliers.
 The scaling with the MAD is necessary to bring all the features to the same scale - it shouldn't matter if you measure the size of an apparment in square meters or square feet.
 
-These are the ingredients to find counterfactuals. 
 The recipe for producing the counterfactuals is straightforward:
 
-1. Choose $\lambda$.
+1. Choose an instance to be explained (x), the desired outcome y', and $\lambda$.
 1. Sample a random instance as initial counterfactual.
-1. Optimize the counterfactual.
-1. Return the counterfactual that minimizes the loss function.
-1. Repeat steps 2-4 and return the list of counterfactuals or the one that minimizes the los.
+1. Run the optimizer for the loss function.
+1. Return the counterfactual that minimizes the loss.
+1. Repeat steps 2-4 and return the list of counterfactuals or the one that minimizes the loss.
 
-You might need to go back to step 1 and ajdust $\lambda$ when the tradeoff between matching the desired outcome and closeness of instance and counterfactual is not as desired.
+When the tradeoff between distance to the desired outcome y' and the distance to the instance x is not as desired, you might need to return to step 1 and ajdust $\lambda$.
 
 ### Examples
 
-The examples are both taken from the paper by Wachter et. al (2017) [^wachter].
+Both examples are from the paper by Wachter et. al (2017) [^wachter].
 
-The first example works with data on average Law School Admission Tests (LSAT).
-The authors train a three-layer fully-connected neural network to predict the students first-year average grade in law school, based on the grade point average (GPA) prior to the law school, their race and the average and on their the law school entrance exam scores.
-The goal is to find counterfactuals for each case which answers the following question:
+In the first example the authors train a three-layer fully-connected neural network to predict the students first-year average grade in law school, based on the grade point average (GPA) prior to the law school, their race and their law school entrance exam scores.
+The goal is to find counterfactuals for each student which answers the following question:
 How would the input feature have to be changed, to yield a predicted score of 0?
 Since the scores were normalised before, a student with a score of 0 is as good as the average of the students.
 A negative score means a result below average, a positive score above average.
 
 The following table shows the learned counterfactuals:
 
-| Score | Original GPA | Original LSAT | Original Race | Cf GPA | Cf LSAT | CF Race |
+| Score | GPA | LSAT | Race | x' GPA | x' LSAT | x' Race |
 | ------|--------------| --------------| --------------| -------| --------| ------- |
 | 0.17 | 3.1 | 39.0 | 0 | 3.1 | 34.0 | 0|
 | 0.54 | 3.7 | 48.0 | 0 | 3.7 | 32.4 | 0|
@@ -141,13 +144,13 @@ The following table shows the learned counterfactuals:
 
 The first column contains the predicted score, the next 3 columns the original feature values and the last 3 columns the counterfactual feature values that yield a score close to 0.
 The first two rows are students with a prediction above average, the other three rows below average.
-The counterfactuals for the first two rows say what would have to change to decrease the score and for the other three cases what would have to change to increase the score to average.
-The counterfactuals always change the race from black (encoded with 1) to white (encoded with 0), showing some racial bias.
-The GPA is not changed for creating counterfactuals, but LSAT is.
+The counterfactuals for the first two rows describe how the student features would have to change to decrease the predicted score and for the other three cases how they would have to change to increase the score to average.
+The counterfactuals always change the race from black (encoded with 1) to white (encoded with 0), showing a racial bias of the model.
+The GPA is not changed in the counterfactuals, but LSAT is.
 
 The second example shows counterfactuals for predicted risk of diabetes.
-The classifier is again a three-layer fully-connected neural network and is trained to predict the probability of diabetes given age, BMI, number of pregnancies and so on for women of Pima heritage.
-The counterfactuals answer the question "What feature values would have to be different to increase or decrease the probability of diabetes to 50%".
+The classifier is again a three-layer fully-connected neural network and is trained to predict the risk for diabetes given age, BMI, number of pregnancies and so on for women of Pima heritage.
+The counterfactuals answer the question "Which feature values have to be changed to increase or decrease the risk score of diabetes to 0.5?".
 The following counterfactuals were found:
 ```{r counterfactuals-pima, fig.cap="Counterfactuals for three women for the risk of diabetes. Example by Wachter et. al (2017)."}
 knitr::include_graphics("images/counterfactual-pima.png")
@@ -155,9 +158,9 @@ knitr::include_graphics("images/counterfactual-pima.png")
 
 ### Advantages
 
-**The interpretation of counterfactuals explanations is very clear**.
+**The interpretation of counterfactual explanations is very clear**.
 If the feature values of an instance are changed according to the counterfactual, then the prediction changes to the predefined prediction.
-There are no assumptions involved or some magic happening in the background. 
+There are no assumptions involved nor is any magic happening in the background. 
 This also means it is not as dangerous as [local models like LIME](#lime), where it is unclear how close a datapoint must be to extrapolate the prediction.
 
 The counterfactual method creates a new instance, but we can also summarize a counterfactual by stating which feature values changed.
@@ -166,13 +169,13 @@ You can either report the counterfactual instance or you can highlight which fea
 
 The **counterfactual method doesn't need any access to the data or the model**.
 It only needs access to the prediction function of the model, which would also work through the web via API for example.
-This is attractive for companies, who are audited by a third party or for creating explanations for customers, without revealing the model or the data. 
+This is attractive for companies which are audited by a third party or for creating explanations for customers, without revealing the model or the data. 
 A company has an interest to protect the model and the data because of trade secrets or because of data privacy.
 Counterfactuals offer a balance between explaining model outcomes and protecting the interests of the model owner.
 
 The method **works also with systems that don't use machine learning**.
-We can create counterfactuals for any system that receives inputs and creates outputs.
-The system that predicts apartment rents could also consist of hand-written rules and counterfactuals would still make sense.
+We can create counterfactuals for any system that receives inputs and returns outputs.
+The system that predicts apartment rents could also consist of hand-written rules and counterfactuals would still work.
 
 **The counterfactual explanation method is relatively easy to implement**, since it's essentially one loss function that has to be implemented and which can be optimized with standard optimizer libraries. 
 Some additional details have to be taken care of like bounding feature values to ranges that make sense (e.g. only positive apartment sizes).
@@ -182,23 +185,23 @@ Some additional details have to be taken care of like bounding feature values to
 **For each instance you will usually find multiple counterfactual explanations (Rashomon effect)**.
 This is inconvenient - most of the time, people prefer simple explanations over the complexities of the real world.
 It also poses a practical challenge.
-Let's say we have generated 23 counterfactuals explanations for an instance. 
+Let's say we have generated 23 counterfactual explanations for an instance. 
 Do we report all of them?
 Just the best one?
 What if they are all relatively "good", but very different?
 These questions have to be answered for each project anew.
-It can also be an advantage to have multiple counterfactual explanations, because then humans can pick the ones they like best, which matches prior knowledge.
+It can also be an advantage to have multiple counterfactual explanations, because then humans can pick the ones that match prior knowledge.
 
-It is **unclear how to optimize for $\lambda$** in practice and hard to give general advice or automate it.
-The choice of the parameter is mostly up to the user and the specific needs in the project.
+It is **unclear how to choose $\lambda$** in practice and it is difficult to give general advice or to automate it.
+The choice of the parameter is mostly up to the user and the specific requirements of a project.
 Is it more important that the prediction of the counterfactual matches the desired prediction or that the counterfactual is similar to the instance of interest?
-Maybe it's okay to create a counterfactual that changes the the predicted apartment rent from 900 Euros to 990 (10 Euros away from the desired 1000) by only changing one feature. 
-By increasing lambda, maybe we find a counterfactual apartment with a predicted rent of 1001, which is closer to the desired outcome, but 4 features had to change dramatically for it. 
+Maybe it's okay to create a counterfactual that changes the predicted apartment rent from 900 Euros to 990 (10 Euros away from the desired 1000) by only changing one feature. 
+By increasing $\lambda$ we may find a counterfactual apartment with a predicted rent of 1001, which is closer to the desired outcome, but 4 features had to change dramatically for it. 
 Which one is the better counterfactual?
 This question has to be answered case by case
 
-The proposed solution and distance function has **no real solution for categorical features**, with many different levels. 
-The authors of the method suggested to run the method for each unique level combination of the categorical features, but this will result in a combinatorial explosions when you have multiple categorical features  with many values (6 categorical features with 10 unique levels would mean 1 million runs).
+The proposed solution and distance function has **no real solution for categorical features** with many different levels. 
+The authors of the method suggested to run the method for each unique level combination of the categorical features, but this will result in a combinatorial explosion when you have multiple categorical features  with many values (6 categorical features with 10 unique levels would mean 1 million runs).
 A proper solution would involve using an optimizer that solves problems with a mix of continuous and discrete inputs.
 
 The counterfactuals method **lacks a general software implementation**.
@@ -209,23 +212,24 @@ Fortunately, it should be easy to implement and hopefully I can remove that stat
 
 - Unfortunately there is no software available currently for counterfactual explanations.
 - An alternative way of searching for counterfactuals is the Growing Spheres algorithm by Laugel et. al (2017)[^spheres].
-The method first draws a sphere around the point of interest, samples point within that sphere, checks if one of the sampled points has the desired outcome and either contracts or expands the sphere and finally returns a spares counterfactual.
+The method first draws a sphere around the point of interest, samples point within that sphere, checks if one of the sampled points has the desired outcome and either contracts or expands the sphere and finally returns a sparse counterfactual.
 They don't use the word counterfactual in their paper, but the method is rather similar.
-They also define a loss function that favors counterfactuals with as few changes in the features as possible.
+They also define a loss function that favors counterfactuals with as few changes in the feature values as possible.
 Instead of optimizing the function directly, they suggest the mentioned search with spheres.
-```{r counterfactuals-spheres, fig.cap = "An illustration of growing spheres and selecting sparse counterfactuals by Laugel et. al (2017)"}
+```{r counterfactuals-spheres, fig.cap = "An illustration of growing spheres and selecting sparse counterfactuals by Laugel et. al (2017)."}
 knitr::include_graphics("images/spheres.png")
 ```
 - Anchors by Ribeiro et. al 2018 [^anchors] are the opposite of counterfactuals.
-Anchors answer to the question: 
+Anchors answer the question: 
 Which features are sufficient to anchor a prediction, i.e. changing the other features can't change the prediction?
-Once we have found features acting as anchors of the prediction, we won't find any counterfactual instances by changing the features not used as anchor.
+Once we have found features acting as anchors of the prediction, we won't find any counterfactual instances by changing the features not used in the anchor.
 ```{r counterfactual-anchors, fig.cap = "Examples for anchors by Ribeiro et. al (2018)"}
 knitr::include_graphics("images/anchors.png")
 ```
 
 
-[^anchors]: Ribeiro, M. T., & Guestrin, C. (n.d.). Anchors : High-Precision Model-Agnostic Explanations.
+[^anchors]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin (2018). "Anchors: High-precision model-agnostic explanations." AAAI Conference on Artificial Intelligence.
+
 
 [^spheres]: Laugel, T., Lesot, M.-J., Marsala, C., Renard, X., & Detyniecki, M. (2017). Inverse Classification for Comparison-based Interpretability in Machine Learning. Retrieved from http://arxiv.org/abs/1712.08443
 
