@@ -9,9 +9,35 @@ The ability to think counterfactual makes us humans so smart compared to other a
 
 In interpretable machine learning, counterfactual explanations can be used to explain predictions of individual instances.
 The "event" is the predicted outcome of an instance, the "causes" are the particular feature values of this instance that were input to the model and "caused" a certain prediction.
-We can easily simulate counterfactuals for predictions of machine learning models:
+Displayed as a graph, the relationship between the inputs and the prediction is very simple:
+The feature values cause the prediction.
+```{r ml-graph-cf, fig.cap = "The causal relationships between inputs of a machine learning model and the predictions, when the model is merely seen as a black box. The inputs cause the prediction (not necessarily reflecting the real causal relation of the data)."}
+# library("DiagrammeR")
+# grViz("
+# digraph a_nice_graph {
+# 
+# # node definitions with substituted label text
+# node [fontname = Helvetica]
+# a [label = '@@1']
+# b [label = '@@2-1']
+# c [label = '@@2-2']
+# d [label = '@@2-3']
+# e [label = '@@2-4']
+# 
+# # edge definitions with the node IDs
+#  {b c d e} -> a
+# }
+# 
+# [1]: 'prediction'
+# [2]: c('x1', 'x2', 'x3', '...')
+# ")
+knitr::include_graphics("images/graph.png")
+```
+Even if in reality the relationship between the inputs and the outcome to be predicted might not be causal, we can see the inputs of a model as the cause of the prediction.
+
+Given this simple graph, it is easy to see how we can simulate counterfactuals for predictions of machine learning models:
 We simply change the feature values of an instance before making the predictions and we analyse how the prediction changes.
-We are interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (e.g. credit application accepted vs. rejected) or in which the prediction reaches a certain threshold (e.g. the probability for cancer reaches 10%).
+We are interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (e.g. credit application accepted or rejected) or in which the prediction reaches a certain threshold (e.g. the probability for cancer reaches 10%).
 **A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.**
 
 The counterfactual explanation method is model-agnostic, since it only works with the model inputs and output.
@@ -78,7 +104,7 @@ In this section, I will present the approach suggested by Wachter et. al 2017[^w
 They suggest minimizing the following loss.
 
 
-$$L(x, x', y', \lambda) = \lambda\cdot(\hat{f}(x')-y')^2+d(x,x')$$
+$$L(x,x',y',\lambda)=\lambda\cdot(\hat{f}(x')-y')^2+d(x,x')$$
 
 The first term is the quadratic distance between the model prediction for the counterfactual x' and the desired outcome y', which the user must define in advance.
 The second term is the distance d between the instance x to be explained and the counterfactual x', but more about this later.
@@ -87,13 +113,17 @@ The loss is solved for a given $\lambda$ and returns a counterfactual x'.
 A higher value of $\lambda$ means that we prefer counterfactuals that come close to the desired outcome y', a lower value means that we prefer counterfactuals x' that are very similar to x in the feature values.
 If $\lambda$ is very large, the instance with the prediction that comes closest to y' will be selected, regardless how far it is away from x.
 Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x.
+The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from y'.
+This constraint can be written as:
+
+$$|\hat{f}(x')-y'|\leq\epsilon$$
 
 To minimize this loss function, any suitable optimization algorithm can be used, e.g. Nelder-Mead.
 If you have access to the gradients of the machine learning model $\hat{f}$, you can use gradient-based methods like ADAM.
-The instance x to be explained, the desired output y' and the control parameter $\lambda$ must be set in advance.
-The loss function is minimized for x' and the (locally) optimal counterfactual x' returned.
+The instance x to be explained, the desired output y' and the tolerance parameter $\epsilon$ must be set in advance.
+The loss function is minimized for x' and the (locally) optimal counterfactual x' returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter).
 
-$$\arg \min_{x'}L(x,x',y',\lambda)$$
+$$\arg\min_{x'}\max_{\lambda}L(x,x',y',\lambda)$$
 
 The function d for measuring the distance between instance x and counterfactual x' is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).
 
@@ -103,7 +133,7 @@ The total distance is the sum of all p feature-wise distances, that is, the abso
 The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset defined as:
 
 
-$$MAD_j = median_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-median_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)$$
+$$MAD_j=median_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-median_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)$$
 
 The median of a vector is the value at which half of the vector values are greater and the other half smaller.
 The MAD is the equivalent of the variance of a feature, but instead of using the mean as the center and summing over the square distances, we use the median as the center and sum over the absolute distances.
@@ -114,13 +144,14 @@ Scaling with the MAD is necessary to bring all the features to the same scale - 
 
 The recipe for producing the counterfactuals is simple:
 
-1. Select an instance x to be explained, the desired outcome y', and $\lambda$.
+1. Select an instance x to be explained, the desired outcome y', a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
 1. Sample a random instance as initial counterfactual.
-1. Run the optimizer for the loss function.
-1. Return the counterfactual that minimizes the loss.
-1. Repeat steps 2-4 and return the list of counterfactuals or the one that minimizes the loss.
-
-You may need to return to step 1 and adjust $\lambda$, when the trade-off between distance to  y' and distance to x is not as desired.
+1. Optimize the loss with the initially sampled counterfactual as starting point.
+1. While $|\hat{f}(x')-y'|>\epsilon$:
+  1. Increase $\lambda$.
+  1. Optimize the loss with the current counterfactual as starting point.
+  1. Return the counterfactual that minimizes the loss.
+1. Repeat steps 2-3 and return the list of counterfactuals or the one that minimizes the loss.
 
 ### Examples
 
@@ -192,17 +223,13 @@ What if they are all relatively "good", but very different?
 These questions must be answered anew for each project.
 It can also be advantageous to have multiple counterfactual explanations, because then humans can select the ones that correspond to their previous knowledge.
 
-It is **unclear how to choose $\lambda$** in practice and it is difficult to give general advice or automate it.
-The choice of the parameter is mostly left to the user and the specific requirements of a project.
-Is it more important that the prediction of the counterfactual matches the desired prediction or that the counterfactual is similar to the instance of interest?
-Maybe it's okay to create a counterfactual that changes the predicted apartment rent from 900 Euro to 990 (10 Euro away from the desired 1000) by changing only one feature. 
-By increasing $\lambda$ we can find a counterfactual apartment with a predicted rent of 1001 Euro, which is closer to the desired outcome, but 4 features had to change dramatically. 
-Which one is the better counterfactual?
-This question must be answered on a case-by-case basis.
+There is **no guarantee that for a given tolerance $\epsilon$ a counterfactual instance is found**.
+That's not necessarily the fault of the method, but rather depends on the data.
 
-The proposed method **can't handle categorical features** with many different levels well. 
+The proposed method **doesn't handle categorical features** with many different levels well. 
 The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values.
 For example, 6 categorical features with 10 unique levels would mean 1 million runs.
+A solution for only categorical features was proposed by Martens et. al (2014)[^martens].
 A good solution would be to use an optimizer that solves problems with a mix of continuous and discrete inputs.
 
 The counterfactuals method **lacks a general software implementation**.
@@ -212,6 +239,9 @@ Fortunately, it should be easy to implement and hopefully I can remove this stat
 ### Software and Alternatives {#example-software}
 
 - Unfortunately there is currently no software available  for counterfactual explanations.
+- A very similar approach was proposed by Martens et. al (2014) for explaining document classifications.
+In their work, they focus on explaining why a document was or was not classified as a particular class.
+The difference to the method presented in this chapter is that Martens et. al focus on text classifiers, which have word occurrences as inputs.
 - An alternative way to search counterfactuals is the Growing Spheres algorithm by Laugel et. al (2017)[^spheres].
 The method first draws a sphere around the point of interest, samples points within that sphere, checks whether one of the sampled points yields the desired prediction, contracts or expands the sphere accordingly until a (sparse) counterfactual is found and finally returned.
 They don't use the word counterfactual in their paper, but the method is quite similar.
@@ -228,6 +258,7 @@ Once we have found features that serve as anchors for a prediction, we will no l
 knitr::include_graphics("images/anchors.png")
 ```
 
+[^martens]: Martens, D., & Provost, F. (2014). Explaining Data-Driven Document Classifications. MIS Quarterly, 38(1), 73–99. http://doi.org/10.25300/MISQ/2014/38.1.04
 
 [^anchors]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin (2018). "Anchors: High-precision model-agnostic explanations." AAAI Conference on Artificial Intelligence.
 
