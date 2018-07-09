@@ -1,3 +1,13 @@
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+
+opts_chunk$set(
+  fig.width = 10)
+```
+
+
+
 ## Adversarial examples
 
 <!-- TODO: -->
@@ -9,128 +19,154 @@
 <!-- - Spell check -->
 <!-- - Last read in HTML form -->
 
-Adversarial examples are instances with small perturbations that are designed to fool a machine learning model into giving a wrong prediction.
+Adversarial examples are instances with small perturbations designed to fool a machine learning model into giving a wrong prediction.
 I recommend reading the chapter about [counterfactual explanations](#counterfactual) first, since the concepts are very similar.
 Adversarial examples are counterfactual examples with a focus on fooling instead of interpreting a system.
 
 *Keywords: adversarial examples, adversarial machine learning, counterfactuals, evasion attacks, machine learning security*
 
-
-Why do we even care about adversarial examples beyond explaining single predictions?
+Why do we care about adversarial examples beyond explaining single predictions?
 Are they not only some curious by-products of machine learning models, without practical relevance?
 The answer is a clear "No!".
 Adversarial examples make machine learning systems vulnerable to attacks, like in the following scenarios.
 A self-driving car crashes into another car because it doesn't recognize the stop sign and assumes the right over left rule holds.
 Someone had sticked an image over the sign, which looks like a stop sign with a little dirt to humans, but was designed to look like a no parking sign to machine learning models.
 A spam detector missclassifies spam as valid mail.
-The spam mail was designed to resemble normal mail, but of course trying to scam the recipient at the same time.
+The spam mail was designed to resemble a normal mail, but with the intend to scam the recipient.
 A machine-learning powered scanner scans packages at the airport for weapons.
 A knife is designed to evade the detection by making the system think it is an umbrella.
-There are many adversarial examples in image recognition, but also in text (One of the frist adversarial examples hit spam filtering models in the early 2000s).
 
 Let's have a look at some ways of creating adversarial examples.
 
 ### Examples
 
 There are many ways of creating these adversarial examples.
-Most methods minimize the distance of adversarial example and instance to be manipulated, while moving the prediction to the desired (wrong) outcome.
-Some methods require access to the gradients of the model (which only works for gradient based models) and some only work with input features and predictions (which makes those methods model-agnostic).
+Most approaches suggest to minimize the distance of adversarial example and instance to be manipulated, while moving the prediction to the desired (wrong) outcome.
+Some methods require access to the gradients of the model (which only works for gradient based models) and some methods work with input features and predictions (which makes those methods model-agnostic).
 The examples in this section focus on image classifiers using deep neural networks, because there is a lot of research going on and they are easy to fool.
 Adversarial examples for images are input samples that were intentionally perturbed (some pixels) aimed to fool the model during test time.
 Through the examples you will see that deep convolutional neural networks for object recognition are vulnerable to adversarial examples, that look harmles to humans.
-Adversarial examples are like optical illusions to us humans.
+An optical illusion for machines.
 A possible source for deep neural networks being vulnerable to adversarial examples is that data points that are close in input space can be very different in the deep embedded space (think of the embedding vectors of an image or text).
 
+<!-- <!-- WAITING FOR PERMISSION TO USE IMAGE -->
+<!-- #### Something's Wrong With My Dog -->
+
+<!-- Szegedy et. al (2013)[^szegedy] in their work "Intriguing Properties of Neural Networks" used box-constrained L-BFGS optimization to find adversarial examples for deep neural networks. -->
+
+<!-- ```{r adversarial-ostrich, fig.cap = "Adversarial examples for AlexNet by Szegedy et. al (2013). All images shown in the left column are correctly classified. The middle column shows the (magnified) perturbation that is added to the images to produce the images in the right column, which are all (wrongly) categorized as 'Ostrich'."} -->
+<!-- knitr::include_graphics("images/adversarial-ostrich.png") -->
+<!-- ``` -->
+
+<!-- These adversarial examples were produced by minimizing the following function respective to r: -->
+
+<!-- $$loss(\hat{f}(x+r),l)+c\cdot|r|$$ -->
+
+<!-- Where x is an image (represented as vector of pixels), r are the changes to the pixels to create an adversarial image (x+r results in a new image), l is the desired outcome class and parameter c for balancing distance of images and distance between predictions. -->
+<!-- The first term is the the distance between the predicted outcome of the adversarial example and the desired class l, the second term measures the distance between the adversarial example and the original image. -->
+<!-- This formulation is almost identical to the loss function optimized by [counterfactuals](#counterfactual):  -->
+<!-- There are additional constraints on r, so that the pixel values stay between 0 and 1.  -->
+<!-- The propose to solve this with a box-constrained L-BFGS, an optimizer algorithm that works with the gradients. -->
+
+**Perturbed Panda**
+
+One method for creating adversarial images is called "gradient sign method" by Goodfellow et. al (2014)[^goodfellow].
+The gradient sign method uses the the gradient of the underlying model to find adversarial examples.
+The original image x is changed pixel-wise by adding or subtracting to each pixel a small $\epsilon$. 
+Whether we add or subtract $\epsilon$ depends if the sign of the gradient for a pixel is positive or negative.
 
 
-<!-- WAITING FOR PERMISSION TO USE IMAGE -->
-#### Something's Wrong With My Dog
-
-Szegedy et. al (2013)[^szegedy] in their work "Intriguing Properties of Neural Networks" used box-constrained L-BFGS optimization to find adversarial examples for deep neural networks.
-
-```{r adversarial-ostrich, fig.cap = "Adversarial examples for AlexNet by Szegedy et. al (2013). All images shown in the left column are correctly classified. The middle column shows the (magnified) perturbation that is added to the images to produce the images in the right column, which are all (wrongly) categorized as 'Ostrich'."}
-knitr::include_graphics("images/adversarial-ostrich.png")
-```
-
-These adversarial examples were produced by minimizing the following function respective to r:
-
-$$loss(\hat{f}(x+r),l)+c\cdot|r|$$
-
-Where x is an image (represented as vector of pixels), r are the changes to the pixels to create an adversarial image (x+r results in a new image), l is the desired outcome class and parameter c for balancing distance of images and distance between predictions.
-The first term is the the distance between the predicted outcome of the adversarial example and the desired class l, the second term measures the distance between the adversarial example and the original image.
-This formulation is almost identical to the loss function optimized by [counterfactuals](#counterfactual): 
-There are additional constraints on r, so that the pixel values stay between 0 and 1. 
-The propose to solve this with a box-constrained L-BFGS, an optimizer algorithm that works with the gradients.
-
-#### Perturbed Panda
-
-Another method is called gradient sign method by Goodfellow et. al (2014)[^goodfellow].
-In their method they use the the gradient of the underlying model to find adversarial examples.
 ```{r adversarial-panda, fig.cap = "Making a Panda look like a gibbon for a neural network by Goodfellow et. al (2014). By changing each of the original panda pixels (left image) in the direction of the gradient with respect to the input pixels towards the targeted outcome 'Gibbon' (middle image, which would be classified as nematode) the authors create an adversarial example that is classified as gibbon but looks like a panda to humans."}
 knitr::include_graphics("images/adversarial-panda.png")
 ```
+
+
 
 Adversarial examples are created with the following formula:
 
 $$x'=x+\epsilon\cdot{}sign(\bigtriangledown_x{}J(\theta,x,y))$$
 
-The original point x is changed pixel-wise a little bit by $\epsilon$ times the direction of the model gradient with respect to the input pixels.
-J is the loss function of the model, $\theta$ the model parameters, which remain untouched.
+
+where $\bigtriangledown_x{}J$ is the gradient of the loss function of the model with respect to the original input pixels x, y the true label for x and $\theta$ the model parameters.
 The gradient of the loss J is calculated with respect to the input pixels towards the desired adversarial outcome y.
-From the gradient vector (which is as long as the vector of input pixels) they take the sign.
+From the gradient vector (which is as long as the vector of input pixels) we only need the sign:
 This sign of the gradient is positive if an increase of the pixel intensity increases the score for the adversarial class y and negative if decreasing the pixel intensity increases the score.
 I expected that these adversarial examples were rather specific for a single image classifier, given a particular neural network architecture.
 But it turns out that you can take this same adversarial examples to a different architecture trained on the same task and it is likely to be an adversarial example for this network as well.
 The vulnerability comes from the linear nature of neural networks.
+Especially neural network architectures that behave more linearly like LSTMs, maxout networks and networks with ReLU or other linear machine learning algorithms like logistic regression are vulnerable to the gradient sign method.
+Why does it work?
+Extrapolation is the vulnerability. 
+Linearity is a problem when we extrapolate, meaning we go into areas with the input feature values that are outside of the data distribution. 
+Through the linearity the model still changes the prediction, because linear effects have no saturation effect and so there is an opportunity to fool the model.
+The models are overly confident at points that never appeared at the dataset.
 
-In this paper they also propose to use adversarial examples and train networks with them to get more robust networks.
+Goodfellow et. al (2014) propose to defend against adversarial examples by adding adversarial examples to the training data to get learn robust prediction models.
 
 
+**A Jellyfish ... No, wait. A BATHTUB! **
 
-#### A Jellyfish ... Wait... No. A BATHTUB! 
-
-There are even attacks that flip a classification by changing a single (!) pixel of an image as shown by Su et. al (2017) [^1pixel].
+The approach presented by Goodfellow et. al (2014) requires changing a lot of pixels, even if only by a bit.
+But what if you were only allowed to change a single pixel, would you be able to fool a machine learning model?
+Su et. al (2017) [^1pixel] showed that it is indeed possible to fool image classifiers by changing a single pixel.
 
 ```{r adversarial-1pixel, fig.cap = "A neural network trained to classify the ImageNet dataset is fooled by adversarial examples. Instead of the original class (in black letters), the network predicts the wrong class (in blue letters) by changing a single pixel (marked with red circles). Work by Su et. al (2017)."}
 knitr::include_graphics("images/adversarial-1pixel.png")
 ```
 
-Their method uses an evolution based approach called differential evolution.
+Similar to counterfactuals, they search for a modified example x' which is close to the original image, but changes the prediction to an adversarial example.
+Closeness to the original image is defined differently though: 
+Only one pixel is allowed to change.
+For searching which pixel should be changed and by how much each of its colors should be changed, they use differential evolution.
+In evolutionary approaches, the real evolutionary process is mimicked:
+A population of individuals called candidates solutions recreates generation by generation.
 
-#### Everything is a toaster!
+Differential evolution does not have many assumptions. 
+It doesn't need access to the models gradient.
+A candidate solution consists of five elements: the x- and y-coordinates and the red, green and blue (RGB) values.
+So each candidate is basically a pixel modification.
+It starts out with 400 candidate solution and we create children at each generation, by using the following formula:
 
-One of my favorite examples brings the adversarial examples into physical reality:
-A sticker that you can print out and stick to objects to make them look like toasters to a machine. 
-Briliant work by Brown et. al (2017)[^toaster].
+$$x_{i}(g+1)=x_{r1}(g)+F(x_{r2}(g)+x_{r3}(g))$$
+where each xi is one element of a candidate solution (either x-coordinate, y-coordinate, red, green or blue), g is the current generation, F is a scaling parameter (set to 0.5) and r1, r2 and r3 are different random numbers.
+So each new child candidate solution is again a pixel with the five attributes for location and color and each of those attributes is a mixture of three random parent pixels.
 
-```{r adversarial-toaster, fig.cap = "A sticker, when added to a scence, makes a VGG16 classifier trained on ImageNet categorize an image of the scence as toaster. Work by Brown et. al (2017)."}
+Creating childrens is stopped when one of the candidate solutions is already an adversarial example, meaning it is classified as the wrong class, or when the number of maximum iterations is reached as set by the user.
+
+
+**Everything is a toaster!**
+
+One of my favorite examples brings adversarial examples into physical reality:
+Brown et. al (2017)[^toaster] designed a sticker that you can print out and stick to objects to make them look like toasters to a machine. 
+Briliant work!
+
+```{r adversarial-toaster, fig.cap = "A sticker, when added to a scene, makes a VGG16 classifier trained on ImageNet categorize an image of the scence as toaster. Work by Brown et. al (2017)."}
 knitr::include_graphics("images/adversarial-toaster.png")
 ```
 
-The difference to other work on adversarial examples is that the constraint is lifted that the image has to be very close to the original image.
-Given the missing constraint, they use a different approach.
-They create an image by replacing a part of the image completely with the patch. 
+A big difference to previously presented methods for adversarial examples is that the constraint is lifted that the adversarial image has to be very close to the original image.
+Instead the methods creates an image by replacing a part of the image completely with the patch. 
 The patch is allowed to take on any shape. 
 The patch is optimized over various images, with different positions on the images, sometimes shifted, sometimes bigger or smaller and rotated to make it work for many situations.
-But the authors also suggest a variant, where the generated adversarial example is very similar to the original image.
+In the end, this optimized image can be printed out and used to fool image classifiers in the wild.
 
 
-#### Never bring your 3D-printed fake-rifle turtle to a gun fight.
+**Never bring your 3D-printed fake-rifle-turtle to a gun fight.**
 
-An idea similar idea to the toaster sticker is a 3D-printed turtle that looks like a riffle, an idea from Athalye et. al (2018)[^turtle]
+This next method is literally adding another dimension to the to the toaster:
+Athalye et. al (2018)[^turtle] created a 3D-printed turtle that looks like a riffle to a deep neural network from almost all possible angles.
 Yes, you read that correctly. 
-A riffle.
 A physical object that looks like a turtle to humans looks like a damn riffle to the computer!
-The missclassification works also when the turtle-riffle is rotated and in a different location of the image.
+The missclassification works also when the turtle-riffle is rotated or put into a different location of the image.
 
 ```{r adversarial-turtle, fig.cap = "A 3D-printed turtle that is recognized as a riffle by TensorFlow’s standard pretrained InceptionV3 classifier. Work by Athalye et. al (2018)"}
 knitr::include_graphics("images/adversarial-turtle.png")
 ```
 
-The difficult thing that the authors achieved that they found a way to create an adversarial example in 3D for a 2D classifier, that is adversarial over all possible transformations (all the ways of turning the turtle, zooming in etc.)
+The difficult thing that the authors achieved is that they found a way to create an adversarial example in 3D for a 2D classifier, that is adversarial over all possible transformations (all the ways of turning the turtle, zooming in etc.)
 
 
-### The blindfolded thief and deceiver.
+**The blindfolded thief and deceiver**
 
 Most adversarial attacks work by using gradient-based optimization on functions defined by a DNN to find adversarial examples.
 It is possible to even create adversarial examples without information about internal model information and without access to the training data as shown by Papernot and colleagues (2017)[^papernot].
@@ -247,12 +283,14 @@ Yes, because attackers can't read the code.
 Security by obfuscation.
 No, because only a very limited amount of programmers will see the code and are highly likely to overlook problems that can be exploited.
 
-
-
 Given the nature of the cat-and-mouse game, we will see a lot of research in this area.
 Attack methods against machine learning will be invented, defenses will be suggested to defend against the attacks.
 Then new attacks will be designed that are not detected by the implemented defenses and the circle begins again.
 I hope with this chapter to sensibilize you that the problem of adversarial examples exist and that only by proactively studying the machine learning models we are able to discover and fix vulnerabilities of the models.
+
+
+
+
 
 [^szegedy]: Szegedy, C., Zaremba, W., Sutskever, I., Bruna, J., Erhan, D., Goodfellow, I., & Fergus, R. (2013). Intriguing properties of neural networks, 1–10. http://doi.org/10.1021/ct2009208
 
