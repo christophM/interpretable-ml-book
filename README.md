@@ -45,12 +45,13 @@ browseURL('_book/index.html')
 All notable changes to the book will be documented here.
 
 ### v0.5 (IN PROGRESS)
-- Added section about LIME images (by Verena Haunschmid)
-- Added chapter about Decision Rules
-- Added a section about when we don't need interpretability
+- Added chapter on Decision Rules
+- Added chapter on adversarial machine examples
+- Added chapter on prototypes and criticisms
+- Added chapter on counterfactual explanations
+- Added section on LIME images (by Verena Haunschmid)
+- Added section on when we don't need interpretability
 - Renamed chapter: Human-style Explanations -> Human-friendly Explanations
-
-
 
 ### v0.4 (2018-05-23)
 - Added chapter on global surrogate models
