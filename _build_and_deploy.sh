@@ -39,7 +39,7 @@ if [  "$BRANCH" = "master" -a "$TRAVIS_PULL_REQUEST" = "false" ] ; then
   # Get the deploy key by using Travis's stored variables to decrypt deploy_key.enc
   git config credential.helper "store --file=.git/credentials"
   echo "https://${GH_TOKEN}:@github.com" > .git/credentials
-  git commit -m "${BUILD_COMMIT_MSG}"
+  git commit -m "${BUILD_COMMIT_MSG}" --allow-empty
 
   # Now that we're all set up, we can push.
   git push origin $TARGET_BRANCH
