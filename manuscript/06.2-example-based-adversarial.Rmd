@@ -1,149 +1,269 @@
-<!-- 
-Counterfactuals are not only good for understanding the models, but also to fool them.
-Machine learning models can be easily fooled by adversarial examples.
-Counterfactuals and adverserial examples in real life. 
-Also called evasion attacks.
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
 
-The broader research area is also known as adversarial machine learning.
-
-This chapter focuses on evasion attacks, that happen during test or application time and not on poisoning attacks, which happen during the training of the model.
-
-This chapter covers mainly insights from the paper that reviews ten years of research of adversarial machine learning by  Biggio et. al (2017)[^adversarial].
-
-Adversarial examples for images are input samples that were intentionally perturbed (some pixels) aimed to fool the model during test time.
-
-There are also attacks aimed at training time, but those are different.
-
-Machine learning is a bit of an arms-race: spammer vs. a system. 
-There are three golden rules : 1) know your adversary agent 2) be proactive and 4) protect yourself.
-
-It has been shown that especially deep convolutional neural networs for object recognition are vulnerable to adversarial examples, that look harmles to humans.
-
-
-Especially because we don't understand the machine learning models and what they learned, they are vulnerable to attacks and often the weakest link in a system. 
-
-Interpretability of the models (for the builder of the system), knowing about adversarial examples helps to protect them against these examples.
-To protect a system, try to proactively find holes in it. 
-Make the models interpretable and find their weaknesses.
-
-Some example: [^szegedy]
-
-![](images/adversarial.png)
-TEXT FROM THE PAPER FOR THE IMAGE:
-Figure 5: Adversarial examples generated for AlexNet [9].(Left) is a correctly predicted sample, (center) dif- ference between correct image, and image predicted incorrectly magnified by 10x (values shifted by 128 and clamped), (right) adversarial example. All images in the right column are predicted to be an “ostrich, Struthio camelus”. Average distortion based on 64 examples is 0.006508. Plase refer to http://goo.gl/huaGPb for full resolution images. The examples are strictly randomly chosen. There is not any postselection involved.
-
-
-There are even attacks that flip a classification by changing a single (!) pixel of the image:
-
-TODO: Add 1pix-attack image from the paper and Cite
-
-And my favorite example: Stickers you can print out and stick to objects to make them look like toasters to the machines.
-TODO: Add image from toaster-sticker paper
-
-
-Adversarial examples not only occur in image recognition, but also in text.
-One of the frist adversarial examples hit spam filtering models in the early 2000s.
+opts_chunk$set(
+  fig.width = 14)
+```
 
 
 
-Error-generic Evasion Attack: 
-Thea attacker is interested in fooling the machine learning model.
-In mathematical terms:
+## Adversarial Examples {#adversarial}
 
-$$\max_{x'}A(x',\theta)=\max_{l\neq{}k}f_l(x)-f_k(x)$$
+An adversarial example is an instance with small, intentional feature perturbations to cause a machine learning model to make a false prediction.
+I recommend reading the chapter about [counterfactual explanations](#counterfactual) first, as the concepts are very similar.
+Adversarial examples are counterfactual examples in which the aim is not to interpret a model but to deceive it.
 
-so that
+*Keywords: adversarial examples, adversarial machine learning, counterfactuals, evasion attacks, machine learning security*
 
-$$d(x,x')\leq{}d_{max},\quad{}x_{lb}\leq{}x'\leq{}x_{ub}$$
+Why are we interested in adversarial examples that go beyond explaining single predictions?
+Aren't they just curious by-products of machine learning models without practical relevance?
+The answer is a clear "no".
+Adversarial examples make machine learning models vulnerable to attacks, as in the following scenarios.
 
-where $f_k(x)$ is the score associated with the true class and $f_l(x)$ the score for the closest competing class.
-This is a similar defintion as the [counterfactuals](#counterfactual), where we want to change the prediction, while the original data point and the adversarial (or counterfactual) example should be similar.
-The focus here is that the new x' is missclassified as the attacker aimed.
-For counterfactuals, manipulation x to get x' has not the intention to produce a missclassification, but rather to understand the model better. 
-Here the purpose of the manipulation is that x and x' have both the same class, but the predicted class for x' changes to a missclassification.
-By adding sparsity to the manipulation, attacks with only few changes are created, for example images that have only a few images changed to the original image.
-Keeping both instance and adversarial attack similar is important to evade detection of manipulation.
+A self-driving car crashes into another car because it doesn't ignores a stop sign.
+Someone had placed a picture over the sign, which looks like a stop sign with a little dirt for humans, but was designed to look like a parking prohibition sign for the cars sign recognition model.
 
+A spam detector incorrectly classifies spam as valid email.
+The spam mail has been designed to resemble a normal email, but with the intention of cheating the recipient.
 
+A machine-learning powered scanner scans suitcases for weapons at the airport.
+A knife was developed to avoid detection by making the system think it is an umbrella.
 
-Problems with deep learning: 
-Examples that are close in input space can be very different in the deep space (think of the embedding of an image or text).
+Let's take a look at some ways to create adversarial examples.
 
+### Methods and Examples
 
-The attacker can have different levels of knowledge.
+There are many techniques to create adversarial examples.
+Most approaches suggest minimizing the distance between the adversarial example and the instance to be manipulated, while shifting the prediction to the desired (wrong) outcome.
+Some methods require access to the gradients of the model, which of course only works with gradient based models such as neural networks, other methods only require access to the prediction function, which makes these methods model-agnostic.
+The methods in this section focus on image classifiers with deep neural networks, as  a lot of research is done in this area and the visualization of adversarial images is very educational.
+Adversarial examples for images are images with intentionally disturbed pixels which aim to deceive the model during test time.
+The examples impressively demonstrate how easily deep neural networks for object recognition can be deceived by images that appear harmless to humans.
+If you haven't yet seen these examples, you might be surprised, because the changes in predictions are incomprehensible for a human observer.
+Adversarial examples are like optical illusions for machines.
 
-- Perfect knowledge, or white-box attacks: Attacker knows everything about the ml model.
-Like knowing all the weights of a linear model.
-- Limited knowledge or gray-box attacks: attacker knows a bit about the ml model.
-For example the feature representation that was used or which type of model was learend, but has no access to training data or the parameters of the model.
-The attacker might be able to get a similar data set from a similar source and get feedback from the original classifier for labeling. 
-By this the attacker can train a surrogate model.
-- Zero-knowledge black box attacks: The attacker can query a system in a black-box manner and try to get feedback.
-The attacker still has of course to know what the purpose of the model is to be able to do anything useful.
+<!-- <!-- WAITING FOR PERMISSION TO USE IMAGE -->
+<!-- #### Something's Wrong With My Dog -->
 
-Defending against those attacks:
-- Iteratively tretrain the classifier on simulated attacks, also called adversarial training.
-- Other approaches are based on game theory. Like learning invariant transformations like feature inserstio, deletion and rescaling.
-- Robust optimization: Adversarial data manipulation can be seen as a special type of nosie. 
-This turn protecting against those attacks into the problem of learning models that are robust to noise.
-For example: regularizing the gradients through simulation of the correpsonding attacks to imporve the security of deep neural networks to evasion attacks.
-- Detecting and removing samples which are far away from the other training data in feature space.
-Data points from this sparsely populated regions can get any prediction, even if wrong, without starkly decreasing the performance of the model.
-- Use ensemble of many different models. 
+<!-- Szegedy et. al (2013)[^szegedy] in their work "Intriguing Properties of Neural Networks" used box-constrained L-BFGS optimization to find adversarial examples for deep neural networks. -->
 
-TODO: WRITE ABOUT THE INTERPRETABLE vs. NON-INTERPREABLE ISSUE FOR SECURITY (i.e. parallel to the open vs. closed source software).
+<!-- ```{r adversarial-ostrich, fig.cap = "Adversarial examples for AlexNet by Szegedy et. al (2013). All images shown in the left column are correctly classified. The middle column shows the (magnified) perturbation that is added to the images to produce the images in the right column, which are all (wrongly) categorized as 'Ostrich'."} -->
+<!-- knitr::include_graphics("images/adversarial-ostrich.png") -->
+<!-- ``` -->
 
+<!-- These adversarial examples were produced by minimizing the following function respective to r: -->
 
-Other ways ml algorithms can be attacked (keep it short)
-- poisoning attacks:  the training data set. An example is Microsoft's Twitter chatbot Tay, which was designed to talk to people on Twitter. 
-It was shut off after 16 hours, because it had started crafting racist and other offensive tweets. 
-It had started repeating what some malicious users were feeding it.
-- evasion attacks: during test time, covered in this chapter.
-- 
+<!-- $$loss(\hat{f}(x+r),l)+c\cdot|r|$$ -->
 
+<!-- Where x is an image (represented as vector of pixels), r are the changes to the pixels to create an adversarial image (x+r results in a new image), l is the desired outcome class and parameter c for balancing distance of images and distance between predictions. -->
+<!-- The first term is the distance between the predicted outcome of the adversarial example and the desired class l, the second term measures the distance between the adversarial example and the original image. -->
+<!-- This formulation is almost identical to the loss function optimized by [counterfactuals](#counterfactual):  -->
+<!-- There are additional constraints on r, so that the pixel values stay between 0 and 1.  -->
+<!-- The propose to solve this with a box-constrained L-BFGS, an optimizer algorithm that works with the gradients. -->
 
-Machine learning deals with known unkowns (classifying data uknown data points from know distribution).
-Machine leanring model attacks deal with unknown unknowns: classifying never seen data points that are weird.
+**Disturbed panda: Fast gradient sign method**
 
-
-Interpretability of machine learning models in general can help to improve the security of such systems. 
-
-Knowing the boundaries and problems of a system let's the deployer more easily imagine possible vulnerabilities. 
-
-Looking at feature importance values gives a quick overview which features influence the model prediction the most. 
-ICE curves simulate some uni-variate attacks, by trying out variations of single features and measuring the output.
-Analysing miss-classifications with counterfactuals, LIME and Shapley value might reveal further weaknesses of the machine learning model. 
-Looking at prototypes and criticisms gives the developer a better understanding of the underlying data distribution, and especially the odd cases as well. 
-And this might give an idea where problems in the model might occur for those edge cases.
-Machine learning model defences deal with unknown unkowns as attacks.
-Do you, as a developer of a model, trust your model out into this dangerous world, without having ever looked into it and even tried to understand it?
-See how it behave in different scenarios, get a feel for the most important input, get the explanations for a few selected predictions.
-Interpretability of machine learning models has a great role to play in adversarial machine learning.
-
-As always, this sword has to edges. 
-Interpretable machine learning can also be used to attack machine learning models. 
-Using surrogate models, I can still an machine learning model. 
-When I learn an interpretable surrogate model, I might also learn something about the internals.
-This can be done conveniently from your home, by accessing the model via an API. 
-Like this you could steal the image recognition models from all the cloud services.
+Goodfellow et. al (2014)[^goodfellow] invented the fast gradient sign method for generating adversarial images.
+The gradient sign method uses the gradient of the underlying model to find adversarial examples.
+The original image x is manipulated by adding or subtracting a small error $\epsilon$ to each pixel. 
+Whether we add or subtract $\epsilon$ depends on whether the sign of the gradient for a pixel is positive or negative.
+Adding errors towards the gradient means that the image is intentionally altered so that the model classification fails.
 
 
-You can - also conveniently via API - create counterfactual explanations, which can be used as adversarial examples.
-When you understand a model, you have a chance to find entry points to cheat it. 
-When you know that a credit score application uses having some special insurance (e.g. for jewelry) as feature (as a proxy that you are reliable or rich maybe), then you can simply get such an insurance to fool the system that your credit risk score is better than it really is.
+```{r adversarial-panda, fig.cap = "Goodfellow et. al (2014) make a panda look like a gibbon for a neural network. By adding small perturbations (middle image) to the original panda pixels (left image), the authors create an adversarial example that is classified as a gibbon (right image) but looks like a panda to humans."}
+knitr::include_graphics("images/adversarial-panda.png")
+```
 
 
 
+The following formula describes the core of the fast gradient sign method:
+
+$$x'=x+\epsilon\cdot{}sign(\bigtriangledown_x{}J(\theta,x,y))$$
+
+
+where $\bigtriangledown_x{}J$ is the gradient of the model's loss function with respect to the original input pixel vector x, y is the true label vector for x and $\theta$ is the model parameter vector.
+From the gradient vector (which is as long as the vector of the input pixels) we only need the sign:
+The sign of the gradient is positive (+1) if an increase in pixel intensity increases the loss (the error the model makes) and negative (-1) if a decrease in pixel intensity increases the loss.
+This vulnerability occurs when a neural network treats a relationship between an input pixel intensity and the class score linearly.
+In particular, neural network architectures that favor linearity, such as LSTMs, maxout networks, networks with ReLU activation units or other linear machine learning algorithms such as logistic regression are vulnerable to the gradient sign method.
+The attack is carried out by extrapolation.
+The linearity between the input pixel intensity and the class scores leads to vulnerability to outliers, i.e. the model can be deceived by moving pixel values into areas outside the data distribution.
+I expected these adversarial examples to be quite specific to a given neural network architecture.
+But it turns out that you can reuse adversarial examples to deceive networks with a different architecture trained on the same task.
+
+Goodfellow et. al (2014) suggested adding adversarial examples to the training data to learn robust models.
+
+
+**A jellyfish ... No, wait. A bathtub: 1-pixel attacks**
+
+The approach presented by Goodfellow and colleagues (2014) requires many pixels to be changed, if only a little.
+But what if you can only change a single pixel?
+Would you be able to deceive a machine learning model?
+Su et. al (2017) [^1pixel] showed that it is actually possible to deceive image classifiers by changing a single pixel.
+
+```{r adversarial-1pixel, fig.cap = "By intentionally changing a single pixel (marked with red circles) a neural network trained on ImageNet is deceived to predict the wrong class (in blue letters) instead of the original class (in black letters). Work by Su et. al (2017)."}
+knitr::include_graphics("images/adversarial-1pixel.png")
+```
+
+Similar to counterfactuals, the 1-pixel attack looks for a modified example x' which comes close to the original image x, but changes the prediction to an adversarial outcome.
+However, the definition of closeness differs: Only a single pixel may change.
+The 1-pixel attack uses differential evolution to find out which pixel is to be changed and how.
+Differential evolution is loosely inspired by biological evolution of species.
+A population of individuals called candidate solutions recombines generation by generation until a solution is found.
+Each candidate solution encodes a pixel modification and is represented by vector of five elements: the x- and y-coordinates and the red, green and blue (RGB) values.
+The search starts with, for example, 400 candidate solutions (= pixel modification suggestions) and creates a new generation of candidate solutions (children) from the parent generation using the following formula:
+
+$$x_{i}(g+1)=x_{r1}(g)+F\cdot(x_{r2}(g)+x_{r3}(g))$$
+where each $x_i$ is an element of a candidate solution (either x-coordinate, y-coordinate, red, green or blue), g is the current generation, F is a scaling parameter (set to 0.5) and r1, r2 and r3 are different random numbers.
+Each new child candidate solution is in turn a pixel with the five attributes for location and color and each of those attributes is a mixture of three random parent pixels.
+
+The creation of children is stopped if one of the candidate solutions is an adversarial example, meaning it is classified as an incorrect class, or if the number of maximum iterations specified by the user is reached.
+
+
+**Everything is a toaster: Adversarial patch**
+
+One of my favorite methods brings adversarial examples into physical reality.
+Brown et. al (2017)[^toaster] designed a printable label that can be stuck next to objects to make them look like toasters for an image classifier.
+Brilliant work!
+
+```{r adversarial-toaster, fig.cap = "A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et. al (2017)."}
+knitr::include_graphics("images/adversarial-toaster.png")
+```
+
+This method differs from the methods presented so far for adversarial examples, since the restriction that the adversarial image must be very close to the original image is removed.
+Instead, the method completely replaces a part of the image with a patch that can take any shape. 
+The image of the patch is optimized over different background images, with different positions of the patch on the images, sometimes moved, sometimes larger or smaller and rotated, so that the patch works for many situations.
+In the end, this optimized image can be printed and used to deceive image classifiers in the wild.
+
+
+**Never bring a 3D-printed turtle to a gunfight - even if your computer thinks it's a good idea: Robust adversarial examples**
+
+The next method is literally adding another dimension to the toaster:
+Athalye et. al (2018)[^turtle] 3D-printed a turtle that was designed to look like a rifle to a deep neural network from almost all possible angles.
+Yeah, you read that right. 
+A physical object that looks like a turtle to humans looks like a fucking rifle to the computer!
+
+```{r adversarial-turtle, fig.cap = "A 3D-printed turtle that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier. Work by Athalye et. al (2018)"}
+knitr::include_graphics("images/adversarial-turtle.png")
+```
+
+The authors have found a way to create an adversarial example in 3D for a 2D classifier that is adversarial over transformations, such as all possibilities to rotate the turtle, zoom in and so on.
+Other approaches such as the fast gradient method no longer work when the image is rotated or viewing angle changes.
+Athalye et. al (2018) propose the Expectation Over Transformation (EOT) algorithm, which is a method of generating adversarial examples that even work when the image is transformed.
+The main idea behind EOT is to optimize adversarial examples across many possible transformations.
+Instead of minimizing the distance between the adversarial example and the original image, EOT keeps the expected distance between the two below a certain threshold, given a selected distribution of possible transformations.
+The expected distance under transformation can be written as:
+
+$$\mathbb{E}_{t\sim{}T}[d(t(x'),t(x))]$$
+where x is the original image, t(x) the transformed image (e.g. rotated), x' the adversarial example and t(x') its transformed version.
+Apart from working with a distribution of transformations, the EOT method follows the familiar pattern of framing the search for adversarial examples as an optimization problem.
+We try to find an adversarial example x' that maximizes the probability for the selected class $y_t$ (e.g. "rifle") across the distribution of possible transformations T:
+
+$$\arg\max_{x'}\mathbb{E}_{t\sim{}T}[log{}P(y_t|t(x'))]$$
+With the constraint that the expected distance over all possible transformations between adversarial example x' and original image x remains below a certain threshold:
+
+$$\mathbb{E}_{t\sim{}T}[d(t(x'),t(x))]<\epsilon\quad\text{and}\quad{}x\in[0,1]^d$$
+
+I think we should be concerned about the possibilities this method enables.
+The other methods are based on the manipulation of digital images.
+However, these 3D-printed, robust adversarial examples can be inserted into any real  scene and deceive a computer to wrongly classify an object.
+Let's turn it around: What if someone creates a rifle which looks like a turtle?
+
+**The blindfolded adversary: Black box attack**
+
+Imagine the following scenario:
+I give you access to my great image classifier via Web API.
+You can get predictions from the model, but you don't have access to the model parameters.
+From the convenience of your couch, you can send data and my service answers with the corresponding classifications.
+Most adversarial attacks are not designed to work in this scenario because they require access to the gradient of the underlying deep neural network to find adversarial examples.
+Papernot and colleagues (2017)[^papernot] showed that it is possible to create adversarial examples without internal model information and without access to the training data.
+This type of (almost) zero-knowledge attack is called black box attack.
+
+How it works:
+
+1. Start with a few images that come from the same domain as the training data, e.g. if the classifier to be attacked is a digit classifier, use images of digits. The knowledge of the domain is required, but not the access to the training data.
+1. Get predictions for the current set of images from the black box.
+1. Train a surrogate model on the current set of images (for example a neural network).
+1. Create a new set of synthetic images using a heuristic that examines for the current set of images in which direction to manipulate the pixels to make the model output have more variance.
+1. Repeat steps 2 to 4 for a predefined number of epochs.
+1. Create adversarial examples for the surrogate model using the fast gradient method (or similar).
+1. Attack the original model with adversarial examples.
+
+The aim of the surrogate model is to approximate the decision boundaries of the black box model, but not necessarily to achieve the same accuracy.
+
+The authors tested this approach by attacking image classifiers trained on various cloud machine learning services.
+These services train image classifiers on user uploaded images and labels.
+The software trains the model automatically - sometimes with an algorithm unknown to the user - and deploys it.
+The classifier then gives predictions for uploaded images, but the model itself can't be viewed or downloaded.
+The authors were able to find adversarial examples for various providers, with up to 84% of the adversarial examples being misclassified.
+
+The method even works if the black box model to be deceived is not a neural network.
+This includes machine learning models without gradients such as a decision trees.
+
+### The Cybersecurity Perspective
+
+Machine learning deals with known unknowns: predicting unknown data points from a known distribution.
+The defense against attacks deals with unknown unknowns: robustly predicting unknown data points from an unknown distribution of adversarial inputs.
+As machine learning is integrated into more and more systems, such as autonomous vehicles or medical devices, they are also becoming entry points for attacks.
+Even if the predictions of a machine learning model on a test dataset are 100% correct,  adversarial examples can be found to deceive the model.
+The defense of machine learning models against cyber attacks is a new part of the field of cyber security.
+
+Biggio et. al (2017)[^adversarial] give a nice review of ten years of research on adversarial machine learning, on which this section is based.
+Cyber security is an arms-race in which attackers and defenders outwit each other time and again.
+
+
+**There are three golden rules in cyber security: 1) know your adversary 2) be proactive and 3) protect yourself.**
+
+The adversary depends on the application of the model.
+People who try to cheat other people out of their money via email are adversary agents of users and providers of email services.
+The providers want to protect their users, so that they can continue using their mail program, the attackers want to get people to give them money.
+Knowing your adversaries means knowing their goals.
+Assuming you don't know that these spammers exist and the only abuse of the email service is sending pirated copies of music, then the defense would be different (e.g. scanning the attachments for copyrighted material instead of analysing the text for spam indicators).
+
+Being proactive means actively testing and identifying weak points of the system.
+You are proactive when you actively try to deceive the model with adversarial examples and then defend against them (more on this later).
+Using interpretability methods to understand which features are important and how features affect the prediction is also a proactive step in understanding the weaknesses of a machine learning model.
+As the data scientist, do you trust your model in this dangerous world without ever having looked beyond the predictive power on a test dataset?
+Have you analyzed how the model behaves in different scenarios, identified the most important inputs, checked the prediction explanations for some examples?
+Have you tried to find adversarial inputs?
+The interpretability of machine learning models plays a major role in cyber security.
+Being reactive, the opposite of proactive, means waiting until the system has been attacked and only then understanding the problem and installing some defensive measures.
+
+How can we protect our machine learning systems?
+One of the most obvious, proactive approaches is the iterative retraining of the classifier with adversarial examples, also called adversarial training.
+Other approaches are based on game theory, such as learning invariant transformations of the features or robust optimization (regularization).
+Another proposed method is to use multiple classifiers instead of just one and have them vote the prediction (ensemble), but that has no guarantee to work, since they could all suffer from similar adversarial examples.
+Another approach that doesn't work well either is gradient masking, which constructs a model without useful gradients by using a nearest neighbor classifier instead of the original model.
+
+
+We can distinguish types of attacks by how much an attacker knows about the system.
+The attacker may have perfect knowledge (white box attack), meaning she knows everything about the model like the type of model, the parameters and the training data;
+The attacker may have partial knowledge (gray box attack), meaning she might only know the feature representation and the type of model that was used, but has no access to the training data or the parameters;
+The attacker may have zero knowledge (black box attack), meaning she can only query the model in a black box manner but has no access to the training data or information about the model parameters.
+Depending on the level of information, the attacker can use different techniques to attack the model.
+As we have seen in the examples, even in the black box case adversarial examples can  be created, so that hiding information about data and model is not sufficient to protect against attacks.
+
+Given the nature of the cat-and-mouse game between attackers and defenders, we will see a lot of development and innovation in this area. 
+Just think of the many different types spam emails that are constantly evolving.
+New methods of attacks against machine learning models are invented and new defensive measures are proposed  against these new attacks.
+More powerful attacks are developed to evade the latest defenses and so on, ad infinitum.
+With this chapter I hope to sensitize you to the problem of adversarial examples and that only by proactively studying the machine learning models are we able to discover and remedy weaknesses.
 
 
 
-
-
-Some links http://www.cleverhans.io/security/privacy/ml/2016/12/16/breaking-things-is-easy.html
 
 
 [^szegedy]: Szegedy, C., Zaremba, W., Sutskever, I., Bruna, J., Erhan, D., Goodfellow, I., & Fergus, R. (2013). Intriguing properties of neural networks, 1–10. http://doi.org/10.1021/ct2009208
 
 [^adversarial]: Biggio, B., & Roli, F. (2017). Wild Patterns: Ten Years After the Rise of Adversarial Machine Learning, 32–37. Retrieved from http://arxiv.org/abs/1712.03141
 
--->
+[^turtle]: Athalye, A., Engstrom, L., Ilyas, A., & Kwok, K. (2017). Synthesizing Robust Adversarial Examples. Retrieved from http://arxiv.org/abs/1707.07397
+
+[^goodfellow]: Goodfellow, I. J., Shlens, J., & Szegedy, C. (2014). Explaining and Harnessing Adversarial Examples, 1–11. http://doi.org/10.1109/CVPR.2015.7298594
+
+[^1pixel]: Su, J., Vargas, D. V., & Kouichi, S. (2017). One pixel attack for fooling deep neural networks. Retrieved from http://arxiv.org/abs/1710.08864
+
+[^toaster]: Brown, T. B., Mané, D., Roy, A., Abadi, M., & Gilmer, J. (2017). Adversarial Patch, (Nips). Retrieved from http://arxiv.org/abs/1712.09665
+
+[^papernot]: Papernot, Nicolas, et al. "Practical black-box attacks against machine learning." Proceedings of the 2017 ACM on Asia Conference on Computer and Communications Security. ACM, 2017.
