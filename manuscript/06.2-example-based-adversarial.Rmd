@@ -12,41 +12,39 @@ opts_chunk$set(
 
 <!-- TODO: -->
 <!-- - Wait for permission to use images (szegedy  left)-->
-<!-- - extend the theory for all papers a bit -->
-<!-- - Print, read and edit -->
 <!-- - Double deepl translation -->
 <!-- - Spell check -->
 <!-- - Last read in HTML form -->
 
-An adversarial example is an instance with small feature perturbations designed to fool a machine learning model into giving a wrong prediction.
-I recommend reading the chapter about [counterfactual explanations](#counterfactual) first, since the concepts are very similar.
-Adversarial examples are counterfactual examples with a focus on fooling instead of interpreting a system.
+An adversarial example is an instance with small, intentional feature perturbations to cause a machine learning model to make false prediction.
+I recommend reading the chapter about [counterfactual explanations](#counterfactual) first, as the concepts are very similar.
+Adversarial examples are counterfactual examples in which the aim is not to interpret a system but to deceive it.
 
 *Keywords: adversarial examples, adversarial machine learning, counterfactuals, evasion attacks, machine learning security*
 
-Why do we care about adversarial examples beyond explaining single predictions?
-Aren't they only curious by-products of machine learning models without practical relevance?
-The answer is a clear "No!".
-Adversarial examples make machine learning models vulnerable to attacks, like in the following scenarios.
-A self-driving car crashes into another car because it doesn't recognize the stop sign and assumes that the right over left rule holds.
-Someone had put an image over the sign, which looks like a stop sign with a little dirt to humans, but was designed to look like a no parking sign to the cars sign recognition machine learning model.
-A spam detector misclassifies spam as valid mail.
-The spam mail was designed to resemble a normal mail, but with the intend to scam the recipient.
-A machine-learning powered scanner scans packages at the airport for weapons.
-A knife is designed to evade the detection by making the system think it is an umbrella.
+Why are we interested in adversarial examples that go beyond explaining single predictions?
+Aren't they just curious by-products of machine learning models without practical relevance?
+The answer is a clear "no".
+Adversarial examples make machine learning models vulnerable to attacks, as in the following scenarios.
+A self-driving car crashes into another car because it doesn't recognize the stop sign.
+Someone had placed a picture over the sign, which looks like a stop sign with a little dirt for humans, but was designed to look like a parking prohibition sign for the cars sign recognition model.
+A spam detector incorrectly classifies spam as valid email.
+The spam mail has been designed to resemble a normal email, but with the intention of cheating the recipient.
+A machine-learning powered scanner scans suitcases for weapons at the airport.
+A knife was developed to avoid detection by making the system think it is an umbrella.
 
-Let's have a look at some ways of creating adversarial examples.
+Let's take a look at some ways to create adversarial examples.
 
 ### Methods and Examples
 
-There are many techniques for creating adversarial examples.
-Most approaches suggest minimizing the distance of the adversarial example and the instance to be manipulated, while moving the prediction to the desired (wrong) outcome.
-Some methods require access to the gradients of the model, which obviously only works for gradient based models like neural networks, some methods only need access to the prediction function, which makes those methods model-agnostic.
-The methods in this section focus on image classifiers using deep neural networks, because there is a lot of research going on and the visualization of the adversarial examples as images is very instructive.
-Adversarial examples for images are images with intentionally perturbed pixels aiming to fool the model during test time.
-The examples demonstrate impressively how easily deep neural networks for object recognition can be fooled by images that look harmless to humans.
-If you haven't seen those examples already, they might surprise you, because the changes in predictions are incomprehensible for a human observer.
-Adversarial examples are like optical illusion for machines.
+There are many techniques to create adversarial examples.
+Most approaches suggest minimizing the distance between the adversarial example and the instance to be manipulated, while shifting the prediction to the desired (wrong) outcome.
+Some methods require access to the gradients of the model, which of course only works with gradient based models such as neural networks, other methods only require access to the prediction function, which makes theses methods model-agnostic.
+The methods in this section focus on image classifiers with deep neural networks, as  a lot of research is done and the visualization of adversarial images is very revealing.
+Adversarial examples for images are images with intentionally disturbed pixels which aim to deceive the model during test time.
+The examples impressively demonstrate how easily deep neural networks for object recognition can be deceived by images that appear harmless to humans.
+If you haven't yet seen these examples, you might be surprised, because the changes in predictions are incomprehensible for a human observer.
+Adversarial examples are like optical illusions for machines.
 
 <!-- <!-- WAITING FOR PERMISSION TO USE IMAGE -->
 <!-- #### Something's Wrong With My Dog -->
@@ -67,16 +65,16 @@ Adversarial examples are like optical illusion for machines.
 <!-- There are additional constraints on r, so that the pixel values stay between 0 and 1.  -->
 <!-- The propose to solve this with a box-constrained L-BFGS, an optimizer algorithm that works with the gradients. -->
 
-**Perturbed panda: Fast gradient sign method**
+**Disturbed panda: Fast gradient sign method**
 
-Goodfellow et. al (2014)[^goodfellow] invented the fast gradient sign method for creating adversarial images.
+Goodfellow et. al (2014)[^goodfellow] invented the fast gradient sign method for generating adversarial images.
 The gradient sign method uses the gradient of the underlying model to find adversarial examples.
-The original image x is manipulated by adding or subtracting a small perturbation $\epsilon$ to each pixel. 
-Whether we add or subtract $\epsilon$ depends whether the sign of the gradient for a pixel is positive or negative.
-Adding perturbations in the direction of the gradient means changing on purpose the image in a way that the model classification will go wrong.
+The original image x is manipulated by adding or subtracting a small error $\epsilon$ to each pixel. 
+Whether we add or subtract $\epsilon$ depends on whether the sign of the gradient for a pixel is positive or negative.
+Adding errors towards the gradient means that the image is intentionally altered so that the model classification fails.
 
 
-```{r adversarial-panda, fig.cap = "Goodfellow et. al (2014) making a Panda look like a gibbon to a neural network. By adding small perturbations (middle image) to the original panda pixels (left image) the authors create an adversarial example that is classified as gibbon (right image) but looks like a panda to humans."}
+```{r adversarial-panda, fig.cap = "Goodfellow et. al (2014) make a panda look like a gibbon for a neural network. By adding small perturbations (middle image) to the original panda pixels (left image), the authors create an adversarial example that is classified as a gibbon (right image) but looks like a panda to humans."}
 knitr::include_graphics("images/adversarial-panda.png")
 ```
 
@@ -87,74 +85,92 @@ The following formula describes the core of the fast gradient sign method:
 $$x'=x+\epsilon\cdot{}sign(\bigtriangledown_x{}J(\theta,x,y))$$
 
 
-where $\bigtriangledown_x{}J$ is the gradient of the loss function of the model with respect to the original input pixel vector x, y the true label vector for x and $\theta$ the model parameters.
-From the gradient vector (which is as long as the vector of input pixels) we only need the sign:
-The sign of the gradient is positive (+1) if an increase of the pixel intensity increases the loss (the error the model makes) and negative (-1) if decreasing the pixel intensity increases the loss.
-The vulnerability arises when a neural network handles a relationship between an input pixel intensity and the class score linearly.
-Especially neural network architectures that favor linearity like LSTMs, maxout networks, networks with ReLU activation units or other linear machine learning algorithms like logistic regression are vulnerable to the gradient sign method.
-The attack works through extrapolation.
-Linearity between input pixel intensity and the class scores introduces vulnerability from through outliers, meaning by moving pixel values into areas outside the data distribution, the model can be fooled.
-I expected that these adversarial examples were rather specific for each neural network architecture.
-But it turns out that you can re-use adversarial examples for fooling networks with a different architecture trained on the same task.
+where $\bigtriangledown_x{}J$ is the gradient of the loss function of the model with respect to the original input pixel vector x, y is the true label vector for x and $\theta$ is the model parameters.
+From the gradient vector (which is as long as the vector of the input pixels) we only need the sign:
+The sign of the gradient is positive (+1) if an increase in pixel intensity increases the loss (the error the model makes) and negative (-1) if a decrease in pixel intensity increases the loss.
+This vulnerability occurs when a neural network treats a relationship between an input pixel intensity and the class score linearly.
+In particular, neural network architectures that favor linearity, such as LSTMs, maxout networks, networks with ReLU activation units or other linear machine learning algorithms such as logistic regression are vulnerable to the gradient sign method.
+The attack is carried out by extrapolation.
+The linearity between the input pixel intensity and the class scores leads to vulnerability to outliers, i.e. the model can be deceived by moving pixel values into areas outside the data distribution.
+I expected these adversarial examples to be quite specific to a given neural network architecture.
+But it turns out that you can reuse adversarial examples to deceive networks with a different architecture trained on the same task.
 
-Goodfellow et. al (2014) proposed to protect neural networks by adding adversarial examples to the training data to learn robust prediction models.
+Goodfellow et. al (2014) suggested protecting neural networks by adding adversarial examples to the training data to learn robust prediction models.
 
 
-**A Jellyfish ... No, wait. A BATHTUB: 1-pixel attacks**
+**A jellyfish ... No, wait. A BATHTUB: 1-pixel attacks**
 
-The approach presented by Goodfellow and colleagues (2014) requires changing a lot of pixels, even if only by a bit.
-But what if you were only allowed to change a single pixel?
-Would you be able to fool a machine learning model?
-Su et. al (2017) [^1pixel] showed that it is indeed possible to fool image classifiers by changing a single pixel.
+The approach presented by Goodfellow and colleagues (2014) requires many pixels to be changed, if only a little.
+But what if you can only change a single pixel?
+Would you be able to deceive a machine learning model?
+Su et. al (2017) [^1pixel] showed that it is actually possible to deceive image classifiers by changing a single pixel.
 
-```{r adversarial-1pixel, fig.cap = "By deliberately changing a single pixel (marked with red circles) a neural network trained on ImageNet is fooled to predict the wrong class (in blue letters) instead of the original class (in black letters). Work by Su et. al (2017)."}
+```{r adversarial-1pixel, fig.cap = "By intentionally changing a single pixel (marked with red circles) a neural network trained on ImageNet is deceived to predict the wrong class (in blue letters) instead of the original class (in black letters). Work by Su et. al (2017)."}
 knitr::include_graphics("images/adversarial-1pixel.png")
 ```
 
-Similar to counterfactuals, the 1-pixel attack searches for a modified example x' which is close to the original image x, but for which the prediction is changed to an adversarial outcome.
-The definition of closeness differs though: Only a single pixel is allowed to change.
-The 1-pixel attack uses differential evolution for finding which pixel to change and in what way.
-Differential evolution is loosely inspired by the biological evolution of species.
-A population of individuals called candidates solutions recreates generation by generation through recombination until a solution is found.
+Similar to counterfactuals, the 1-pixel attack looks for a modified example x' which comes close to the original image x, but changes the prediction to an adversarial outcome.
+However, the definition of closeness differs: Only a single pixel may change.
+The 1-pixel attack uses differential evolution to find out which pixel is to be changed and how.
+Differential evolution is loosely inspired by biological evolution of species.
+A population of individuals called candidate solutions recombines generation by generation through until a solution is found.
 Each candidate solution encodes a pixel modification and is represented by vector of five elements: the x- and y-coordinates and the red, green and blue (RGB) values.
-The search begins with, for example, 400 candidate solutions (= pixel modification suggestions) and creates a new generation of candidate solutions (children) from the parent generation by using the following formula:
+The search starts with, for example, 400 candidate solutions (= pixel modification suggestions) and creates a new generation of candidate solutions (children) from the parent generation using the following formula:
 
 $$x_{i}(g+1)=x_{r1}(g)+F(x_{r2}(g)+x_{r3}(g))$$
-where each $x_i$ is one element of a candidate solution (either x-coordinate, y-coordinate, red, green or blue), g is the current generation, F is a scaling parameter (set to 0.5) and r1, r2 and r3 are different random numbers.
-Each new child candidate solution is, again, a pixel with the five attributes for location and color and each of those attributes is a mixture of three random parent pixels.
+where each $x_i$ is an element of a candidate solution (either x-coordinate, y-coordinate, red, green or blue), g is the current generation, F is a scaling parameter (set to 0.5) and r1, r2 and r3 are different random numbers.
+Each new child candidate solution is in turn a pixel with the five attributes for location and color and each of those attributes is a mixture of three random parent pixels.
 
-Creating children is stopped when one of the candidate solutions is an adversarial example, meaning it is classified as the wrong class, or when the number of maximum iterations is reached as set by the user.
+The creation of children is stopped if one of the candidate solutions is an adversarial example, meaning it is classified as an incorrect class, or if the number of maximum iterations specified by the user is reached.
 
 
 **Everything is a toaster: Adversarial patch**
 
 One of my favorite examples brings adversarial examples into physical reality.
-Brown et. al (2017)[^toaster] designed a printable sticker which you can stick next to objects to make them look like toasters to an image classifier.
+Brown et. al (2017)[^toaster] designed a printable label that can be stuck next to objects to make them look like toasters for an image classifier.
 Brilliant work!
 
-```{r adversarial-toaster, fig.cap = "A sticker which makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et. al (2017)."}
+```{r adversarial-toaster, fig.cap = "A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et. al (2017)."}
 knitr::include_graphics("images/adversarial-toaster.png")
 ```
 
-This method differs from the previously presented methods for adversarial examples, because the constraint that the adversarial image has to be very close to the original image is lifted.
-Instead, the method replaces a part of the image completely with a patch, which is allowed to take on any shape. 
-The image of the  patch is optimized over various background images, with different positions of the path on the images, sometimes shifted, sometimes bigger or smaller and rotated to make the patch work for many situations.
-In the end, this optimized image can be printed out and used to fool image classifiers in the wild.
+This method differs from the methods presented so far for adversarial examples, since the restriction that the adversarial image must be very close to the original image is removed.
+Instead, the method completely replaces a part of the image with a patch that can take any shape. 
+The image of the patch is optimized over different background images, with different positions of the patch on the images, sometimes moved, sometimes larger or smaller and rotated, so that the patch works for many situations.
+In the end, this optimized image can be printed and used to deceive image classifiers in the wild.
 
 
-**Never bring your 3D-printed fake-rifle-turtle to a gun fight: Robust adversarial examples**
+**Never bring a 3D-printed turtle to a gunfight - even if your computer thinks it's a good idea: Robust adversarial examples**
 
 The next method is literally adding another dimension to the toaster:
-Athalye et. al (2018)[^turtle] 3D-printed a turtle that was designed to look like a riffle to a deep neural network from almost all possible angles.
-Yes, you read that correctly. 
-A physical object that looks like a turtle to humans looks like a damn riffle to the computer!
+Athalye et. al (2018)[^turtle] 3D-printed a turtle that was designed to look like a rifle to a deep neural network from almost all possible angles.
+Yeah, you read that right. 
+A physical object that looks like a turtle to humans looks like a fucking rifle to the computer!
 
-```{r adversarial-turtle, fig.cap = "A 3D-printed turtle that is recognized as a riffle by TensorFlow’s standard pre-trained InceptionV3 classifier. Work by Athalye et. al (2018)"}
+```{r adversarial-turtle, fig.cap = "A 3D-printed turtle that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier. Work by Athalye et. al (2018)"}
 knitr::include_graphics("images/adversarial-turtle.png")
 ```
 
-The authors found a way to create an adversarial example in 3D for a 2D classifier, which is adversarial over most possible transformations, like all the ways of turning the turtle, zooming in and so on.
+The authors have found a way to create an adversarial example in 3D for a 2D classifier that is adversarial over tansformations, such as all possibilities to rotate the turtle, zoom in and so on.
+Other approaches such as the fast gradient method no longer work when the image is rotated or viewing angle changes.
+Athalye et. al (2018) propose the Expectation Over Transformation (EOT) algorithm, which is a method of generating adversarial examples that even work when the image is transformed.
+The main idea behind EOT is to optimize adversarial examples across many possible transformations.
+Instead of minimizing the distance between the adversarial example and the original image, EOT minimizes the expected distance between the two, given a selected distribution of possible transformations.
 
+$$\mathbb{E}_{t\sim{}T}[d(t(x'),t(x))]$$
+where x is the original image, t(x) the transformed image (e.g. rotated), x' the adversarial example and t(x') its transformed version.
+Apart from working with a distribution of transformations, the EOT method follows the familiar pattern of framing the search for adversarial examples as an optimization problem.
+We try to find an adversarial example x' that maximizes the probability for the selected class $y_t$ (e.g. "rifle") across the distribution of possible transformations T:
+
+$$\arg\max_{x'}\mathbb{E}_{t\sim{}T}[log{}P(y_t|t(x'))]$$
+With the constraint that the expected distance over all possible transformations between adversarial example x' and original image x remains below a certain threshold:
+
+$$\mathbb{E}_{t\sim{}T}[d(t(x'),t(x))]<\epsilon\quad\text{and}\quad{}x\in[0,1]^d$$
+
+I think we should be concerned about the possibilities this method enables.
+The other methods are based on the manipulation of digital images.
+Howerver, these 3D-printed, robust adversarial examples can be inserted into any real  scene and deceive a computer to wrongly classify an object.
+Let's turn it around: What if someone creates a rifle which looks like a turtle?
 
 **The blindfolded adversary: Black box attack**
 
