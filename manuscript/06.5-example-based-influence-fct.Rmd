@@ -126,15 +126,102 @@ Refitting the model is very costly, but possible.
 
 ### Identifying Influential Instances without Refitting
 
+The whole refitting thing is rather slow, because if you have thousands of training samples, you have to retrain your model thousands of times.
+Assuming the model takes a day to compute and you have 1000 training examples, then - without parallelization - the computation of influential instances will take almost 3 years.
+Ain't nobody got time for that.
+
 Model-agnostic, there is influence functions by Koh and Liang (2017)[^koh].
+But it only works for methods where you have some loss function that you can differentiate with respect to some model parameters.
+Random forests for example won't work. 
+Logistic regression, neural networks and support vector machines work.
 Idea: For a prediction of a instance, trace it back through the learning algorithm to the training data.
 It helps for understanding the model behaviour, debugging the model and detecting errors with the dataset.
 It also helps to identify [adversarial examples](#adversarial) which exploit vulnerabilities of a machine learning model.
 
 
+The method is based on influence function which was invented for robust statistics.
+The idea is: 
+I have some estimator T (like any statistical measurement) which acts on some distribution F. 
+How much does T change if we perturb F is what robust statistics deals with.
+It's a measure of  stability.
+
+Assuming that you can differentiad the loss twice with respect to the model parameters $\theta$ you can use this method.
+Actually, it's also possible to use it when the differentiation twice is not possible and there is a trick to compute the Hessian matrix (second derivative).
+
+
+The goal:
+
+$$\theta_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z_i,\theta)$$
+where $\theta$ is the vector of the model parameters.
+L is the loss function used to train the model and $\epsilon$ is avery small number.
+$z_i$ are the training data and z is the data point for which we want to find influential instances.
+The intuition behind this formula is:
+How much does the loss change if we upweight a particular points $z_i$ from the training data by a little bit ($\epsilon$) and downweight the other data points respectively?
+
+The solution is:
+
+$$I_{up,loss}=\frac{\delta{}L(z_{test},\hat{\theta}_{\epsilon{}z})}{d\epsilon}=-\bigtriangledown_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\hat{\theta}}\bigtriangledown_{\hat{\theta}}L(z_{test},\hat{\theta})$$
+The intuition behind the parts where the L stands:
+How much does the model want to go into the direction of the upweighted training data point.
+A large gradient means:
+A small change in the model parameter $\theta$ (for example the weights in a neural network) decrease the loss a lot, so if I upweight this training point, the parameters will change by a lot.
+
+The H is the hessian matrix (the second derivative):
+
+$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\bigtriangledown^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
+The intuition behind the Hessian matrix is: 
+When I change the training points in particular direction, how does the loss change?
+
+The notation of this I measure is basically so that this is a bit like a fraction, where the L-part is in the numerator and the H-part is in the denominator. 
+So the informal way to think about the Iup measure is:
+When we upweight this training point, Iup is the ratio of how much the loss of this single point changes compared to how much the other data points vote for the parameters of the model not to change because the loss would increase.
+
+The problem is that the Hessian is not tractable (TODO: explain better).
+So an improvement is needed.
+The method proposed by the authors suggests using some tricks to get the Hessian.
+Scaling it up.
+
+The key idea:
+You only need the Hessian times a vector $H_{\hat{\theta}}v$ and not the hessian itself.
+By applying a series of tricks (Pearlmutter trick, CG and Taylor expansion) it can be derived.
+
+This also works when no derivative exists, for example when the model uses Hinge loss instead of some differentiable loss.
+The solution is to replace the loss with some smoothed loss, but the model can still be trained with the non-smooth loss.
+
+### Application of Influence Instances
+
+- Debugging model errors
+
+Checkout why the model makes error on certain data points by checking which inputs were most responsible.
+
+- Fixing training data
+
+Given a budget for how many data points you can change the ground truth, how do you pick the ones to look at?
+Best way is to only pick the influential points, because non-influential points - by definition - don't affect the model much anyways.
+This works way better than choosing random misclassified or badly predicted points or choosing by the ones with the highest loss.
+
+- Poisoning attacks: Creating adversarial examples for model training
+
+How much does the loss change if we change the image a bit
+The idea is to add weight to create a synthetic image, and remove weight from the original one to create an adversarial training instance.
 
 
 
+
+
+
+
+
+
+What is the difference to using the nearest neighbour in feature space?
+Training examples with higher loss have higher influence and nearest neighbour is like taking difference of loss and hessian?
+
+
+
+What happens when you don't have the y? 
+The method requires computing the loss. 
+Does that mean we can't use it for new data for which we don't know the true y?
+No, because we can compute any measure based on the derivative, like the change in prediction or predicted probability.
 
 
 
