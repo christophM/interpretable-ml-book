@@ -1,0 +1,42 @@
+```{r archetypes, eval=FALSE}
+
+library("archetypes")
+devtools::load_all()
+data(cervical)
+
+mm = model.matrix(~ . - 1, data = cervical)
+
+cervical.x = cervical[setdiff(names(cervical), "Biopsy")]
+aa = archetypes(cervical.x, 5)
+
+
+simplexplot(aa)
+
+summary(aa)
+
+round(aa$archetypes, 1)
+
+
+cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
+mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
+
+predict(mod, newdata = data.frame(aa$archetypes))
+
+
+pred.cervical = Predictor$new(mod, data = cervical.x, class = "Cancer")
+pdp = Shapley$new(pred.cervical, data.frame(aa$archetypes)[1,]) 
+pdp$plot()
+
+pdp = Shapley$new(pred.cervical, data.frame(aa$archetypes)[2,]) 
+pdp$plot()
+
+
+pdp = Shapley$new(pred.cervical, round(data.frame(aa$archetypes)[3,])) 
+pdp$plot()
+```
+
+
+<!-- Using archetypes for interpretability:  -->
+<!-- - Find archetypes -->
+<!-- - Get predictions for archetypes -->
+<!-- - Interpret -->
