@@ -1,22 +1,97 @@
 # Influential Instances
 
-Which were the most influential data points for building the model?
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+```
 
+<!-- Intro text -->
+An influential instance is a data instance whose deletion would considerably change the fitted model.
 Data instances can have extreme effects on the learning process of the model.
 
 
+<!-- Some intuition -->
 
+
+<!-- Model as a function of the data-->
+
+Why did the model make a particular prediction?
+Unlike most other methods, we don't treat the model as fixed, but as a function of the training data and outcome.
+We explain the model and the prediction with respect to the training data that was most responsible for the prediction and the model parameters.
+Considering the model is a function of the features plus the outcome, we can ask which training instance were most responsible for the particular prediction.
+Responsibility for a data point can be measured by how much the prediction changes, when we remove or upweight a certain point.
+
+<!-- Definitions and visualisations: outliers, leverage? and influential instances -->
+
+**Outlier**
+An outlier is a point which is far away from other data points.
 What's an outlier?
 A data point that lies outside of the mass of the probability distribution (an unlikely point).
+
+```{r outlier, fig.cap = "The feature follows a Gaussian distribution with the exception of an outlier with x=8."}
+n = 50
+x = rnorm(mean = 1, n = n)
+x = c(x, 8)
+y = rnorm(mean = x, n = n)
+y = c(y, 7.2)
+df = data.frame(x, y)
+ggplot(df) + geom_histogram(aes(x = x)) + my_theme()
+```
+
+Outliers can results because of the following reasons:
+
+TODO: Checkout this blog post (see AA book example)
+
+
+Outliers might or might not be interesting data points (for as criticisms or archetypes), but when we want to know what really impacts the model and its predictions, we have to look at influential points.
+
+**Influential point**
+An influential point is a data point which has a strong effect on the fitted model.
+An outlier can, but doesn't have to be an influential point.
+This can be either measured as the influence on some model parameters or on the predictions of the model.
+Influential instances can be and often are outliers.
+The concepts are not the same.
 Not every outlier is necessarily an influential point. 
 An influential point is a special outlier: An outlier that  influences the learned model (when comparing the models learned with and without the influential points).
+
+```{r influential-point, fig.cap = "The different influence on a fit of a linear model by adding an outlier or adding an influential data point. Adding a non-influential outlier doesn't change the fitted slope much. Adding an influential point changes the fitted slope drastically."}
+
+
+df1 = df
+df2  = df[1:n,]
+df3 = rbind(df2, data.frame(x = 8, y = 0))
+df1$regression_model = "with outlier"
+df2$regression_model = "without outlier/influential point"
+df3$regression_model = "with influential point"
+df.all = rbind(df1, df2, df3)
+
+
+text.dat = data.frame(x = c(8, 8), y = c(7.2, 0), lab = c("Outlier \u2192", "Influential point & outlier \u2192"), regression_model = "with outlier")
+  
+ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = regression_model)) + 
+  geom_point(size = 2) + 
+  geom_smooth(method='lm',formula=y~x, se = FALSE, aes(color = regression_model)) + 
+  my_theme() + 
+  geom_text(data = text.dat, aes(label = lab), hjust = 1, nudge_x = -0.2, vjust = 0.3)
+
+```
+
+**Leverage point??**
+
 Another term is leverage points in terms of linear regression. 
 Leverage refers to the potential to greatly influence the model, but it doesn't have to.
 Leverage points are extreme in some feature, but not necessarily in y.
 
-TODO: Example with regression curve (with and without influential point).
-TODO MAYBE: Example with decision tree (with and without influential point)
+```{r leverage-point}
 
+
+
+```
+
+
+
+
+### Identifying Influential Instances
 
 
 Identifying influential instances in linear models: Cooks distance.
