@@ -74,7 +74,7 @@ df.all = rbind(df1, df2, df3)
 
 
 text.dat = data.frame(x = c(8, 8), y = c(7.2, 0), lab = c("Outlier \u2192", "Influential point & outlier \u2192"), regression_model = "with outlier")
-  
+
 ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = regression_model)) + 
   geom_point(size = 2) + 
   geom_smooth(method='lm',formula=y~x, se = FALSE, aes(color = regression_model)) + 
@@ -98,7 +98,7 @@ Leverage points are extreme in some feature, but not necessarily in y.
 
 
 
-### Identifying Influential Instances with Refitting
+### Identifying Influential Instances with Cook's Distance
 
 
 Identifying influential instances in linear models: Cooks distance.
@@ -109,15 +109,138 @@ The model with an instance is compared to the one without and the model differen
 Linear model, GLM there is XXX.
 In linear regression, an influential instance is an outlier that greatly affects the estimated slope of the regression line.
 
-Cooks Distance is defined as:
+Cooks Distance Di for a data point is defined as the sum of the changes in the predicted outcome when the i-th instance is removed from the model training.
 
 $$D_i=\frac{\sum_{i=1}^n(\hat{y}_j-\hat{y}_{j(i)})^2}{p\cdot{}MSE}$$
 
 where the numerator is the squared difference between prediction of model with and without the i-th instance, summed over the dataset.
 The denominator is the number of features p times the mean squared error.
 The Cooks distance tells us how much the predicted output of a linear model changes when we remove the i-the instance in the training.
+Cook's distance refers to how far, on average, predicted y-values will move if the observation in question is dropped from the data set.
+Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the formula is not required to be used on linear models but is actually model agnostic.
 
-TODO: Plot with Cooks Distance 
+### Example with Cook's Distance
+
+
+```{r cooks}
+
+data("bike")
+
+cooks = function(predicted, predicted.without, n.features, errors) {
+  sum((predicted - predicted.without)^2)/(n.features * ((1/(length(predicted) - n.features)) * sum(errors * errors)))
+}
+
+library(rpart)
+
+cars.lm = rpart(cnt ~ ., data = bike)
+predicted.orig = predict(cars.lm, newdata = bike)
+cs= lapply(1:nrow(bike), function(to.remove.index) {
+  cars.lm.1 = rpart(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
+  predict.removed = predict(cars.lm.1, newdata = bike)
+  error = bike$cnt - predicted.orig
+  cooks(predicted.orig, predict.removed, n.features = ncol(bike) - 1, errors = error)
+})
+
+df = data.frame(cooks = unlist(cs), id = 1:nrow(bike))
+
+ggplot(df) + geom_point(aes(x = id, y = cooks))
+
+r.dist = cooks.distance(cars.lm)
+
+plot(my.dist, r.dist)
+cor(my.dist, r.dist)
+
+my.dist / r.dist
+```
+
+Instead of removing a data point and aggregating over the data,  we flip it around:
+For a given instance and its prediction, refit the model with iteratively each instance removed and find out the most influential data points.
+As done in the following example with a decision tree.
+
+
+```{r cooks-single}
+
+cooks.matrix = matrix(NA, ncol = nrow(bike), nrow = nrow(bike))
+cars.lm = rpart(cnt ~ ., data = bike)
+predicted.orig = predict(cars.lm, newdata = bike)
+for (to.remove.index in 1:nrow(bike)) {
+  cars.lm.1 = rpart(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
+  print(to.remove.index)
+  predict.removed = predict(cars.lm.1, newdata = bike)
+  error = bike$cnt - predicted.orig[to.predict.index]
+  
+  for (to.predict.index in 1:nrow(bike)) {
+    cooks.matrix[to.remove.index, to.predict.index] = (predicted.orig[to.predict.index] - predict.removed[to.predict.index])^2
+  }
+}
+
+cooks.matrix
+
+plot(colSums(cooks.matrix))
+plot(rowSums(cooks.matrix))
+
+
+
+obs = cooks.matrix[,200]
+xx = rbind(bike[200,],
+  bike[order(obs, decreasing = TRUE)[1:5],])
+
+pred = predict(cars.lm, newdata = xx)
+xx$pred = pred
+xx
+## Examples end up in the same node, so removing them changes the tree structure and the points are influential to the data point
+## 
+cars.lm
+```
+
+
+
+```{r cooks-single-2}
+library(mlr)
+
+cooks.matrix = matrix(NA, ncol = nrow(bike), nrow = nrow(bike))
+
+lrn = makeLearner("regr.svm")
+tsk = makeRegrTask(data = bike, target = "cnt")
+mod = train(lrn, tsk)
+
+predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
+for (to.remove.index in 1:nrow(bike)) {
+  print(to.remove.index)
+  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
+  predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
+  error = bike$cnt - predicted.orig[to.predict.index]
+  
+  for (to.predict.index in 1:nrow(bike)) {
+    cooks.matrix[to.remove.index, to.predict.index] = (predicted.orig[to.predict.index] - predict.removed[to.predict.index])^2
+  }
+}
+
+cooks.matrix
+
+plot(colSums(cooks.matrix))
+plot(rowSums(cooks.matrix))
+
+
+
+obs = cooks.matrix[,200]
+xx = rbind(bike[200,],
+  bike[order(obs, decreasing = TRUE)[1:5],])
+
+pred = predict(cars.lm, newdata = xx)
+xx$pred = pred
+xx
+## Examples end up in the same node, so removing them changes the tree structure and the points are influential to the data point
+## 
+mod
+```
+
+When is a point influential?
+Some say, when the Cooks Distance is larger than one. 
+Some say, when Cooks Distance is larger than 4/N where N is the number of instances in the training data.
+Some say, look at visualisations of the distribution and check if some data points clearly peak out.
+
+
 
 
 
@@ -204,10 +327,6 @@ This works way better than choosing random misclassified or badly predicted poin
 
 How much does the loss change if we change the image a bit
 The idea is to add weight to create a synthetic image, and remove weight from the original one to create an adversarial training instance.
-
-
-
-
 
 
 
