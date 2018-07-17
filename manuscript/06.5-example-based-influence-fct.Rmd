@@ -235,6 +235,9 @@ xx
 mod
 ```
 
+
+TODO: Visualize instance wise changes.
+
 When is a point influential?
 Some say, when the Cooks Distance is larger than one. 
 Some say, when Cooks Distance is larger than 4/N where N is the number of instances in the training data.
@@ -258,6 +261,8 @@ But it only works for methods where you have some loss function that you can dif
 Random forests for example won't work. 
 Logistic regression, neural networks and support vector machines work.
 Idea: For a prediction of a instance, trace it back through the learning algorithm to the training data.
+
+
 It helps for understanding the model behaviour, debugging the model and detecting errors with the dataset.
 It also helps to identify [adversarial examples](#adversarial) which exploit vulnerabilities of a machine learning model.
 
@@ -272,9 +277,10 @@ Assuming that you can differentiad the loss twice with respect to the model para
 Actually, it's also possible to use it when the differentiation twice is not possible and there is a trick to compute the Hessian matrix (second derivative).
 
 
-The goal:
+How would the model parameters look like if we would remove data point z?
+Thanks to influence functions from robust statistic, we can answer the question, by upweighting the z in the loss function by some small step $\epsilon$, which results in the following, new parameters:
 
-$$\theta_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z_i,\theta)$$
+$$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
 where $\theta$ is the vector of the model parameters.
 L is the loss function used to train the model and $\epsilon$ is avery small number.
 $z_i$ are the training data and z is the data point for which we want to find influential instances.
@@ -283,7 +289,9 @@ How much does the loss change if we upweight a particular points $z_i$ from the 
 
 The solution is:
 
-$$I_{up,loss}=\frac{\delta{}L(z_{test},\hat{\theta}_{\epsilon{}z})}{d\epsilon}=-\bigtriangledown_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\hat{\theta}}\bigtriangledown_{\hat{\theta}}L(z_{test},\hat{\theta})$$
+$$I_{up,loss}(z,z_{test})=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}=-\bigtriangledown_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\hat{\theta}}\bigtriangledown_{\hat{\theta}}L(z_{test},\hat{\theta})$$
+
+We look how the loss of z_test changes when we upweight a certain training data points, telling us how influential this training data points was for the prediction of z_test.
 The intuition behind the parts where the L stands:
 How much does the model want to go into the direction of the upweighted training data point.
 A large gradient means:
