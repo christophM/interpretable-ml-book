@@ -9,10 +9,7 @@ set.seed(42)
 An influential instance is a data instance whose deletion would considerably change the fitted model.
 Data instances can have extreme effects on the learning process of the model.
 
-
-<!-- Some intuition -->
-
-
+*Keywords: Influential points, influence function, leave-one-out analysis, Cook's Distance, regression deletion diagnostics*
 <!-- Model as a function of the data-->
 
 Why did the model make a particular prediction?
@@ -23,17 +20,22 @@ Responsibility for a data point can be measured by how much the prediction chang
 
 A learning algorithm (the algorithm that produces a linear model or a random forest) is - in its essence - a function that takes in data and spits out a model, which can be described by its parameters:
 
-$$\text{Learner}:X\rightarrow{}\text{Model}(\theta)$$
+$$\text{Learner}:X,y\rightarrow{}\text{Model}(\theta)$$
 
-And a model is a function that projects from to data to some output y:
+And a model is a function that projects from to data to some prediction $\hat{y}:
 
-$$\text{Model}:X\rightarrow{}y$$
-<!-- Definitions and visualisations: outliers, leverage? and influential instances -->
+$$\text{Model}:X\rightarrow{}\hat{y}$$
 
-**Outlier**
-An outlier is a point which is far away from other data points.
-What's an outlier?
-A data point that lies outside of the mass of the probability distribution (an unlikely point).
+Why not trace a prediction by the model right back to the training points that were most responsible?
+That question drives the idea behind influential data points.
+
+Before we start into some methods how to find influential instance, we have to talk about what influential instances are and what the difference between an outlier and an influential instance is. 
+You probably have already heard about outliers before.
+An outlier is an instance which is far away from other instances in the dataset.
+"Far away" can be measured by for example the Euclidean distance.
+In a dataset of newborn stats, a baby that weights 6kg would be considered an outlier.
+In a dataset of bank accounts, which are mostly checking accounts, a dedicated loan account, with a large negative balance and not so many movements compared to the checking accounts would be considered an outlier.
+The following images shows an outlier:
 
 ```{r outlier, fig.cap = "The feature follows a Gaussian distribution with the exception of an outlier with x=8."}
 n = 50
@@ -146,16 +148,19 @@ df = data.frame(cooks = unlist(cs), id = 1:nrow(bike))
 
 ggplot(df) + geom_point(aes(x = id, y = cooks))
 
-r.dist = cooks.distance(cars.lm)
-
-plot(my.dist, r.dist)
-cor(my.dist, r.dist)
-
-my.dist / r.dist
 ```
 
 Instead of removing a data point and aggregating over the data,  we flip it around:
 For a given instance and its prediction, refit the model with iteratively each instance removed and find out the most influential data points.
+
+We simply look at the absolute difference between predicted value of instance j with and without instance j included in the training of the model:
+
+$$d_{j(i)}=|\hat{y}_j-\hat{y}_{j(i)}|$$
+It's like asking the counterfactual:
+How would the prediction for instance j change if we left out instance i from the training process.
+But we don't only do this for left out instance i, but we leave out each instance one after each other and get a vector of differences.
+Then we can rank all the differences by amount and choose the training instance which yield the biggest change in prediction when left out of the training and use those to explain the prediction of the model for this instance.
+
 As done in the following example with a decision tree.
 
 
@@ -166,10 +171,8 @@ cars.lm = rpart(cnt ~ ., data = bike)
 predicted.orig = predict(cars.lm, newdata = bike)
 for (to.remove.index in 1:nrow(bike)) {
   cars.lm.1 = rpart(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
-  print(to.remove.index)
   predict.removed = predict(cars.lm.1, newdata = bike)
-  error = bike$cnt - predicted.orig[to.predict.index]
-  
+  error = bike$cnt - predicted.orig
   for (to.predict.index in 1:nrow(bike)) {
     cooks.matrix[to.remove.index, to.predict.index] = (predicted.orig[to.predict.index] - predict.removed[to.predict.index])^2
   }
@@ -195,6 +198,9 @@ cars.lm
 ```
 
 
+Cook's distance is very similar in approach to the leave-one-out cross validation (LOOCV), which can be used to estimate the error of a machine learning model, but usually repeated k cross validation works better, btw..
+
+
 TODO: Motivate use of disaggregated Cook's distance.
 
 ```{r cooks-single-2}
@@ -208,10 +214,9 @@ mod = train(lrn, tsk)
 
 predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
 for (to.remove.index in 1:nrow(bike)) {
-  print(to.remove.index)
   mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
   predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
-  error = bike$cnt - predicted.orig[to.predict.index]
+  error = bike$cnt - predicted.orig
   
   for (to.predict.index in 1:nrow(bike)) {
     cooks.matrix[to.remove.index, to.predict.index] = (predicted.orig[to.predict.index] - predict.removed[to.predict.index])^2
@@ -244,9 +249,6 @@ When is a point influential?
 Some say, when the Cooks Distance is larger than one. 
 Some say, when Cooks Distance is larger than 4/N where N is the number of instances in the training data.
 Some say, look at visualisations of the distribution and check if some data points clearly peak out.
-
-
-
 
 
 Cooks Distance is model-agnostic?
@@ -313,7 +315,7 @@ For the gradient of the test prediction loss: The higher the gradient, the more 
 The whole construct can also be seen as a measure of similarity between the the training and the test instance.
 Similarity doesn't mean here the Euclidean distance, but the similarity the model learned.
 
-**Excursion: Intuition behinde the gradient and the Hessian**
+**Excursion: Intuition behind the gradient and the Hessian matrix**
 
 Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions.
 It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit.
@@ -376,9 +378,6 @@ $$H=\begin{pmatrix}\frac{d^2\text{Height}}{dsds}&\frac{d^2\text{Height}}{dsdl}\\
 
 
 ```{r potato-chip, fig.cap = "Created by Topntp26 - Freepik.com"}
-
-library(jpeg)
-library(grid)
 img <- readJPEG("images/potato-chips.jpg")
 p1 <- rasterGrob(img, interpolate=TRUE)
 
@@ -429,6 +428,18 @@ Influence functions also work in non-convex models, even though they formally re
 TODO: Explain the stochastic estimation of the Hessian instead of the conjugate gradients method, because that is what the authors use in the end.
 TODO: Checkout if it is easy to use the code with bike data and small neural network.
 
+
+Two problems with this approach: 
+
+- Lack of convexity of loss
+Solution: smooth the hessian matrix so it becomes positive definite
+- Lack of differentiability of loss.
+Some losses cannot be differentiaed twice.
+Solution: Approximate loss with differentiable version for computing the influence function.
+
+
+TODO: Write a bit about how to create adversarial examples with influence functions.
+
 ### Application of Influence Instances
 
 - Fixing training data
@@ -450,9 +461,6 @@ How much does the loss change if we change the image a bit
 The idea is to add weight to create a synthetic image, and remove weight from the original one to create an adversarial training instance.
 
 
-
-
-
 What is the difference to using the nearest neighbour in feature space?
 Training examples with higher loss have higher influence and nearest neighbour is like taking difference of loss and hessian?
 
@@ -464,11 +472,31 @@ Does that mean we can't use it for new data for which we don't know the true y?
 No, because we can compute any measure based on the derivative, like the change in prediction or predicted probability.
 
 
-### Advantages
+### Advantages of identifying influential points
 
-### Disadvantages
+- Very different from other approaches, because looking at influential instances emphasizes the role the training data plays in the learning process
+- Directly helps identifying problems with data points that are wrongly labeled or have high influence and are therefor to be critically evaluated.
+- In theory model-agnostic at least the methods that requre refitting 
+- Influence functions can also be used to create adversarial training data
+- 
+
+### Disadvantages of identifying influential points
+
+- Cook's Distance and similar are very expensive to calculate because it requires refitting. 
+When your model takes an hour to fit and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of instance by leaving them out one after each other from the training.
+- Influence functions are a good alternative, but only for models with differentiable parameters, like neural networks. 
+Forget it for tree-based methods like random forest, boosted trees or decision trees.
+- Cook's distance and the influence functions have no absolute scale on which to judge them. 
+The cutoff at which we call an instance influential is therefore a bit arbitrary.
+But it's still useful to rank the instances among each other.
 
 ### Software and Alternatives
+
+- Cook's distance in R, though only for lm and glm. But very easy to implement, see example from this book.
+- Python code for influence from paper in repository. 
+Unfortunately just the paper dump and no maintained Python module.
+-
+
 
 Good blog post, which helped me understand this paper better: http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641
 
