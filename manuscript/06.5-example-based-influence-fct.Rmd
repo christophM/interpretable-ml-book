@@ -105,6 +105,7 @@ Identifying influential instances in linear models: Cooks distance.
 For both measures, we refit the model repeatedly while leaving out certain instances.
 The model with an instance is compared to the one without and the model difference for the weights is compared.
 
+Cook's distance measures globally (across the whole dataset) how influential a training instance was for all predictions.
 
 Linear model, GLM there is XXX.
 In linear regression, an influential instance is an outlier that greatly affects the estimated slope of the regression line.
@@ -194,6 +195,7 @@ cars.lm
 ```
 
 
+TODO: Motivate use of disaggregated Cook's distance.
 
 ```{r cooks-single-2}
 library(mlr)
@@ -272,6 +274,8 @@ The idea is:
 I have some estimator T (like any statistical measurement) which acts on some distribution F. 
 How much does T change if we perturb F is what robust statistics deals with.
 It's a measure of  stability.
+Influence functions measure how a training example affects the predictions for a test example
+Or, as formulated by the paper: How much would the test loss change by upweighting a certain training example?
 
 Assuming that you can differentiad the loss twice with respect to the model parameters $\theta$ you can use this method.
 Actually, it's also possible to use it when the differentiation twice is not possible and there is a trick to compute the Hessian matrix (second derivative).
@@ -289,24 +293,124 @@ How much does the loss change if we upweight a particular points $z_i$ from the 
 
 The solution is:
 
-$$I_{up,loss}(z,z_{test})=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}=-\bigtriangledown_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\hat{\theta}}\bigtriangledown_{\hat{\theta}}L(z_{test},\hat{\theta})$$
+$$I_{up,loss}(z,z_{test})=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})$$
+
 
 We look how the loss of z_test changes when we upweight a certain training data points, telling us how influential this training data points was for the prediction of z_test.
 The intuition behind the parts where the L stands:
 How much does the model want to go into the direction of the upweighted training data point.
 A large gradient means:
 A small change in the model parameter $\theta$ (for example the weights in a neural network) decrease the loss a lot, so if I upweight this training point, the parameters will change by a lot.
+Some intuition behind that: 
+The first term $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance, 
+also the last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$, but for the training instance. 
+The middle part $H^{-1}_{\hat{\theta}}$ measures the similarity between the two.
+
+More intuition about the formula:
+The influence is proportionate to how large the gradients are for the training and test loss.
+The higher the gradient of the training loss, the higher its influence on the parameters, the higher the influence on the test prediction.
+For the gradient of the test prediction loss: The higher the gradient, the more influentiable the test instance is.
+The whole construct can also be seen as a measure of similarity between the the training and the test instance.
+Similarity doesn't mean here the Euclidean distance, but the similarity the model learned.
+
+**Excursion: Intuition behinde the gradient and the Hessian**
+
+Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions.
+It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit.
+Since the model usually has many parameters, the gradient also is a vector with many numbers, one for each parameter, telling for each parameter the rate and direction of change of the loss if we were to change the parameter.
+A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss.
+The Hessian is the second-order derivative.
+What the gradient is to the loss, is the hessian to the gradient. 
+The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss.
+A more informal explanation is that the Hessian informs us how curved the rate of change is. 
+The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking. 
+A real world example: A potato chip.
+Not the irregular ones, but the ones where each chip has the same shape, which you can stack. 
+If you lay such a chip on a surface, such that the ends on off the ends of the longer side touch the ground, we will see how it relates to gradients and the Hessian.
+The long end points away from you, so that you could now put your fingers on the left and right elevated parts of the chip and wiggle it, but be careful not to break it.
+Have a look at the next picture to see what I mean.
+
+The chip is 3-dimensional and will be a good example.
+Assume that each point on the chip describes the combiniation of two model parameters, represented as the coordinate in the direction of the long side and the coordinate in the direction of the short side.
+The height of a point on the chip represents the value of the loss function.
+Now, if we start on the left of the elevated short sides of the chip, the gradient of the loss (height of the chip) would be negative, since going from left to right by a small step would decrease the height/loss. 
+In the middle of the chip, there is a gradient of zero and on the right a positive gradient for the direction.
+But this was only one component of the gradient. 
+The other component is in the longer direction of the chip. 
+Coming from your body, the gradient is first positive, then zero, then negative.
+Now for the Hessian: It describes how curvy the chip is or also the rate of change of the gradient. 
+Since we have two parameters (two directions), we have to describe the curviness regarding the direction we are looking.
+Let's again start at the left of the short sides of the chips, with the the high negative gradient. 
+How curvy is the chip?
+Well, that depends whether you look into the direction towards the other short end or into the direction of the long ends.
+The Hessian or curviness is very high for going from short edge to short edge, because there is much curviness between the short edges. 
+The curviness 
+But being on a short edge and going into one 
+
+
+Let's say the height of the chip is the loss, the coordinate along the back of the from back to neck is one parameter, and the coordinate of the saddle from left flank to right flank is the second parameter.
+Going from left to right, the saddle first increases in height and than decreases.
+A high rate of change of the gradient (rate of rate of increase of height), so there is a positive Hessian for short direction, when looking into the short direction. 
+But how much does the gradient change for the short direction, when we look into the long direction?
+That is, when we go to a certain coordinate on the chip, fix the position of the short side, but check how much the gradient changes, when we change the coordinate in the long direction. 
+The answer is 0.
+
+We assume the chip's height follows the following function of the position on the short side and the position on the long side.
+Let's call the position on the short side s and the position on the long side l:
+
+$$\text{Height}=s^2-l^2+2$$
+The 2 is just used so that the chip starts at zero and not a negative value.
+
+The gradient of the chip looks like this:
+
+$$\nabla\text{Height}=\begin{pmatrix}\frac{d\text{Height}}{ds}\\\frac{d\text{Height}}{dl}\end{pmatrix}=\begin{pmatrix}2s\\-2l\end{pmatrix}$$
+
+This means that going from left to write short end, we increase the gradient and going from body pointing long end to the one long end further away, we decrease the rate at which the height increases.
+This gradient depends on the position on the chip, which shows that for the chip the gradient is dependent on where we are on the chip, which means that the Hessian matrix will not only contain zeros, but there is a changing rate of change of the height.
+
+
+The Hessian for our chip looks like this: 
+
+$$H=\begin{pmatrix}\frac{d^2\text{Height}}{dsds}&\frac{d^2\text{Height}}{dsdl}\\\frac{d^2\text{Height}}{dsdl}&\frac{d^2\text{Height}}{dldl}\end{pmatrix}=\begin{pmatrix}2&0\\0&-2\end{pmatrix}$$
+
+
+
+```{r potato-chip, fig.cap = "Created by Topntp26 - Freepik.com"}
+
+library(jpeg)
+library(grid)
+img <- readJPEG("images/potato-chips.jpg")
+p1 <- rasterGrob(img, interpolate=TRUE)
+
+p1 = knitr::include_graphics("images/potato-chips.jpg")
+
+df = expand.grid(long = seq(from = -1.5, to = 1.5, length.out = 10),
+  short = seq(from = -1, to = 1, length.out = 10))
+
+## Adding to for elevation
+df$height = 2 + df$short^2  - df$long^2  
+
+p2 = ggplot(df) + 
+  geom_tile(aes(x = short, y = long, fill = height)) + 
+  scale_x_continuous("Short side of chip") + 
+  scale_y_continuous("Long side of chip") + 
+  scale_fill_continuous("Height of chip") + 
+  coord_fixed()
+grid.arrange(p1, p2, ncol = 2)
+```
+
+
 
 The H is the hessian matrix (the second derivative):
 
-$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\bigtriangledown^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
+$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
 The intuition behind the Hessian matrix is: 
 When I change the training points in particular direction, how does the loss change?
 
-The notation of this I measure is basically so that this is a bit like a fraction, where the L-part is in the numerator and the H-part is in the denominator. 
-So the informal way to think about the Iup measure is:
 When we upweight this training point, Iup is the ratio of how much the loss of this single point changes compared to how much the other data points vote for the parameters of the model not to change because the loss would increase.
 
+Computing I-up-loss has two challenges: First, it requires calculating and inverting the Hessian matrix.
+Second, we want to calculate the property across all training points zi and a few test points z.test.
 The problem is that the Hessian is not tractable (TODO: explain better).
 So an improvement is needed.
 The method proposed by the authors suggests using some tricks to get the Hessian.
@@ -319,17 +423,26 @@ By applying a series of tricks (Pearlmutter trick, CG and Taylor expansion) it c
 This also works when no derivative exists, for example when the model uses Hinge loss instead of some differentiable loss.
 The solution is to replace the loss with some smoothed loss, but the model can still be trained with the non-smooth loss.
 
+
+Influence functions also work in non-convex models, even though they formally require convexity.
+
+TODO: Explain the stochastic estimation of the Hessian instead of the conjugate gradients method, because that is what the authors use in the end.
+TODO: Checkout if it is easy to use the code with bike data and small neural network.
+
 ### Application of Influence Instances
-
-- Debugging model errors
-
-Checkout why the model makes error on certain data points by checking which inputs were most responsible.
 
 - Fixing training data
 
 Given a budget for how many data points you can change the ground truth, how do you pick the ones to look at?
 Best way is to only pick the influential points, because non-influential points - by definition - don't affect the model much anyways.
 This works way better than choosing random misclassified or badly predicted points or choosing by the ones with the highest loss.
+
+- Handling domain mismatch / Debugging model errors
+
+Assume data is trained on one domain - like deciding if a cat or a dog is on an image, but all images where from inside the house - and an example from another domain comes in, e.g. showing a dog outside the house.
+The model can make heavy mistakes.
+The influence function can tell how this domain mismatch will play out.
+Checkout why the model makes error on certain data points by checking which inputs were most responsible.
 
 - Poisoning attacks: Creating adversarial examples for model training
 
@@ -350,6 +463,14 @@ The method requires computing the loss.
 Does that mean we can't use it for new data for which we don't know the true y?
 No, because we can compute any measure based on the derivative, like the change in prediction or predicted probability.
 
+
+### Advantages
+
+### Disadvantages
+
+### Software and Alternatives
+
+Good blog post, which helped me understand this paper better: http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641
 
 
 
