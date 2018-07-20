@@ -2,20 +2,22 @@
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all()
-set.seed(42)
+set.seed(43)
 ```
 
 <!-- Intro text -->
-An influential instance is a data instance whose deletion would considerably change the fitted model.
-Data instances can have extreme effects on the learning process of the model.
+An influential instance is a data instance whose deletion from the training data would considerably change a model, when fitted on the reduced dataset.
+Identifying influential training instances can explain predictions of black box models.
 
 *Keywords: Influential points, influence function, leave-one-out analysis, Cook's Distance, regression deletion diagnostics*
-<!-- Model as a function of the data-->
 
-Why did the model make a particular prediction?
-Unlike most other methods, we don't treat the model as fixed, but as a function of the training data and outcome.
+<!-- Model as a function of the data-->
+Classically, identfiying influential instances is a procedure used for researching the robustness of a model and also to maybe remove these instance from the training data.
+But we can also use influential instances to explain why a particular prediction was made, by tracing the decision through the model back to the training data.
 We explain the model and the prediction with respect to the training data that was most responsible for the prediction and the model parameters.
-Considering the model is a function of the features plus the outcome, we can ask which training instance were most responsible for the particular prediction.
+Unlike most other methods, we don't treat the model as fixed, but as a function of the training data and outcome.
+
+Considering that the model is a function of the features plus the outcome, we can ask which training instance were most responsible for the particular prediction.
 Responsibility for a data point can be measured by how much the prediction changes, when we remove or upweight a certain point.
 
 A learning algorithm (the algorithm that produces a linear model or a random forest) is - in its essence - a function that takes in data and spits out a model, which can be described by its parameters:
@@ -30,9 +32,9 @@ Why not trace a prediction by the model right back to the training points that w
 That question drives the idea behind influential data points.
 
 Before we start into some methods how to find influential instance, we have to talk about what influential instances are and what the difference between an outlier and an influential instance is. 
-You probably have already heard about outliers before.
+You probably have already heared about outliers before.
 An outlier is an instance which is far away from other instances in the dataset.
-"Far away" can be measured by for example the Euclidean distance.
+"Far away" can for example be measured by the Euclidean distance.
 In a dataset of newborn stats, a baby that weights 6kg would be considered an outlier.
 In a dataset of bank accounts, which are mostly checking accounts, a dedicated loan account, with a large negative balance and not so many movements compared to the checking accounts would be considered an outlier.
 The following images shows an outlier:
@@ -46,10 +48,6 @@ y = c(y, 7.2)
 df = data.frame(x, y)
 ggplot(df) + geom_histogram(aes(x = x)) + my_theme()
 ```
-
-Outliers can results because of the following reasons:
-
-TODO: Checkout this blog post (see AA book example)
 
 
 Outliers might or might not be interesting data points (for as criticisms or archetypes), but when we want to know what really impacts the model and its predictions, we have to look at influential points.
@@ -81,27 +79,26 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
   geom_point(size = 2) + 
   geom_smooth(method='lm',formula=y~x, se = FALSE, aes(color = regression_model)) + 
   my_theme() + 
-  geom_text(data = text.dat, aes(label = lab), hjust = 1, nudge_x = -0.2, vjust = 0.3)
+  geom_label(data = text.dat, aes(label = lab), hjust = 1, nudge_x = -0.2, vjust = 0.3)
 
 ```
 
-**Leverage point??**
+<!-- **Leverage point??** -->
 
-Another term is leverage points in terms of linear regression. 
-Leverage refers to the potential to greatly influence the model, but it doesn't have to.
-Leverage points are extreme in some feature, but not necessarily in y.
+<!-- Another term is leverage points in terms of linear regression.  -->
+<!-- Leverage refers to the potential to greatly influence the model, but it doesn't have to. -->
+<!-- Leverage points are extreme in some feature, but not necessarily in y. -->
 
-```{r leverage-point}
+<!-- ```{r leverage-point} -->
 
 
 
-```
+<!-- ``` -->
 
 
 
 
 ### Identifying Influential Instances with Cook's Distance
-
 
 Identifying influential instances in linear models: Cooks distance.
 For both measures, we refit the model repeatedly while leaving out certain instances.
@@ -122,8 +119,7 @@ The Cooks distance tells us how much the predicted output of a linear model chan
 Cook's distance refers to how far, on average, predicted y-values will move if the observation in question is dropped from the data set.
 Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the formula is not required to be used on linear models but is actually model agnostic.
 
-### Example with Cook's Distance
-
+TODO: Analyse for Cook's distance what the most important features were by learning a tree: cooks.dist ~ . -id
 
 ```{r cooks}
 
@@ -133,22 +129,83 @@ cooks = function(predicted, predicted.without, n.features, errors) {
   sum((predicted - predicted.without)^2)/(n.features * ((1/(length(predicted) - n.features)) * sum(errors * errors)))
 }
 
-library(rpart)
 
-cars.lm = rpart(cnt ~ ., data = bike)
-predicted.orig = predict(cars.lm, newdata = bike)
+lrn = makeLearner("regr.ranger")
+tsk = makeRegrTask(data = bike, target = "cnt")
+mod = train(lrn, tsk)
+predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
 cs= lapply(1:nrow(bike), function(to.remove.index) {
-  cars.lm.1 = rpart(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
-  predict.removed = predict(cars.lm.1, newdata = bike)
+  print(to.remove.index)
+  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
+  predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
   error = bike$cnt - predicted.orig
   cooks(predicted.orig, predict.removed, n.features = ncol(bike) - 1, errors = error)
 })
 
 df = data.frame(cooks = unlist(cs), id = 1:nrow(bike))
 
-ggplot(df) + geom_point(aes(x = id, y = cooks))
+ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
+  scale_y_continuous("Cook's Distance") + 
+  scale_x_continuous("Index of instance")
+
+df.bike  = cbind(df, bike)
+rpart(cooks ~ . -id, data = df.bike, control = rpart.control(maxdepth = 2))
+
+
+
+lrn = makeLearner("regr.svm")
+tsk = makeRegrTask(data = bike, target = "cnt")
+mod = train(lrn, tsk)
+predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
+cs= lapply(1:nrow(bike), function(to.remove.index) {
+  print(to.remove.index)
+  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
+  predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
+  error = bike$cnt - predicted.orig
+  cooks(predicted.orig, predict.removed, n.features = ncol(bike) - 1, errors = error)
+})
+
+df = data.frame(cooks = unlist(cs), id = 1:nrow(bike))
+
+ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
+  scale_y_continuous("Cook's Distance") + 
+  scale_x_continuous("Index of instance")
+
+df.bike  = cbind(df, bike)
+rpart(cooks ~ . -id, data = df.bike, control = rpart.control(maxdepth = 2))
+
 
 ```
+
+Now we have the most influential data points. 
+This is already useful for debugging the data:
+Is there some problematic instance?
+These are the first points to check again if they have any mistakes in them, because any mistake in them influences by definition the model a lot.
+
+```{r cooks-top}
+cooks.sorted = df[order(df$cooks, decreasing = TRUE),]
+bike[cooks.sorted$id[1],]
+```
+```{r cooks-top-expl}
+library(randomForest)
+to.remove.index = cooks.sorted$id[1]
+cars.lm = randomForest(cnt ~ ., data = bike)
+cars.lm.1 = randomForest(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
+
+bike$cnt[to.remove.index]
+abs.diffs = abs(predict(cars.lm, newdata = bike) - predict(cars.lm.1, newdata = bike))
+which(abs.diffs > 200)
+
+bike[c(239, 641),]
+
+cars.lm
+
+```
+
+Point lies right on the edge of the threshold and removing it changes the split value which cascades down the tree.
+Obviously, we could only make sense here, because we have a simple decision tree model, which we can easily investigate.
+What would we do with a black box model?
+
 
 Instead of removing a data point and aggregating over the data,  we flip it around:
 For a given instance and its prediction, refit the model with iteratively each instance removed and find out the most influential data points.
@@ -201,7 +258,6 @@ cars.lm
 Cook's distance is very similar in approach to the leave-one-out cross validation (LOOCV), which can be used to estimate the error of a machine learning model, but usually repeated k cross validation works better, btw..
 
 
-TODO: Motivate use of disaggregated Cook's distance.
 
 ```{r cooks-single-2}
 library(mlr)
@@ -410,7 +466,13 @@ When we upweight this training point, Iup is the ratio of how much the loss of t
 
 Computing I-up-loss has two challenges: First, it requires calculating and inverting the Hessian matrix.
 Second, we want to calculate the property across all training points zi and a few test points z.test.
-The problem is that the Hessian is not tractable (TODO: explain better).
+
+The problem is that computing and inverting the Hessian requires $O(np^2 + p^3)$ operations. 
+This term tells us that the computation operations necessary (and therefore time) depends on the number of parameters to the cube.
+Let's say the number of parameters in your model is 10, and the time necessary to compute the Hessian is 1s.
+We exchange the model with a model with 100 parameters, which is 10 times as many parameters as the original model.
+The computation time is not merely 10x 1s = 10s, but since it scales with the cube, it's actually 10x 10x 10x 1s = 1000s.
+This is not healthy for a method that should be usably with neural networks with millions of parameters.
 So an improvement is needed.
 The method proposed by the authors suggests using some tricks to get the Hessian.
 Scaling it up.
@@ -425,9 +487,27 @@ The solution is to replace the loss with some smoothed loss, but the model can s
 
 Influence functions also work in non-convex models, even though they formally require convexity.
 
-TODO: Explain the stochastic estimation of the Hessian instead of the conjugate gradients method, because that is what the authors use in the end.
-TODO: Checkout if it is easy to use the code with bike data and small neural network.
 
+Stochastics estimation of the Hessian matrix. 
+Even with the conjugate gradients trick, computing the Hessian is expensive because it has to be iterated over the whole training set.
+The trick is to get a sample of the training data and then compute:
+
+
+(REmove formula?)
+
+$$H_j^{-1}v=v+(I-\nabla^2_{\theta}L(z_j,\hat{\theta}))H^{-1}_{j-1}v$$
+where $\nabla^2_{\theta}L(z_j,\hat{\theta})$ is the second order derivative (curviness) at example $z_j$.
+
+TODO: Shorten details about the tricks the authors used.
+
+
+
+
+
+
+How good does upscaling with $I_{up,loss}$ work? 
+We can only know for certain, by comparing the loss we get with the leave-one-out retraining.
+The authors did this and got pretty good results.
 
 Two problems with this approach: 
 
