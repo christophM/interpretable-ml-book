@@ -31,11 +31,14 @@ $$\text{Model}:X\rightarrow{}\hat{y}$$
 Why not trace a prediction by the model right back to the training points that were most responsible?
 That question drives the idea behind influential data points.
 
-Before we start into some methods how to find influential instance, we have to talk about what influential instances are and what the difference between an outlier and an influential instance is. 
-You probably have already heared about outliers before.
+Before we start digging into some methods how to find influential instance, we have to talk about what influential instances are and what the differences between an outlier and an influential instance are.
+
+**Outlier**
+
+You probably have already heard about outliers before.
 An outlier is an instance which is far away from other instances in the dataset.
 "Far away" can for example be measured by the Euclidean distance.
-In a dataset of newborn stats, a baby that weights 6kg would be considered an outlier.
+In a dataset of newborn body measurements, a baby that weights 6kg would be considered an outlier.
 In a dataset of bank accounts, which are mostly checking accounts, a dedicated loan account, with a large negative balance and not so many movements compared to the checking accounts would be considered an outlier.
 The following images shows an outlier:
 
@@ -50,10 +53,13 @@ ggplot(df) + geom_histogram(aes(x = x)) + my_theme()
 ```
 
 
-Outliers might or might not be interesting data points (for as criticisms or archetypes), but when we want to know what really impacts the model and its predictions, we have to look at influential points.
+Outliers might or might not be interesting data points (like criticisms or archetypes).
+Outliers can be influential for the model fit, but don't have to be. 
+But when we want to know what really impacts the model and its predictions, we have to look at influential points.
 
 **Influential point**
 An influential point is a data point which has a strong effect on the fitted model.
+Influential is defined as how much the model is different when the model is refitted when the data point is removed.
 An outlier can, but doesn't have to be an influential point.
 This can be either measured as the influence on some model parameters or on the predictions of the model.
 Influential instances can be and often are outliers.
@@ -77,9 +83,9 @@ text.dat = data.frame(x = c(8, 8), y = c(7.2, 0), lab = c("Outlier \u2192", "Inf
 
 ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = regression_model)) + 
   geom_point(size = 2) + 
-  geom_smooth(method='lm',formula=y~x, se = FALSE, aes(color = regression_model)) + 
+  geom_smooth(method='lm',formula=y~x, se = FALSE, aes(color = regression_model), fullrange = TRUE) + 
   my_theme() + 
-  geom_label(data = text.dat, aes(label = lab), hjust = 1, nudge_x = -0.2, vjust = 0.3)
+  geom_label(data = text.dat, aes(label = lab), hjust = 1, nudge_x = -0.2, vjust = 0.3) 
 
 ```
 
@@ -98,9 +104,9 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
 
 
 
-### Identifying Influential Instances with Cook's Distance
+### Identifying Influential Instances with Cook's Distance and DFBETA  
 
-Identifying influential instances in linear models: Cooks distance.
+Identifying influential instances in linear models: Cooks distance and DFBETA
 For both measures, we refit the model repeatedly while leaving out certain instances.
 The model with an instance is compared to the one without and the model difference for the weights is compared.
 
@@ -119,46 +125,75 @@ The Cooks distance tells us how much the predicted output of a linear model chan
 Cook's distance refers to how far, on average, predicted y-values will move if the observation in question is dropped from the data set.
 Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the formula is not required to be used on linear models but is actually model agnostic.
 
-TODO: Analyse for Cook's distance what the most important features were by learning a tree: cooks.dist ~ . -id
+
+DFBETA is the same idea as Cook's Distance. 
+We look at the model with and without an instance.
+
+$$DFBETA_{i}=\beta-\beta_{(i)}$$
+
+where $\beta$ are the model parameters with all data points, and $\beta_{(i)}$ the model parameters when the model is fit without instance i.
+This obviously only works for models with weight parameters like logistic regression, neural networks etc..
+For models that don't have weight parameters, like decision trees, tree ensembles, support vector machines, Cook's Distance is more useful.
+
+In the following example, we fit a random forest to predict bike rentals and we use Cook's Distance to measure which training points were the most influential. 
+This requires to refit the random forest `r nrow(bike)` times, because that's the size of the training data.
+For this example, it's not a problem since the code still runs through within a few minutes, but for bigger models this is problematic.
+
 
 ```{r cooks}
-
-data("bike")
-
+#'@param predicted The predicted outcome of a model
+#'@param predicted.without The predicted outcome of a model with a data point removed
+#'@param n.features The number of features
+#'@param errors The vector of model errors
 cooks = function(predicted, predicted.without, n.features, errors) {
   sum((predicted - predicted.without)^2)/(n.features * ((1/(length(predicted) - n.features)) * sum(errors * errors)))
 }
 
+data("cervical")
 
-lrn = makeLearner("regr.ranger")
-tsk = makeRegrTask(data = bike, target = "cnt")
+lrn = makeLearner("classif.ranger", predict.type = "prob", num.trees  = 10)
+tsk = makeClassifTask(data = cervical, target = "Biopsy")
 mod = train(lrn, tsk)
-predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
-cs= lapply(1:nrow(bike), function(to.remove.index) {
-  print(to.remove.index)
-  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
-  predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
-  error = bike$cnt - predicted.orig
-  cooks(predicted.orig, predict.removed, n.features = ncol(bike) - 1, errors = error)
+predicted.orig = getPredictionProbabilities(predict(mod, newdata = cervical))
+cs = lapply(1:nrow(cervical), function(to.remove.index) {
+  if(to.remove.index %% 50 == 0) print(to.remove.index)
+  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(cervical), to.remove.index))
+  predict.removed = getPredictionProbabilities(predict(mod.2, newdata = cervical))
+  error = (cervical$Biopsy == "Cancer") - predicted.orig
+  cooks(predicted.orig, predict.removed, n.features = ncol(cervical) - 1, errors = error)
 })
 
-df = data.frame(cooks = unlist(cs), id = 1:nrow(bike))
+df = data.frame(cooks = unlist(cs), id = 1:nrow(cervical))
 
+df = df[order(df$cooks, decreasing = TRUE),]
+kable(cervical[df$id[1],])
+```
+
+The following table shows the instance with the highest Cook's Distance of `r df[1,"cooks"]`. 
+The mean of Cook's Distances is `r mean(df$cooks)`.
+
+`r kable(t(cervical[df$id[1],]))`
+
+Well, not very useful. 
+This again shows that all the methods that yield instances as output are only meaningful when we have a good way of representing this instance.
+But we can do other things to better understand what types of instances are influential.
+
+
+```{r cooks-analyzed, eval=FALSE}
 ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
   scale_y_continuous("Cook's Distance") + 
   scale_x_continuous("Index of instance")
 
-df.bike  = cbind(df, bike)
-rpart(cooks ~ . -id, data = df.bike, control = rpart.control(maxdepth = 2))
+df.cervical  = cbind(df, cervical)
+rpart(cooks ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
+```
 
-
-
+```{r cooks2, eval=FALSE}
 lrn = makeLearner("regr.svm")
 tsk = makeRegrTask(data = bike, target = "cnt")
 mod = train(lrn, tsk)
 predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
 cs= lapply(1:nrow(bike), function(to.remove.index) {
-  print(to.remove.index)
   mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
   predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
   error = bike$cnt - predicted.orig
@@ -173,8 +208,6 @@ ggplot(df) + geom_point(aes(x = id, y = cooks)) +
 
 df.bike  = cbind(df, bike)
 rpart(cooks ~ . -id, data = df.bike, control = rpart.control(maxdepth = 2))
-
-
 ```
 
 Now we have the most influential data points. 
