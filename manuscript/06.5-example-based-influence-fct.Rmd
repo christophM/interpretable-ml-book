@@ -104,140 +104,118 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
 
 
 
-### Identifying Influential Instances with Cook's Distance and DFBETA  
+### Identifying Influential Instances with deletion diagnostics
 
+This is a topic, where classic statistics is well equiped.
 Identifying influential instances in linear models: Cooks distance and DFBETA
 For both measures, we refit the model repeatedly while leaving out certain instances.
 The model with an instance is compared to the one without and the model difference for the weights is compared.
 
 Cook's distance measures globally (across the whole dataset) how influential a training instance was for all predictions.
 
-Linear model, GLM there is XXX.
+Linear model, GLM there is also some approximation of this.
 In linear regression, an influential instance is an outlier that greatly affects the estimated slope of the regression line.
 
 Cooks Distance Di for a data point is defined as the sum of the changes in the predicted outcome when the i-th instance is removed from the model training.
 
-$$D_i=\frac{\sum_{i=1}^n(\hat{y}_j-\hat{y}_{j(i)})^2}{p\cdot{}MSE}$$
+$$D_i=\frac{\sum_{i=1}^n(\hat{y}_j-\hat{y}_{j}^{(-i)})^2}{p\cdot{}MSE}$$
 
 where the numerator is the squared difference between prediction of model with and without the i-th instance, summed over the dataset.
 The denominator is the number of features p times the mean squared error.
 The Cooks distance tells us how much the predicted output of a linear model changes when we remove the i-the instance in the training.
 Cook's distance refers to how far, on average, predicted y-values will move if the observation in question is dropped from the data set.
 Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the formula is not required to be used on linear models but is actually model agnostic.
+Note that Cook's Distance is simply the difference between the sum of predicted outcomes with full data and predicted without the i-th instance in training.
+The denominator is the same for all instances to be removed and only scales the distance.
+
 
 
 DFBETA is the same idea as Cook's Distance. 
 We look at the model with and without an instance.
 
-$$DFBETA_{i}=\beta-\beta_{(i)}$$
+$$DFBETA_{i}=\beta-\beta^{(-i)}$$
 
 where $\beta$ are the model parameters with all data points, and $\beta_{(i)}$ the model parameters when the model is fit without instance i.
 This obviously only works for models with weight parameters like logistic regression, neural networks etc..
 For models that don't have weight parameters, like decision trees, tree ensembles, support vector machines, Cook's Distance is more useful.
 
+But we are doing machine learning, can we use Cook's Distance and DFBETA for any model?
+No, we can't, but the underlying idea is so simple: Measure the difference in prediction when instance i is removed.
+Also instead of building the sum, we only look at the influence the deletion of instance i from the training dataset has on instance's j prediction.
+
+$$\text{Influence}_{j}^{(-i)}=\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
+
+
+When we want to see the average influence of instance i on the whole dataset.
+This is similar to the Cook's Distance:
+
+$$\text{Influence}^{(-i)}=\frac{1}{n}\sum_{j=1}^{n}\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
+
+
+
 In the following example, we fit a random forest to predict bike rentals and we use Cook's Distance to measure which training points were the most influential. 
-This requires to refit the random forest `r nrow(bike)` times, because that's the size of the training data.
+This requires to refit the random forest `r nrow(cervical)` times, because that's the size of the training data.
 For this example, it's not a problem since the code still runs through within a few minutes, but for bigger models this is problematic.
 
 
-```{r cooks}
+```{r influence}
 #'@param predicted The predicted outcome of a model
 #'@param predicted.without The predicted outcome of a model with a data point removed
-#'@param n.features The number of features
-#'@param errors The vector of model errors
-cooks = function(predicted, predicted.without, n.features, errors) {
-  sum((predicted - predicted.without)^2)/(n.features * ((1/(length(predicted) - n.features)) * sum(errors * errors)))
+influence.v = function(predicted, predicted.without) {
+  abs(predicted - predicted.without)
 }
+
+influence.matrix = matrix(NA, ncol = nrow(cervical), nrow = nrow(cervical))
 
 data("cervical")
 
-lrn = makeLearner("classif.ranger", predict.type = "prob", num.trees  = 10)
+lrn = makeLearner("classif.ranger", predict.type = "prob")
 tsk = makeClassifTask(data = cervical, target = "Biopsy")
 mod = train(lrn, tsk)
 predicted.orig = getPredictionProbabilities(predict(mod, newdata = cervical))
 cs = lapply(1:nrow(cervical), function(to.remove.index) {
-  if(to.remove.index %% 50 == 0) print(to.remove.index)
   mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(cervical), to.remove.index))
   predict.removed = getPredictionProbabilities(predict(mod.2, newdata = cervical))
-  error = (cervical$Biopsy == "Cancer") - predicted.orig
-  cooks(predicted.orig, predict.removed, n.features = ncol(cervical) - 1, errors = error)
+  influence.v(predicted.orig, predict.removed)
 })
 
-df = data.frame(cooks = unlist(cs), id = 1:nrow(cervical))
+# Column: Removed instance, row: influenced instance
+influence.df = data.frame(cs)
+influence.df = as.matrix(influence.df)
+diag(influence.df) = NA
 
-df = df[order(df$cooks, decreasing = TRUE),]
+df = data.frame(influence = colMeans(influence.df, na.rm = TRUE), id = 1:nrow(cervical))
+
+df = df[order(df$influence, decreasing = TRUE),]
 kable(cervical[df$id[1],])
 ```
 
-The following table shows the instance with the highest Cook's Distance of `r df[1,"cooks"]`. 
-The mean of Cook's Distances is `r mean(df$cooks)`.
+The following table shows the instance with the highest influence of `r df[1,"influence"]`. 
+The mean of influence is `r mean(df$influence)`.
 
 `r kable(t(cervical[df$id[1],]))`
-
-Well, not very useful. 
-This again shows that all the methods that yield instances as output are only meaningful when we have a good way of representing this instance.
-But we can do other things to better understand what types of instances are influential.
-
-
-```{r cooks-analyzed, eval=FALSE}
-ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
-  scale_y_continuous("Cook's Distance") + 
-  scale_x_continuous("Index of instance")
-
-df.cervical  = cbind(df, cervical)
-rpart(cooks ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
-```
-
-```{r cooks2, eval=FALSE}
-lrn = makeLearner("regr.svm")
-tsk = makeRegrTask(data = bike, target = "cnt")
-mod = train(lrn, tsk)
-predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
-cs= lapply(1:nrow(bike), function(to.remove.index) {
-  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
-  predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
-  error = bike$cnt - predicted.orig
-  cooks(predicted.orig, predict.removed, n.features = ncol(bike) - 1, errors = error)
-})
-
-df = data.frame(cooks = unlist(cs), id = 1:nrow(bike))
-
-ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
-  scale_y_continuous("Cook's Distance") + 
-  scale_x_continuous("Index of instance")
-
-df.bike  = cbind(df, bike)
-rpart(cooks ~ . -id, data = df.bike, control = rpart.control(maxdepth = 2))
-```
 
 Now we have the most influential data points. 
 This is already useful for debugging the data:
 Is there some problematic instance?
 These are the first points to check again if they have any mistakes in them, because any mistake in them influences by definition the model a lot.
 
-```{r cooks-top}
-cooks.sorted = df[order(df$cooks, decreasing = TRUE),]
-bike[cooks.sorted$id[1],]
-```
-```{r cooks-top-expl}
-library(randomForest)
-to.remove.index = cooks.sorted$id[1]
-cars.lm = randomForest(cnt ~ ., data = bike)
-cars.lm.1 = randomForest(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
 
-bike$cnt[to.remove.index]
-abs.diffs = abs(predict(cars.lm, newdata = bike) - predict(cars.lm.1, newdata = bike))
-which(abs.diffs > 200)
+But otherwise, simply printing the instances is not, not very useful. 
+This again shows that all the methods that yield instances as output are only meaningful when we have a good way of representing this instance.
+But we can do other things to better understand what types of instances are influential.
+What is the structure common to the influential points that makes them influential?
 
-bike[c(239, 641),]
 
-cars.lm
+```{r cooks-analyzed, eval=FALSE}
+# ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
+#   scale_y_continuous("Cook's Distance") + 
+#   scale_x_continuous("Index of instance")
 
+df.cervical  = cbind(df, cervical)
+rpart(influence ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
 ```
 
-Point lies right on the edge of the threshold and removing it changes the split value which cascades down the tree.
-Obviously, we could only make sense here, because we have a simple decision tree model, which we can easily investigate.
-What would we do with a black box model?
 
 
 Instead of removing a data point and aggregating over the data,  we flip it around:
@@ -254,82 +232,37 @@ Then we can rank all the differences by amount and choose the training instance 
 As done in the following example with a decision tree.
 
 
-```{r cooks-single}
 
-cooks.matrix = matrix(NA, ncol = nrow(bike), nrow = nrow(bike))
-cars.lm = rpart(cnt ~ ., data = bike)
-predicted.orig = predict(cars.lm, newdata = bike)
-for (to.remove.index in 1:nrow(bike)) {
-  cars.lm.1 = rpart(cnt ~ ., data = bike[setdiff(1:nrow(bike), to.remove.index),])
-  predict.removed = predict(cars.lm.1, newdata = bike)
-  error = bike$cnt - predicted.orig
-  for (to.predict.index in 1:nrow(bike)) {
-    cooks.matrix[to.remove.index, to.predict.index] = (predicted.orig[to.predict.index] - predict.removed[to.predict.index])^2
-  }
-}
+```{r cooks-single-2}
 
-cooks.matrix
+i = which(rowMeans(influence.df, na.rm = TRUE) == max(rowMeans(influence.df, na.rm = TRUE)))
+i = 5
+obs = influence.df[i,]
+cervical.200 = cervical
+cervical.200$influence = unlist(obs)
+rpart(influence ~ ., data = cervical.200)
 
-plot(colSums(cooks.matrix))
-plot(rowSums(cooks.matrix))
-
-
-
-obs = cooks.matrix[,200]
-xx = rbind(bike[200,],
-  bike[order(obs, decreasing = TRUE)[1:5],])
-
-pred = predict(cars.lm, newdata = xx)
-xx$pred = pred
-xx
-## Examples end up in the same node, so removing them changes the tree structure and the points are influential to the data point
-## 
-cars.lm
+ggplot(cervical.200) + geom_point(aes(x = Hormonal.Contraceptives..years., y = influence))
 ```
 
+
+```{r cooks-single-2}
+
+most.influential.for.i = which(influence.df[i,] == max(influence.df[i,], na.rm = TRUE))
+
+cervical.200[most.influential.for.i,]
+```
+
+
+The most influential instance for the `r i`-th instance is the `r most.influential.for.i`-th instance. 
+They have very similar values for the number of XXXX.
+It's because a random forest is used and similarity in features for the split.
+When removed, the splits are likely different.
 
 Cook's distance is very similar in approach to the leave-one-out cross validation (LOOCV), which can be used to estimate the error of a machine learning model, but usually repeated k cross validation works better, btw..
 
 
 
-```{r cooks-single-2}
-library(mlr)
-
-cooks.matrix = matrix(NA, ncol = nrow(bike), nrow = nrow(bike))
-
-lrn = makeLearner("regr.svm")
-tsk = makeRegrTask(data = bike, target = "cnt")
-mod = train(lrn, tsk)
-
-predicted.orig = getPredictionResponse(predict(mod, newdata = bike))
-for (to.remove.index in 1:nrow(bike)) {
-  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(bike), to.remove.index))
-  predict.removed = getPredictionResponse(predict(mod.2, newdata = bike))
-  error = bike$cnt - predicted.orig
-  
-  for (to.predict.index in 1:nrow(bike)) {
-    cooks.matrix[to.remove.index, to.predict.index] = (predicted.orig[to.predict.index] - predict.removed[to.predict.index])^2
-  }
-}
-
-cooks.matrix
-
-plot(colSums(cooks.matrix))
-plot(rowSums(cooks.matrix))
-
-
-
-obs = cooks.matrix[,200]
-xx = rbind(bike[200,],
-  bike[order(obs, decreasing = TRUE)[1:5],])
-
-pred = predict(cars.lm, newdata = xx)
-xx$pred = pred
-xx
-## Examples end up in the same node, so removing them changes the tree structure and the points are influential to the data point
-## 
-mod
-```
 
 
 TODO: Visualize instance wise changes.
@@ -338,10 +271,23 @@ When is a point influential?
 Some say, when the Cooks Distance is larger than one. 
 Some say, when Cooks Distance is larger than 4/N where N is the number of instances in the training data.
 Some say, look at visualisations of the distribution and check if some data points clearly peak out.
-
-
-Cooks Distance is model-agnostic?
 Refitting the model is very costly, but possible.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Identifying Influential Instances without Refitting
 
