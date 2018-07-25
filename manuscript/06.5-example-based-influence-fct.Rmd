@@ -1,37 +1,19 @@
-# Influential Instances
+## Influential Instances
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all()
 set.seed(43)
+
+influence.matrix.filename = "../data/influence-df.RData"
 ```
 
 <!-- Intro text -->
-An influential instance is a data instance whose deletion from the training data would considerably change a model, when fitted on the reduced dataset.
-Identifying influential training instances can explain predictions of black box models.
+An influential instance is an instance whose deletion from the training data in the model fitting step considerably changes the prediction model.
+Identifying influential training instances can be used to 'debug' the model and understand the global model behaviour and single predictions better.
 
-*Keywords: Influential points, influence function, leave-one-out analysis, Cook's Distance, regression deletion diagnostics*
+*Keywords: Influential points, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics*
 
-<!-- Model as a function of the data-->
-Classically, identfiying influential instances is a procedure used for researching the robustness of a model and also to maybe remove these instance from the training data.
-But we can also use influential instances to explain why a particular prediction was made, by tracing the decision through the model back to the training data.
-We explain the model and the prediction with respect to the training data that was most responsible for the prediction and the model parameters.
-Unlike most other methods, we don't treat the model as fixed, but as a function of the training data and outcome.
-
-Considering that the model is a function of the features plus the outcome, we can ask which training instance were most responsible for the particular prediction.
-Responsibility for a data point can be measured by how much the prediction changes, when we remove or upweight a certain point.
-
-A learning algorithm (the algorithm that produces a linear model or a random forest) is - in its essence - a function that takes in data and spits out a model, which can be described by its parameters:
-
-$$\text{Learner}:X,y\rightarrow{}\text{Model}(\theta)$$
-
-And a model is a function that projects from to data to some prediction $\hat{y}:
-
-$$\text{Model}:X\rightarrow{}\hat{y}$$
-
-Why not trace a prediction by the model right back to the training points that were most responsible?
-That question drives the idea behind influential data points.
-
-Before we start digging into some methods how to find influential instance, we have to talk about what influential instances are and what the differences between an outlier and an influential instance are.
+Before we start digging into some methods how to find influential instance, we have to talk about the difference between outlier and an influential instances.
 
 **Outlier**
 
@@ -42,23 +24,25 @@ In a dataset of newborn body measurements, a baby that weights 6kg would be cons
 In a dataset of bank accounts, which are mostly checking accounts, a dedicated loan account, with a large negative balance and not so many movements compared to the checking accounts would be considered an outlier.
 The following images shows an outlier:
 
-```{r outlier, fig.cap = "The feature follows a Gaussian distribution with the exception of an outlier with x=8."}
+```{r outlier, fig.cap = "The feature follows a Gaussian distribution with the exception of the outlier x=8."}
 n = 50
 x = rnorm(mean = 1, n = n)
 x = c(x, 8)
 y = rnorm(mean = x, n = n)
 y = c(y, 7.2)
 df = data.frame(x, y)
-ggplot(df) + geom_histogram(aes(x = x)) + my_theme()
+ggplot(df) + geom_histogram(aes(x = x)) + my_theme() + 
+  scale_x_continuous("feature x") + 
+  scale_y_continuous("count")
 ```
 
 
 Outliers might or might not be interesting data points (like criticisms or archetypes).
 Outliers can be influential for the model fit, but don't have to be. 
-But when we want to know what really impacts the model and its predictions, we have to look at influential points.
+But when we want to know what really impacts the model and its predictions, we have to look at influential instances
 
-**Influential point**
-An influential point is a data point which has a strong effect on the fitted model.
+**Influential instance**
+An influential instance or point is a data instance which has a strong effect on the fitted model.
 Influential is defined as how much the model is different when the model is refitted when the data point is removed.
 An outlier can, but doesn't have to be an influential point.
 This can be either measured as the influence on some model parameters or on the predictions of the model.
@@ -89,34 +73,44 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
 
 ```
 
-<!-- **Leverage point??** -->
+**How can we use the concept of an influential instance for understanding the model? Some motivation.**
 
-<!-- Another term is leverage points in terms of linear regression.  -->
-<!-- Leverage refers to the potential to greatly influence the model, but it doesn't have to. -->
-<!-- Leverage points are extreme in some feature, but not necessarily in y. -->
-
-<!-- ```{r leverage-point} -->
-
-
-
-<!-- ``` -->
+A model is created by a learner, which learns the model from the training data.
+The big idea behind influential instances for interpretability is to trace predictions back were it all began: the training data.
+A learner, which is the algorithm that produces the machine learning model is - in its essence - a function that takes in training data consisting of features X and the target y and spits out a machine learning model.
+The learner of a decision tree is an algorithm that chooses the split features and the values at which to split. 
+A learner for a neural network uses the backpropagation to find the best weights.
 
 
+```{r learner, "A learner learns a model from labeled training data. The model is used to make predictions."}
+knitr::include_graphics("images/learner.png")
+```
+
+
+Instead of looking at the model itself, or how the prediction changes when we change the inputs (to the prediction model, not to the training process), we ask how the model and the predictions would change when we remove instances from the training data in the training process.
+Unlike most other methods, we don't treat the model as fixed, but as a function of the training data and outcome.
+We can ask globally: Which were the most influential instances for the model parameters or the overall predictions?
+We can ask locally: Which were the most influential instances for the prediction of a particular instance?
+Great! Now everyone is aware that the model is a product of the data, but how, exactly, can we trace a prediction back to the training data?
+We have two means of measuring the influence:
+First, we can delete the instance from the training data and refit the model on the reduced training dataset and observe the difference in either model parameters or the predictions (either locally or globally).
+The other option is to upweight a data point 
+Influence of a data point can be measured by how much the prediction changes, when we remove or upweight a certain point.
+First we learn about the approach of deleting single instances and later in the chapter about upweighting instances.
 
 
 ### Identifying Influential Instances with deletion diagnostics
 
-This is a topic, where classic statistics is well equiped.
-Identifying influential instances in linear models: Cooks distance and DFBETA
-For both measures, we refit the model repeatedly while leaving out certain instances.
+
+When facing a problem, we should always look if other people have already solved a similar problem. 
+In the case of influential instance, statistician have already done a lot, especially in the area of (generalized) linear regression models
+For measuring the effect of deleting an instance on the model parameters, we have the DFBETA measure, for the effect on the predictions, we have Cook's distance.
+For both measures, we have to refit the model repeatedly while leaving out certain instances.
 The model with an instance is compared to the one without and the model difference for the weights is compared.
 
-Cook's distance measures globally (across the whole dataset) how influential a training instance was for all predictions.
-
-Linear model, GLM there is also some approximation of this.
-In linear regression, an influential instance is an outlier that greatly affects the estimated slope of the regression line.
-
-Cooks Distance Di for a data point is defined as the sum of the changes in the predicted outcome when the i-th instance is removed from the model training.
+**Cook's distance** measures globally (across the whole dataset) how influential a training instance was for all predictions. 
+The measure was invented for linear regression models, approximations for generalized linear regression models exist.
+Cooks distance Di for a data point is defined as the sum of the changes in the predicted outcome when the i-th instance is removed from the model training.
 
 $$D_i=\frac{\sum_{i=1}^n(\hat{y}_j-\hat{y}_{j}^{(-i)})^2}{p\cdot{}MSE}$$
 
@@ -124,52 +118,53 @@ where the numerator is the squared difference between prediction of model with a
 The denominator is the number of features p times the mean squared error.
 The Cooks distance tells us how much the predicted output of a linear model changes when we remove the i-the instance in the training.
 Cook's distance refers to how far, on average, predicted y-values will move if the observation in question is dropped from the data set.
-Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the formula is not required to be used on linear models but is actually model agnostic.
-Note that Cook's Distance is simply the difference between the sum of predicted outcomes with full data and predicted without the i-th instance in training.
+Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the idea behind it does not require to be used on linear models but is actually model agnostic.
+Note that Cook's distance is simply the difference between the sum of predicted outcomes with full data and predicted without the i-th instance in training.
 The denominator is the same for all instances to be removed and only scales the distance.
 
-
-
-DFBETA is the same idea as Cook's Distance. 
-We look at the model with and without an instance.
+**DFBETA** measures the difference in the model parameters after deletion:
 
 $$DFBETA_{i}=\beta-\beta^{(-i)}$$
 
-where $\beta$ are the model parameters with all data points, and $\beta_{(i)}$ the model parameters when the model is fit without instance i.
+where $\beta$ is the vector with the model parameters with all data points, and $\beta_{(i)}$ the model parameters when the model is fit without instance i.
 This obviously only works for models with weight parameters like logistic regression, neural networks etc..
-For models that don't have weight parameters, like decision trees, tree ensembles, support vector machines, Cook's Distance is more useful.
+For models that don't have weight parameters, like decision trees, tree ensembles, support vector machines, Cook's distance is more useful.
 
-But we are doing machine learning, can we use Cook's Distance and DFBETA for any model?
-No, we can't, but the underlying idea is so simple: Measure the difference in prediction when instance i is removed.
-Also instead of building the sum, we only look at the influence the deletion of instance i from the training dataset has on instance's j prediction.
+We are doing machine learning and don't want to restrict ourselves to linear models.
+Can we use Cook's distance and DFBETA for any model?
+DFBETA requires model parameters, so an approach a la Cook's distance is more general, so we will look at the later, but all ideas apply to measuring the influence of deletion on model parameters as well.
+The idea to measure influence of deletion on predictions amounts to a simple difference of the prediction before and after deletion.
+We can easily break it down locally to explain for a single prediction for a particular instance j, what the influence of the i-th training instance was. 
+Let's define influence very simply as:
 
 $$\text{Influence}_{j}^{(-i)}=\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
+This formula is basically the a single summand from the numerator of Cook's distance. 
+The denominator of Cook's distance is the same for all deleted instances, so in terms of ranking we don't need the denumerator anyways.
 
-When we want to see the average influence of instance i on the whole dataset.
-This is similar to the Cook's Distance:
+When we want to see the average influence of instance i on the whole dataset, we take the mean over the predictions of the whole dataset.
 
 $$\text{Influence}^{(-i)}=\frac{1}{n}\sum_{j=1}^{n}\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
 
 
-In the following example, we fit a random forest to predict bike rentals and we use Cook's Distance to measure which training points were the most influential. 
-This requires to refit the random forest `r nrow(cervical)` times, because that's the size of the training data.
-For this example, it's not a problem since the code still runs through within a few minutes, but for bigger models this is problematic.
+**Example with deletion influence**
 
+In the following example, we train a support  vector machine to predict [cervical cancer](#cervical) given risk factors and we measure which training points were the most influential overall and for single predictions.
+Since predicting cancer is a classification problem, we measure the influence on the predicted probability for cancer.
+An instance is influential when the predicted probability changes a lot (increase / decrease) on average in the dataset when the instance is removed from the model training.
+Measuring influence for all `r nrow(cervical)` training instances requires to fit the model once on all training data and refit it `r nrow(cervical)` times (= size of training data) with each time one of the instances removed.
 
-```{r influence}
+```{r influence, eval = !file.exists(influence.matrix.filename)}
 #'@param predicted The predicted outcome of a model
 #'@param predicted.without The predicted outcome of a model with a data point removed
 influence.v = function(predicted, predicted.without) {
-  abs(predicted - predicted.without)
+  predicted - predicted.without
 }
 
 influence.matrix = matrix(NA, ncol = nrow(cervical), nrow = nrow(cervical))
 
-data("cervical")
-
-lrn = makeLearner("classif.ranger", predict.type = "prob")
+lrn = makeLearner("classif.svm", predict.type = "prob")
 tsk = makeClassifTask(data = cervical, target = "Biopsy")
 mod = train(lrn, tsk)
 predicted.orig = getPredictionProbabilities(predict(mod, newdata = cervical))
@@ -183,110 +178,101 @@ cs = lapply(1:nrow(cervical), function(to.remove.index) {
 influence.df = data.frame(cs)
 influence.df = as.matrix(influence.df)
 diag(influence.df) = NA
-
-df = data.frame(influence = colMeans(influence.df, na.rm = TRUE), id = 1:nrow(cervical))
-
-df = df[order(df$influence, decreasing = TRUE),]
-kable(cervical[df$id[1],])
+save(influence.df, predicted.orig, file = influence.matrix.filename)
 ```
 
+
 The following table shows the instance with the highest influence of `r df[1,"influence"]`. 
-The mean of influence is `r mean(df$influence)`.
 
-`r kable(t(cervical[df$id[1],]))`
-
+```{r}
+load(influence.matrix.filename)
+df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nrow(cervical))
+df = df[order(df$influence, decreasing = TRUE),]
+kable(t(cervical[df$id[1],]))
+```
+An influence of `r sprintf('%.3f', abs(df[1,"influence"]))` means when we remove the `r df$id[1]`-th instance the predicted probability changes on average by an absolute `r sprintf('%.2f', 100 * df[1,"influence"])`%.
+This is quite substantial because the average predicted probability for cancer is `r sprintf('%.3f', 100 *mean(predicted.orig))`%.
+The mean of influence over all possible deletion is `r sprintf('%.3f', 100 * mean(abs(df$influence)))`%.
 Now we have the most influential data points. 
 This is already useful for debugging the data:
 Is there some problematic instance?
 These are the first points to check again if they have any mistakes in them, because any mistake in them influences by definition the model a lot.
 
-
 But otherwise, simply printing the instances is not, not very useful. 
 This again shows that all the methods that yield instances as output are only meaningful when we have a good way of representing this instance.
 But we can do other things to better understand what types of instances are influential.
 What is the structure common to the influential points that makes them influential?
+We can turn this meta question into a regression problem and model the influence between the overall influence per instance and their features as regression problem:
+Which feature values make an instance more influential?
+For this we can use any method from the [interpretable machine learning models chapter](#simple).
+For this example I choose a decision tree (following figure), which shows that training data for women of age 35 and above are the most influential for training the support vector machine.
+From all the women in the dataset  `r sprintf('%.3f', 100 * mean(cervical$Age >= 35))`% are older than 35.
+In the [partial dependence chapter](#pdp) we have seen that after 40, there is a sharp increase in predicted cancer probability and the [feature importance](#feature-importance) has also detected age as one of the more important features.
+The influence analysis says that the model becomes increasingly more unstable when predicting cancer for increasingly older women.
+This is in itself valuable information. 
+It means that mistakes in the data for one of those instances can have a strong effect on the model.
 
-
-```{r cooks-analyzed, eval=FALSE}
-# ggplot(df) + geom_point(aes(x = id, y = cooks)) + 
-#   scale_y_continuous("Cook's Distance") + 
-#   scale_x_continuous("Index of instance")
-
+```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree modeling the relationship between the influence of an instance and its features. The maximal depth of the tree is set to 2."}
 df.cervical  = cbind(df, cervical)
-rpart(influence ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
+ct = rpart(abs(influence) ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
+ct = as.party(ct)
+plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
+```
+
+```{r influence-single-prepare}
+i = which(predicted.orig == max(predicted.orig))
 ```
 
 
-
-Instead of removing a data point and aggregating over the data,  we flip it around:
-For a given instance and its prediction, refit the model with iteratively each instance removed and find out the most influential data points.
-
-We simply look at the absolute difference between predicted value of instance j with and without instance j included in the training of the model:
-
-$$d_{j(i)}=|\hat{y}_j-\hat{y}_{j(i)}|$$
+This analysis was global and asked which was the overall most influential instance.
+Now, we pick out one of the instances, for which we want to explain the prediction by finding the most influential training data instances.
 It's like asking the counterfactual:
 How would the prediction for instance j change if we left out instance i from the training process.
 But we don't only do this for left out instance i, but we leave out each instance one after each other and get a vector of differences.
 Then we can rank all the differences by amount and choose the training instance which yield the biggest change in prediction when left out of the training and use those to explain the prediction of the model for this instance.
+This gives us a list of training instances, ranked by it's influence of the `r i`-the instance.
+Full disclosure: the instance to be explained was picked by choosing the instance which had the highest predicted probability of cancer (`r sprintf('%.2f', 100 * predicted.orig[i])`%), which I thought might be an interesting case to analyse more deeper.
+Now, we could return the, let's say, top 10 most influential instances for the prediction of the `r i`-the instance, printed as a table.
+Not very useful, because we wouldn't be able to see much.
+Again it is more useful to find among those instance the relationship between features and the influence measure.
+We use a decision tree for that, which is trained to predict the influence given the features, but, really, we only misuse it to find some structure and not to actually predict anything.
+The following decision tree reveals what kind of training instances where the most influential for the prediction of the `r i`-th instance. 
 
-As done in the following example with a decision tree.
 
-
-
-```{r cooks-single-2}
-
-i = which(rowMeans(influence.df, na.rm = TRUE) == max(rowMeans(influence.df, na.rm = TRUE)))
-i = 5
+```{r influence-single, fig.cap = sprintf("Decision tree explaining which instances were the most influential for predicting the $i-th instance. Removing women who smoked for 19 years or longer, have a very high influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7% of cancer probability. Maximal depth of the tree is set to 2.", i, i)}
 obs = influence.df[i,]
 cervical.200 = cervical
 cervical.200$influence = unlist(obs)
-rpart(influence ~ ., data = cervical.200)
-
-ggplot(cervical.200) + geom_point(aes(x = Hormonal.Contraceptives..years., y = influence))
+#cervical.200 = na.omit(cervical.200)
+worst.case.index = which(abs(cervical.200$influence) == max(abs(cervical.200$influence), na.rm = TRUE))
+ct = rpart(abs(influence) ~ ., data = cervical.200, control = rpart.control(maxdepth = 2))
+ct = as.party(ct)
+plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
 ```
 
+Instances, where women smoked for 19 years ore more have a high influence on the prediction of the `r i`-th instance.
+In the data, `r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 19))`% of women smoked that long, which amounts to only `r sum(cervical$Smokes..years >= 19)` subjects.
+Any error that happened in surveying the number of years smoking of one of these women will have a tremendous effect on the predicted outcome for the `r i`-th instance.
 
-```{r cooks-single-3}
 
-most.influential.for.i = which(influence.df[i,] == max(influence.df[i,], na.rm = TRUE))
+The most extreme is when we remove the `r worst.case.index`-th instance.
+She has smoked for `r cervical$Smokes..years.[worst.case.index]` years, matching our results from the decision tree.
+Btw. the case, for who we are checking the prediction has smoked for `r cervical$Smokes..years.[i]` years.
+Then the predicted probability for the `r i`-th instance changes from `r sprintf('%.2f', 100 * predicted.orig[i])`% to `r sprintf('%.2f', 100 * (predicted.orig[i]  - cervical.200$influence[worst.case.index]))`%!!!
 
-cervical.200[most.influential.for.i,]
+
+When looking at the other features of the influential case, we can see another possible problem.
+```{r influence-most-influential}
+kable(t(cervical.200[worst.case.index,]))
 ```
 
+The data says that the woman is 28 years old, and has already been smoking 22 years. 
+Either it's a really extreme case and she truly started smoking at 6 or this is a data error. 
+I tend to believe the latter, but this is certainly a case where we should not blindly believe in the correctness of the data.
 
-The most influential instance for the `r i`-th instance is the `r most.influential.for.i`-th instance. 
-They have very similar values for the number of XXXX.
-It's because a random forest is used and similarity in features for the split.
-When removed, the splits are likely different.
-
-Cook's distance is very similar in approach to the leave-one-out cross validation (LOOCV), which can be used to estimate the error of a machine learning model, but usually repeated k cross validation works better, btw..
-
-
-
-
-
-TODO: Visualize instance wise changes.
-
-When is a point influential?
-Some say, when the Cooks Distance is larger than one. 
-Some say, when Cooks Distance is larger than 4/N where N is the number of instances in the training data.
-Some say, look at visualisations of the distribution and check if some data points clearly peak out.
-Refitting the model is very costly, but possible.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+These examples demonstrated how useful identifying influential instances is for debugging models.
+One problem with the proposed approach is that the model has to be refitted for each training point, which can be quite often.
+In the remaining part of the chapter I will show you a method where refitting is not necessary.
 
 
 ### Identifying Influential Instances without Refitting
@@ -413,10 +399,8 @@ $$H=\begin{pmatrix}\frac{d^2\text{Height}}{dsds}&\frac{d^2\text{Height}}{dsdl}\\
 
 
 ```{r potato-chip, fig.cap = "Created by Topntp26 - Freepik.com"}
-img <- readJPEG("images/potato-chips.jpg")
-p1 <- rasterGrob(img, interpolate=TRUE)
-
-p1 = knitr::include_graphics("images/potato-chips.jpg")
+img <- jpeg::readJPEG("images/potato-chips.jpg")
+p1 <- grid::rasterGrob(img, interpolate=TRUE)
 
 df = expand.grid(long = seq(from = -1.5, to = 1.5, length.out = 10),
   short = seq(from = -1, to = 1, length.out = 10))
@@ -480,10 +464,6 @@ where $\nabla^2_{\theta}L(z_j,\hat{\theta})$ is the second order derivative (cur
 TODO: Shorten details about the tricks the authors used.
 
 
-
-
-
-
 How good does upscaling with $I_{up,loss}$ work? 
 We can only know for certain, by comparing the loss we get with the leave-one-out retraining.
 The authors did this and got pretty good results.
@@ -543,17 +523,23 @@ No, because we can compute any measure based on the derivative, like the change 
 
 ### Disadvantages of identifying influential points
 
-- Cook's Distance and similar are very expensive to calculate because it requires refitting. 
+- Cook's distance and similar are very expensive to calculate because it requires refitting. 
 When your model takes an hour to fit and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of instance by leaving them out one after each other from the training.
 - Influence functions are a good alternative, but only for models with differentiable parameters, like neural networks. 
 Forget it for tree-based methods like random forest, boosted trees or decision trees.
 - Cook's distance and the influence functions have no absolute scale on which to judge them. 
 The cutoff at which we call an instance influential is therefore a bit arbitrary.
 But it's still useful to rank the instances among each other.
+- These diagnostics only look at the deletion of single points and not what happens when multiple points are deleted. 
+Bigger groups of data instances could have some interactions with each other affecting the model fit and the prediction heavily.
+There are n possibilities for deleting a single instance from the data. 
+There are n times n-1 possibilities for deleting two instances from the training data. 
+And you certainly don't want to start going any further, because there are just too many ways.
 
 ### Software and Alternatives
 
-- Cook's distance in R, though only for lm and glm. But very easy to implement, see example from this book.
+- Deletion diagnostics is very simple to implement. See example from this book.
+- Cook's distance in R, though only for lm and glm. 
 - Python code for influence from paper in repository. 
 Unfortunately just the paper dump and no maintained Python module.
 -
