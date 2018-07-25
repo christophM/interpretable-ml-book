@@ -5,6 +5,7 @@ devtools::load_all()
 set.seed(43)
 
 influence.matrix.filename = "../data/influence-df.RData"
+data("cervical")
 ```
 
 <!-- Intro text -->
@@ -82,7 +83,7 @@ The learner of a decision tree is an algorithm that chooses the split features a
 A learner for a neural network uses the backpropagation to find the best weights.
 
 
-```{r learner, "A learner learns a model from labeled training data. The model is used to make predictions."}
+```{r learner, "A learner learns a model from labeled training data. The model is used to make predictions.", out.width="\textwidth"}
 knitr::include_graphics("images/learner.png")
 ```
 
@@ -91,7 +92,7 @@ Instead of looking at the model itself, or how the prediction changes when we ch
 Unlike most other methods, we don't treat the model as fixed, but as a function of the training data and outcome.
 We can ask globally: Which were the most influential instances for the model parameters or the overall predictions?
 We can ask locally: Which were the most influential instances for the prediction of a particular instance?
-Great! Now everyone is aware that the model is a product of the data, but how, exactly, can we trace a prediction back to the training data?
+Great! Now everyone is aware that the model is a product of the data, but how, exactly, can we trace a prediction back to the training data
 We have two means of measuring the influence:
 First, we can delete the instance from the training data and refit the model on the reduced training dataset and observe the difference in either model parameters or the predictions (either locally or globally).
 The other option is to upweight a data point 
@@ -99,7 +100,7 @@ Influence of a data point can be measured by how much the prediction changes, wh
 First we learn about the approach of deleting single instances and later in the chapter about upweighting instances.
 
 
-### Identifying Influential Instances with deletion diagnostics
+### Deletion Diagnostics
 
 
 When facing a problem, we should always look if other people have already solved a similar problem. 
@@ -190,6 +191,7 @@ df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nr
 df = df[order(df$influence, decreasing = TRUE),]
 kable(t(cervical[df$id[1],]))
 ```
+
 An influence of `r sprintf('%.3f', abs(df[1,"influence"]))` means when we remove the `r df$id[1]`-th instance the predicted probability changes on average by an absolute `r sprintf('%.2f', 100 * df[1,"influence"])`%.
 This is quite substantial because the average predicted probability for cancer is `r sprintf('%.3f', 100 *mean(predicted.orig))`%.
 The mean of influence over all possible deletion is `r sprintf('%.3f', 100 * mean(abs(df$influence)))`%.
@@ -272,160 +274,90 @@ I tend to believe the latter, but this is certainly a case where we should not b
 
 These examples demonstrated how useful identifying influential instances is for debugging models.
 One problem with the proposed approach is that the model has to be refitted for each training point, which can be quite often.
-In the remaining part of the chapter I will show you a method where refitting is not necessary.
-
-
-### Identifying Influential Instances without Refitting
-
 The whole refitting thing is rather slow, because if you have thousands of training samples, you have to retrain your model thousands of times.
 Assuming the model takes a day to compute and you have 1000 training examples, then - without parallelization - the computation of influential instances will take almost 3 years.
 Ain't nobody got time for that.
+In the remaining part of the chapter I will show you a method that doesn't require refitting the model.
 
-Model-agnostic, there is influence functions by Koh and Liang (2017)[^koh].
-But it only works for methods where you have some loss function that you can differentiate with respect to some model parameters.
-Random forests for example won't work. 
+
+### Influence Functions
+
+*You* : I want to know the influence of a training instance on a particular instance's prediction.  
+*Research* : You can delete this training instance, refit the model, and measure the difference in prediction.  
+You: Great! But do you have a method that works without me having to refit the model? It takes so much time.  
+*Research* : Do you have a model with a differentiable loss and model parameters?  
+*You* : I fitted a neural network with logistic loss. So yes.  
+*Research* : Ok, you can use **influence functions** as an efficient approximation. Instead of deleting the instance, the method upweights the instance in the loss by a very small step. Loss upweighting is similar to deleting the instance.  
+*You* : Then what?  
+*Research* : Since you have the loss function and you can differentiate it, you can calculate the influence on a prediction by upweighting the instance, without having to refit the model.  
+*You* : Great, that's what I was looking for!  
+
+Koh and Liang (2017)[^koh] suggested to use influence functions from the field of robust statistics to measure how an instance influences a prediction.
+Like deletion diagnostics, influence functions trace a prediction back to the responsible training instance to explain this particular predictions.
+Instead of deleting training instances, the method measures how much the model changes when the instance is upweighted.
+
+The proposed method requires access to the gradient of the loss of the model.
+This  only works for methods where you have some loss function that you can differentiate with respect to some model parameters.
+Random forests for example don't work. 
 Logistic regression, neural networks and support vector machines work.
-Idea: For a prediction of a instance, trace it back through the learning algorithm to the training data.
-
 
 It helps for understanding the model behaviour, debugging the model and detecting errors with the dataset.
 It also helps to identify [adversarial examples](#adversarial) which exploit vulnerabilities of a machine learning model.
 
+Influence functions originate from robust statistics.
+The idea is that I have some estimator T (could be an estimate of the mean of a population or a complex model) which acts on some distribution F (data on which the estimation or training was done). 
+Influence functions measure how much estimator T changes if we perturb F.
+In our specific case for interpretable machine learning, influence functions measure how a training instance affects the predictions of another instance, by upweighting that training instance.
 
-The method is based on influence function which was invented for robust statistics.
-The idea is: 
-I have some estimator T (like any statistical measurement) which acts on some distribution F. 
-How much does T change if we perturb F is what robust statistics deals with.
-It's a measure of  stability.
-Influence functions measure how a training example affects the predictions for a test example
-Or, as formulated by the paper: How much would the test loss change by upweighting a certain training example?
+The following section explains the math behind influence functions.
 
-Assuming that you can differentiad the loss twice with respect to the model parameters $\theta$ you can use this method.
-Actually, it's also possible to use it when the differentiation twice is not possible and there is a trick to compute the Hessian matrix (second derivative).
+### Going deeper into the math
 
-
-How would the model parameters look like if we would remove data point z?
-Thanks to influence functions from robust statistic, we can answer the question, by upweighting the z in the loss function by some small step $\epsilon$, which results in the following, new parameters:
+The idea behind influence functions for epxplaining predictions is to upweight the loss of a training instance by a small step $\epsilon$, which results in the new model parameters:
 
 $$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
+
 where $\theta$ is the vector of the model parameters.
-L is the loss function used to train the model and $\epsilon$ is avery small number.
-$z_i$ are the training data and z is the data point for which we want to find influential instances.
+L is the loss function used to train the model and $\epsilon$ is a very small number.
+$z_i$ are the training data and z is the training instance we upweight, simulating it's removal.
 The intuition behind this formula is:
 How much does the loss change if we upweight a particular points $z_i$ from the training data by a little bit ($\epsilon$) and downweight the other data points respectively?
+With influence functions, we never actually calculate the new parameters, but derive from that an influence measure of upweighted training instance z on the prediction of another instance $z_{test}$.
 
-The solution is:
+
+
 
 $$I_{up,loss}(z,z_{test})=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})$$
 
-
-We look how the loss of z_test changes when we upweight a certain training data points, telling us how influential this training data points was for the prediction of z_test.
-The intuition behind the parts where the L stands:
-How much does the model want to go into the direction of the upweighted training data point.
-A large gradient means:
-A small change in the model parameter $\theta$ (for example the weights in a neural network) decrease the loss a lot, so if I upweight this training point, the parameters will change by a lot.
-Some intuition behind that: 
 The first term $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance, 
-also the last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$, but for the training instance. 
-The middle part $H^{-1}_{\hat{\theta}}$ measures the similarity between the two.
+also the last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$, but for the upweighted training instance. 
+The middle part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
 
-More intuition about the formula:
-The influence is proportionate to how large the gradients are for the training and test loss.
-The higher the gradient of the training loss, the higher its influence on the parameters, the higher the influence on the test prediction.
+$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
+
+The influence is proportionate to how large the gradients for the training and test loss are.
+The higher the gradient of the training loss, the higher its influence on the parameters and the higher the influence on the test prediction.
 For the gradient of the test prediction loss: The higher the gradient, the more influentiable the test instance is.
 The whole construct can also be seen as a measure of similarity between the the training and the test instance.
 Similarity doesn't mean here the Euclidean distance, but the similarity the model learned.
 
-**Excursion: Intuition behind the gradient and the Hessian matrix**
-
 Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions.
 It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit.
-Since the model usually has many parameters, the gradient also is a vector with many numbers, one for each parameter, telling for each parameter the rate and direction of change of the loss if we were to change the parameter.
 A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss.
 The Hessian is the second-order derivative.
 What the gradient is to the loss, is the hessian to the gradient. 
 The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss.
 A more informal explanation is that the Hessian informs us how curved the rate of change is. 
 The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking. 
-A real world example: A potato chip.
-Not the irregular ones, but the ones where each chip has the same shape, which you can stack. 
-If you lay such a chip on a surface, such that the ends on off the ends of the longer side touch the ground, we will see how it relates to gradients and the Hessian.
-The long end points away from you, so that you could now put your fingers on the left and right elevated parts of the chip and wiggle it, but be careful not to break it.
-Have a look at the next picture to see what I mean.
-
-The chip is 3-dimensional and will be a good example.
-Assume that each point on the chip describes the combiniation of two model parameters, represented as the coordinate in the direction of the long side and the coordinate in the direction of the short side.
-The height of a point on the chip represents the value of the loss function.
-Now, if we start on the left of the elevated short sides of the chip, the gradient of the loss (height of the chip) would be negative, since going from left to right by a small step would decrease the height/loss. 
-In the middle of the chip, there is a gradient of zero and on the right a positive gradient for the direction.
-But this was only one component of the gradient. 
-The other component is in the longer direction of the chip. 
-Coming from your body, the gradient is first positive, then zero, then negative.
-Now for the Hessian: It describes how curvy the chip is or also the rate of change of the gradient. 
-Since we have two parameters (two directions), we have to describe the curviness regarding the direction we are looking.
-Let's again start at the left of the short sides of the chips, with the the high negative gradient. 
-How curvy is the chip?
-Well, that depends whether you look into the direction towards the other short end or into the direction of the long ends.
-The Hessian or curviness is very high for going from short edge to short edge, because there is much curviness between the short edges. 
-The curviness 
-But being on a short edge and going into one 
 
 
-Let's say the height of the chip is the loss, the coordinate along the back of the from back to neck is one parameter, and the coordinate of the saddle from left flank to right flank is the second parameter.
-Going from left to right, the saddle first increases in height and than decreases.
-A high rate of change of the gradient (rate of rate of increase of height), so there is a positive Hessian for short direction, when looking into the short direction. 
-But how much does the gradient change for the short direction, when we look into the long direction?
-That is, when we go to a certain coordinate on the chip, fix the position of the short side, but check how much the gradient changes, when we change the coordinate in the long direction. 
-The answer is 0.
+TODO: CONTINUE HERE
 
-We assume the chip's height follows the following function of the position on the short side and the position on the long side.
-Let's call the position on the short side s and the position on the long side l:
-
-$$\text{Height}=s^2-l^2+2$$
-The 2 is just used so that the chip starts at zero and not a negative value.
-
-The gradient of the chip looks like this:
-
-$$\nabla\text{Height}=\begin{pmatrix}\frac{d\text{Height}}{ds}\\\frac{d\text{Height}}{dl}\end{pmatrix}=\begin{pmatrix}2s\\-2l\end{pmatrix}$$
-
-This means that going from left to write short end, we increase the gradient and going from body pointing long end to the one long end further away, we decrease the rate at which the height increases.
-This gradient depends on the position on the chip, which shows that for the chip the gradient is dependent on where we are on the chip, which means that the Hessian matrix will not only contain zeros, but there is a changing rate of change of the height.
-
-
-The Hessian for our chip looks like this: 
-
-$$H=\begin{pmatrix}\frac{d^2\text{Height}}{dsds}&\frac{d^2\text{Height}}{dsdl}\\\frac{d^2\text{Height}}{dsdl}&\frac{d^2\text{Height}}{dldl}\end{pmatrix}=\begin{pmatrix}2&0\\0&-2\end{pmatrix}$$
-
-
-
-```{r potato-chip, fig.cap = "Created by Topntp26 - Freepik.com"}
-img <- jpeg::readJPEG("images/potato-chips.jpg")
-p1 <- grid::rasterGrob(img, interpolate=TRUE)
-
-df = expand.grid(long = seq(from = -1.5, to = 1.5, length.out = 10),
-  short = seq(from = -1, to = 1, length.out = 10))
-
-## Adding to for elevation
-df$height = 2 + df$short^2  - df$long^2  
-
-p2 = ggplot(df) + 
-  geom_tile(aes(x = short, y = long, fill = height)) + 
-  scale_x_continuous("Short side of chip") + 
-  scale_y_continuous("Long side of chip") + 
-  scale_fill_continuous("Height of chip") + 
-  coord_fixed()
-gridExtra::grid.arrange(p1, p2, ncol = 2)
-```
-
-
-
-The H is the hessian matrix (the second derivative):
-
-$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
-The intuition behind the Hessian matrix is: 
-When I change the training points in particular direction, how does the loss change?
+Assuming that you can differentiate the loss twice with respect to the model parameters $\theta$ you can use this method.
+Actually, it's also possible to use it when the differentiation twice is not possible and there is a trick to compute the Hessian matrix (second derivative), but more about that later.
 
 When we upweight this training point, Iup is the ratio of how much the loss of this single point changes compared to how much the other data points vote for the parameters of the model not to change because the loss would increase.
+
 
 Computing I-up-loss has two challenges: First, it requires calculating and inverting the Hessian matrix.
 Second, we want to calculate the property across all training points zi and a few test points z.test.
@@ -456,9 +388,10 @@ Even with the conjugate gradients trick, computing the Hessian is expensive beca
 The trick is to get a sample of the training data and then compute:
 
 
-(REmove formula?)
+(Remove formula?)
 
 $$H_j^{-1}v=v+(I-\nabla^2_{\theta}L(z_j,\hat{\theta}))H^{-1}_{j-1}v$$
+
 where $\nabla^2_{\theta}L(z_j,\hat{\theta})$ is the second order derivative (curviness) at example $z_j$.
 
 TODO: Shorten details about the tricks the authors used.
@@ -506,7 +439,6 @@ What is the difference to using the nearest neighbour in feature space?
 Training examples with higher loss have higher influence and nearest neighbour is like taking difference of loss and hessian?
 
 
-
 What happens when you don't have the y? 
 The method requires computing the loss. 
 Does that mean we can't use it for new data for which we don't know the true y?
@@ -523,8 +455,12 @@ No, because we can compute any measure based on the derivative, like the change 
 
 ### Disadvantages of identifying influential points
 
-- Cook's distance and similar are very expensive to calculate because it requires refitting. 
+- Deletion diagnostics and similar are very expensive to calculate because it requires refitting. 
 When your model takes an hour to fit and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of instance by leaving them out one after each other from the training.
+But history has proven so far that computing resources increase all the time.
+A computation that was unthinkable 20 years ago, you can do on your smartphone today.
+We can fit on a single laptop models with millions of training instances and thousands of parameters within minutes. 
+So it's not a big step to say that deletion diagnostics will even work with big neural networks easily in 10 years.
 - Influence functions are a good alternative, but only for models with differentiable parameters, like neural networks. 
 Forget it for tree-based methods like random forest, boosted trees or decision trees.
 - Cook's distance and the influence functions have no absolute scale on which to judge them. 
@@ -540,7 +476,7 @@ And you certainly don't want to start going any further, because there are just 
 
 - Deletion diagnostics is very simple to implement. See example from this book.
 - Cook's distance in R, though only for lm and glm. 
-- Python code for influence from paper in repository. 
+- Python code for influence from paper in repository. https://github.com/kohpangwei/influence-release
 Unfortunately just the paper dump and no maintained Python module.
 -
 
@@ -550,3 +486,106 @@ Good blog post, which helped me understand this paper better: http://mlexplained
 
 
 [^koh]: Koh, P. W., & Liang, P. (2017). Understanding Black-box Predictions via Influence Functions. Retrieved from http://arxiv.org/abs/1703.04730
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- **Excursion: Intuition behind the gradient and the Hessian matrix** -->
+
+<!-- Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions. -->
+<!-- It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit. -->
+<!-- Since the model usually has many parameters, the gradient also is a vector with many numbers, one for each parameter, telling for each parameter the rate and direction of change of the loss if we were to change the parameter. -->
+<!-- A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss. -->
+<!-- The Hessian is the second-order derivative. -->
+<!-- What the gradient is to the loss, is the hessian to the gradient.  -->
+<!-- The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss. -->
+<!-- A more informal explanation is that the Hessian informs us how curved the rate of change is.  -->
+<!-- The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking.  -->
+<!-- A real world example: A potato chip. -->
+<!-- Not the irregular ones, but the ones where each chip has the same shape, which you can stack.  -->
+<!-- If you lay such a chip on a surface, such that the ends on off the ends of the longer side touch the ground, we will see how it relates to gradients and the Hessian. -->
+<!-- The long end points away from you, so that you could now put your fingers on the left and right elevated parts of the chip and wiggle it, but be careful not to break it. -->
+<!-- Have a look at the next picture to see what I mean. -->
+
+<!-- The chip is 3-dimensional and will be a good example. -->
+<!-- Assume that each point on the chip describes the combiniation of two model parameters, represented as the coordinate in the direction of the long side and the coordinate in the direction of the short side. -->
+<!-- The height of a point on the chip represents the value of the loss function. -->
+<!-- Now, if we start on the left of the elevated short sides of the chip, the gradient of the loss (height of the chip) would be negative, since going from left to right by a small step would decrease the height/loss.  -->
+<!-- In the middle of the chip, there is a gradient of zero and on the right a positive gradient for the direction. -->
+<!-- But this was only one component of the gradient.  -->
+<!-- The other component is in the longer direction of the chip.  -->
+<!-- Coming from your body, the gradient is first positive, then zero, then negative. -->
+<!-- Now for the Hessian: It describes how curvy the chip is or also the rate of change of the gradient.  -->
+<!-- Since we have two parameters (two directions), we have to describe the curviness regarding the direction we are looking. -->
+<!-- Let's again start at the left of the short sides of the chips, with the the high negative gradient.  -->
+<!-- How curvy is the chip? -->
+<!-- Well, that depends whether you look into the direction towards the other short end or into the direction of the long ends. -->
+<!-- The Hessian or curviness is very high for going from short edge to short edge, because there is much curviness between the short edges.  -->
+<!-- The curviness  -->
+<!-- But being on a short edge and going into one  -->
+
+
+<!-- Let's say the height of the chip is the loss, the coordinate along the back of the from back to neck is one parameter, and the coordinate of the saddle from left flank to right flank is the second parameter. -->
+<!-- Going from left to right, the saddle first increases in height and than decreases. -->
+<!-- A high rate of change of the gradient (rate of rate of increase of height), so there is a positive Hessian for short direction, when looking into the short direction.  -->
+<!-- But how much does the gradient change for the short direction, when we look into the long direction? -->
+<!-- That is, when we go to a certain coordinate on the chip, fix the position of the short side, but check how much the gradient changes, when we change the coordinate in the long direction.  -->
+<!-- The answer is 0. -->
+
+<!-- We assume the chip's height follows the following function of the position on the short side and the position on the long side. -->
+<!-- Let's call the position on the short side s and the position on the long side l: -->
+
+<!-- $$\text{Height}=s^2-l^2+2$$ -->
+<!-- The 2 is just used so that the chip starts at zero and not a negative value. -->
+
+<!-- The gradient of the chip looks like this: -->
+
+<!-- $$\nabla\text{Height}=\begin{pmatrix}\frac{d\text{Height}}{ds}\\\frac{d\text{Height}}{dl}\end{pmatrix}=\begin{pmatrix}2s\\-2l\end{pmatrix}$$ -->
+
+<!-- This means that going from left to write short end, we increase the gradient and going from body pointing long end to the one long end further away, we decrease the rate at which the height increases. -->
+<!-- This gradient depends on the position on the chip, which shows that for the chip the gradient is dependent on where we are on the chip, which means that the Hessian matrix will not only contain zeros, but there is a changing rate of change of the height. -->
+
+
+<!-- The Hessian for our chip looks like this:  -->
+
+<!-- $$H=\begin{pmatrix}\frac{d^2\text{Height}}{dsds}&\frac{d^2\text{Height}}{dsdl}\\\frac{d^2\text{Height}}{dsdl}&\frac{d^2\text{Height}}{dldl}\end{pmatrix}=\begin{pmatrix}2&0\\0&-2\end{pmatrix}$$ -->
+
+
+
+<!-- ```{r potato-chip, fig.cap = "Created by Topntp26 - Freepik.com"} -->
+<!-- img <- jpeg::readJPEG("images/potato-chips.jpg") -->
+<!-- p1 <- grid::rasterGrob(img, interpolate=TRUE) -->
+
+<!-- df = expand.grid(long = seq(from = -1.5, to = 1.5, length.out = 10), -->
+<!--   short = seq(from = -1, to = 1, length.out = 10)) -->
+
+<!-- ## Adding to for elevation -->
+<!-- df$height = 2 + df$short^2  - df$long^2   -->
+
+<!-- p2 = ggplot(df) +  -->
+<!--   geom_tile(aes(x = short, y = long, fill = height)) +  -->
+<!--   scale_x_continuous("Short side of chip") +  -->
+<!--   scale_y_continuous("Long side of chip") +  -->
+<!--   scale_fill_continuous("Height of chip") +  -->
+<!--   coord_fixed() -->
+<!-- gridExtra::grid.arrange(p1, p2, ncol = 2) -->
+<!-- ``` -->
+
+
+<!-- **End of excursion** -->
+
+
+
+
