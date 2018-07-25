@@ -109,7 +109,7 @@ In this section, I will present the approach suggested by Wachter et. al 2017[^w
 They suggest minimizing the following loss.
 
 
-$$L(x,x',y',\lambda)=\lambda\cdot(\hat{f}(x')-y')^2+d(x,x')$$
+$$L(x,x^\prime,y^\prime,\lambda)=\lambda\cdot(\hat{f}(x^\prime)-y^\prime)^2+d(x,x^\prime)$$
 
 The first term is the quadratic distance between the model prediction for the counterfactual x' and the desired outcome y', which the user must define in advance.
 The second term is the distance d between the instance x to be explained and the counterfactual x', but more about this later.
@@ -121,18 +121,18 @@ Ultimately, the user must decide how to balance the requirement that the predict
 The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from y'.
 This constraint can be written as:
 
-$$|\hat{f}(x')-y'|\leq\epsilon$$
+$$|\hat{f}(x^\prime)-y^\prime|\leq\epsilon$$
 
 To minimize this loss function, any suitable optimization algorithm can be used, e.g. Nelder-Mead.
 If you have access to the gradients of the machine learning model $\hat{f}$, you can use gradient-based methods like ADAM.
 The instance x to be explained, the desired output y' and the tolerance parameter $\epsilon$ must be set in advance.
 The loss function is minimized for x' and the (locally) optimal counterfactual x' returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter).
 
-$$\arg\min_{x'}\max_{\lambda}L(x,x',y',\lambda)$$
+$$\arg\min_{x^\prime}\max_{\lambda}L(x,x^\prime,y^\prime,\lambda)$$
 
 The function d for measuring the distance between instance x and counterfactual x' is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).
 
-$$d(x,x')=\sum_{j=1}^p\frac{|x_j-x'_j|}{MAD_j}$$
+$$d(x,x^\prime)=\sum_{j=1}^p\frac{|x_j-x^\prime_j|}{MAD_j}$$
 
 The total distance is the sum of all p feature-wise distances, that is, the absolute differences of feature values between instance x and counterfactual x'.
 The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset defined as:
@@ -152,7 +152,7 @@ The recipe for producing the counterfactuals is simple:
 1. Select an instance x to be explained, the desired outcome y', a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
 1. Sample a random instance as initial counterfactual.
 1. Optimize the loss with the initially sampled counterfactual as starting point.
-1. While $|\hat{f}(x')-y'|>\epsilon$:
+1. While $|\hat{f}(x^\prime)-y^\prime|>\epsilon$:
   1. Increase $\lambda$.
   1. Optimize the loss with the current counterfactual as starting point.
   1. Return the counterfactual that minimizes the loss.
