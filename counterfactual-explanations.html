@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2018-07-21">
+<meta name="date" content="2018-07-25">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -293,13 +293,13 @@ FIGURE 6.1: The causal relationships between inputs of a machine learning model 
 <h3><span class="header-section-number">6.1.1</span> Generating counterfactual explanations</h3>
 <p>A simple and naive approach to generating counterfactual explanations is searching by trial and error. This approach involves randomly changing feature values of the instance of interest and stopping when the desired output is predicted. Like the example where Anna tried to find a version of her apartment for which she could charge more rent. But there are better approaches than trial and error. First, we define a loss function that takes as input the instance of interest, a counterfactual and the desired (counterfactual) outcome. The loss measures how far the predicted outcome of the counterfactual is from to the predefined outcome and how far the counterfactual is from the instance of interest. We can either optimize the loss directly with an optimization algorithm or by searching around the instance, as suggested in the ‘Growing Spheres’ method, see <a href="counterfactual-explanations.html#example-software">Software and Alternatives</a>).</p>
 <p>In this section, I will present the approach suggested by Wachter et. al 2017<a href="#fn38" class="footnoteRef" id="fnref38"><sup>38</sup></a>. They suggest minimizing the following loss.</p>
-<p><span class="math display">\[L(x,x&#39;,y&#39;,\lambda)=\lambda\cdot(\hat{f}(x&#39;)-y&#39;)^2+d(x,x&#39;)\]</span></p>
+<p><span class="math display">\[L(x,x^\prime,y^\prime,\lambda)=\lambda\cdot(\hat{f}(x^\prime)-y^\prime)^2+d(x,x^\prime)\]</span></p>
 <p>The first term is the quadratic distance between the model prediction for the counterfactual x’ and the desired outcome y’, which the user must define in advance. The second term is the distance d between the instance x to be explained and the counterfactual x’, but more about this later. The parameter <span class="math inline">\(\lambda\)</span> balances the distance in prediction (first term) against the distance in feature values (second term). The loss is solved for a given <span class="math inline">\(\lambda\)</span> and returns a counterfactual x’. A higher value of <span class="math inline">\(\lambda\)</span> means that we prefer counterfactuals that come close to the desired outcome y’, a lower value means that we prefer counterfactuals x’ that are very similar to x in the feature values. If <span class="math inline">\(\lambda\)</span> is very large, the instance with the prediction that comes closest to y’ will be selected, regardless how far it is away from x. Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x. The authors of the method suggest instead of selecting a value for <span class="math inline">\(\lambda\)</span> to select a tolerance <span class="math inline">\(\epsilon\)</span> for how far away the prediction of the counterfactual instance is allowed to be from y’. This constraint can be written as:</p>
-<p><span class="math display">\[|\hat{f}(x&#39;)-y&#39;|\leq\epsilon\]</span></p>
+<p><span class="math display">\[|\hat{f}(x^\prime)-y^\prime|\leq\epsilon\]</span></p>
 <p>To minimize this loss function, any suitable optimization algorithm can be used, e.g. Nelder-Mead. If you have access to the gradients of the machine learning model <span class="math inline">\(\hat{f}\)</span>, you can use gradient-based methods like ADAM. The instance x to be explained, the desired output y’ and the tolerance parameter <span class="math inline">\(\epsilon\)</span> must be set in advance. The loss function is minimized for x’ and the (locally) optimal counterfactual x’ returned while increasing <span class="math inline">\(\lambda\)</span> until a sufficiently close solution is found (= within the tolerance parameter).</p>
-<p><span class="math display">\[\arg\min_{x&#39;}\max_{\lambda}L(x,x&#39;,y&#39;,\lambda)\]</span></p>
+<p><span class="math display">\[\arg\min_{x^\prime}\max_{\lambda}L(x,x^\prime,y^\prime,\lambda)\]</span></p>
 <p>The function d for measuring the distance between instance x and counterfactual x’ is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).</p>
-<p><span class="math display">\[d(x,x&#39;)=\sum_{j=1}^p\frac{|x_j-x&#39;_j|}{MAD_j}\]</span></p>
+<p><span class="math display">\[d(x,x^\prime)=\sum_{j=1}^p\frac{|x_j-x^\prime_j|}{MAD_j}\]</span></p>
 <p>The total distance is the sum of all p feature-wise distances, that is, the absolute differences of feature values between instance x and counterfactual x’. The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset defined as:</p>
 <p><span class="math display">\[MAD_j=median_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-median_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)\]</span></p>
 <p>The median of a vector is the value at which half of the vector values are greater and the other half smaller. The MAD is the equivalent of the variance of a feature, but instead of using the mean as the center and summing over the square distances, we use the median as the center and sum over the absolute distances. The proposed distance function has the advantage over the Euclidean distance that it introduces sparsity. This means that two points are closer to each other when less features are different. And it is more robust to outliers. Scaling with the MAD is necessary to bring all the features to the same scale - it shouldn’t matter whether you measure the size of an apartment in square meters or square feet.</p>
@@ -308,7 +308,7 @@ FIGURE 6.1: The causal relationships between inputs of a machine learning model 
 <li>Select an instance x to be explained, the desired outcome y’, a tolerance <span class="math inline">\(\epsilon\)</span> and a (low) initial value for <span class="math inline">\(\lambda\)</span>.</li>
 <li>Sample a random instance as initial counterfactual.</li>
 <li>Optimize the loss with the initially sampled counterfactual as starting point.</li>
-<li>While <span class="math inline">\(|\hat{f}(x&#39;)-y&#39;|&gt;\epsilon\)</span>:</li>
+<li>While <span class="math inline">\(|\hat{f}(x^\prime)-y^\prime|&gt;\epsilon\)</span>:</li>
 <li>Increase <span class="math inline">\(\lambda\)</span>.</li>
 <li>Optimize the loss with the current counterfactual as starting point.</li>
 <li>Return the counterfactual that minimizes the loss.</li>
