@@ -12,7 +12,18 @@ data("cervical")
 An influential instance is an instance whose deletion from the training data in the model fitting step considerably changes the prediction model.
 Identifying influential training instances can be used to 'debug' the model and understand the global model behaviour and single predictions better.
 
-*Keywords: Influential points, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics*
+*Keywords: Influential points, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics, robust statistics*
+
+In this chapter you will read about two approaches how to identify influential instances.
+Both approaches originate from robust statistics and relate to influence functions.
+Robust statistics is a field of statistis that deals with problematic and violated assumptions, outliers and influential instances.
+For something that is derived from data, like the mean of a variable or a prediction model, the influence function measure how much a single data point influences the something derived from data.
+For example, when we have 10 values and measure the mean, influence functions can tell us how strongly the mean is affected by single components.
+The first approach tackles the question by simply removing an instance from the data and recalculating the statistic or the model, this is also called empirical influence functions.
+For the mean example, we recalculate the mean 10 times while leaving out one of the values each time and measure how much it changes.
+The second approach upweights one of the data points by a small weight, which is the same as the first derivative of some model given a distribution of data.
+It's also called "infinitesimal approach"
+
 
 Before we start digging into some methods how to find influential instance, we have to talk about the difference between outlier and an influential instances.
 
@@ -100,7 +111,7 @@ Influence of a data point can be measured by how much the prediction changes, wh
 First we learn about the approach of deleting single instances and later in the chapter about upweighting instances.
 
 
-### Deletion Diagnostics
+### Deletion Diagnostics or Empirical Influence Functions
 
 
 When facing a problem, we should always look if other people have already solved a similar problem. 
@@ -287,7 +298,10 @@ In the remaining part of the chapter I will show you a method that doesn't requi
 You: Great! But do you have a method that works without me having to refit the model? It takes so much time.  
 *Research* : Do you have a model with a differentiable loss and model parameters?  
 *You* : I fitted a neural network with logistic loss. So yes.  
-*Research* : Ok, you can use **influence functions** as an efficient approximation. Instead of deleting the instance, the method upweights the instance in the loss by a very small step. Loss upweighting is similar to deleting the instance.  
+*Research* : Ok, you can use **influence functions** as an efficient approximation. 
+An influence function is a measure of the dependence of the model on the value of one of the training instances. 
+Instead of deleting the instance, the method upweights the instance in the loss by a very small step. 
+Loss upweighting is similar to deleting the instance.  
 *You* : Then what?  
 *Research* : Since you have the loss function and you can differentiate it, you can calculate the influence on a prediction by upweighting the instance, without having to refit the model.  
 *You* : Great, that's what I was looking for!  
@@ -317,17 +331,71 @@ The idea behind influence functions for epxplaining predictions is to upweight t
 
 $$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
 
-where $\theta$ is the vector of the model parameters.
-L is the loss function used to train the model and $\epsilon$ is a very small number.
-$z_i$ are the training data and z is the training instance we upweight, simulating it's removal.
+where $\theta$ is the vector of the original model parameters and $\hat{\theta}_{\epsilon,z}$ the parameter vector after upweighting z by a very small number $\epsilon$.
+L is the loss function used to train the model, $z_i$ are the training data and z is the training instance we upweight to simulate its removal.
 The intuition behind this formula is:
 How much does the loss change if we upweight a particular points $z_i$ from the training data by a little bit ($\epsilon$) and downweight the other data points respectively?
+How would the parameter vector look like that optimizes this loss?
+We actually never compute this parameters, but the influence functions from robust statistics, 
+which is the first derivative of the loss in the direction of the parameters.
+This answers the question:
+How steep is the rate of change when upweighting a single instance.
+The steeper, the more influential is an instance.
+It's taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
+
 With influence functions, we never actually calculate the new parameters, but derive from that an influence measure of upweighted training instance z on the prediction of another instance $z_{test}$.
 
 
+TODO: Add starting point for calculation?
 
+$$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
 
-$$I_{up,loss}(z,z_{test})=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})$$
+TODO: Plot with quadratic expansion?
+x-axis: theta
+y-axis: loss
+
+The following illustration shows the loss for instance z on the y-axis and the parameter $\theta$ on the x-axis.
+The model parameter is 1-dimensional for demonstration purposes, but in reality is usually high-dimensional.
+Would we pick the optimal model parameter only according to this graphic would mean we pick a model parameter that is optimal for the training instance z, completely ignoring the other training instances.
+That's why we only move a little into the direction of improvement for instance z.
+We don't actually know how the loss will change when we upweight z, but with the first and second derivative of the loss, we can create a quadratic approximation around our actual model parameter and pretend that this is how the real loss would behave.
+
+```{r quadratic-expansion}
+x = seq(from = -1.2, to = 1.2, length.out = 100)
+y.fun = function(x) {
+  -x - 2*x^2 - x^3 + 2 * x^4
+}
+y = y.fun(x)
+expansion = function(x, x0 = 0) {
+  d1 = function(x) -1 - 2*x - 3 * x^2 +  8 * x^3
+  d2 = function(x)    - 2   - 6 * x   + 24 * x^2
+  y.fun(x0) + d1(x0) * (x - x0) + 0.5 * (x - x0)^2*d2(x0)
+}
+
+dat = data.frame(x=x, y=y)
+dat$type = "Actual loss"
+dat2 = dat
+dat2$type = "Quadratic expansion"
+dat2$y = expansion(x)
+dat3 = rbind(dat, dat2)
+
+#pts  = data.frame(x = c(0, 2/6))
+
+ggplot(dat3) + geom_line(aes(x = x, y = y, group = type, color = type)) + 
+  geom_vline(xintercept = 0, linetype = 2) + 
+  geom_vline(xintercept = 1/2, linetype = 2) + 
+  scale_y_continuous("Loss for instance z", labels = NULL, breaks = NULL) + 
+  scale_x_continuous("Model parameter", labels = NULL, breaks = NULL) +
+  geom_point(x = 0, y = expansion(x = 0)) + 
+  geom_label(x = 0, label = expression(hat(theta)), y  = expansion(x=0), vjust = 2) + 
+  geom_point(x = 1/2, y = expansion(x = 1/2)) + 
+  geom_label(x = 1/2, y = expansion(x = 1/2), label = expression(hat(theta)[-z]), vjust = 2) + 
+  geom_segment(x = 0, xend=1/2, y=1, yend=1, arrow = arrow(length = unit(0.2, "cm"))) + 
+  geom_label(x = 0.25, y = 1.1, label = expression(-frac(1,n)~I[up~params](z)), vjust = -0.2) #+ 
+  my_theme()
+
+```
+
 
 The first term $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance, 
 also the last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$, but for the upweighted training instance. 
@@ -463,6 +531,8 @@ We can fit on a single laptop models with millions of training instances and tho
 So it's not a big step to say that deletion diagnostics will even work with big neural networks easily in 10 years.
 - Influence functions are a good alternative, but only for models with differentiable parameters, like neural networks. 
 Forget it for tree-based methods like random forest, boosted trees or decision trees.
+- Approximate influence functions with the upweighting are approximate, because it is only a quadratic expansion around the parameters.
+This means that it can be wrong and the influence of an instance is actually higher or lower when removed.
 - Cook's distance and the influence functions have no absolute scale on which to judge them. 
 The cutoff at which we call an instance influential is therefore a bit arbitrary.
 But it's still useful to rank the instances among each other.
