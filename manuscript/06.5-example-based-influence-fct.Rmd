@@ -343,16 +343,29 @@ How steep is the rate of change when upweighting a single instance.
 The steeper, the more influential is an instance.
 It's taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
 
-With influence functions, we never actually calculate the new parameters, but derive from that an influence measure of upweighted training instance z on the prediction of another instance $z_{test}$.
 
+The change in the parameters can be calculated as
 
-TODO: Add starting point for calculation?
+$$I_{\text{up,params}}(z)=\left.\frac{d{}\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}=-H_{\hat{\theta}}^{-1}\nabla_{\theta}L(y,\hat{\theta})$$
 
-$$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
+The  last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$ is the gradient of the upweighted training instance. 
+The middle part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
+Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions.
+It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit.
+A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss.
+The Hessian is the second-order derivative.
+What the gradient is to the loss, is the hessian to the gradient. 
+The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss.
+A more informal explanation is that the Hessian informs us how curved the rate of change is. 
+The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking. 
 
-TODO: Plot with quadratic expansion?
-x-axis: theta
-y-axis: loss
+$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
+This is basically forming a quadratic expansion around the parameters $\theta$.
+We can also callculate what the new parameters would be through this approximation:
+
+$$\hat{\theta}_{-z}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(z)$$
+That's basically the original parameter following the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= divided by the hessian) and scaled by 1 over n, because that's the weight of a single training instance.
+If we would not weight by 1 over n, but by 1, this would be like saying that we want to shift all of the weight away from the other training instances fully to the single training instance z and only optimize that.
 
 The following illustration shows the loss for instance z on the y-axis and the parameter $\theta$ on the x-axis.
 The model parameter is 1-dimensional for demonstration purposes, but in reality is usually high-dimensional.
@@ -391,91 +404,59 @@ ggplot(dat3) + geom_line(aes(x = x, y = y, group = type, color = type)) +
   geom_point(x = 1/2, y = expansion(x = 1/2)) + 
   geom_label(x = 1/2, y = expansion(x = 1/2), label = expression(hat(theta)[-z]), vjust = 2) + 
   geom_segment(x = 0, xend=1/2, y=1, yend=1, arrow = arrow(length = unit(0.2, "cm"))) + 
-  geom_label(x = 0.25, y = 1.1, label = expression(-frac(1,n)~I[up~params](z)), vjust = -0.2) #+ 
+  geom_label(x = 0.25, y = 1.1, label = expression(-frac(1,n)~I[up~theta](z)), vjust = -0.2) + 
   my_theme()
 
 ```
 
 
-The first term $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance, 
-also the last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$, but for the upweighted training instance. 
-The middle part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
 
-$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
 
+With influence functions, we never actually calculate the new parameters, but derive from that an influence measure of upweighted training instance z on the prediction of another instance $z_{test}$.
+
+But what is the rate of change in the predictions, for upweighting training instance z?
+For that we could either calculate the new parameters and then make predictions with the newly parameterized model, or we could also calculate the influence directly, since we can get the influence on predictions by using the chain rule.
+Instead of looking at the influence of training instance upweighting on model parameters, we look how the loss of a single prediction changes, when the loss of the training instance is upweighted and the parameters change accordingly.
+
+$$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
+The first line of this equation means that we are interested in the change of the loss of a particular instance $z_{test}$, would we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
+In the second line of the equation, we applied the chain rule of derivatives and get the derivative of the loss of the test instance regarding the parameters times the influence on the parameters, which we replace with the equation of it in the third line.
+The first term in the third line $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance with respect to the model parameters.
+All these mathemtics, tricks and magic, and in the end, we do something straightforward:
+This was all just the fancy and sciency way of saying that the influence of the training instance z on a particular instance $z_{test}$ is "how strongly the instance reacts to change in model parameter" times "how much the parameters will change if we upweight the instance z".
+Not as difficult as the formulas suggest, right?
+Took me a while to figure out, but once it becomes clear it is beautifully untangled and ready to be stored in my brain.
+Another way to read the formula:
 The influence is proportionate to how large the gradients for the training and test loss are.
 The higher the gradient of the training loss, the higher its influence on the parameters and the higher the influence on the test prediction.
 For the gradient of the test prediction loss: The higher the gradient, the more influentiable the test instance is.
 The whole construct can also be seen as a measure of similarity between the the training and the test instance.
-Similarity doesn't mean here the Euclidean distance, but the similarity the model learned.
-
-Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions.
-It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit.
-A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss.
-The Hessian is the second-order derivative.
-What the gradient is to the loss, is the hessian to the gradient. 
-The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss.
-A more informal explanation is that the Hessian informs us how curved the rate of change is. 
-The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking. 
+Similarity doesn't mean here the Euclidean distance, but the similarity the model learned and by how much they are connected through changes in the model parameters.
 
 
-TODO: CONTINUE HERE
-
-Assuming that you can differentiate the loss twice with respect to the model parameters $\theta$ you can use this method.
-Actually, it's also possible to use it when the differentiation twice is not possible and there is a trick to compute the Hessian matrix (second derivative), but more about that later.
-
-When we upweight this training point, Iup is the ratio of how much the loss of this single point changes compared to how much the other data points vote for the parameters of the model not to change because the loss would increase.
 
 
-Computing I-up-loss has two challenges: First, it requires calculating and inverting the Hessian matrix.
-Second, we want to calculate the property across all training points zi and a few test points z.test.
-
+There is actually more to the method, but enough mathematics for this chapter.
+These were the mathematical basics to understand the core of the system, the other stuff are fixes for problems.
+First of all, the loss function of the machine learning model needs to be differentiable, twice actually.
+If this is not the case, the authors propose to use a differentiable loss as replacement for the calculation of the influence.
+This also works when no derivative exists, for example when the underlying model uses Hinge loss instead of some differentiable loss.
+The loss is replaced with some smoothed loss, but the model can still be trained with the non-smooth loss.
+The other issue is the Hessian matrix.
+A few tricks are employed to get the thing with the Hessian working, because it is too nasty to calculate directly.
 The problem is that computing and inverting the Hessian requires $O(np^2 + p^3)$ operations. 
 This term tells us that the computation operations necessary (and therefore time) depends on the number of parameters to the cube.
-Let's say the number of parameters in your model is 10, and the time necessary to compute the Hessian is 1s.
-We exchange the model with a model with 100 parameters, which is 10 times as many parameters as the original model.
-The computation time is not merely 10x 1s = 10s, but since it scales with the cube, it's actually 10x 10x 10x 1s = 1000s.
-This is not healthy for a method that should be usably with neural networks with millions of parameters.
-So an improvement is needed.
-The method proposed by the authors suggests using some tricks to get the Hessian.
-Scaling it up.
-
-The key idea:
-You only need the Hessian times a vector $H_{\hat{\theta}}v$ and not the hessian itself.
-By applying a series of tricks (Pearlmutter trick, CG and Taylor expansion) it can be derived.
-
-This also works when no derivative exists, for example when the model uses Hinge loss instead of some differentiable loss.
-The solution is to replace the loss with some smoothed loss, but the model can still be trained with the non-smooth loss.
+Let's say that your model has 10 parameters and the time necessary to compute the Hessian is 1 second.
+We exchange the model with a model with 100 parameters, 10 times as many parameters as before.
+The computation time is not merely 10x 1 second = 10 seconds, but since it scales with the cube, it will actually be in the area of  1000 of seconds.
+This is not healthy for a method that should be applicable to neural networks with millions of parameters.
+So two tricks are applied. 
+One is to never actually calculate the Hessian (TaDa!!). 
+You never need the Hessian directly, but only the Hessian times another vector and with some tricks this is easier to compute.
+The normal Hessian would involves all data instances. 
+So another speed up is to sample instances from the data instead of using all.
 
 
-Influence functions also work in non-convex models, even though they formally require convexity.
-
-
-Stochastics estimation of the Hessian matrix. 
-Even with the conjugate gradients trick, computing the Hessian is expensive because it has to be iterated over the whole training set.
-The trick is to get a sample of the training data and then compute:
-
-
-(Remove formula?)
-
-$$H_j^{-1}v=v+(I-\nabla^2_{\theta}L(z_j,\hat{\theta}))H^{-1}_{j-1}v$$
-
-where $\nabla^2_{\theta}L(z_j,\hat{\theta})$ is the second order derivative (curviness) at example $z_j$.
-
-TODO: Shorten details about the tricks the authors used.
-
-
-How good does upscaling with $I_{up,loss}$ work? 
-We can only know for certain, by comparing the loss we get with the leave-one-out retraining.
-The authors did this and got pretty good results.
-
-Two problems with this approach: 
-
-- Lack of convexity of loss
-Solution: smooth the hessian matrix so it becomes positive definite
-- Lack of differentiability of loss.
-Some losses cannot be differentiaed twice.
-Solution: Approximate loss with differentiable version for computing the influence function.
 
 
 TODO: Write a bit about how to create adversarial examples with influence functions.
@@ -519,7 +500,11 @@ No, because we can compute any measure based on the derivative, like the change 
 - Directly helps identifying problems with data points that are wrongly labeled or have high influence and are therefor to be critically evaluated.
 - In theory model-agnostic at least the methods that requre refitting 
 - Influence functions can also be used to create adversarial training data
-- 
+- For the empiricial influence function, we looked at the difference in the prediction. 
+But we could really look at any statistic we like. 
+You could analyse how much a training instance influences the loss.
+You could analyse how much a training instance influences the feature importance.
+You could analyse how much a training instance influences
 
 ### Disadvantages of identifying influential points
 
