@@ -158,6 +158,8 @@ When we want to see the average influence of instance i on the whole dataset, we
 
 $$\text{Influence}^{(-i)}=\frac{1}{n}\sum_{j=1}^{n}\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
+Here I opted to formulate the influence on the prediction.
+This would also work for the difference in model parameters or the difference in the loss.
 
 
 **Example with deletion influence**
@@ -361,7 +363,7 @@ The Hessian is a matrix because to describe the curvature of the loss and that s
 
 $$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
 This is basically forming a quadratic expansion around the parameters $\theta$.
-We can also callculate what the new parameters would be through this approximation:
+We can also callculate what the new parameters would be through this linear approximation:
 
 $$\hat{\theta}_{-z}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(z)$$
 That's basically the original parameter following the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= divided by the hessian) and scaled by 1 over n, because that's the weight of a single training instance.
@@ -434,8 +436,6 @@ The whole construct can also be seen as a measure of similarity between the the 
 Similarity doesn't mean here the Euclidean distance, but the similarity the model learned and by how much they are connected through changes in the model parameters.
 
 
-
-
 There is actually more to the method, but enough mathematics for this chapter.
 These were the mathematical basics to understand the core of the system, the other stuff are fixes for problems.
 First of all, the loss function of the machine learning model needs to be differentiable, twice actually.
@@ -457,44 +457,39 @@ The normal Hessian would involves all data instances.
 So another speed up is to sample instances from the data instead of using all.
 
 
-
-
-TODO: Write a bit about how to create adversarial examples with influence functions.
-
 ### Application of Influence Instances
 
-TODO: Shows some examples and ask authors to use images.
+Influential instances have lots of applications, some already presented in this chapter.
 
-- Fixing training data
+**Understanding model behaviour**
+
+Different machine learning models have different ways of making their predictions.
+Even if they have the same performance, their combination of the features might be very different and because of that, they might fail in different scenarios.
+Understanding the particular weak points of a model as in the instances that are most influential helps to form a "mental model" of the machine learning model behaviour in your head.
+
+TODO: Include image once you got the permission
+
+```{r example-influence-function-svm-inception, eval = FALSE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that are close in color with the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)"}
+knitr::include_graphics("images/influence-functions-svm-inception.png")
+```
+
+
+**Fixing training data**
 
 Given a budget for how many data points you can change the ground truth, how do you pick the ones to look at?
 Best way is to only pick the influential points, because non-influential points - by definition - don't affect the model much anyways.
 This works way better than choosing random misclassified or badly predicted points or choosing by the ones with the highest loss.
 
-- Handling domain mismatch / Debugging model errors
+**Handling domain mismatch / Debugging model errors**
 
 Assume data is trained on one domain - like deciding if a cat or a dog is on an image, but all images where from inside the house - and an example from another domain comes in, e.g. showing a dog outside the house.
 The model can make heavy mistakes.
 The influence function can tell how this domain mismatch will play out.
 Checkout why the model makes error on certain data points by checking which inputs were most responsible.
-
-- Poisoning attacks: Creating adversarial examples for model training
-
-How much does the loss change if we change the image a bit
-The idea is to add weight to create a synthetic image, and remove weight from the original one to create an adversarial training instance.
+This is closely related to understanding the model behaviour better.
 
 
-What is the difference to using the nearest neighbour in feature space?
-Training examples with higher loss have higher influence and nearest neighbour is like taking difference of loss and hessian?
-
-
-What happens when you don't have the y? 
-The method requires computing the loss. 
-Does that mean we can't use it for new data for which we don't know the true y?
-No, because we can compute any measure based on the derivative, like the change in prediction or predicted probability.
-
-
-### Advantages of identifying influential points
+### Advantages of Identifying Influential Instances
 
 - Very different from other approaches, because looking at influential instances emphasizes the role the training data plays in the learning process
 - Directly helps identifying problems with data points that are wrongly labeled or have high influence and are therefor to be critically evaluated.
@@ -506,7 +501,7 @@ You could analyse how much a training instance influences the loss.
 You could analyse how much a training instance influences the feature importance.
 You could analyse how much a training instance influences
 
-### Disadvantages of identifying influential points
+### Disadvantages of Identifying Influential Instances
 
 - Deletion diagnostics and similar are very expensive to calculate because it requires refitting. 
 When your model takes an hour to fit and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of instance by leaving them out one after each other from the training.
@@ -514,7 +509,7 @@ But history has proven so far that computing resources increase all the time.
 A computation that was unthinkable 20 years ago, you can do on your smartphone today.
 We can fit on a single laptop models with millions of training instances and thousands of parameters within minutes. 
 So it's not a big step to say that deletion diagnostics will even work with big neural networks easily in 10 years.
-- Influence functions are a good alternative, but only for models with differentiable parameters, like neural networks. 
+- Influence functions are a good alternative, but only for models with differentiable parameters, like neural networks.
 Forget it for tree-based methods like random forest, boosted trees or decision trees.
 - Approximate influence functions with the upweighting are approximate, because it is only a quadratic expansion around the parameters.
 This means that it can be wrong and the influence of an instance is actually higher or lower when removed.
@@ -531,10 +526,11 @@ And you certainly don't want to start going any further, because there are just 
 
 - Deletion diagnostics is very simple to implement. See example from this book.
 - Cook's distance in R, though only for lm and glm. 
-- Python code for influence from paper in repository. https://github.com/kohpangwei/influence-release
-Unfortunately just the paper dump and no maintained Python module.
--
-
+- Koh and Liang published the Python code for influence functions from paper [in a repository](https://github.com/kohpangwei/influence-release).
+That's great!
+Unfortunately it is 'only' the code to the paper dump and not a maintained and documented Python module.
+But still better than nothing.
+The code is focused on the tensorflow library, so you couldn't directly use it for black box models using other frameworks, like sci-kit learn.
 
 Good blog post, which helped me understand this paper better: http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641
 
