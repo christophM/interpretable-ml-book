@@ -345,7 +345,7 @@ It can be estimated using:
 $$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
 
 A more informal explanation is that the Hessian informs us how curved the loss is at a particular point. 
-The Hessian is a matrix because it describes the curvature of the loss and the curviness depends on the direction we are looking. 
+The Hessian is a matrix and not only a vector, because it describes the curvature of the loss and the curviness depends on the direction we are looking. 
 The update of the model parameters, as described by the above formula, is equivalent to taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
 
 This is basically forming a quadratic expansion around the parameters $\theta$.
@@ -354,15 +354,15 @@ We can also callculate what the new parameters would be through this linear appr
 $$\hat{\theta}_{-z}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(z)$$
 
 That's basically the original parameter following the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= divided by the hessian) and scaled by 1 over n, because that's the weight of a single training instance.
-If we would not weight by 1 over n, but by 1, this would be like saying that we want to shift all of the weight away from the other training instances fully to the single training instance z and only optimize that.
 
-The following illustration shows the loss for instance z on the y-axis and the parameter $\theta$ on the x-axis.
-The model parameter is 1-dimensional for demonstration purposes, but in reality is usually high-dimensional.
-Would we pick the optimal model parameter only according to this graphic would mean we pick a model parameter that is optimal for the training instance z, completely ignoring the other training instances.
+The following figure illustrates how the upweighting works.
+The x-axis shows the value of the  parameter $\theta$ and the y-axis shows the corresponding value of the loss, but only for instance z and not the other instances.
+The model parameter here is 1-dimensional for demonstration purposes, but in reality it is usually high-dimensional.
+If we were to pick the optimal model parameter only according to this graphic, it would mean that  we pick a model parameter that is optimal for the training instance z, starting from the current model parameter, completely ignoring the other training instances.
 That's why we only move a little into the direction of improvement for instance z.
-We don't actually know how the loss will change when we upweight z, but with the first and second derivative of the loss, we can create a quadratic approximation around our actual model parameter and pretend that this is how the real loss would behave.
+We don't actually know how the loss will truly change when we upweight z, but with the first and second derivative of the loss, we create a quadratic approximation around our actual model parameter and pretend that this is how the real loss would behave.
 
-```{r quadratic-expansion}
+```{r quadratic-expansion, fig.cap="Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and going 1/n into the direction where the loss for the instance z change the most. This upweighting of instance z in the loss simulates what would happen if we were to delete z and train the model on the reduced data."}
 x = seq(from = -1.2, to = 1.2, length.out = 100)
 y.fun = function(x) {
   -x - 2*x^2 - x^3 + 2 * x^4
@@ -399,13 +399,14 @@ ggplot(dat3) + geom_line(aes(x = x, y = y, group = type, color = type)) +
 ```
 
 
+We don't actually have to calculate the new parameters, but we derive from the influence function a measure of influence by upweighted training instance z.
+Until now, we only talked about the influence on the model parameters.
 
-
-With influence functions, we never actually calculate the new parameters, but derive from that an influence measure of upweighted training instance z on the prediction of another instance $z_{test}$.
-
-But what is the rate of change in the predictions, for upweighting training instance z?
+How do the predictions change when we upweight training instance z?
 For that we could either calculate the new parameters and then make predictions with the newly parameterized model, or we could also calculate the influence directly, since we can get the influence on predictions by using the chain rule.
 Instead of looking at the influence of training instance upweighting on model parameters, we look how the loss of a single prediction changes, when the loss of the training instance is upweighted and the parameters change accordingly.
+
+TODO: CONTINUE HERE
 
 $$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
 
@@ -489,7 +490,7 @@ You could analyse how much a training instance influences
 
 ### Disadvantages of Identifying Influential Instances
 
-- Deletion diagnostics and similar are very expensive to calculate because it requires refitting. 
+- Deletion diagnostics and similar are very expensive to calculate because it requires refitting.
 When your model takes an hour to fit and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of instance by leaving them out one after each other from the training.
 But history has proven so far that computing resources increase all the time.
 A computation that was unthinkable 20 years ago, you can do on your smartphone today.
