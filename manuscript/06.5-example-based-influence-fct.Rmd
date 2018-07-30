@@ -9,21 +9,32 @@ data("cervical")
 ```
 
 <!-- Intro text -->
-An influential instance is an instance whose deletion from the training data in the model fitting step considerably changes the prediction model.
-Identifying influential training instances can be used to 'debug' the model and understand the global model behaviour and single predictions better.
+Machine learning models are - ultimately - a product of the training data.
+Deleting one of the training instances can have a big impact on the resulting model.
+We call a training instance "influential" when its deletion from the training data considerably changes the model's parameters or predictions
+Identifying influential training instances can be used to 'debug' a machine learning model and explain its behavior and predictions better.
+
 
 *Keywords: Influential points, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics, robust statistics*
 
-In this chapter you will read about two approaches how to identify influential instances.
-Both approaches originate from robust statistics and relate to influence functions.
-Robust statistics is a field of statistis that deals with problematic and violated assumptions, outliers and influential instances.
-For something that is derived from data, like the mean of a variable or a prediction model, the influence function measure how much a single data point influences the something derived from data.
-For example, when we have 10 values and measure the mean, influence functions can tell us how strongly the mean is affected by single components.
-The first approach tackles the question by simply removing an instance from the data and recalculating the statistic or the model, this is also called empirical influence functions.
-For the mean example, we recalculate the mean 10 times while leaving out one of the values each time and measure how much it changes.
-The second approach upweights one of the data points by a small weight, which is the same as the first derivative of some model given a distribution of data.
-It's also called "infinitesimal approach"
+This chapter will show you two approaches for identifying influential instances.
+Both approaches originate from robust statistics and relate to a concept called 'influence functions'.
+Robust statistics provides statistical methods that  which are less influenced by outliers or by violation of model assumptions.
+Robust statistics also provides methods to measure how robust estimations (like the mean of a sample or a prediction model) from data are.
+One of those methods is the influence function, which measures how strongly an estimation is influenced by a single data point.
+Imagine you want to estimate the mean income of people in your city and ask ten random people on the street how much they earn.
+Apart from your sample being really bad probably, how much can your mean income estimate be influenced by a single person?
+The influence function can tell you how much the mean is affected when one of the income statements is an outlier. 
+By the way, the answer is that your mean estimate can be really badly be influenced by a single answer, because the mean scales linearly with single answers.
+A more robust choice is the median (the value at which one half of the people earns more and the other half less), because even if you make an outlier more extreme, the result will not change.
 
+The first approach presented here tackles the question of measuring influence by simply removing an instance from the data and recalculating the statistic or the model.
+This approach is also called empirical influence functions.
+For the income example, we would re-calculate the mean 10 times while leaving out one of the income statements each time and measure how much the mean estimate it changes. 
+A big change means that this instance was very influential.
+
+The second approach upweights one of the data points by a small weight, which is the same as the first derivative of some model given a distribution of data.
+This aproach is also called "infinitesimal approach".
 
 Before we start digging into some methods how to find influential instance, we have to talk about the difference between outlier and an influential instances.
 
@@ -63,7 +74,7 @@ The concepts are not the same.
 Not every outlier is necessarily an influential point. 
 An influential point is a special outlier: An outlier that  influences the learned model (when comparing the models learned with and without the influential points).
 
-```{r influential-point, fig.cap = "The different influence on a fit of a linear model by adding an outlier or adding an influential data point. Adding a non-influential outlier doesn't change the fitted slope much. Adding an influential point changes the fitted slope drastically."}
+```{r influential-point, fig.cap = "The different influence on a fit of a linear model by adding a (non-influential) outlier or adding an influential data point. Adding a non-influential outlier doesn't change the fitted slope much. Adding an influential point changes the fitted slope drastically."}
 
 
 df1 = df
@@ -421,6 +432,7 @@ For that we could either calculate the new parameters and then make predictions 
 Instead of looking at the influence of training instance upweighting on model parameters, we look how the loss of a single prediction changes, when the loss of the training instance is upweighted and the parameters change accordingly.
 
 $$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
+
 The first line of this equation means that we are interested in the change of the loss of a particular instance $z_{test}$, would we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
 In the second line of the equation, we applied the chain rule of derivatives and get the derivative of the loss of the test instance regarding the parameters times the influence on the parameters, which we replace with the equation of it in the third line.
 The first term in the third line $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance with respect to the model parameters.
@@ -466,8 +478,6 @@ Influential instances have lots of applications, some already presented in this 
 Different machine learning models have different ways of making their predictions.
 Even if they have the same performance, their combination of the features might be very different and because of that, they might fail in different scenarios.
 Understanding the particular weak points of a model as in the instances that are most influential helps to form a "mental model" of the machine learning model behaviour in your head.
-
-TODO: Include image once you got the permission
 
 ```{r example-influence-function-svm-inception, eval = FALSE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that are close in color with the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)"}
 knitr::include_graphics("images/influence-functions-svm-inception.png")
