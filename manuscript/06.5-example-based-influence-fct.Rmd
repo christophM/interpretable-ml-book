@@ -284,40 +284,30 @@ In the remaining part of the chapter I will show you a method that doesn't requi
 ### Influence Functions
 
 *You* : I want to know the influence of a training instance on a particular instance's prediction.  
-*Research* : You can delete this training instance, refit the model, and measure the difference in prediction.  
-You: Great! But do you have a method that works without me having to refit the model? It takes so much time.  
+*Research* : You can delete this training instance, retrain the model, and measure the difference in prediction.  
+*You* : Great! But do you have a method that works without retraining model? It takes so much time.  
 *Research* : Do you have a model with a differentiable loss and model parameters?  
 *You* : I fitted a neural network with logistic loss. So yes.  
-*Research* : Ok, you can use **influence functions** as an efficient approximation. 
-An influence function is a measure of the dependence of the model on the value of one of the training instances. 
+*Research* : Then you can approximate the influence with **influence functions**. 
+An influence function is a measure for how much the model parameters or predictions depend on the value of one of the training instances. 
 Instead of deleting the instance, the method upweights the instance in the loss by a very small step. 
+This method involves approximating the loss around the current model parameters using the gradient and Hessian matrix.
 Loss upweighting is similar to deleting the instance.  
-*You* : Then what?  
-*Research* : Since you have the loss function and you can differentiate it, you can calculate the influence on a prediction by upweighting the instance, without having to refit the model.  
 *You* : Great, that's what I was looking for!  
 
-Koh and Liang (2017)[^koh] suggested to use influence functions from the field of robust statistics to measure how an instance influences a prediction.
-Like deletion diagnostics, influence functions trace a prediction back to the responsible training instance to explain this particular predictions.
-Instead of deleting training instances, the method measures how much the model changes when the instance is upweighted.
+Koh and Liang (2017)[^koh] suggested to use influence functions, a method from robust statistics, to measure how an instance influences a prediction or model parameter.
+Like deletion diagnostics, influence functions trace a prediction or model parameter back to the responsible training instance.
+But instead of deleting training instances, the method measures how much the model changes when the instance is upweighted.
 
-The proposed method requires access to the gradient of the loss of the model.
-This  only works for methods where you have some loss function that you can differentiate with respect to some model parameters.
-Random forests for example don't work. 
-Logistic regression, neural networks and support vector machines work.
-
-It helps for understanding the model behaviour, debugging the model and detecting errors with the dataset.
-It also helps to identify [adversarial examples](#adversarial) which exploit vulnerabilities of a machine learning model.
-
-Influence functions originate from robust statistics.
-The idea is that I have some estimator T (could be an estimate of the mean of a population or a complex model) which acts on some distribution F (data on which the estimation or training was done). 
-Influence functions measure how much estimator T changes if we perturb F.
-In our specific case for interpretable machine learning, influence functions measure how a training instance affects the predictions of another instance, by upweighting that training instance.
+The proposed method requires access to the gradient of the loss of the model, which only works for methods where you have some loss function that you can differentiate with respect to some model parameters.
+Logistic regression, neural networks and support vector machines work, tree-based methods like random forests don't work.
+Influence function help for understanding the model behaviour, debugging the model and detecting errors with the dataset.
 
 The following section explains the math behind influence functions.
 
-### Going deeper into the math
+### Math Behind Influence Functions
 
-The idea behind influence functions for epxplaining predictions is to upweight the loss of a training instance by a small step $\epsilon$, which results in the new model parameters:
+The key idea behind influence functions is to upweight the loss of a training instance by a small step $\epsilon$, which results in new model parameters:
 
 $$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
 
@@ -325,35 +315,30 @@ where $\theta$ is the vector of the original model parameters and $\hat{\theta}_
 L is the loss function used to train the model, $z_i$ are the training data and z is the training instance we upweight to simulate its removal.
 The intuition behind this formula is:
 How much does the loss change if we upweight a particular points $z_i$ from the training data by a little bit ($\epsilon$) and downweight the other data points respectively?
-How would the parameter vector look like that optimizes this loss?
-We actually never compute this parameters, but the influence functions from robust statistics, 
-which is the first derivative of the loss in the direction of the parameters.
-This answers the question:
-How steep is the rate of change when upweighting a single instance.
-The steeper, the more influential is an instance.
-It's taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
-
-
+How would the parameter vector look like that optimizes this newly combined loss?
 The change in the parameters can be calculated as
 
 $$I_{\text{up,params}}(z)=\left.\frac{d{}\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}=-H_{\hat{\theta}}^{-1}\nabla_{\theta}L(y,\hat{\theta})$$
 
 The  last term $\nabla_{\hat{\theta}}L(z,\hat{\theta})$ is the gradient of the upweighted training instance. 
-The middle part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
-Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions.
+The gradient is the rate of change of the loss of the training (or test example) in various directions.
 It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit.
 A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss.
-The Hessian is the second-order derivative.
-What the gradient is to the loss, is the hessian to the gradient. 
+The first part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
 The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss.
-A more informal explanation is that the Hessian informs us how curved the rate of change is. 
-The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking. 
+It can be estimated using: 
 
 $$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
+
+A more informal explanation is that the Hessian informs us how curved the loss is at a particular point. 
+The Hessian is a matrix because it describes the curvature of the loss and the curviness depends on the direction we are looking. 
+The update of the model parameters, as described by the above formula, is equivalent to taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
+
 This is basically forming a quadratic expansion around the parameters $\theta$.
 We can also callculate what the new parameters would be through this linear approximation:
 
 $$\hat{\theta}_{-z}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(z)$$
+
 That's basically the original parameter following the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= divided by the hessian) and scaled by 1 over n, because that's the weight of a single training instance.
 If we would not weight by 1 over n, but by 1, this would be like saying that we want to shift all of the weight away from the other training instances fully to the single training instance z and only optimize that.
 
