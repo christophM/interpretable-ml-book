@@ -128,7 +128,7 @@ When facing a problem, it can be useful to see if other people have already solv
 In the area of influential instances, statistician have already done a lot of research, especially for (generalized) linear regression models.
 When you search for "influential observations", the first search results are about measures like DFBETA and Cook's distance.
 **DFBETA** measures the effect of deleting an instance on the model parameters.
-**Cook's distance** measures the effect of deleting an instance on the model predictions.
+**Cook's distance**  (Cook, 1977[^cook]) measures the effect of deleting an instance on the model predictions.
 For both measures, we have to retrain the model repeatedly while leaving out certain instances.
 The model with all instances is compared to the one without in terms of the difference in parameters or predictions.
 
@@ -443,9 +443,9 @@ The following figure shows an example where a support vector machine (SVM) and a
 The most influential instances for one exemplary image of a fish differed a lot. 
 For the SVM, instances were influential when they were similar in color. 
 For the neural network, instances were influential when they were conceptually similar.
-But also one dog image was among the most influential images for the neural network, showing that it learned the concepts rather than the Euclidean distance in color space.
+But also one dog image was among the most influential images for the neural network, showing that it learned the concepts rather than for example the Euclidean distance in color space.
 
-```{r example-influence-function-svm-inception, eval = FALSE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that are close in color with the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)"}
+```{r example-influence-function-svm-inception, eval = TRUE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that are close in color with the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)"}
 knitr::include_graphics("images/influence-functions-svm-inception.png")
 ```
 
@@ -454,37 +454,37 @@ knitr::include_graphics("images/influence-functions-svm-inception.png")
 
 Handling domain mismatch is closely related to understanding the model behavior better.
 Domain mismatch means that the distribution of the training and the test data are different, which can cause the model to perform poorly on the test data.
-Influence function can help to identify training instances that caused the error, 
-Let's again assume you built a prediction model for the clinical outcome of patients. 
+Influence functions can identify training instances that caused the error.
+Let's assume you built a prediction model for the outcome of patients who had some surgery. 
 All these patients come from the same hospital. 
 Now you use the model in another hospital and see that it does not work well for many patients.
 Of course, you assume that the two hospitals have different patients and looking at their data reveals that they are differing in many features. 
 But which features are the ones that 'broke' the model?
 Again, influential instances are a great way to answer the question.
 You take one of the new patient, for whom the model made a wrong prediction and find the most influential instances and analyse them.
-For example this might reveal that the second hospital has on average older patients and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict well for this subgroup.
-The conclusion would be that the model has to train on more patients that are older to work well in the second hospital.
+For example this might reveal that the second hospital has on average older patients and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict this subgroup well.
+The conclusion would be that the model has to be trained on more patients that are older to work well in the second hospital.
 
 **Fixing training data**
 
-Given you have a time / financial budget for how many of your training instances you can check if all features and labels are correct, how do you make an efficient selection?
+Given you have a limit on how many training instances for correctness of features and labels are correct, how do you make an efficient selection?
 The best way is to pick the most influential instances, because - by definition - they affect the model the most.
-So even if you would have some instance with obviously wrong values, but if they are non-influential and the only thing you need the data for is the prediction model, it's a better choice to check the influential instances.
-For example, you train a prediction model for predicting if a patient should stay at the hospital or be released early.
+Even if you would have an instance with obviously wrong values, if the instance is non-influential and the only thing you need the data for is the prediction model, it's a better choice to check the influential instances.
+For example, you train a model for predicting if a patient should stay at the hospital or be released early.
 You really want to make sure that the model is robust and makes correct predictions, because falsely releasing a patient early can have bad consequences.
 Patient records can be very messy, so you don't have perfect confidence in the quality.
-But also checking patient information and possibly correcting it can be very time consuming, because once you report the ids for the patients to check, the hospital has to actually send someone to look closer into the patients records, which might be handwritten and checking data for one patient might cost an hour or so.
+But also checking patient information and possibly correcting it can be very time consuming, because once you report which patients to check, the hospital has to actually send someone to look closer into the patients records, which might be handwritten and checking data for one patient might cost an hour of work or more.
 Given this cost, it makes sense to only check a few important data instances.
-The only method I can think of that makes sense for choosing are patients that had a high influence on the prediction model.
+The best way is selecting patients who had a high influence on the prediction model.
 Koh et. al (2018) showed that this type of selections works way better than choosing randomly or choosing the ones with the highest loss / that were misclassified.
 
 
 
 ### Advantages of Identifying Influential Instances
 
-- The deletion diagnostics and influence functions approach is very different from the mostly feature-perturbation based approaches presented in the [model-agnostic chapter](#agnostic). 
+- The deletion diagnostics and influence functions approaches are very different from the mostly feature-perturbation based approaches presented in the [model-agnostic chapter](#agnostic). 
 Looking at influential instances emphasizes the role the training data plays in the learning process.
-This makes influence function and deletion diagnostics **one of the best debugging tools**.
+This makes influence function and deletion diagnostics **one of the best machine learning debugging tools**.
 From the techniques presented in this book, it's the only one that directly helps to identify the instances which should be checked for errors.
 - **Deletion diagnostics are model-agnostic**, meaning they can be applied to any model. 
 Also influence functions based on the derivatives can be applied to a broad class of models. 
@@ -494,39 +494,38 @@ These are instances which are manipulated in a way that the model will fail to p
 The difference to the methods in the [adversarial examples chapter](#adversarial) is that the attack happens here during training time, also known as poisoning attacks.
 If you are interested in those, read the paper by Koh and Liang (2017).
 - For the deletion diagnostics and influence function, we looked at the difference in the prediction and for the influence function we looked at the increase in loss. 
-But, really, **the approach is generalizable** to 'what happens to ... when we delete/upweight instance z?', where you can fill '...' with any function of your model can be used. 
+But, really, **the approach is generalizable** to 'what happens to ... when we delete/upweight instance z?', where you can fill '...' with any function of your model of your desire. 
 You could analyse how much a training instance influences the overall loss of the model.
 You could analyse how much a training instance influences the feature importance.
 You could analyse how much a training instance influences which feature is picked for the first split when training a [decision tree](#tree).
 
 ### Disadvantages of Identifying Influential Instances
 
-- Deletion diagnostics are very **expensive to calculate** because it requires refitting.
-When your model takes an hour to fit and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of all instance by leaving them out one after each other from the training data.
+- Deletion diagnostics are very **expensive to calculate** because they require retraining.
+When your model takes an hour to train and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of all instance by leaving them out one after another from the training data.
 But also history has proven so far that computing resources increase all the time.
 A computation that was resource-wise unthinkable 20 years ago, can be done by your smartphone easily.
-You can train models with thousands of of training instances and hundreds of parameters within seconds/minutes on a laptop. 
-So it's not a big step to say that deletion diagnostics will even work with big neural networks easily in 10 years.
+You can train models with thousands of training instances and hundreds of parameters within seconds/minutes on a laptop. 
+So it's not a big leap to speculate that deletion diagnostics will even work with big neural networks easily in 10 years.
 - **Influence functions are a good alternative, but only for models with differentiable parameters**, like neural networks.
-It doesn't work for tree-based methods like random forest, boosted trees or decision trees.
-Even if you have models with parameters and a loss function, the loss might not be differentiable. 
-But for the latter problem, there is a trick you can use:
-use a differentiable loss as replacement for the calculation of the influence.
-For example when the underlying model uses Hinge loss instead of some differentiable loss.
-The loss is replaced with some smoothed loss for the influence functions, but the model can still be trained with the non-smooth loss.
-- **Influence functions with the upweighting are only approximate**, because it is only a quadratic expansion around the parameters.
+They don't work for tree-based methods like random forest, boosted trees or decision trees.
+Even if you have models with parameters and a loss function, the loss might not be differentiable.
+But for the latter problem, there is a trick:
+use a differentiable loss as replacement for the calculation of the influence, for example when the underlying model uses Hinge loss instead of some differentiable loss.
+The loss is replaced with a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
+- **Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
 This means that it can be wrong and the influence of an instance is actually higher or lower when removed.
 Koh and Liang (2017) showed for a few examples that the influence calculated through influence function was close to the measure you get when the model was actually recomputed after deletion of the instance.
-But there is no guarantee that the approximation is good.
+But there is no guarantee that the approximation is always so close.
 - A minor issue, but there is **no clear cutoff at which we call an influence of an instance influential or non-influential**.
-But it's still useful to rank the instances among each other, but it would be great to have the means to not only rank the instances, but to actually distinguish between influential and non-influential.
-For example, when you identify the top 10 most influential training instance for a test instance some of them might not be influential, because actually only the top 3 or something were really influential.
-- The influence measures **only consider deletions of single instances** and not what happens when multiple points are deleted. 
+It's still useful to rank the instances by influence, but it would be great to have the means to not only rank the instances, but to actually distinguish between influential and non-influential.
+For example, when you identify the top 10 most influential training instance for a test instance some of them might not be influential, because for example only the top 3 were really influential.
+- The influence measures **only consider deletions of single instances** and not deletion of multiple instances at once.
 Bigger groups of data instances could have some interactions with each other affecting the model training and the prediction heavily.
 But the problem stems from combinatorics:
 There are n possibilities for deleting a single instance from the data. 
 There are already n times n-1 possibilities for deleting two instances from the training data. 
-And you certainly don't want to start going any further, because there are just too many ways.
+And you certainly don't want to start going any further, because there are just too many combinations.
 
 ### Software and Alternatives
 
@@ -535,10 +534,12 @@ And you certainly don't want to start going any further, because there are just 
 - Koh and Liang published the Python code for influence functions from paper [in a repository](https://github.com/kohpangwei/influence-release).
 That's great!
 Unfortunately it is 'only' the code to the paper and not a maintained and documented Python module.
-The code is focused on the Tensorflow library, so you couldn't directly use it for black box models using other frameworks, like sci-kit learn.
-- Here is a [great blog post for influence functions](http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641), which helped me understand this paper better. 
+The code is focused on the Tensorflow library, so you can't directly use it for black box models using other frameworks, like sci-kit learn.
+- Here is a [great blog post for influence functions](http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641), which helped me understand the paper from Koh and Liang better. 
 The blog post goes a bit deeper into the mathematics behind influence function for black box models and also talks about some of the mathematical 'tricks' used to implement the method efficiently.
 
+
+[^cook]: Cook, R. Dennis. "Detection of influential observation in linear regression." Technometrics 19.1 (1977): 15-18.
 
 [^koh]: Koh, P. W., & Liang, P. (2017). Understanding Black-box Predictions via Influence Functions. Retrieved from http://arxiv.org/abs/1703.04730
 
