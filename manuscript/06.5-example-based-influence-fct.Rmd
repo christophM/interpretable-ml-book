@@ -9,45 +9,41 @@ data("cervical")
 ```
 
 <!-- Intro text -->
-Machine learning models are - ultimately - a product of the training data.
-Deleting one of the training instances can impact the resulting model.
-We call a training instance "influential" when its deletion from the training data considerably changes the model's parameters or predictions.
-By identifying influential training instances we can 'debug' machine learning models and explain their behavior and predictions better.
+Machine learning models are ultimately a product of training data.
+Deleting one of the training instances can affect the resulting model.
+We call a training instance "influential" when its deletion from the training data considerably changes the parameters or predictions of the model.
+By identifying influential training instances, we can 'debug' machine learning models and better explain their behavior and predictions.
 
 
 *Keywords: Influential instances, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics, robust statistics*
 
 
-This chapter will talk about the difference between an outlier and an influential instances and show you two approaches for identifying influential instances.
-Both approaches originate from robust statistics and relate to a concept called 'influence functions'.
-Robust statistics provides statistical methods which are less influenced by outliers or by violations of model assumptions.
-Robust statistics also provides methods to measure how robust estimations from data are (like a mean estimate or the the weights of a prediction model).
-One of these methods is the influence function, which measures how strongly an estimation is influenced by a single data point.
+This chapter shows you two approaches for identifying influential instances, namely deletion diagnostics and influence functions.
+Both approaches are based on robust statistics, which provides statistical methods that are less affected by outliers or violations of model assumptions.
+Robust statistics also provides methods to measure how robust estimates are from data (such as a mean estimate or the weights of a prediction model).
 
-Imagine you want to estimate the mean income of people in your city and ask ten random people on the street how much they earn.
-Apart from your sample being probably really bad, how much can your mean income estimate be influenced by a single person?
-The influence function can tell you how much the mean is affected when one of the income statements is an outlier. 
-By the way, the answer is that your mean estimate can be influenced very strongly by a single answer, because the mean scales linearly with single values.
-A more robust choice is the median (the value at which one half of the people earns more and the other half less), because even if the highest earning person in your sample would earn 10 times more, the resulting median would not change.
-
-The first approach presented in this chapter tackles the question how to measure influence by simply removing an instance from the data and recalculating the statistic or the model.
-For the income example, we would re-calculate the mean 10 times while leaving out one of the income statements each time and measuring how much the mean estimate changes. 
+Imagine you want to estimate the average income of the people in your city and ask ten random people on the street how much they earn.
+Apart from the fact that your sample is probably really bad, how much can your average income estimate be influenced by a single person?
+To answer this question, you can recalculate the mean value by omitting single persons or derive mathematically via "influence functions" how the mean value can be influenced. 
+With the deletion approach, we would recalculate the mean value ten times omitting one of the income statements each time and measuring how much the mean estimate changes. 
 A big change means that an instance was very influential.
+The second approach upweights one of the persons by a small weight, which corresponds to the calculation of the first derivative of a statistic or model.
+This approach is also known as "infinitesimal approach" or "influence function".
+The answer is, by the way, that your mean estimate can be very strongly influenced by a single answer, since the mean scales linearly with single values.
+A more robust choice is the median (the value at which one half of people earn more and the other half less), because even if the person owith the heighest income in your sample would earn ten times more, the resulting median would not change.
 
-The second approach upweights one of the data points by a small weight, which is the same as calculating the first derivative of a statistic or model.
-This approach is also called 'infinitesimal approach' or 'influence function'.
-
-Before we start digging into these two approaches for finding influential instances, we will look intoß the difference between an outlier and an influential instance.
+Deletions diagnostics and influence functions can also be applied to the parameters or predictions of machine learning models to understand their behavior better or to explain individiual predictions.
+Before we look atthese two approaches for finding influential instances, we will examine the difference between an outlier and an influential instance.
 
 **Outlier**
 
-An outlier is an instance which is far away from the other instances in the dataset.
-"Far away" means that the distance, for example the Euclidean distance, to all the other instances is very large.
-In a dataset of body measurements of newborns, a newborn that weights 6kg would be considered an outlier.
-In a dataset of bank accounts, where most are checking accounts, a dedicated loan account (large negative balance, only few transactions) would be considered an outlier.
+An outlier is an instance that is far away from the other instances in the dataset.
+"Far away" means that the distance, for example the Euclidean distance, to all the other instances is very great.
+In a dataset of newborn body measurements, a newborn weighing 6 kg would be considered an outlier.
+In a dataset of bank accounts where most are checking accounts, a dedicated loan account (large negative balance, few transactions) would be considered an outlier.
 The following figure shows an outlier for a 1-dimensional distribution.
 
-```{r outlier, fig.cap = "The feature x follows a Gaussian distribution with the exception of the outlier x=8."}
+```{r outlier, fig.cap = "Feature x follows a Gaussian distribution with the exception of outlier x=8."}
 set.seed(42)
 n = 50
 x = rnorm(mean = 1, n = n)
@@ -61,14 +57,14 @@ ggplot(df) + geom_histogram(aes(x = x)) + my_theme() +
 ```
 
 
-Outliers might or might not be interesting data points (like [criticisms or prototypes](#proto)).
-Outliers can be influential on the model training, but don't have to be. 
+Outliers can be interesting data points (like [criticisms or prototypes](#proto)).
+Outliers can influence the model training, but don't have to. 
 Influential instances are defined differently.
 
 **Influential Instance**
 
 An influential instance is a data instance whose removal has a strong effect on the trained model.
-The more the model parameters or the predictions of a model change, when the model is retrained with an instance removed from the training data, the more influential this particular instance is. Whether an instance is influential for a trained model also depends on its value for the target y.
+The more the model parameters or predictions of a model change when the model is retrained with an instance removed from the training data, the more influential that instance is. Whether an instance is influential for a trained model also depends on its value for the target y.
 The following figure shows an influential instance for a linear model.
 
 
@@ -96,7 +92,7 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
 
 ```
 
-
+TODO: CONTINUE HERE
 
 **How do influential instances help to understand the model? A motivation.**
 
