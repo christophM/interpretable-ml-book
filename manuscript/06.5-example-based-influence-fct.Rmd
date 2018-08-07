@@ -92,12 +92,10 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
 
 ```
 
-TODO: CONTINUE HERE
-
 **How do influential instances help to understand the model? A motivation.**
 
-The key idea behind influential instances for interpretability is to trace predictions back to were it all began: the training data.
-A learner, which is the algorithm that produces the machine learning model is a function that takes in training data consisting of features X and the target y and produces a machine learning model.
+The key idea behind influential instances for interpretability is to trace predictions back to where it all began: the training data.
+A learner, that is, the algorithm that generates the machine learning model, is a function that takes training data consisting of features X and target y and generates a machine learning model.
 For example, the learner of a decision tree is an algorithm that selects the split features and the values at which to split. 
 A learner for a neural network uses backpropagation to find the best weights.
 
@@ -106,27 +104,27 @@ A learner for a neural network uses backpropagation to find the best weights.
 knitr::include_graphics("images/learner.png")
 ```
 
-We ask how the model parameters or the predictions would change when we remove instances from the training data in the training process.
-This is in contrast to other interpretability approaches that analyze how the prediction changes when we manipulate the features of the instances to be predicted, like [partial dependence plots](#pdp) or [feature importance](#feature-importance).
-With influential instances, we don't treat the model as fixed, but as a function of the training features and of the target
-Influential instances help us answer questions about the global model behavior and about single predictions.
+We ask how the model parameters or the predictions would change if we removed instances from the training data in the training process.
+This is in contrast to other interpretability approaches that analyze how the prediction changes when we manipulate the features of the instances to be predicted, such as [partial dependence plots](#pdp) or [feature importance](#feature-importance).
+With influential instances, we don't treat the model as fixed, but as a function of the training features and the target
+Influential instances help us answer questions about global model behavior and about individual predictions.
 Which were the most influential instances for the model parameters or the predictions overall?
 Which were the most influential instances for the prediction of a particular instance?
-Great! But how, exactly, can we find those influential instances?
-We have two means of measuring the influence:
-Our first option is to delete the instance from the training data, retrain the model on the reduced training dataset and observe the difference in either model parameters or the predictions (either locally or globally).
-The second option is to upweight a data instance using an approximation of parameter changes based on the gradients of the model parameters.
+
+But how exactly can we find those influential instances?
+We have two ways of measuring influence:
+Our first option is to delete the instance from the training data, retrain the model on the reduced training dataset and observe the difference in the model parameters or predictions (either individually or over the complete dataset).
+The second option is to upweight a data instance by approximating the parameter changes based on the gradients of the model parameters.
 The deletion approach is easier to understand and motivates the upweighting approach, so we start with the former.
 
 ### Deletion Diagnostics
 
-When facing a problem, it can be useful to see if other people have already solved a similar problem. 
-In the area of influential instances, statistician have already done a lot of research, especially for (generalized) linear regression models.
+Statistician have already done a lot of research in the area of influential instances, especially for (generalized) linear regression models.
 When you search for "influential observations", the first search results are about measures like DFBETA and Cook's distance.
 **DFBETA** measures the effect of deleting an instance on the model parameters.
-**Cook's distance**  (Cook, 1977[^cook]) measures the effect of deleting an instance on the model predictions.
-For both measures, we have to retrain the model repeatedly while leaving out certain instances.
-The model with all instances is compared to the one without in terms of the difference in parameters or predictions.
+**Cook's distance**  (Cook, 1977[^cook]) measures the effect of deleting an instance on model predictions.
+For both measures we have to retrain the model repeatedly, omitting individual instances each time.
+The parameters or predictions of the model with all instances is compared with the parameters or predictions of the model with one of the instances deleted from the training data.
 
 DFBETA is defined as:
 
@@ -134,46 +132,47 @@ $$DFBETA_{i}=\beta-\beta^{(-i)}$$
 
 where $\beta$ is the vector with the model parameters when the model is trained on all data instances, and $\beta^{(-i)}$ the model parameters when the model is trained without instance i.
 Quite intuitive I would say.
-DFBETA only works for models with weight parameters, like logistic regression or neural networks, but not for models like decision trees, tree ensembles, some support vector machines and so on.
+DFBETA works only for models with weight parameters, such as logistic regression or neural networks, but not for models such as decision trees, tree ensembles, some support vector machines and so on.
 
 Cook's distance was invented for linear regression models and approximations for generalized linear regression models exist.
 Cook's distance for a training instance is defined as the (scaled) sum of the differences in the predicted outcome when the i-th instance is removed from the model training.
 
 $$D_i=\frac{\sum_{i=1}^n(\hat{y}_j-\hat{y}_{j}^{(-i)})^2}{p\cdot{}MSE}$$
 
-where the numerator is the squared difference between prediction of model with and without the i-th instance, summed over the dataset.
+where the numerator is the squared difference between prediction of the model with and without the i-th instance, summed over the dataset.
 The denominator is the number of features p times the mean squared error.
-The denominator is the same for no matter which instance i is removed.
-Cook's distance tells us how much the predicted output of a linear model changes when we remove the i-the instance in the training.
+The denominator is the same for all instances no matter which instance i is removed.
+Cook's distance tells us how much the predicted output of a linear model changes when we remove the i-the instance in training.
 
 
 Can we use Cook's distance and DFBETA for any machine learning model?
-DFBETA requires model parameters, so this measure works for parameterized models.
-Cook's distance does not require model parameters.
-Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the idea of taking the difference of some of the model before and after removal of a particular instance is very general.
-One problem of the definition of Cook's distance is the MSE, which is not meaningful for all types of predictions models (e.g. classification).
+DFBETA requires model parameters, so this measure works only for parameterized models.
+Cook's distance does not require any model parameters.
+Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the idea of taking the difference between model predictions before and after removal of a particular instance is very general.
+A problem with the definition of Cook's distance is the MSE, which is not meaningful for all types of prediction models (e.g. classification).
 
-The most simplistic influence measure for the effect on the model predictions can be written as: 
+The simplest influence measure for the effect on the model predictions can be written as follows: 
 
 $$\text{Influence}^{(-i)}=\frac{1}{n}\sum_{j=1}^{n}\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
-This expression is basically the numerator of Cook's distance, with the difference of summing the absolute difference instead of the differences.
-But this was a choice I made, because it makes sense for the examples later.
-The general form of deletion diagnostic measures is to choose a measure (like the sum of absolute differences) and to calculate the difference of the measure for the model trained and all instances and when the influential instance is deleted.
-Also, we can easily break the influence down locally to explain for the prediction of instance j what the influence of the i-th training instance was:
+This expression is basically the numerator of Cook's distance, with the difference that the absolute difference is added up instead of the differences.
+This was a choice I made, because it makes sense for the examples later.
+The general form of deletion diagnostic measures consists of choosing a measure (such as the sum of the absolute differences) and calculating the difference of the measure for the model trained on all instances and when the influential instance is deleted.
+
+
+We can easily break the influence down to explain for the prediction of instance j what the influence of the i-th training instance was:
 
 $$\text{Influence}_{j}^{(-i)}=\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
-Here I opted to formulate the influence on the prediction.
 This would also work for the difference in model parameters or the difference in the loss.
-We will use these simple influence measures in the following example.
+In the following example we will use these simple influence measures.
 
 **Example with deletion diagnostics**
 
-In the following example, we train a support vector machine to predict [cervical cancer](#cervical) given risk factors and we measure which training instances were the most influential overall and also for a particular prediction.
-Since predicting cancer is a classification problem, we measure the influence as the difference in predicted probability for cancer.
-An instance is influential when the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from the model training.
-Measuring influence for all `r nrow(cervical)` training instances of the cervical cancer training data requires to train the model once on all training data and retrain it `r nrow(cervical)` times (= size of training data) with one of the instances removed each time.
+In the following example, we train a support vector machine to predict [cervical cancer](#cervical) given risk factors and measure which training instances were most influential overall and for a given prediction.
+Since the prediction of cancer is a classification problem, we measure the influence as the difference in predicted probability for cancer.
+An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
+The measurement of the influence for all `r nrow(cervical)` training instances of cervical cancer training data requires to train the model once on all training data and retrain it `r nrow(cervical)` times (= size of training data) with one of the instances removed each time.
 
 ```{r influence, eval = !file.exists(influence.matrix.filename)}
 #'@param predicted The predicted outcome of a model
@@ -207,32 +206,32 @@ df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nr
 df = df[order(df$influence, decreasing = TRUE),]
 ```
 
-The most influential instance has an  influence measure of approximately `r sprintf("%.2f", abs(df[1,"influence"]))`).
+The most influential instance has an influence measure of about `r sprintf("%.2f", abs(df[1,"influence"]))`).
 
-An influence of `r sprintf('%.2f', abs(df[1,"influence"]))` means that when we remove the `r df$id[1]`-th instance, the predicted probability changes on average by `r sprintf('%.1f', 100 * df[1,"influence"])` percentage points.
+An influence of `r sprintf('%.2f', abs(df[1,"influence"]))` means that if we remove the `r df$id[1]`-th instance, the predicted probability changes by `r sprintf('%.1f', 100 * df[1,"influence"])` percentage points on average.
 This is quite substantial considering the average predicted probability for cancer is `r sprintf('%.1f', 100 *mean(predicted.orig))`%.
-The mean of influence measures over all possible deletions is `r sprintf('%.1f', 100 * mean(abs(df$influence)))` percentage points.
+The mean value of influence measures over all possible deletions is `r sprintf('%.1f', 100 * mean(abs(df$influence)))` percentage points.
 Now we know which of the data instances were most influential for the model.
-This is already useful for debugging the data.
-Is there some problematic instance?
+This is already useful to know for debugging the data.
+Is there a problematic instance?
 Are there measurement errors?
-The influential instances are the first instances to check for mistakes, because any mistake in them influences the model predictions a lot.
+The influential instances are the first to check for errors, because each error in them strongly influences the model predictions.
 
-Apart from model debugging, can we learn anything to understand the model better?
-Simply printing the top 10 most influential instances is not very useful, because that's just a table of instances with lots of features.
-All the methods that yield instances as output are only meaningful when we have a good way of representing an instance.
-But we can better understand what types of instances are influential by asking 
-what sets an influential instance apart from non-influential instances?
+Apart from model debugging, can we learn something to better understand the model?
+Just printing out the top 10 most influential instances is not very useful, because it is just a table of instances with many features.
+All methods that return instances as output only make sense if we have a good way of representing an instance.
+But we can better understand what kinds of instances are influential when we ask:
+What distinguishes an influential instance from non-influential instances?
 We can turn this question into a regression problem and model the influence of an instance as a function of its feature values. 
-We are free to choose any model from the [interpretable machine learning models chapter](#simple).
-For this example I chose a decision tree (following figure), which reveals that data from women of age 35 and above were the most influential for the support vector machine.
-From all the women in the dataset  `r sum(cervical$Age >= 35)` out of `r nrow(cervical)` were older than 35.
-In the [partial dependence chapter](#pdp) we have seen that after 40, there is a sharp increase in predicted cancer probability and the [feature importance](#feature-importance) has also detected age as one of the more important features.
-The influence analysis tells us that the model becomes increasingly more unstable when predicting cancer for higher ages.
-This is in itself valuable information. 
-It means that mistakes in the data for one of those instances can have a strong effect on the model.
+We are free to choose any model from the chapter on [interpretable machine learning models](#simple).
+For this example I chose a decision tree (following figure) that shows that data from women of age 35 and older were the most influential for the support vector machine.
+Of all the women in the dataset  `r sum(cervical$Age >= 35)` out of `r nrow(cervical)` were older than 35.
+In the chapter on [partial dependence plots](#pdp) we have seen that after 40 there is a sharp increase in the predicted probability of cancer and the [feature importance](#feature-importance) has also detected age as one of the most important features.
+The influence analysis tells us that the model becomes increasingly unstable when predicting cancer for a higher ages.
+This in itself is valuable information. 
+This means that errors in the data of these instances can have a strong effect on the model.
 
-```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree modeling the relationship between the influence of an instance and its features. The maximal depth of the tree is set to 2."}
+```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree that models the relationship between the influence of an instance and its features. The maximum depth of the tree is set to 2."}
 df.cervical  = cbind(df, cervical)
 ct = rpart(abs(influence) ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
 ct = as.party(ct)
@@ -245,20 +244,20 @@ i = which(predicted.orig == max(predicted.orig))
 
 
 This first influence analysis asked which was the *overall* most influential instance.
-Now we pick out one of the instances, namely the `r i`-th instance, for which we want to explain the prediction by finding the most influential training data instances.
-This is like asking a counterfactual question:
-How would the prediction for instance `r i` change if we left out instance i from the training process.
+Now we select one of the instances, namely the `r i`-th instance, for which we want to explain the prediction by finding the most influential training data instances.
+It's like a counterfactual question:
+How would the prediction for instance `r i` change if we omit instance i from the training process?
 We repeat this removal for all instances.
-Then we choose the training instances which yield the biggest change in the prediction of instance `r i` when left out of the training and use those to explain the prediction of the model for this instance.
-I picked the instance `r i` to be explained by choosing the instance which had the highest predicted probability of cancer (`r sprintf('%.2f', 100 * predicted.orig[i])`%), which I thought might be an interesting case to analyse more deeply.
-We could return the, let's say, top 10 most influential instances for the prediction of the `r i`-the instance, printed as a table.
-Not very useful, because we wouldn't be able to see much.
-Again it is more useful to find out what sets the influential instances apart from the non-influential instances by analysing their features.
-We use a decision tree for that, which is trained to predict the influence given the features, but, really, we only misuse it to find some structure and not to actually predict anything.
-The following decision tree reveals what kind of training instances where the most influential for the prediction of the `r i`-th instance. 
+Then we select the training instances that result in the biggest change in the prediction of instance `r i` when they are omitted from the training and use them to explain the prediction of the model for that instance.
+I chose to explain the prediction for instance `r i` because it is the instance with the highest predicted probability of cancer (`r sprintf('%.2f', 100 * predicted.orig[i])`%), which I thought was an interesting case to analyse more deeply.
+We could return the, say, top 10 most influential instances for predicting the `r i`-th instance printed as a table.
+Not very useful, because we couldn't see much.
+Again, it makes more sense to find out what distinguishes the influential instances from the non-influential instances by analyzing their features.
+We use a decision tree trained to predict the influence given the features, but in reality we misuse it only to find a structure and not to actually predict something
+The following decision tree shows which kind of training instances where most influential for predicting the `r i`-th instance. 
 
 
-```{r influence-single, fig.cap = sprintf("Decision tree explaining which instances were the most influential for predicting the %i-th instance. Data of women who smoked for 19 years or longer had a very influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability. Maximal depth of the tree is set to 2.", i, i)}
+```{r influence-single, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from women who smoked for 19 years or longer had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability. Maximal depth of the tree is set to 2.", i, i)}
 obs = influence.df[i,]
 cervical.200 = cervical
 cervical.200$influence = unlist(obs)
@@ -269,102 +268,103 @@ ct = as.party(ct)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
 ```
 
-Instances, where women smoked for 19 years or longer have a high influence on the prediction of the `r i`-th instance.
-The woman behind the `r i`-th instance has smoked for `r cervical$Smokes..years.[i]` years.
-In the data, `r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 19))`% of women smoked 19 years or longer, which amounts to only `r sum(cervical$Smokes..years >= 19)` subjects.
-Any error that happened in surveying the number of years smoking of one of these women will have a tremendous effect on the predicted outcome for the `r i`-th instance.
+Data instance of women smoked or have been smoking for 19 years or longer have a high influence on the prediction of the `r i`-th instance.
+The woman behind the `r i`-th instance smoked for `r cervical$Smokes..years.[i]` years.
+In the data, `r sum(cervical$Smokes..years >= 19)` women (`r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 19))`%) smoked 19 years or longer.
+Any mistake made in collecting the number of years of smoking of one of these women will have a huge impact on the predicted outcome for the `r i`-th instance.
 
-The most extreme change in prediction happens when we remove the `r worst.case.index`-th instance.
-She has supposedly smoked for `r cervical$Smokes..years.[worst.case.index]` years, confirming our findings from the decision tree.
-The predicted probability for the `r i`-th instance changes from `r sprintf('%.2f', 100 * predicted.orig[i])` percentage points to `r sprintf('%.2f', 100 * (predicted.orig[i]  - cervical.200$influence[worst.case.index]))` percentage points, when we remove the `r worst.case.index`-th instance!!!
+The most extreme change in the prediction happens when we remove the `r worst.case.index`-th instance.
+The patient allegedly smoked for `r cervical$Smokes..years.[worst.case.index]` years, aligned with the results from the decision tree.
+The predicted probability for the `r i`-th instance changes from `r sprintf('%.2f', 100 * predicted.orig[i])` percentage points to `r sprintf('%.2f', 100 * (predicted.orig[i]  - cervical.200$influence[worst.case.index]))` percentage points if we remove the `r worst.case.index`-th instance!
 
 
-When we look closer at the features of the most influential instance, we can see another possible problem.
-The data says that the woman is 28 years old, and has already been smoking for 22 years. 
-Either it's a really extreme case and she truly started smoking at 6 or this is a data error. 
+If we take a closer look at the features of the most influential instance, we can see another possible problem.
+The data say that the woman is 28 years old and has been smoking for 22 years. 
+Either it's a really extreme case and she really started smoking at 6 or, this is a data error. 
 I tend to believe the latter.
-This is certainly a situation where we have to question the correctness of the data.
+This is certainly a situation in which we must question the accuracy of the data.
 
-These examples demonstrated how useful identifying influential instances is for debugging models.
-One problem with the proposed approach is that the model has to be retrained for each training point.
-The whole retraining can rather slow, because if you have thousands of training samples, you have to retrain your model thousands of times.
-Assuming the model takes a day to train and you have 1000 training examples, then - without parallelization - the computation of influential instances will take almost 3 years.
-Ain't nobody got time for that.
-In the remaining part of the chapter I will show you a method that doesn't require retraining the model.
+These examples showed how useful it is to identify influential instances to debug models.
+One problem with the proposed approach is that the model needs to be retrained for each training instance.
+The whole retraining can be quete slow, because if you have thousands of training samples, you will have to retrain your model thousands of times.
+Assuming the model takes one day to train and you have 1000 training examples, then the computation of influential instances - without parallelization - will take almost 3 years.
+Nobody has time for this.
+In the rest of this chapter, I will show you a method that doesn't require retraining the model.
 
 
 ### Influence Functions
 
-*You* : I would like to know the influence of a training instance on a particular prediction.  
-*Research* : You can delete the training instance, retrain the model, and measure the difference in prediction.  
-*You* : Great! But do you also have a method for me that works without retraining model? It takes so much time.  
-*Research* : Do you have a model with a loss function that is twice differentiable with respect to its model parameters?  
-*You* : I trained a neural network with the logistic loss. So yes.  
-*Research* : Then you can approximate the influence of the instance on the model parameters and on the prediction with **influence functions**. 
-The influence function is a measure for how much the model parameters or predictions depend on a training instance. 
+*You*: I want to know influence a training instance has on a particular prediction.  
+*Research*: You can delete the training instance, retrain the model, and measure the difference in the prediction.  
+*You*: Great! But do you have a method for me that works without retraining? It takes so much time.  
+*Research*: Do you have a model with a loss function that is twice differentiable with respect to its parameters?  
+*You*: I trained a neural network with the logistic loss. So yes.  
+*Research*: Then you can approximate the influence of the instance on the model parameters and on the prediction with **influence functions**. 
+The influence function is a measure of how strongly the model parameters or predictions depend on a training instance. 
 Instead of deleting the instance, the method upweights the instance in the loss by a very small step. 
 This method involves approximating the loss around the current model parameters using the gradient and Hessian matrix.
 Loss upweighting is similar to deleting the instance.  
-*You* : Great, that's what I was looking for!  
+*You*: Great, that's what I'm looking for!  
 
-Koh and Liang (2017)[^koh] suggested to use influence functions, a method from robust statistics, to measure how an instance influences model parameter or a prediction.
-Like deletion diagnostics, influence functions trace the model parameters and predictions back to the responsible training instance.
-But instead of deleting training instances, the method approximates how much the model changes when the instance is upweighted.
+Koh and Liang (2017)[^koh] suggested using influence functions, a method of robust statistics, to measure how an instance influences model parameter or a prediction.
+As with deletion diagnostics, the influence functions trace the model parameters and predictions back to the responsible training instance.
+However, instead of deleting training instances, the method approximates how much the model changes when the instance is upweighted.
 
-The influence functions method requires access to the gradient of the loss with respect to the model parameters, which only works for a subset of machine learning models.
+The method of influence functions requires access to the loss gradient with respect to the model parameters, which only works for a subset of machine learning models.
 Logistic regression, neural networks and support vector machines qualify, tree-based methods like random forests don't.
-Influence functions help for understanding the model behavior, debugging the model and detecting errors with the dataset.
+Influence functions help to understand the model behavior, debug the model and detect errors in the dataset.
 
 The following section explains the intuition and math behind influence functions.
 
 ### Math Behind Influence Functions
 
-The key idea behind influence functions is to upweight the loss of a training instance by a (infinitesimally) small step $\epsilon$, which results in new model parameters:
+The key idea behind influence functions is to upweight the loss of a training instance by an infinitesimally small step $\epsilon$, which results in new model parameters:
 
 $$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
 
-where $\theta$ is model parameters vector and $\hat{\theta}_{\epsilon,z}$ the parameter vector after upweighting z by a very small number $\epsilon$.
-L is the loss function used to train the model, $z_i$ are the training data and z is the training instance we upweight to simulate its removal.
+where $\theta$ is the model parameters vector and $\hat{\theta}_{\epsilon,z}$ is the parameter vector after upweighting z by a very small number $\epsilon$.
+L is the loss function with which the model was trained, $z_i$ are the training data and z is the training instance which we want to upweight to simulate its removal.
 The intuition behind this formula is:
-How much does the loss change if we upweight a particular points $z_i$ from the training data by a little bit ($\epsilon$) and downweight the other data instance accordingly?
-How would the parameter vector look like that optimizes this newly combined loss?
-The influence function of the parameters, which is the influence of upweighting training isntance z on the parameters, can be calculated as
+How much will the loss change if we upweight a particular instance $z_i$ from the training data by a little ($\epsilon$) and downweight the other data instance accordingly?
+What would the parameter vector look like to optimize this new combined loss?
+The influence function of the parameters, that is the influence of upweighting training instance z on the parameters, can be calculated as follows.
 
 $$I_{\text{up,params}}(z)=\left.\frac{d{}\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}=-H_{\hat{\theta}}^{-1}\nabla_{\theta}L(z,\hat{\theta})$$
 
-The  last term $\nabla_{\theta}L(z,\hat{\theta})$ is the gradient of the loss for the upweighted training instance with respect to the parameters.
-The gradient is the rate of change of the loss of the training instance in various directions.
+The last expression $\nabla_{\theta}L(z,\hat{\theta})$ is the loss gradient with respect to the parameters for the upweighted training instance.
+The gradient is the rate of change of the loss of the training instance.
 It tells us how much the loss changes when we change the model parameters $\hat{\theta}$ by a bit.
-A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative entry means that the increase of the parameter decreases the loss.
+A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative entry means that the increase of the parameter reduces the loss.
 The first part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
-The Hessian matrix is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss.
+The Hessian matrix is the rate of change of the gradient, or expressed as loss, it is the rate of change of the rate of change of the loss.
 It can be estimated using: 
 
 $$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
 
-More informally, the Hessian matrix captures how curved the loss is at a particular point. 
-The Hessian is a matrix and not only a vector, because it describes the curvature of the loss and the curviness depends on the direction we are looking into. 
-The actual computation of the Hessian matrix is time consuming if you have many parameters.
-Koh and colleagues suggested some tricks to compute it efficiently, which is beyond the scope of this chapter.
-The update of the model parameters, as described by the above formula, is equivalent to taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
+More informally: 
+The Hessian matrix records how curved the loss is at a certain point. 
+The Hessian is a matrix and not just a vector, because it describes the curvature of the loss and the curvature depends on the direction in which we look.
+The actual calculation of the Hessian matrix is time-consuming if you have many parameters.
+Koh and colleagues suggested some tricks to calculate it efficiently, which goes beyond the scope of this chapter.
+Updating the model parameters, as described by the above formula, is equivalent to taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
 
-What's the intuition behind this influence function formula?
+What intuition is behind this influence function formula?
 The formula comes from forming a quadratic expansion around the parameters $\hat{\theta}$.
-That means we don't actually know or it's to complex to calculate how the loss of instance z will change exactly when removed/upweighted.
-That's why we approximate the function locally by using information about the steepness (= gradient) and the curviness (= Hessian matrix) at the current model parameter setting.
-With this loss approximation, we can calculate what the new parameters would approximately look like, when we upweight instance z:
+That means we don't actually know, or it's to complex to calculate how exactly the loss of instance z will change when it is removed/upweighted.
+We approximate the function locally by using information about the steepness (= gradient) and the curviness (= Hessian matrix) at the current model parameter setting.
+With this loss approximation, we can calculate what the new parameters would approximately look like if we upweighted instance z:
 
 $$\hat{\theta}_{-z}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(z)$$
 
-The approximates parameters vector is basically the original parameter subtracting the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= multiplied by the inverese Hessian matrix) and scaled by 1 over n, because that's the weight of a single training instance.
+The approximate parameter vector is basically the original parameter minus the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= multiplied by the inverese Hessian matrix) and scaled by 1 over n, because that's the weight of a single training instance.
 
-The following figure illustrates how the upweighting works.
-The x-axis shows the value of the  parameter $\theta$ and the y-axis shows the corresponding value of the loss, with upweighted instance z.
+The following figure shows how the upweighting works.
+The x-axis shows the value of the $\theta$ parameter and the y-axis the corresponding value of the loss with upweighted instance z.
 The model parameter here is 1-dimensional for demonstration purposes, but in reality it is usually high-dimensional.
-We only move a 1 over n into the direction of improvement for instance z.
-We don't know how the loss will truly change when we upweight z, but with the first and second derivative of the loss, we create this quadratic approximation around our actual model parameter and pretend that this is how the real loss would behave.
+We move only 1 over n into the direction of improvement of the loss for instance z.
+We don't know how the loss would really change when we delete z, but with the first and second derivative of the loss, we create this quadratic approximation around our current model parameter and pretend that this is how the real loss would behave.
 
-```{r quadratic-expansion, fig.cap="Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and going 1/n into the direction where the loss for the instance with upweighted instance z (y-axis) improves the most. This upweighting of instance z in the loss approximates the parameter changes if we were to delete z and train the model on the reduced data."}
+```{r quadratic-expansion, fig.cap="Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and moving 1/n into the direction in which the loss with upweighted instance z (y-axis) improves most. This upweighting of instance z in the loss approximates the parameter changes if we delete z and train the model on the reduced data."}
 x = seq(from = -1.2, to = 1.2, length.out = 100)
 y.fun = function(x) {
   -x - 2*x^2 - x^3 + 2 * x^4
@@ -402,78 +402,81 @@ ggplot(dat3) +
 ```
 
 
-We don't actually have to calculate the new parameters, but we can use the influence function as a measure of influence of z on the parameters.
+We don't actually need to calculate the new parameters, but we can use the influence function as a measure of the influence of z on the parameters.
 
 How do the *predictions* change when we upweight training instance z?
-For that we could either calculate the new parameters and then make predictions with the newly parameterized model, or we can also calculate the influence directly, since we can calculate the influence of instance z on predictions by using the chain rule:
+We can either calculate the new parameters and then make predictions using the newly parameterized model, or we can also calculate the influence  of instance z on the predictions directly, since we can calculate the influence by using the chain rule:
 
 $$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
 
-The first line of this equation means that we measure the influence of a training instance on a particular prediction $z_{test}$ as the change of the loss of the test instance when we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
-For the second line of the equation, we applied the chain rule of derivatives and get the derivative of the loss of the test instance with respect to the the parameters times the influence of z on the parameters.
+The first line of this equation means that we measure the influence of a training instance on a certain prediction $z_{test}$ as a change in loss of the test instance when we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
+For the second line of the equation, we have applied the chain rule of derivatives and get the derivative of the loss of the test instance with respect to the parameters times the influence of z on the parameters.
 In the third line, we replace the expression with the influence function for the parameters.
 The first term in the third line $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance with respect to the model parameters.
 
 Having a formula is great and the scientific and accurate way of showing things.
-But I believe it's very important to get some intuition what the formula means.
-The formula for $I_{\text{up,loss}}$ says that the influence function of the training instance z on the prediction of an instance $z_{test}$ is "how strongly the instance reacts to a change in model parameter" times "how much the parameters will change if we upweight the instance z".
+But I think it's very important to get some intuition about what the formula means.
+The formula for $I_{\text{up,loss}}$ states that the influence function of the training instance z on the prediction of an instance $z_{test}$ is "how strongly the instance reacts to a change of the model parameter" times "how much the parameters change when we upweight the instance z".
 Another way to read the formula:
 The influence is proportionate to how large the gradients for the training and test loss are.
 The higher the gradient of the training loss, the higher its influence on the parameters and the higher the influence on the test prediction.
-The higher the gradient of the test prediction, the more influenceable the test instance is.
-The whole construct can also be seen as a measure of similarity (as learned by the model) between the training and the test instance.
+The higher the gradient of the test prediction, the more influenceable the test instance.
+The entire construct can also be seen as a measure of the similarity (as learned by the model) between the training and the test instance.
 
 That's it with theory and intuition.
-The next section will explain how influence functions can be applied.
+The next section explains how influence functions can be applied.
 
 ### Application of Influence Functions
 
-Influence functions have lots of applications, some already presented in this chapter.
+Influence functions have many applications, some of which have already presented in this chapter.
 
 **Understanding model behavior**
 
 Different machine learning models have different ways of making predictions.
-Even if two models have the same performance, their way to come up with a prediction from the features might be very different and because of that, they might fail in different scenarios.
-Understanding the particular weak points of a model through identifying influential instances helps to form a "mental model" of the machine learning model behavior in your head.
+Even if two models have the same performance, the way they make predictions from the features can be very different and therefore fail in different scenarios.
+Understanding the particular weaknesses of a model by identifying influential instances helps to form a "mental model" of the machine learning model behavior in your mind.
 The following figure shows an example where a support vector machine (SVM) and a neural network were trained to distinguish images of dogs and fish.
-The most influential instances for one exemplary image of a fish differed a lot. 
-For the SVM, instances were influential when they were similar in color. 
-For the neural network, instances were influential when they were conceptually similar.
-But also one dog image was among the most influential images for the neural network, showing that it learned the concepts rather than for example the Euclidean distance in color space.
+The most influential instances of an exemplary image of a fish were very different for both models.
+For the SVM, instances were influential if they were similar in color. 
+For the neural network, instances were influential if they were conceptually similar.
+For the neural network, even one image of a dog image was among the most influential images, showing that it learned the concepts and not the Euclidean distance in color space.
 
-```{r example-influence-function-svm-inception, eval = TRUE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that are close in color with the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)"}
+```{r example-influence-function-svm-inception, eval = TRUE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that had similar colors as the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)"}
 knitr::include_graphics("images/influence-functions-svm-inception.png")
 ```
 
 
-**Handling domain mismatch / Debugging model errors**
+**Handling domain mismatches / Debugging model errors**
 
-Handling domain mismatch is closely related to understanding the model behavior better.
-Domain mismatch means that the distribution of the training and the test data are different, which can cause the model to perform poorly on the test data.
+Handling domain mismatch is closely related to a better understanding the model behavior.
+Domain mismatch means that the distribution of training and test data is different, which can cause the model to perform poorly on the test data.
 Influence functions can identify training instances that caused the error.
-Let's assume you built a prediction model for the outcome of patients who had some surgery. 
+Suppose you have trained a prediction model for the outcome of patients who have undergone surgery. 
 All these patients come from the same hospital. 
 Now you use the model in another hospital and see that it does not work well for many patients.
-Of course, you assume that the two hospitals have different patients and looking at their data reveals that they are differing in many features. 
-But which features are the ones that 'broke' the model?
-Again, influential instances are a great way to answer the question.
-You take one of the new patient, for whom the model made a wrong prediction and find the most influential instances and analyse them.
-For example this might reveal that the second hospital has on average older patients and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict this subgroup well.
-The conclusion would be that the model has to be trained on more patients that are older to work well in the second hospital.
+Of course, you assume that the two hospitals have different patients, and if you look at their data, you can see that they differ in many features. 
+But what are the features or instances that have 'broken' the model?
+Here too, influential instances are a good way to answer this question.
+You take one of the new patient, for whom the model has made a false prediction and find and analyse the most influential instances.
+For example, this could show that the second hospital has older patients on average and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict this subgroup well.
+The conclusion would be that the model neeeds to be trained on more patients who are older in order to work well in the second hospital.
 
 **Fixing training data**
 
-Given you have a limit on how many training instances for correctness of features and labels are correct, how do you make an efficient selection?
-The best way is to pick the most influential instances, because - by definition - they affect the model the most.
-Even if you would have an instance with obviously wrong values, if the instance is non-influential and the only thing you need the data for is the prediction model, it's a better choice to check the influential instances.
-For example, you train a model for predicting if a patient should stay at the hospital or be released early.
-You really want to make sure that the model is robust and makes correct predictions, because falsely releasing a patient early can have bad consequences.
-Patient records can be very messy, so you don't have perfect confidence in the quality.
-But also checking patient information and possibly correcting it can be very time consuming, because once you report which patients to check, the hospital has to actually send someone to look closer into the patients records, which might be handwritten and checking data for one patient might cost an hour of work or more.
-Given this cost, it makes sense to only check a few important data instances.
-The best way is selecting patients who had a high influence on the prediction model.
-Koh et. al (2018) showed that this type of selections works way better than choosing randomly or choosing the ones with the highest loss / that were misclassified.
+If you have a limit on how many training instances you can check for correctness, how do you make an efficient selection?
+The best way is to select the most influential instances, because - by definition - they have the most influence on the model.
+Even if you would have an instance with obviously incorrect values, if the instance is not influential and you only need the data for the prediction model, it's a better choice to check the influential instances.
+For example, you train a model for predicting whether a patient should remain in the hospital or be discharged early.
+You really want to make sure that the model is robust and makes correct predictions, because a wrong release of a patient can have bad consequences.
+Patient records can be very messy, so you don't have perfect confidence in the quality of the data.
+But checking patient information and correcting it can be very time-consuming, because once you have reported which patients you need to check, the hospital actually needs to send someone to look at the patients records more closely, which can be handwritten and checking data for a patient can take an hour or more.
+In view of theses costs, it makes sense to check only a few important data instances.
+The best way is to select patients who have had a high influence on the prediction model.
+Koh et. al (2018) showed that this type of selection works much better than random selection or the selection of those with the highest loss or wrong classification.
 
+
+
+TODO: CONTINUE HERE WITH DEEPL
 
 
 ### Advantages of Identifying Influential Instances
