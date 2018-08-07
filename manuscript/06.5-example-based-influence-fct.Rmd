@@ -481,61 +481,63 @@ TODO: CONTINUE HERE WITH DEEPL
 
 ### Advantages of Identifying Influential Instances
 
-- The deletion diagnostics and influence functions approaches are very different from the mostly feature-perturbation based approaches presented in the [model-agnostic chapter](#agnostic). 
-Looking at influential instances emphasizes the role the training data plays in the learning process.
-This makes influence function and deletion diagnostics **one of the best machine learning debugging tools**.
-From the techniques presented in this book, it's the only one that directly helps to identify the instances which should be checked for errors.
-- **Deletion diagnostics are model-agnostic**, meaning they can be applied to any model. 
+- The approaches of deletion diagnostics and influence functions are very different from the mostly feature-perturbation based approaches presented in the [model-agnostic chapter](#agnostic). 
+A look at influential instances emphasizes the role of training data in the learning process.
+This makes influence function and deletion diagnostics **one of the best debugging tools for machine learning models**.
+Of the techniques presented in this book, it's the only one that directly helps to identify the instances which should be checked for errors.
+- **Deletion diagnostics are model-agnostic**, meaning the approach can be applied to any model. 
 Also influence functions based on the derivatives can be applied to a broad class of models. 
-That means we can use those methods to **compare different machine learning models** and understand their different behaviors better, going beyond comparing only the predictive performance.
-- We didn't touch this topic in this chapter, but **influence functions via derivatives can also be used to create adversarial training data**. 
-These are instances which are manipulated in a way that the model will fail to predict specific test instances, when the model is trained on those manipulated instances.
-The difference to the methods in the [adversarial examples chapter](#adversarial) is that the attack happens here during training time, also known as poisoning attacks.
-If you are interested in those, read the paper by Koh and Liang (2017).
-- For the deletion diagnostics and influence function, we looked at the difference in the prediction and for the influence function we looked at the increase in loss. 
+We can use these methods to **compare different machine learning models** and better understand their different behaviors, going beyond comparing only the predictive performance.
+- We have not talked about this topic in this chapter, but **influence functions via derivatives can also be used to create adversarial training data**. 
+These are instances that are manipulated in such a way that the model cannot predict certain test instances correctly when the model is trained on those manipulated instances.
+The difference to the methods in the [adversarial examples chapter](#adversarial) is that the attack takes place during the training time, also known as poisoning attacks.
+If you are interested, read the paper by Koh and Liang (2017).
+- For the deletion diagnostics and influence function, we considered the difference in the prediction and for the influence function the increase of the loss. 
 But, really, **the approach is generalizable** to 'what happens to ... when we delete/upweight instance z?', where you can fill '...' with any function of your model of your desire. 
-You could analyse how much a training instance influences the overall loss of the model.
-You could analyse how much a training instance influences the feature importance.
-You could analyse how much a training instance influences which feature is picked for the first split when training a [decision tree](#tree).
+You can analyze how much a training instance influences the overall loss of the model.
+You can analyze how much a training instance influences the feature importance.
+You can analyze how much a training instance influences which feature is selected for the first split when training a [decision tree](#tree).
 
 ### Disadvantages of Identifying Influential Instances
 
 - Deletion diagnostics are very **expensive to calculate** because they require retraining.
-When your model takes an hour to train and you have 10,000 instances, then it will take longer than a year to sequentially compute the influence of all instance by leaving them out one after another from the training data.
-But also history has proven so far that computing resources increase all the time.
-A computation that was resource-wise unthinkable 20 years ago, can be done by your smartphone easily.
-You can train models with thousands of training instances and hundreds of parameters within seconds/minutes on a laptop. 
-So it's not a big leap to speculate that deletion diagnostics will even work with big neural networks easily in 10 years.
-- **Influence functions are a good alternative, but only for models with differentiable parameters**, like neural networks.
+If your model needs an hour to train and you have 10,000 instances, it takes longer than a year to sequentially calculate the influence of all instance by omitting them one after the other from the training data.
+But also history has shown that computer resources are constantly increasing.
+A calculation that 20 years ago was unthinkable in terms of resources can easily be performed with your smartphone.
+You can train models with thousands of training instances and hundreds of parameters on a laptop in seconds/minutes. 
+It is therefore not a big leap to assume that deletion diagnostics will work without time problems even with large neural networks in 10 years.
+- **Influence functions are a good alternative to deletion diagnostics, but only for models with differentiable parameters**, such as neural networks.
 They don't work for tree-based methods like random forest, boosted trees or decision trees.
-Even if you have models with parameters and a loss function, the loss might not be differentiable.
-But for the latter problem, there is a trick:
-use a differentiable loss as replacement for the calculation of the influence, for example when the underlying model uses Hinge loss instead of some differentiable loss.
-The loss is replaced with a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
+Even if you have models with parameters and a loss function, the loss may not be differentiable.
+But for the last problem, there is a trick:
+Use a differentiable loss as substitute for calculating the influence, for example, if the underlying model uses the Hinge loss instead of some differentiable loss.
+The loss is replaced by a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
 - **Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
 This means that it can be wrong and the influence of an instance is actually higher or lower when removed.
-Koh and Liang (2017) showed for a few examples that the influence calculated through influence function was close to the measure you get when the model was actually recomputed after deletion of the instance.
-But there is no guarantee that the approximation is always so close.
-- A minor issue, but there is **no clear cutoff at which we call an influence of an instance influential or non-influential**.
-It's still useful to rank the instances by influence, but it would be great to have the means to not only rank the instances, but to actually distinguish between influential and non-influential.
-For example, when you identify the top 10 most influential training instance for a test instance some of them might not be influential, because for example only the top 3 were really influential.
-- The influence measures **only consider deletions of single instances** and not deletion of multiple instances at once.
-Bigger groups of data instances could have some interactions with each other affecting the model training and the prediction heavily.
-But the problem stems from combinatorics:
-There are n possibilities for deleting a single instance from the data. 
-There are already n times n-1 possibilities for deleting two instances from the training data. 
-And you certainly don't want to start going any further, because there are just too many combinations.
+Koh and Liang (2017) showed for some examples that the influence calculated by the influence function was close to the influence measure obtained when the model was actually recomputed after the instance was deleted.
+But there is no guarantee that the approximation will always be so close.
+- There is **no clear cutoff of the influence measure at which we call an instance influential or non-influential**.
+It's useful to sort the instances by influence, but it would be great to have the means not only to sort the instances, but actually to distinguish between influential and non-influential.
+For example, if you identify the top 10 most influential training instance for a test instance, some of them may not be influential because, for example, only the top 3 were really influential.
+- The influence measures **only takes into account the deletion of individual instances** and not the deletion of several instances at once.
+Larger groups of data instances may have some interactions  that strongly influence model training and prediction
+But the problem lies in combinatorics:
+There are n possibilities to delete an individual instance from the data. 
+There are n times n-1 possibilities to delete two instances from the training data. 
+There are n times n-1 times n-2 possibilities to delete three ...
+I guess you can guess where this is going, there are just too many combinations.
 
 ### Software and Alternatives
 
-- Deletion diagnostics are very simple to implement yourself. Have a look at [the code](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) I wrote for the examples in this chapter.
+- Deletion diagnostics are very simple to implement. 
+Take a a look at [the code](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) I wrote for the examples in this chapter.
 - For linear models and generalized linear models many influence measures like Cook's distance are implemented in R in the `stats` package.
-- Koh and Liang published the Python code for influence functions from paper [in a repository](https://github.com/kohpangwei/influence-release).
+- Koh and Liang published the Python code for influence functions from their paper [in a repository](https://github.com/kohpangwei/influence-release).
 That's great!
-Unfortunately it is 'only' the code to the paper and not a maintained and documented Python module.
-The code is focused on the Tensorflow library, so you can't directly use it for black box models using other frameworks, like sci-kit learn.
-- Here is a [great blog post for influence functions](http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641), which helped me understand the paper from Koh and Liang better. 
-The blog post goes a bit deeper into the mathematics behind influence function for black box models and also talks about some of the mathematical 'tricks' used to implement the method efficiently.
+Unfortunately it is 'only' the code of the paper and not a maintained and documented Python module.
+The code is focused on the Tensorflow library, so you can't use it directly for black box models using other frameworks, like sci-kit learn.
+- Here is a [great blog post for influence functions](http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641) that helped me understand Koh and Liang's paper better. 
+The blog post goes a little deeper into the mathematics behind influence functions for black box models and also talks about some of the mathematical 'tricks' with which the method is efficiently implemented.
 
 
 [^cook]: Cook, R. Dennis. "Detection of influential observation in linear regression." Technometrics 19.1 (1977): 15-18.
