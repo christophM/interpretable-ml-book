@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="pdp.html">
-<link rel="next" href="interaction.html">
+<link rel="prev" href="contribute.html">
+<link rel="next" href="acknowledgements.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
@@ -279,83 +279,28 @@ window.cookieconsent.initialise({
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="ice" class="section level2">
-<h2><span class="header-section-number">5.2</span> Individual Conditional Expectation (ICE)</h2>
-<p>For a chosen feature, Individual Conditional Expectation (ICE) plots draw one line per instance, representing how the instance’s prediction changes when the feature changes.</p>
-<p>The partial dependence plot for visualizing the average effect of a feature is a global method, because it does not focus on specific instances, but on an overall average. The equivalent to a PDP for local expectations is called individual conditional expectation (ICE) plot (Goldstein et al. 2015[^Goldstein2015]). An ICE plot visualizes the dependence of the predicted response on a feature for EACH instance separately, resulting in multiple lines, one for each instance, compared to one line in partial dependence plots. A PDP is the average of the lines of an ICE plot. The values for a line (and one instance) can be computed by leaving all other features the same, creating variants of this instance by replacing the feature’s value with values from a grid and letting the black box make the predictions with these newly created instances. The result is a set of points for an instance with the feature value from the grid and the respective predictions.</p>
-<p>So, what do you gain by looking at individual expectations, instead of partial dependencies? Partial dependence plots can obfuscate a heterogeneous relationship that comes from interactions. PDPs can show you how the average relationship between feature <span class="math inline">\(x_S\)</span> and <span class="math inline">\(\hat{y}\)</span> looks like. This works only well in cases where the interactions between <span class="math inline">\(x_S\)</span> and the remaining <span class="math inline">\(x_C\)</span> are weak. In case of interactions, the ICE plot will give a lot more insight.</p>
-<p>A more formal definition: In ICE plots, for each instance in <span class="math inline">\(\{(x_{S_i},x_{C_i})\}_{i=1}^N\)</span> the curve <span class="math inline">\(\hat{f}_S^{(i)}\)</span> is plotted against <span class="math inline">\(x_{S_i}\)</span>, while <span class="math inline">\(x_{C_i}\)</span> is kept fixed.</p>
-<div id="example-1" class="section level3">
-<h3><span class="header-section-number">5.2.1</span> Example</h3>
-<p>Let’s go back to the dataset about <a href="cervical.html#cervical">risk factors for cervical cancer</a> and see how each instance’s prediction is associated with the feature ‘Age’. The model we will analyze is a RandomForest that predicts the probability of cancer for a woman given risk factors. In the <a href="pdp.html#pdp">partial dependence plot</a> we have seen that the cancer probability increases around the age of 50, but does it hold true for each woman in the dataset? The ICE plot reveals that the most women’s predicted probability follows the average pattern of increase at 50, but there are a few exceptions: For the few women that have a high predicted probability at a young age, the predicted cancer probability does not change much with increasing age.</p>
-<div class="figure"><span id="fig:ice-cervical"></span>
-<img src="images/ice-cervical-1.png" alt="Individual conditional expectation plot of cervical cancer probability by age. Each line represents the conditional expectation for one woman. Most women with a low cancer probability in younger years see an increase in predicted cancer probability, given all other feature value stay the same. Interestingly for a few women that have a high estimated cancer probability bigger than 0.4, the estimated probability does not change much with higher age." width="1050" />
-<p class="caption">
-FIGURE 5.5: Individual conditional expectation plot of cervical cancer probability by age. Each line represents the conditional expectation for one woman. Most women with a low cancer probability in younger years see an increase in predicted cancer probability, given all other feature value stay the same. Interestingly for a few women that have a high estimated cancer probability bigger than 0.4, the estimated probability does not change much with higher age.
-</p>
-</div>
-<p>The next figures shows an ICE plot for the <a href="bike-data.html#bike-data">bike rental prediction</a> (the underlying prediction model is a RandomForest).</p>
-<div class="figure"><span id="fig:ice-bike"></span>
-<img src="images/ice-bike-1.png" alt="Individual conditional expectation plot of expected bike rentals and weather conditions. The same effects as in the partial dependence plots can be observed." width="1050" />
-<p class="caption">
-FIGURE 5.6: Individual conditional expectation plot of expected bike rentals and weather conditions. The same effects as in the partial dependence plots can be observed.
-</p>
-</div>
-<p>All curves seem to follow the same course, so there seem to be no obvious interactions. That means that the PDP is already a good summary of the relationships of the displayed features and the predicted bike rentals.</p>
-<div id="centered-ice-plot" class="section level4">
-<h4><span class="header-section-number">5.2.1.1</span> Centered ICE Plot</h4>
-<p>There is one issue with ICE plots: It can be hard to see if the individual conditional expectation curves differ between individuals, because they start at different <span class="math inline">\(\hat{f}(x)\)</span>. An easy fix is to center the curves at a certain point in <span class="math inline">\(x_S\)</span> and only display the difference in the predicted response. The resulting plot is called centered ICE plot (c-ICE). Anchoring the curves at the lower end of <span class="math inline">\(x_S\)</span> is a good choice. The new curves are defined as: <span class="math display">\[\hat{f}_{cent}^{(i)}=\hat{f}_i-\mathbf{1}\hat{f}(x^{\text{*}},x_{C_i})\]</span> where <span class="math inline">\(\mathbf{1}\)</span> is a vector of 1’s with the appropriate number of dimensions (usually one- or two-dimensional), <span class="math inline">\(\hat{f}\)</span> the fitted model and <span class="math inline">\(x^{\text{*}}\)</span> the anchor point.</p>
-</div>
-<div id="example-2" class="section level4">
-<h4><span class="header-section-number">5.2.1.2</span> Example</h4>
-<p>Taking for example the cervical cancer ICE plot for age and centering the lines at the youngest observed age yields:</p>
-<div class="figure"><span id="fig:ice-cervical-centered"></span>
-<img src="images/ice-cervical-centered-1.png" alt="Centered ICE plot for predicted cervical cancer risk probability by age. The lines are fixed to 0 at age 13 and each point shows the difference to the prediction with age 13. Compared to age 18, the predictions for most instances stay the same and see an increase up to 20 percent. A few cases show the opposite behavior: The predicted probability decreases with increasing age." width="1050" />
-<p class="caption">
-FIGURE 5.7: Centered ICE plot for predicted cervical cancer risk probability by age. The lines are fixed to 0 at age 13 and each point shows the difference to the prediction with age 13. Compared to age 18, the predictions for most instances stay the same and see an increase up to 20 percent. A few cases show the opposite behavior: The predicted probability decreases with increasing age.
-</p>
-</div>
-<p>With the centered ICE plots it is easier to compare the curves of individual instances. This can be useful when we are not interested in seeing the absolute change of a predicted value, but rather the difference in prediction compared to a fixed point of the feature range.</p>
-<p>The same for the bike dataset and count prediction model:</p>
-<div class="figure"><span id="fig:ice-bike-centered"></span>
-<img src="images/ice-bike-centered-1.png" alt="Centred individual conditional expectation plots of expected bike rentals by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at their minimal feature value in the data." width="1050" />
-<p class="caption">
-FIGURE 5.8: Centred individual conditional expectation plots of expected bike rentals by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at their minimal feature value in the data.
-</p>
-</div>
-</div>
-<div id="derivative-ice-plot" class="section level4">
-<h4><span class="header-section-number">5.2.1.3</span> Derivative ICE Plot</h4>
-<p>Another way to make it visually easier to spot heterogeneity is to look at the individual derivatives of <span class="math inline">\(\hat{f}\)</span> with respect to <span class="math inline">\(x_S\)</span> instead of the predicted response <span class="math inline">\(\hat{f}\)</span>. The resulting plot is called derivative ICE plot (d-ICE). The derivatives of a function (or curve) tell you in which direction changes occur and if any occur at all. With the derivative ICE plot it is easy to spot value ranges in a feature where the black box’s predicted values change for (at least some) instances. If there is no interaction between <span class="math inline">\(x_S\)</span> and <span class="math inline">\(x_C\)</span>, then <span class="math inline">\(\hat{f}\)</span> can be expressed as:</p>
-<p><span class="math display">\[\hat{f}(x)=\hat{f}(x_S,x_C)=g(x_S)+h(x_C),\quad\text{with}\quad\frac{\delta\hat{f}(x)}{\delta{}x_S}\]</span></p>
-<p>Without interactions, the individual partial derivatives should be the same for all instances. If they differ, it is because of interactions and it will become visible in the d-ICE plot. In addition to displaying the individual curves for derivative <span class="math inline">\(\hat{f}\)</span>, showing the standard deviation of derivative <span class="math inline">\(\hat{f}\)</span> helps to highlight regions in <span class="math inline">\(x_S\)</span> with heterogeneity in the estimated derivatives. The derivative ICE plot takes a long time to compute and is rather impractical.</p>
-</div>
-</div>
-<div id="advantages-3" class="section level3">
-<h3><span class="header-section-number">5.2.2</span> Advantages</h3>
-<ul>
-<li>Individual conditional expectation curves are <strong>even more intuitive to understand</strong> than partial dependence plots: One line represents the predictions for one instance when we vary the feature of interest.</li>
-<li>In contrast to partial dependence plots they can <strong>uncover heterogeneous relationships</strong>.</li>
-</ul>
-</div>
-<div id="disadvantages-3" class="section level3">
-<h3><span class="header-section-number">5.2.3</span> Disadvantages</h3>
-<ul>
-<li>ICE curves <strong>can only display one feature</strong> meaningfully, because two features would require drawing multiple, overlaying surfaces and there is no way you would still see anything in the plot.</li>
-<li>ICE curves suffer from the same problem as PDPs: When the feature of interest is correlated with the other features, then <strong>not all points in the lines might be valid data points</strong> according to the joint feature distribution.</li>
-<li>When many ICE curves are drawn the plot <strong>can become overcrowded</strong> and you don’t see anything any more. The solution: either add some transparency to the lines or only draw a sample of the lines.</li>
-<li>In ICE plots it might not be easy to <strong>see the average</strong>. This has a simple solution: just combine individual conditional expectation curves with the partial dependence plot.</li>
-</ul>
+<div id="citation" class="section level1">
+<h1><span class="header-section-number">Chapter 9</span> Citation</h1>
+<p>Cite the book like this:</p>
+<pre><code>Molnar, C. (2018). Interpretable Machine Learning. Retrieved from https://christophm.github.io/interpretable-ml-book/</code></pre>
+<p>Or use the following bibtex entry:</p>
+<pre><code>@book{molnar,
+  title = {Interpretable Machine Learning},
+  author = {Christoph Molnar},
+  publisher = {https://christophm.github.io/interpretable-ml-book/},
+  note = {\url{https://christophm.github.io/interpretable-ml-book/}},
+  year = {2018}
+}</code></pre>
+<p>If you use the book as a reference, it would be great if you write me a line and tell me what for. This is of course optional and only servesto satisfy my own curiosity and perhaps to spark interesting exchanges. My mail is <a href="mailto:christoph.molnar.ai@gmail.com">christoph.molnar.ai@gmail.com</a> .</p>
 
-</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="pdp.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="interaction.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="contribute.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="acknowledgements.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -385,7 +330,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.3-agnostic-ice.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/08-contribute.Rmd",
 "text": "Edit"
 },
 "download": null,
