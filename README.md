@@ -45,6 +45,7 @@ browseURL('_book/index.html')
 All notable changes to the book will be documented here.
 
 ### v0.5 (IN PROGRESS)
+- Added chapter on influential instances
 - Added chapter on Decision Rules
 - Added chapter on adversarial machine examples
 - Added chapter on prototypes and criticisms
