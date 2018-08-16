@@ -8,7 +8,7 @@ The partial dependence plot shows the marginal effect of a feature on the predic
 The prediction function is fixed at a few values of the chosen features and averaged over the other features.
 
 
-Other names: marginal means, predictive margins, marginal effects.
+*Keywords: partial dependence plots, PDP, marginal means, predictive margins, marginal effects, ALEplot*
 
 
 A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or more complex.
@@ -38,6 +38,97 @@ A straightforward way to handle multi-class problems is to plot one line or one 
 
 The partial dependence plot is a global method:
 The method takes into account all instances and makes a statement about the global relationship of a feature with the predicted outcome.
+
+
+BUUUUUTTTT there is a problem with partial dependence plots, and that's correlated features.
+When two input features are strongly correlated, the partial dependence plot for one of those features will not make sense.
+How come? 
+When features are correlated and we compute the partial dependence, we use grid values in combination with the correlated feature that don't make sense. 
+For example we want to predict the worth of a house using number of rooms and the size of the living area.
+Then we analyse the partial dependence of the predicted price on the living area.
+For the first grid values - let's say a living area of 30 square meters - we use all data points, even flats with 10 rooms, which don't yield a realistic data instance. 
+But in PD plots we use those to compute the average effect. 
+So what can we do?
+The answer is to only use instance for which the grid values that are forced as feature values make realistic instances.
+One solution is to use only the neighbours, meaning that for the 30 square meters, we only compute the partial dependence with houses that are between let's say 25 and 35 square meters (wait, are those real houses? maybe houses for ants). 
+The solution also has a name: ALE plots, which is short for Accumulated Local Effects (ALE) Plots.
+
+### Accumulated Local Effects (ALE) Plots
+
+ALEplots are partial dependence plots that solve the problem the PDPs have with correlated features.
+Both types solve the problem of computing the average marginal effects: 
+
+$$E_{x_C}\left[\hat{f}(x_S,x_C)\right]$$
+
+The difference is that PDPs assume that the feature are not strongly correlated for computing the average effects. 
+The ALEplot also works for correlated features, by only computing the partial effects locally.
+So how do ALEplots solve this problem?
+First, the method divides a feature into intervals instead of grid points.
+This is almost the same, but the difference is important. 
+Because ALEplots now use all the data points in each interval to compute the partial effects.
+
+
+```{r aleplot-motivation, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP averages the prediction over the whole range of x2 (left plot), even if unrealistic combinations of x1 and x2 are used. ALE plots average only over the conditional distribution at x1 = 0.75 (right plot). "}
+
+set.seed(1)
+n = 100
+intercept = 0.75
+
+x1 = runif(100)
+x2 = x1 + rnorm(100, sd = 0.1)
+df = data.frame(x1, x2)  
+
+p = ggplot(df) + geom_point(aes(x = x1, y = x2)) + my_theme()  + 
+  theme(panel.grid.major.y = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank())
+
+p.int = p + geom_vline(xintercept = intercept)
+x1.dens = density(x1)
+x1.dens.df = data.frame(dens = x1.dens$y, x = x1.dens$x)
+
+
+p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) + 
+  ggtitle(sprintf("Marginal distribution p(x2)", intercept)) + 
+  scale_y_continuous(limits = c(-0.2, 1.2))
+
+x1.dens.ale = density(x1[(x1 > (intercept - 0.1)) & (x1 < (intercept + 0.1))])
+x1.dens.ale.df = data.frame(dens = x1.dens.ale$y, x = x1.dens.ale$x)
+
+p2 = p.int + geom_path(data = x1.dens.ale.df, aes(x = intercept - dens/10, y = x)) + 
+  ggtitle(sprintf("Conditional distribution p(x2|x1=%.2f)", intercept)) + 
+  scale_y_continuous(limits = c(-0.2, 1.2))
+
+gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+The following graphic show how the ALEplots are calculated. 
+
+TODO: Create plot with images
+
+
+```{r aleplot-computation, fig.cap = ""}
+p 
+
+```
+
+
+TODO: Example with correlated features and how the output between PDP and ALEplot differs.
+
+TODO: Write about 2D-ALEplots
+
+TODO: CITE ALE plot
+
+TODO: Add to examples the ALE plot version
+
+TODO: Change AlE plot entry in alternatives
+
+TODO: Add Advantages and Disadvantages of ALE plots  
+- Disadvantage: how many numbers of intervals?
+- Dis: different number of points for each estimate
+- Adv: problem of correlated features solved
+- Adv: faster than pdp because much less predictions involved.
 
 
 ### Examples
