@@ -3,12 +3,12 @@ devtools::load_all()
 set.seed(42)
 ```
 
-## Partial Dependence Plot (PDP) {#pdp}
+## Partial Dependence Plot (PDP) and ALE Plot {#pdp}
 The partial dependence plot shows the marginal effect of a feature on the predicted outcome of a previously fit model (J. H. Friedman 2001[^Friedman2001]). 
 The prediction function is fixed at a few values of the chosen features and averaged over the other features.
 
 
-*Keywords: partial dependence plots, PDP, marginal means, predictive margins, marginal effects, ALEplot*
+*Keywords: partial dependence plots, PDP, marginal means, predictive margins, marginal effects, ALE plot*
 
 
 A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or more complex.
@@ -74,8 +74,8 @@ set.seed(1)
 n = 100
 intercept = 0.75
 
-x1 = runif(100)
-x2 = x1 + rnorm(100, sd = 0.1)
+x1 = runif(n)
+x2 = x1 + rnorm(n, sd = 0.1)
 df = data.frame(x1, x2)  
 
 p = ggplot(df) + geom_point(aes(x = x1, y = x2)) + my_theme()  + 
@@ -105,17 +105,107 @@ gridExtra::grid.arrange(p1, p2, ncol = 2)
 
 The following graphic show how the ALEplots are calculated. 
 
-TODO: Create plot with images
-
+TODO: Create plot 
+1. only data points
+2. division into intervals
+3. exemplary calculation for one interval
+4. resulting ALE plot
 
 ```{r aleplot-computation, fig.cap = ""}
-p 
 
+set.seed(12)
+n = 25
+
+x1 = runif(n)
+x2 = x1 + rnorm(n, sd = 0.1)
+df = data.frame(x1, x2)  
+
+p = ggplot(df) + geom_point(aes(x = x1, y = x2)) + my_theme()  + 
+  theme(panel.grid.major.y = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank()) 
+
+
+grid.df = data.frame(x1 = seq(from = 0,  to = 1, length.out = 6)[1:6], x2 = NA)
+label.df = grid.df[1:5,]
+label.df$x1 = label.df$x1 + 0.1
+label.df$x2 = 0.95
+label.df$label = sprintf("N1(%i)", 1:5)
+
+break.labels = c(expression(z[0~","~1]),  expression(z[1~","~1]), expression(z[2~","~1]), expression(z[3~","~1]),
+  expression(z[4~","~1]), expression(z[5~","~1]))
+
+diff.df = df[df$x1 <= 0.8 & df$x1 > 0.6, ]
+
+p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) + 
+  scale_x_continuous(breaks = seq(from = 0,  to = 1, length.out = 6), limits = c(0, 1), labels = break.labels) + 
+  geom_label(data = label.df, aes(x = x1, y = x2, label = label)) + 
+  geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches")))
 ```
 
 
-TODO: Example with correlated features and how the output between PDP and ALEplot differs.
+First we have to estimate the uncentered effect: 
 
+$$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{i,j}\in{}N_j(k)}\left[f(z_{k,j},x_{i\setminus{}j}) - f(z_{k-1,j},x_{i\setminus{}j})\right]$$
+
+This effect is then centered, so that the mean effect is zero:
+
+$$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x_{i,j})$$
+
+
+
+```{r correlation-problem, fig.cap = "Two features and a predicted outcome. The model simply predicts for y (shaded background) the sum of the two features, but there is also some artifact where the model always predicts 2, when x1 is larger than 0.7 and x2 smaller than 0.3. Since the distribution doesn't touch this area, there shouldn't be a problem. Shoudl the distribution shift, then there would be one."}
+
+set.seed(12)
+n = 25
+
+x1 = runif(n)
+x2 = x1 + rnorm(n, sd = 0.1)
+df = data.frame(x1, x2)  
+df$y = x1 + x2
+
+mod  = lm(y ~ ., data = df)
+
+y.fun = function(X.model, newdata) {
+  pred = predict(X.model, newdata)
+  pred[newdata$x1 > 0.7 & newdata$x2 < 0.3] = 2
+  pred
+}
+
+grid.dat = expand.grid(x1 = seq(from = 0, to = 1, length.out = 20), x2 = seq(from = 0, to = 1, length.out = 20))
+grid.dat$predicted = y.fun(mod, grid.dat)
+
+ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) + 
+  geom_point(aes(x = x1, y = x2), size = 3) + 
+  scale_fill_gradient(low = "white", high = "blue")
+```
+```{r correlation-pdp-ale-compute, plot = FALSE}
+library(ALEPlot)
+pred = Predictor$new(mod, data = df, predict.fun = y.fun)
+pdp = Partial$new(pred, feature = "x1", ice = FALSE)
+pdp1 = pdp$plot() + ggtitle("PDP")
+pdp = Partial$new(pred, feature = "x2", ice = FALSE)
+pdp2 = pdp$plot() + ggtitle("PDP")
+
+ale1.df = data.frame(ALEPlot(df, mod, J = "x1", pred.fun = y.fun))
+ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("x1") + scale_y_continuous(expression(hat(y))) + 
+  ggtitle("ALE plot")
+ale2.df = data.frame(ALEPlot(df, mod, J = "x2", pred.fun = y.fun))
+ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("x2") + scale_y_continuous(expression(hat(y))) + 
+  ggtitle("ALE plot")
+```
+
+
+```{r correlation-pdp-ale-plot, fig.cap = "Comparing the marginal feature effects computed with PDP and ALE. The PDP picks up on the artifact in the data, which is not part of the data distribution, which shows as a jump in the plot. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and prediction, ignoring areas where no data points are."}
+gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
+```
+
+
+ALE plot can also be used with more features, but it only makes sense with two at maximum.
+Two feature works as one feature, with the difference that we don't build intervals, but rectangles and use for the computation of the marginal effects the  data instances in each rectangle.
 TODO: Write about 2D-ALEplots
 
 TODO: CITE ALE plot
@@ -129,7 +219,9 @@ TODO: Add Advantages and Disadvantages of ALE plots
 - Dis: different number of points for each estimate
 - Adv: problem of correlated features solved
 - Adv: faster than pdp because much less predictions involved.
+- Adv: centered at zero, makes for nicer interpretation, but can also be done for pdpd
 
+TODO: Add ALE plot to description
 
 ### Examples
 In practice, the set of features $x_S$ usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
