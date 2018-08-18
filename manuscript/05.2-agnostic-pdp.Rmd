@@ -223,9 +223,7 @@ gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
 
 ALE plot can also be used with more features, but it only makes sense with two at maximum.
 Two feature works as one feature, with the difference that we don't build intervals, but rectangles and use for the computation of the marginal effects the  data instances in each rectangle.
-TODO: Write about 2D-ALEplots
 
-TODO: CITE ALE plot
 
 TODO: Add to examples the ALE plot version
 
@@ -275,6 +273,38 @@ The potential bikers are increasingly inhibited in engaging in cycling when humi
 Also, the more wind the less people like to bike, which makes sense.
 Interestingly, the predicted bike counts don't drop between 25 and 35 km/h windspeed, but there is just not so much training data, so we can't be confident about the effect.
 At least intuitively I would expect the bike rentals to drop with any increase in windspeed, especially when the windspeed is very high.
+
+
+
+TODO: Intro text for ALE example and some interpretation
+
+```{r ale-bike-prep, fig.keep = FALSE}
+y.fun = function(X.model, newdata) {
+ X.model$predict(newdata)[[1]]
+}
+
+limits = c(-1100, 700)
+
+ale1.df = data.frame(ALEPlot(bike, pred.bike, J = "temp", pred.fun = y.fun))
+ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("temp") + scale_y_continuous(expression(hat(y)), limits = limits) + 
+   my_theme()
+ale2.df = data.frame(ALEPlot(bike, pred.bike, J = "hum", pred.fun = y.fun))
+ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("hum") + scale_y_continuous(expression(hat(y)), limits = limits) + 
+   my_theme()
+
+ale3.df = data.frame(ALEPlot(bike, pred.bike, J = "windspeed", pred.fun = y.fun))
+ale3 = ggplot(ale3.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("windspeed") + scale_y_continuous(expression(hat(y)), limits = limits) + my_theme()
+
+```
+
+```{r ale-bike, fig.cap = "ALE  plots for the rental bike prediction model and different weather measurements (Temperature, Humidity, Windspeed). The overall tendencies are similar to partial dependence plots. One difference is that the effects are centered at 0. For very high temperature or humidity, the ALE and PD plot differ. The ALE plot detects much larger negative effects on the predicted bike rentals when it's very hot or very humid."}
+gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
+```
+
+
 
 We also compute the partial dependence for [cervical cancer classification](#cervical).
 Again, we fit a RandomForest to predict whether a woman has cervical cancer given some risk factors. 
