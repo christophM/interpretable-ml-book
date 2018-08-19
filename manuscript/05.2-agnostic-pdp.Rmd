@@ -79,7 +79,7 @@ x1 = runif(n)
 x2 = x1 + rnorm(n, sd = 0.1)
 df = data.frame(x1, x2)  
 
-p = ggplot(df) + geom_point(aes(x = x1, y = x2)) + my_theme()  + 
+p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +  
   theme(panel.grid.major.y = element_blank(), 
     panel.grid.minor.y = element_blank(), 
     panel.grid.major.x = element_blank(), 
@@ -121,7 +121,7 @@ x1 = runif(n)
 x2 = x1 + rnorm(n, sd = 0.1)
 df = data.frame(x1, x2)  
 
-p = ggplot(df) + geom_point(aes(x = x1, y = x2)) + my_theme()  + 
+p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
   theme(panel.grid.major.y = element_blank(), 
     panel.grid.minor.y = element_blank(), 
     panel.grid.major.x = element_blank(), 
@@ -259,11 +259,11 @@ mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf')
 
 pred.bike = Predictor$new(mod.bike, data = bike)
 pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
-p1 = pdp$plot() + my_theme() + scale_x_continuous('Temperature', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, 5500))
+p1 = pdp$plot() +  scale_x_continuous('Temperature', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, 5500))
 pdp$set.feature("hum")
-p2 = pdp$plot() + my_theme()+ scale_x_continuous('Humidity', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
+p2 = pdp$plot() +  scale_x_continuous('Humidity', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
 pdp$set.feature("windspeed")
-p3 = pdp$plot() + my_theme()+ scale_x_continuous('Windspeed', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
+p3 = pdp$plot() + scale_x_continuous('Windspeed', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
 
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
@@ -287,16 +287,14 @@ limits = c(-1100, 700)
 
 ale1.df = data.frame(ALEPlot(bike, pred.bike, J = "temp", pred.fun = y.fun))
 ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("temp") + scale_y_continuous(expression(hat(y)), limits = limits) + 
-   my_theme()
+  scale_x_continuous("temp") + scale_y_continuous(expression(hat(y)), limits = limits)
 ale2.df = data.frame(ALEPlot(bike, pred.bike, J = "hum", pred.fun = y.fun))
 ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("hum") + scale_y_continuous(expression(hat(y)), limits = limits) + 
-   my_theme()
+  scale_x_continuous("hum") + scale_y_continuous(expression(hat(y)), limits = limits)
 
 ale3.df = data.frame(ALEPlot(bike, pred.bike, J = "windspeed", pred.fun = y.fun))
 ale3 = ggplot(ale3.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("windspeed") + scale_y_continuous(expression(hat(y)), limits = limits) + my_theme()
+  scale_x_continuous("windspeed") + scale_y_continuous(expression(hat(y)), limits = limits)
 
 ```
 
@@ -307,26 +305,42 @@ gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 
 
 We also compute the partial dependence for [cervical cancer classification](#cervical).
-Again, we fit a RandomForest to predict whether a woman has cervical cancer given some risk factors. 
+Again, we fit a linear disciminant analysis (LDA) to predict whether a woman has cervical cancer given some risk factors. 
 Given the model, we compute and visualize the partial dependence of the cancer probability on different features: 
 
 ```{r pdp-cervical, fig.cap = 'Partial dependence plot of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the partial dependence plot shows that on average the cancer probability is until 40 and increases after that. The sparseness of data points after age of 50 indicates that the model did not have many data points to learn from above that age. The number of years on hormonal contraceptives is associated with a higher cancer risk after 10 years. But again, there are not many data points in that region, which implies that we might not be able to rely on the machine learning model predictions for >10 years on contraceptives.', dev.args = list(pointsize = 5.5)}
 data(cervical)
 cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
+mod = mlr::train(mlr::makeLearner(cl = 'classif.lda', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
 
 pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
 pdp = Partial$new(pred.cervical, "Age", ice = FALSE) 
 
-p1 = pdp$plot() + my_theme() + 
+p1 = pdp$plot() + 
   scale_x_continuous(limits = c(0, NA)) + 
   scale_y_continuous('Predicted cancer probability', limits = c(0, 0.4))
 pdp$set.feature("Hormonal.Contraceptives..years.")
-p2 = pdp$plot() + my_theme() + 
+p2 = pdp$plot() + 
   scale_x_continuous(limits = c(0, NA)) + 
   scale_y_continuous('', limits = c(0, 0.4))
 
 gridExtra::grid.arrange(p1, p2, ncol = 2)
+```
+
+```{r ale-cervical-prep, fig.keep = FALSE}
+ale1.df = data.frame(ALEPlot(cervical, pred.cervical, J = "Age", pred.fun = y.fun, K = 100))
+ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("Age") + scale_y_continuous(expression(hat(y))) 
+
+ale2.df = data.frame(ALEPlot(cervical, pred.cervical, J = "Hormonal.Contraceptives..years.", pred.fun = y.fun))
+ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
+  scale_x_continuous("Hormonal.Contraceptives..years.") + scale_y_continuous(expression(hat(y))) 
+
+
+```
+
+```{r ale-cervical, fig.cap = ""}
+gridExtra::grid.arrange(ale1, ale2, ncol = 2)
 ```
 
 
@@ -334,7 +348,7 @@ We can also visualizes the partial dependence of two features at once:
 
 ```{r pdp-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45, regardless of number of pregnancies. An interesting interaction happens at ages below 25: Young women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had zero or above two pregnancies. The model predicts a - kind of - protective effect against cancer for 1 or 2 pregnancies. But be careful with drawing conclusions: This might just be a correlation and not causal! The cancer risk and number of pregnancies could be caused by another, unmeasured factor in which the young women differ.'}
 pd = Partial$new(pred.cervical, c("Num.of.pregnancies", "Age"), ice = FALSE) 
-pd$plot()+ my_theme() 
+pd$plot()
 ```
 
 
