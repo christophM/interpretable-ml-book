@@ -5,11 +5,11 @@ set.seed(42)
 
 ## Partial Dependence Plot (PDP) and ALE Plot {#pdp}
 
-The partial dependence plot (PDP) shows the marginal effect of a feature on the predicted outcome of a previously fit model (J. H. Friedman 2001[^Friedman2001]). 
+The partial dependence plot (PDP or PD plot) shows the marginal effect of a feature on the predicted outcome of a previously fit model (J. H. Friedman 2001[^Friedman2001]). 
 The prediction function is fixed at a few values of the chosen features and averaged over the other features.
 The Accumulated Local Effects (ALE) plot [^ALE] is an alternative to the PDP and fixes the problem that PDPs have when features are correlated.
 
-*Keywords: partial dependence plots, PDP, marginal means, predictive margins, marginal effects, ALE plot*
+*Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects, ALE plot*
 
 
 A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or more complex.
@@ -106,13 +106,8 @@ gridExtra::grid.arrange(p1, p2, ncol = 2)
 
 The following graphic show how the ALEplots are calculated. 
 
-TODO: Create plot 
-1. only data points
-2. division into intervals
-3. exemplary calculation for one interval
-4. resulting ALE plot
 
-```{r aleplot-computation, fig.cap = ""}
+```{r aleplot-computation, fig.cap = "For the computation of ALE plots, we first divide the feature into intervals (vertical lines). In each interval, we select the data instances (points) and compute the difference in prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). Not shown in the plot: These difference are later cumulated and centered, which yields the ALE curve."}
 
 set.seed(12)
 n = 25
@@ -145,17 +140,31 @@ p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) +
   geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches")))
 ```
 
+ALE plots are plots for estimates of the first order (1D) or second order (2D) effects of features on the prediction.
+An ALE plot for feature $x_j$ is the acumulated integral of the expected gradient of the prediction over values of $x_j$.
+We are interested in the partial function of the prediction dependent on only a single (or two) features.
+Instead of directly computing the average of the function, the authors calculate the derivative and integrate again over the derivative to get the value of the function. 
+Now, that sound stupid. 
+Derivation and integration cancel each other out, like first subtracting, then adding the same number. 
+Why does this make sense?
+Because the derivative is computed at different grid values and averages the effects locally, avoiding the mistake of partial dependence plots of averaging over the marginal distribution which is so problematic when the features are correlated.
 
-TODO: Describe the theoretic construct of ALEPlot and add the formula for 1D.
-
+$$\tilde{f}_{j,ALE}(x_j)=\int^{x_j}_{z_{0,j}}E\left[f^j(X_j,X_{\setminus{}j})|X_j=z_j\right]dz_j$$
+This is the theoretic construct, also it is also centered as you will see in the estimator.
+You might notice that this would require that we f has a derivative.
+But for the actual estimation, we use a sample estimator and divide the feature into many intervals, so it is not a problem.
 First we have to estimate the uncentered effect: 
 
 $$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{i,j}\in{}N_j(k)}\left[f(z_{k,j},x_{i\setminus{}j}) - f(z_{k-1,j},x_{i\setminus{}j})\right]$$
+
 
 This effect is then centered, so that the mean effect is zero:
 
 $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x_{i,j})$$
 
+Let's see this thing now in action. 
+I create a data situation in which the partial dependence plot fails. 
+Namely a situation in which the features are strongly correlated and the prediction model does something weird at a combination of the two features for which we never observed instances.
 
 
 ```{r correlation-problem, fig.cap = "Two features and a predicted outcome. The model simply predicts for y (shaded background) the sum of the two features, but there is also some artifact where the model always predicts 2, when x1 is larger than 0.7 and x2 smaller than 0.3. Since the distribution doesn't touch this area, there shouldn't be a problem. Shoudl the distribution shift, then there would be one."}
@@ -223,13 +232,11 @@ gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
 ```
 
 
-ALE plot can also be used with more features, but it only makes sense with two at maximum.
+ALE plot can also be used with more features, but, as with PDP,  only makes sense with two at maximum.
 Two feature works as one feature, with the difference that we don't build intervals, but rectangles and use for the computation of the marginal effects the  data instances in each rectangle.
 
 
-TODO: Add to examples the ALE plot version
-
-TODO: Change AlE plot entry in alternatives
+TODO: Add to 2D examples the ALE plot version
 
 TODO: Add Advantages and Disadvantages of ALE plots  
 - Disadvantage: how many numbers of intervals?
@@ -238,7 +245,6 @@ TODO: Add Advantages and Disadvantages of ALE plots
 - Adv: faster than pdp because much less predictions involved.
 - Adv: centered at zero, makes for nicer interpretation, but can also be done for pdpd
 
-TODO: Add ALE plot to description
 
 ### Examples
 In practice, the set of features $x_S$ usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
@@ -359,11 +365,13 @@ pd$plot()
 - The computation of partial dependence plots is **intuitive**: 
 The partial dependence curve at a certain feature value represents the average prediction when we force all data points to take on that feature value. 
 In my experience, laypersons usually grasp the idea of PDPs quickly.
+ALE plots are a bit less intuitive, but still no dark magic.
 - If the feature for which you computed the PDP is uncorrelated with the other model features, then the PDPs are perfectly representing how the feature influences the target on average.
 In this uncorrelated case the **interpretation is clear**: 
 The partial dependence plots shows how on average the prediction changes in your dataset, when the j-th feature is changed. 
 It's complicated when features are correlated, see also disadvantages.
-- Partial dependence plots are **simple to implement**.
+The interpretation of ALE plots is also clear: Conditional on a given x value, the effect of the feature on the prediction can be read from the ALE plot.
+- Partial dependence and ALE plots are **simple to implement**.
 - **Causal interpretation** : The calculation for the partial dependence plots has a causal interpretation: 
 We intervene on $x_j$ and measure the changes in the predictions. 
 By doing this, we analyse the causal relationship between the feature and the outcome.[^pdpCausal]
@@ -373,19 +381,19 @@ The relationship is causal for the model - because we explicitly model the outco
 ### Disadvantages
 - The **maximum number of features** you can look at jointly is - realistically - two and - if you are stubborn and pretend that 3D plots on a 2D medium are useful - three.
 That's not the fault of PDPs, but of the 2-dimensional representation (paper or screen) and also our inability to imagine more than 3 dimensions.
-- Some PD visualisations don't include the **feature distribution**. 
+- Some PD and ALE plots don't include the **feature distribution**. 
 Omitting the distribution can be misleading, because you might over-interpret the line in regions, with almost no feature values.
 This problem is easy to fix by showing a rug (indicators for data points on the x-axis) or a histogram.
-- The **assumption of independence** poses the biggest issue. 
+- The **assumption of independence** poses the biggest issue of PD plots. 
 The feature(s), for which the partial dependence is computed, is/are assumed to be independently distributed from the other model features we average over.
 For example: Assume you want to predict how fast a person walks, given the person's weight and height. 
 For the partial dependence of one of the features, let's say height, we assume that the other features (weight) are not correlated with height, which is obviously a wrong assumption. 
 For the computation of the PDP at some height (for example at height = 200cm) we average over the marginal distribution of weight, which might include a weight below 50kg, which is unrealistic for a 2 meter person. 
 In other words: When the features are correlated, we put weight on areas of the feature distribution where the actual probability mass is very low (for example it is unlikely that someone is 2 meters tall but weighting below 50kg).
-A solution to this problem are ALEPlots[^ALE], that only average over close data points. 
-- **Heterogenous effects might be hidden** because the PDP only shows the average over the observations. 
+A solution to this problem are ALEPlots[^ALE], which only average over close data points. 
+- **Heterogenous effects might be hidden** because the ALE and PD plots only show the average over the observations. 
 Assume that for feature $x_j$ half your data points have a positive assocation with the outcome - the greater $x_j$ the greater $\hat{y}$ - and the other half has negative assocation - the smaller $x_j$ the greater $\hat{y}$.
-The PDP curve might be a straight, horizontal line, because the effects of both dataset halves cancel each other out. 
+The curve might be a straight, horizontal line, because the effects of both dataset halves cancel each other out. 
 You then conclude that the feature has no effect on the outcome. 
 By plotting the [individiual conditional expectation curves](#ice) instead of the aggregated line, we can uncover heterogeneous effects.
 
