@@ -3,13 +3,12 @@ devtools::load_all()
 set.seed(42)
 ```
 
-## Partial Dependence Plot (PDP) and ALE Plot {#pdp}
+## Partial Dependence Plot (PDP) {#pdp}
 
 The partial dependence plot (PDP or PD plot) shows the marginal effect of a feature on the predicted outcome of a previously fit model (J. H. Friedman 2001[^Friedman2001]). 
 The prediction function is fixed at a few values of the chosen features and averaged over the other features.
-The Accumulated Local Effects (ALE) plot [^ALE] is an alternative to the PDP and fixes the problem that PDPs have when features are correlated.
 
-*Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects, ALE plot*
+*Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects*
 
 
 A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or more complex.
@@ -39,256 +38,6 @@ A straightforward way to handle multi-class problems is to plot one line or one 
 
 The partial dependence plot is a global method:
 The method takes into account all instances and makes a statement about the global relationship of a feature with the predicted outcome.
-
-
-BUUUUUTTTT there is a problem with partial dependence plots, and that's correlated features.
-When two input features are strongly correlated, the partial dependence plot for one of those features will not make sense.
-How come? 
-When features are correlated and we compute the partial dependence, we use grid values in combination with the correlated feature that don't make sense. 
-For example we want to predict the worth of a house using number of rooms and the size of the living area.
-Then we analyse the partial dependence of the predicted price on the living area.
-For the first grid values - let's say a living area of 30 square meters - we use all data points, even flats with 10 rooms, which don't yield a realistic data instance. 
-But in PD plots we use those to compute the average effect. 
-So what can we do?
-The answer is to only use instance for which the grid values that are forced as feature values make realistic instances.
-One solution is to use only the neighbours, meaning that for the 30 square meters, we only compute the partial dependence with houses that are between let's say 25 and 35 square meters (wait, are those real houses? maybe houses for ants). 
-The solution also has a name: ALE plots, which is short for Accumulated Local Effects (ALE) Plots.
-
-### Accumulated Local Effects (ALE) Plots
-
-ALEplots are partial dependence plots that solve the problem the PDPs have with correlated features.
-Both types solve the problem of computing the average marginal effects: 
-
-$$E_{x_C}\left[\hat{f}(x_S,x_C)\right]$$
-
-The difference is that PDPs assume that the feature are not strongly correlated for computing the average effects. 
-The ALEplot also works for correlated features, by only computing the partial effects locally.
-So how do ALEplots solve this problem?
-First, the method divides a feature into intervals instead of grid points.
-This is almost the same, but the difference is important. 
-Because ALEplots now use all the data points in each interval to compute the partial effects.
-
-
-```{r aleplot-motivation, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP averages the prediction over the whole range of x2 (left plot), even if unrealistic combinations of x1 and x2 are used. ALE plots average only over the conditional distribution at x1 = 0.75 (right plot). "}
-
-set.seed(1)
-n = 100
-intercept = 0.75
-
-x1 = runif(n)
-x2 = x1 + rnorm(n, sd = 0.1)
-df = data.frame(x1, x2)  
-
-p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +  
-  theme(panel.grid.major.y = element_blank(), 
-    panel.grid.minor.y = element_blank(), 
-    panel.grid.major.x = element_blank(), 
-    panel.grid.minor.x = element_blank())
-
-p.int = p + geom_vline(xintercept = intercept)
-x1.dens = density(x1)
-x1.dens.df = data.frame(dens = x1.dens$y, x = x1.dens$x)
-
-
-p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) + 
-  ggtitle(sprintf("Marginal distribution p(x2)", intercept)) + 
-  scale_y_continuous(limits = c(-0.2, 1.2))
-
-x1.dens.ale = density(x1[(x1 > (intercept - 0.1)) & (x1 < (intercept + 0.1))])
-x1.dens.ale.df = data.frame(dens = x1.dens.ale$y, x = x1.dens.ale$x)
-
-p2 = p.int + geom_path(data = x1.dens.ale.df, aes(x = intercept - dens/10, y = x)) + 
-  ggtitle(sprintf("Conditional distribution p(x2|x1=%.2f)", intercept)) + 
-  scale_y_continuous(limits = c(-0.2, 1.2))
-
-gridExtra::grid.arrange(p1, p2, ncol = 2)
-```
-
-The following graphic show how the ALEplots are calculated. 
-
-
-```{r aleplot-computation, fig.cap = "For the computation of ALE plots, we first divide the feature into intervals (vertical lines). In each interval, we select the data instances (points) and compute the difference in prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). Not shown in the plot: These difference are later cumulated and centered, which yields the ALE curve."}
-
-set.seed(12)
-n = 25
-
-x1 = runif(n)
-x2 = x1 + rnorm(n, sd = 0.1)
-df = data.frame(x1, x2)  
-
-p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
-  theme(panel.grid.major.y = element_blank(), 
-    panel.grid.minor.y = element_blank(), 
-    panel.grid.major.x = element_blank(), 
-    panel.grid.minor.x = element_blank()) 
-
-
-grid.df = data.frame(x1 = seq(from = 0,  to = 1, length.out = 6)[1:6], x2 = NA)
-label.df = grid.df[1:5,]
-label.df$x1 = label.df$x1 + 0.1
-label.df$x2 = 0.95
-label.df$label = sprintf("N1(%i)", 1:5)
-
-break.labels = c(expression(z[0~","~1]),  expression(z[1~","~1]), expression(z[2~","~1]), expression(z[3~","~1]),
-  expression(z[4~","~1]), expression(z[5~","~1]))
-
-diff.df = df[df$x1 <= 0.8 & df$x1 > 0.6, ]
-
-p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) + 
-  scale_x_continuous(breaks = seq(from = 0,  to = 1, length.out = 6), limits = c(0, 1), labels = break.labels) + 
-  geom_label(data = label.df, aes(x = x1, y = x2, label = label)) + 
-  geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches")))
-```
-
-ALE plots are plots for estimates of the first order (1D) or second order (2D) effects of features on the prediction.
-An ALE plot for feature $x_j$ is the accumulated integral of the expected gradient of the prediction over values of $x_j$.
-We are interested in the partial function of the prediction dependent on only a single (or two) features.
-Instead of directly computing the average of the function, the authors calculate the derivative and integrate again over the derivative to get the value of the function. 
-Now, that sound stupid. 
-Derivation and integration cancel each other out, like first subtracting, then adding the same number. 
-Why does this make sense?
-Because the derivative is computed at different grid values and averages the effects locally, avoiding the mistake of partial dependence plots of averaging over the marginal distribution which is so problematic when the features are correlated.
-
-$$\tilde{f}_{j,ALE}(x_j)=\int^{x_j}_{z_{0,j}}E\left[f^j(X_j,X_{\setminus{}j})|X_j=z_j\right]dz_j$$
-This is the theoretic construct, also it is also centered as you will see in the estimator.
-You might notice that this would require that we f has a derivative.
-But for the actual estimation, we use a sample estimator and divide the feature into many intervals, so it is not a problem.
-First we have to estimate the uncentered effect: 
-
-$$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{i,j}\in{}N_j(k)}\left[f(z_{k,j},x_{i\setminus{}j})-f(z_{k-1,j},x_{i\setminus{}j})\right]$$
-
-
-This effect is then centered, so that the mean effect is zero:
-
-$$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x_{i,j})$$
-
-The value of the ALE can be interpreted as the effect of the feature at a certain feature value compared to the mean. 
-For example if the curve at $x_j=3$ is -2, it means that when $x_j$ has value 2, then the prediction is lower by 2 compared to the average prediction.
-
-Let's see this thing now in action. 
-I create a data situation in which the partial dependence plot fails. 
-Namely a situation in which the features are strongly correlated and the prediction model does something weird at a combination of the two features for which we never observed instances.
-
-
-```{r correlation-problem, fig.cap = "Two features and a predicted outcome. The model simply predicts for y (shaded background) the sum of the two features, but there is also some artifact where the model always predicts 2, when x1 is larger than 0.7 and x2 smaller than 0.3. Since the distribution doesn't touch this area, there shouldn't be a problem. Shoudl the distribution shift, then there would be one."}
-
-set.seed(12)
-n = 25
-
-x1 = runif(n)
-x2 = x1 + rnorm(n, sd = 0.1)
-df = data.frame(x1, x2)  
-df$y = x1 + x2
-
-mod  = lm(y ~ ., data = df)
-
-y.fun = function(X.model, newdata) {
-  pred = predict(X.model, newdata)
-  pred[newdata$x1 > 0.7 & newdata$x2 < 0.3] = 2
-  pred
-}
-
-grid.dat = expand.grid(x1 = seq(from = 0, to = 1, length.out = 20), x2 = seq(from = 0, to = 1, length.out = 20))
-grid.dat$predicted = y.fun(mod, grid.dat)
-
-ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) + 
-  geom_point(aes(x = x1, y = x2), size = 3) + 
-  scale_fill_gradient(low = "white", high = "blue")
-```
-
-"This is a completely made up example", I here some people yelling.
-"What kind of model would do such a thing?! Unrealistic!", other join. 
-Yes, this is a toy example. 
-BUT, remember that, when you train a model, the model only fits the existing data points. 
-Any area outside of the distributions, depending on the type of model anything can happen, because the model will not be penalized for doing weird stuff abroad.
-"Where there is no judge, there will be no judgement".
-It's like dancing like nobodies watching.
-Linear models for example have extreme behaviour outside the are of the data, because they are linear functions. 
-Imagine a linear regression model for predicting the worth of a house which has a postive weight for the influence of the living area.
-Going outside the data means going beyond certain levels of square meters (let's say 3000) will make your predictions grow extreme.
-The phenomenon is called extrapolation and that's also what's happening when you have correlated features with partial dependence plots.
-Extrapolation of values to values that don't even exist.
-See what happens with the PD plots and how they compare to the ALE plots in our little example:
-
-
-```{r correlation-pdp-ale-compute, plot = FALSE}
-library(ALEPlot)
-pred = Predictor$new(mod, data = df, predict.fun = y.fun)
-pdp = Partial$new(pred, feature = "x1", ice = FALSE)
-pdp1 = pdp$plot() + ggtitle("PDP")
-pdp = Partial$new(pred, feature = "x2", ice = FALSE)
-pdp2 = pdp$plot() + ggtitle("PDP")
-
-ale1.df = data.frame(ALEPlot(df, mod, J = "x1", pred.fun = y.fun))
-ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("x1") + scale_y_continuous(expression(hat(y))) + 
-  ggtitle("ALE plot")
-ale2.df = data.frame(ALEPlot(df, mod, J = "x2", pred.fun = y.fun))
-ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("x2") + scale_y_continuous(expression(hat(y))) + 
-  ggtitle("ALE plot")
-```
-
-
-```{r correlation-pdp-ale-plot, fig.cap = "Comparing the marginal feature effects computed with PDP and ALE. The PDP picks up on the artifact in the data, which is not part of the data distribution, which shows as a jump in the plot. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and prediction, ignoring areas where no data points are."}
-gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
-```
-
-
-ALE plot can also be used with more features, but, as with PDP,  only makes sense with two at maximum.
-Two feature works as one feature, with the difference that we don't build intervals, but rectangles and use for the computation of the marginal effects the  data instances in each rectangle.
-I'll spare you with the formula for 2D plots. 
-If you are interested, I refer to the paper, formulas (13) - (16) for the computation.
-Here is some intuition how it is computed:
-
-```{r aleplot-computation-2d, fig.cap = "Illustration on how to calculate the second-order Accumulated Local Effects. We lay a grid over the two features we are interested in. In each cell of that grid (one is exemplary highlighted), we compute the second-order differences, which is the joint effect (indicated by arrow from cell bottom left to top right) minus the two first order effects, as indicated by the vertical and horizontal arrows next to the cell. In each cell the effects are averaged for the points within that cell."}
-
-
-p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
-  theme(panel.grid.major.y = element_blank(), 
-    panel.grid.minor.y = element_blank(), 
-    panel.grid.major.x = element_blank(), 
-    panel.grid.minor.x = element_blank()) 
-
-
-grid.df1 = data.frame(x1 = seq(from = min(df$x1),  to = max(df$x1), length.out = 6)[1:6], x2 = NA)
-grid.df2 = data.frame(x2 = seq(from = min(df$x2),  to = max(df$x2), length.out = 6)[1:6], x1 = NA)
-
-chosen.tile = data.frame(x = grid.df1$x1[4], xend = grid.df1$x1[5], y = grid.df2$x2[4], yend = grid.df2$x2[5])
-
-mv.arr = 0.02
-p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) + 
-  geom_hline(data = grid.df2, aes(yintercept = x2), linetype = 3) + 
-  geom_rect(aes(xmin = x, xmax = xend,  ymin = y, ymax = yend), data = chosen.tile, alpha = 0, color = "black", size = 1.1) + 
-  geom_segment(data = chosen.tile, aes(x = x, xend = xend, y = y, yend = yend), arrow = arrow(angle = 10)) + 
-    geom_segment(data = chosen.tile, aes(x = x - mv.arr, xend = x - mv.arr, y = y, yend = yend), arrow = arrow(angle = 10)) + 
-    geom_segment(data = chosen.tile, aes(x = x, xend = xend, y = y - mv.arr, yend = y - mv.arr), arrow = arrow(angle = 10))  
-```
-
-TODO: Describe what happens in missing rectangles.
-
-Interpretation of the second-order ALE:
-TODO: Explain 2D ALE plot: Is second-order effect
-
-TODO: Explain ALE for 1 , features
-TODO: Explain ALE for two categorical features
-TODO: Explain ALE for mixed categorical and numerical features
-TODO: Explain PDP for categorical features
-TODO: Explain PDP for mixed numerical and categorical feature
-TODO MAYBE: Give ALE plot it's own chapter
-TODO: List M-Plot as alternative
-
-TODO LATER: Replace ALEPlot::ALEPlot with iml::Partial
-
-
-TODO: Add Advantages and Disadvantages of ALE plots  
-- Disadvantage: how many numbers of intervals?
-- Dis: They don't have accompanying ICE plots equivalent like PDPs
-- Dis: different number of points for each estimate
-- Adv: problem of correlated features solved
-- Adv: faster than pdp because much less predictions involved.
-- Adv. ALE has O(n) and even if K goes to infinity, in reality its maximum n
-- Adv: centered at zero, makes for nicer interpretation, but can also be done for pdpd
 
 
 ### Examples
@@ -329,32 +78,6 @@ At least intuitively I would expect the bike rentals to drop with any increase i
 
 
 
-TODO: Intro text for ALE example and some interpretation
-
-```{r ale-bike-prep, fig.keep = FALSE}
-y.fun = function(X.model, newdata) {
- X.model$predict(newdata)[[1]]
-}
-
-limits = c(-1100, 700)
-
-ale1.df = data.frame(ALEPlot(bike, pred.bike, J = "temp", pred.fun = y.fun))
-ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("temp") + scale_y_continuous(expression(hat(y)), limits = limits)
-ale2.df = data.frame(ALEPlot(bike, pred.bike, J = "hum", pred.fun = y.fun))
-ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("hum") + scale_y_continuous(expression(hat(y)), limits = limits)
-
-ale3.df = data.frame(ALEPlot(bike, pred.bike, J = "windspeed", pred.fun = y.fun))
-ale3 = ggplot(ale3.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("windspeed") + scale_y_continuous(expression(hat(y)), limits = limits)
-
-```
-
-```{r ale-bike, fig.cap = "ALE  plots for the rental bike prediction model and different weather measurements (Temperature, Humidity, Windspeed). The overall tendencies are similar to partial dependence plots. One difference is that the effects are centered at 0. For very high temperature or humidity, the ALE and PD plot differ. The ALE plot detects much larger negative effects on the predicted bike rentals when it's very hot or very humid."}
-gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
-```
-
 
 
 We also compute the partial dependence for [cervical cancer classification](#cervical).
@@ -380,23 +103,6 @@ p2 = pdp$plot() +
 gridExtra::grid.arrange(p1, p2, ncol = 2)
 ```
 
-```{r ale-cervical-prep, fig.keep = FALSE}
-ale1.df = data.frame(ALEPlot(cervical, pred.cervical, J = "Age", pred.fun = y.fun, K = 100))
-ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("Age") + scale_y_continuous(expression(hat(y))) 
-
-ale2.df = data.frame(ALEPlot(cervical, pred.cervical, J = "Hormonal.Contraceptives..years.", pred.fun = y.fun))
-ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("Hormonal.Contraceptives..years.") + scale_y_continuous(expression(hat(y))) 
-
-
-```
-
-```{r ale-cervical, fig.cap = ""}
-gridExtra::grid.arrange(ale1, ale2, ncol = 2)
-```
-
-
 We can also visualizes the partial dependence of two features at once:
 
 ```{r pdp-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45, regardless of number of pregnancies. An interesting interaction happens at ages below 25: Young women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had zero or above two pregnancies. The model predicts a - kind of - protective effect against cancer for 1 or 2 pregnancies. But be careful with drawing conclusions: This might just be a correlation and not causal! The cancer risk and number of pregnancies could be caused by another, unmeasured factor in which the young women differ.'}
@@ -405,11 +111,6 @@ pd$plot()
 ```
 
 
-TODO: Create GGplot version of 2D ALEPlot
-
-```{r ale-cervical-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of number of pregnancies and the age on the predicted risk of cancer.'}
-ALEPlot(cervical, pred.cervical, J = which(names(cervical) %in% c("Num.of.pregnancies", "Age")), pred.fun = y.fun, K = 50)
-```
 
 
 
@@ -417,13 +118,11 @@ ALEPlot(cervical, pred.cervical, J = which(names(cervical) %in% c("Num.of.pregna
 - The computation of partial dependence plots is **intuitive**: 
 The partial dependence curve at a certain feature value represents the average prediction when we force all data points to take on that feature value. 
 In my experience, laypersons usually grasp the idea of PDPs quickly.
-ALE plots are a bit less intuitive, but still no dark magic.
 - If the feature for which you computed the PDP is uncorrelated with the other model features, then the PDPs are perfectly representing how the feature influences the target on average.
 In this uncorrelated case the **interpretation is clear**: 
 The partial dependence plots shows how on average the prediction changes in your dataset, when the j-th feature is changed. 
 It's complicated when features are correlated, see also disadvantages.
-The interpretation of ALE plots is also clear: Conditional on a given x value, the effect of the feature on the prediction can be read from the ALE plot.
-- Partial dependence and ALE plots are **simple to implement**.
+- Partial dependence plots are **simple to implement**.
 - **Causal interpretation** : The calculation for the partial dependence plots has a causal interpretation: 
 We intervene on $x_j$ and measure the changes in the predictions. 
 By doing this, we analyse the causal relationship between the feature and the outcome.[^pdpCausal]
@@ -433,7 +132,7 @@ The relationship is causal for the model - because we explicitly model the outco
 ### Disadvantages
 - The **maximum number of features** you can look at jointly is - realistically - two and - if you are stubborn and pretend that 3D plots on a 2D medium are useful - three.
 That's not the fault of PDPs, but of the 2-dimensional representation (paper or screen) and also our inability to imagine more than 3 dimensions.
-- Some PD and ALE plots don't include the **feature distribution**. 
+- Some PD plots don't include the **feature distribution**. 
 Omitting the distribution can be misleading, because you might over-interpret the line in regions, with almost no feature values.
 This problem is easy to fix by showing a rug (indicators for data points on the x-axis) or a histogram.
 - The **assumption of independence** poses the biggest issue of PD plots. 
@@ -442,8 +141,8 @@ For example: Assume you want to predict how fast a person walks, given the perso
 For the partial dependence of one of the features, let's say height, we assume that the other features (weight) are not correlated with height, which is obviously a wrong assumption. 
 For the computation of the PDP at some height (for example at height = 200cm) we average over the marginal distribution of weight, which might include a weight below 50kg, which is unrealistic for a 2 meter person. 
 In other words: When the features are correlated, we put weight on areas of the feature distribution where the actual probability mass is very low (for example it is unlikely that someone is 2 meters tall but weighting below 50kg).
-A solution to this problem are ALEPlots[^ALE], which only average over close data points. 
-- **Heterogenous effects might be hidden** because the ALE and PD plots only show the average over the observations. 
+A solution to this problem are [Accumulated Local Effect plots](#ale) or short ALE plots[^ALE], which work with the conditional instead of the marginal distribution.
+- **Heterogenous effects might be hidden** because PD plots only show the average over the observations. 
 Assume that for feature $x_j$ half your data points have a positive assocation with the outcome - the greater $x_j$ the greater $\hat{y}$ - and the other half has negative assocation - the smaller $x_j$ the greater $\hat{y}$.
 The curve might be a straight, horizontal line, because the effects of both dataset halves cancel each other out. 
 You then conclude that the feature has no effect on the outcome. 
@@ -451,7 +150,6 @@ By plotting the [individiual conditional expectation curves](#ice) instead of th
 
 
 [^ALE]: Apley, D. W. (n.d.). Visualizing the Effects of Predictor Variables in Black Box Supervised Learning Models, 1–36. Retrieved from https://arxiv.org/ftp/arxiv/papers/1612/1612.08468.pdf
-
 
 
 [^Friedman2001]: Friedman, Jerome H. 2001. "Greedy Function Approximation: A Gradient Boosting Machine." Annals of Statistics. JSTOR, 1189–1232.
