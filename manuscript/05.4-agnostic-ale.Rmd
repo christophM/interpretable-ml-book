@@ -5,7 +5,6 @@ set.seed(42)
 
 ## Accumulated Local Effects (ALE) {#ale}
 
-TODO: Proofread PDP chapter
 Accumulated Local Effects show the effect of a single feature or of two features on the predicted outcome.
 The Accumulated Local Effects (ALE) plot [^ALE] is an alternative to the PDP and fixes the problem that PDPs have when features are correlated.
 
@@ -235,19 +234,43 @@ p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) +
     geom_segment(data = chosen.tile, aes(x = x, xend = xend, y = y - mv.arr, yend = y - mv.arr), arrow = arrow(angle = 10))  
 ```
 
-TODO: Describe what happens in missing rectangles.
+
+When spanning the grid, which is the cartesian product of the quantiles of both features, some cells might remain empty, especially when the features are correlated. 
+In the example in the figure before, many cells were empty because of the correlation.
+In this case, the ALE can either be omitted and visualized with a greyed out box. 
+Alternatively, you can can replace the average local effect for an empty cell by the corresponding value for the
+nearest nonempty cell.
+How is this problem distinct from the extrapolation problem that PDPs have?
+Well, for PDPs these empty areas are involved in estimating first-order univariate effects, which biases the estimates.
+For ALE plots the empty cells only play a role in second-order effects and when a cell is empty it can also be indicated by plotting points where data lie into the plot to make it clear.
+
 
 Interpretation of the second-order ALE:
-TODO: Explain 2D ALE plot: Is second-order effect
+The second-order effect is the additional interaction effect of the features, when we account for the main effects of the features.
+Let's say two features don't interact, but have each a linear main-effect on the predicted. 
+In the 1D ALE plot for each feature we will see a line as effect curve. 
+But when plotting the 2D ALE plot it should remain zero, because the second-order effect is only the additional effect of the interaction.
+The same as the first-order effect is centered at zero and does not evovle around the mean prediction like partial dependence plots do.
 
-TODO: Explain ALE for 1 , features
-TODO: Explain ALE for two categorical features
-TODO: Explain ALE for mixed categorical and numerical features
+
+
+The Accumulated Local Effects can also be computed for arbitrary higher orders (combinations of more than two features), but as argued in the [PDP chapter](#pdp), only up to 2D makes sense, because higher interactions can't be visualized meaningfully.
+
+
+
+*What happens with categorical features?*
+
+Accumulated Local Effects need - by definition - an order within a feature to work.
+That means that they also work for categorical features once you can decide on an order of the categories.
+Some categorical features have a natural order, for example grades in school or hierarchy ranks in a company.
+For those it might make sense to keep that order, but for other features like the season or color there is no obvious order.
+Then there are some features inbetween like day of the week (Monday, Tuesday, ...) which look like they have an order, but where do we start (monday? sunday?) and for some prediction model Mondays might be more similar to Thursdays than to Tuesdays.
+
+
 TODO: Explain PDP for categorical features
 TODO: Explain PDP for mixed numerical and categorical feature
-TODO MAYBE: Give ALE plot it's own chapter
-TODO: List M-Plot as alternative
-
+TODO: List M-Plot as alternative to PDP?
+TODO: Proofread PDP chapter
 TODO LATER: Replace ALEPlot::ALEPlot with iml::Partial
 
 
@@ -259,6 +282,7 @@ TODO: Add Advantages and Disadvantages of ALE plots
 - Adv: faster than pdp because much less predictions involved.
 - Adv. ALE has O(n) and even if K goes to infinity, in reality its maximum n
 - Adv: centered at zero, makes for nicer interpretation, but can also be done for pdpd
+
 
 
 ### Examples
@@ -292,7 +316,7 @@ gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 
 
 
-```{r ale-cervical-prep, fig.keep = FALSE}
+```{r ale-cervical-prep, fig.keep = FALSE, include = FALSE}
 ale1.df = data.frame(ALEPlot(cervical, pred.cervical, J = "Age", pred.fun = y.fun, K = 100))
 ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
   scale_x_continuous("Age") + scale_y_continuous(expression(hat(y))) 
@@ -308,7 +332,11 @@ ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) +
 gridExtra::grid.arrange(ale1, ale2, ncol = 2)
 ```
 
-TODO: Create GGplot version of 2D ALEPlot
+
+TODO: Add first order effect plot ?
+```{r ale-bike-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of windspeed and temperature on the predicted number of bike rentals'}
+ALEPlot::ALEPlot(bike, mod, J = c("windspeed", "temp"), pred.fun = y.fun, K = 100)
+```
 
 ```{r ale-cervical-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of number of pregnancies and the age on the predicted risk of cancer.'}
 ALEPlot(cervical, pred.cervical, J = which(names(cervical) %in% c("Num.of.pregnancies", "Age")), pred.fun = y.fun, K = 50)
