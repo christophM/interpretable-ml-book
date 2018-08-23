@@ -267,15 +267,16 @@ For those it might make sense to keep that order, but for other features like th
 Then there are some features inbetween like day of the week (Monday, Tuesday, ...) which look like they have an order, but where do we start (monday? sunday?) and for some prediction model Mondays might be more similar to Thursdays than to Tuesdays.
 
 
+TODO: ADD example with categorical feature
+TODO: Explain procedure for categorical features
 TODO: Proofread PDP chapter
 
 
 ### Examples
 
-TODO: Add comparisons with partial dependence plots 
-TODO: Intro text for ALE example and some interpretation
 
-Let's return to the regression example, in which we predict [bike rentals](#bike-data).
+It's time to predict [bike rentals](#bike-data) dependent on weather and day
+We fit a XXX model for this.
 We first fit a machine learning model on the dataset, for which we want to analyse the partial dependencies.
 In this case, we fitted a RandomForest to predict the bike rentals and use the partial dependence plot to visualize the relationships the model learned.
 The influence of the weather features on the predicted bike counts:
@@ -285,10 +286,11 @@ data(bike)
 library("mlr")
 library("ggplot2")
 
+set.seed(42)
 bike.task = makeRegrTask(data = bike, target = "cnt")
-mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.ctree'), bike.task)
+mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.ctree'), bike.task)$learner.model
 
-pred.bike = Predictor$new(mod.bike, data = bike)
+pred.bike = Predictor$new(mod.bike, data = bike, y = "cnt")
 ```
 
 ```{r ale-bike-prep, fig.keep = FALSE}
@@ -296,7 +298,7 @@ y.fun = function(X.model, newdata) {
  X.model$predict(newdata)[[1]]
 }
 
-limits = c(-1100, 700)
+limits = c(-1500, 800)
 
 ale1.df = data.frame(ALEPlot(bike, pred.bike, J = "temp", pred.fun = y.fun))
 ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
@@ -315,18 +317,21 @@ ale3 = ggplot(ale3.df) + geom_line(aes(x = x.values, y = f.values)) +
 gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 ```
 
+Let's look at the correlation of the feature temperature, humidity and windspeed.
 
-```{r ale-bike, fig.cap = ""}
-kable(cor(bike[c("temp", "hum", "windspeed")]))
+```{r ale-bike-cor}
+kable(cor(bike[c("temp", "hum", "windspeed")]), digits = 2)
 ```
 
-```{r pdp-bike-compare, fig.cap = 'PDP fails to identify for humidity and temperature the big drop in prediction when at high values. That is humid weather or hot weather.'}
+They are a bit correlated, but not strongly, so when we use a partial dependence plot, it should also yield reasonable results.
+
+```{r pdp-bike-compare, fig.cap = "Partial dependence plots for the features temperature, humidity and windspeed. Compared to the ALE plots, the PDPs show a smaller drop in bike rentals for high temperature or high humidity. The PDP uses all data points for calculating the effect of high temperature for example, even for instances with season 'winter' for example, so the results of the ALE plot are more reliable."}
 pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
-p1 = pdp$plot() +  scale_x_continuous('Temperature', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(3000, 5500))
+p1 = pdp$plot() +  scale_x_continuous('Temperature') + scale_y_continuous('Predicted number of bike rentals', limits = c(3700, 5300))
 pdp$set.feature("hum")
-p2 = pdp$plot() +  scale_x_continuous('Humidity', limits = c(0, NA)) + scale_y_continuous('', limits = c(3000, 5500))
+p2 = pdp$plot() +  scale_x_continuous('Humidity') + scale_y_continuous('', limits = c(3000, 5500))
 pdp$set.feature("windspeed")
-p3 = pdp$plot() + scale_x_continuous('Windspeed', limits = c(0, NA)) + scale_y_continuous('', limits = c(3000, 5500))
+p3 = pdp$plot() + scale_x_continuous('Windspeed') + scale_y_continuous('', limits = c(3000, 5500))
 
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
@@ -335,11 +340,28 @@ Next we look at the second-order effect of humidity and temperature on the predi
 Remember that the second-order effect is the additional interaction effect of the two features and does not cover the first-order effects. 
 This means that you won't see the for example the trend that high humidity causes less rented bikes.
 
-```{r ale-bike-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of humidity and temperature on the predicted number of bike rentals. Yellow color indicates above average and red color below average number of predicted bike rentals. The plot reveals an interaction between temperature and humidity: Hot and humid weather additionally decreases the number of bike rentals (keep in mind that both first-order effects of humidity and temperature also say that the number of bike rentals are decreased when hot and humid), but hot and dry or humid and cold weather actually increases the expected number of bike rentals. TODO: Adapt '}
+```{r ale-bike-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of humidity and temperature on the predicted number of bike rentals. Yellow color indicates above average and red color below average number of predicted bike rentals. The plot reveals an interaction between temperature and humidity: Hot and humid weather increases the number of bike rentals (keep in mind that both first-order effects of humidity and temperature say that the number of bike rentals are decreased when hot and humid). So for hot and humid weather, the joint effect of temperature and humidity is not the sum of the first-order effects, but actually less. Fpr cold and humid weather, an additional negative effect on the number of predicted bike rentals is shown. '}
 x = ALEPlot::ALEPlot(bike, pred.bike, J = c("hum", "temp"), pred.fun = y.fun, K = 100)
 ```
 
+To emphasize again the difference between the pure second-order effect (the 2D ALE plot) and the total effect, let's look at what the partial dependence plot shows.
+The partial dependence plot for two features combines the first-order and second-order effects.
 
+```{r pdp-bike-vs-ale-2D, fig.cap = "Partial dependence plot of the effect of temperature and humidity on the predicted bike rentals. The plot combines the main effect of each of the features and their interaction, unlike the 2D-ALE plot which only shows the interaction."}
+pdp = Partial$new(pred.bike, c("hum", "temp"))
+pdp$plot() + scale_fill_gradient(low = "red", high = "yellow")
+```
+When you are only interested in the interaction, the way of the ALE plot is better. 
+But if you want to read out the combined effect of the features, then the way of the 2D PDP is better, since it combines main effects and interaction. 
+If you want to know what the expected number of bike rentals is at 30 degrees Celsius and 80 percent humidity, you can directly read it from the 2D PDP. 
+When you want to know the same thing using ALE plots, than you have to look at three plots: The ALE plot for temperature, for humidity and for temperature + humidity.
+On the other hand, when two features have no interaction, only plotting the second-order effect will reveal just that. 
+When the first-order effects are included, the 2D plot will show something and it is not easy to spot weather the features interact or not (but you can see it if you practice).
+
+
+Enough bikes for now, let's turn to classification.
+We train a random forest to predict the probability for [cervical cancer](#cervical) for a woman dependent on risk factors.
+For the random forest we visualize the Accumulated Local Effects for two of the features:
 
 ```{r ale-cervical-prep, fig.keep = FALSE, include = FALSE}
 data(cervical)
@@ -353,35 +375,24 @@ ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) +
 
 ale2.df = data.frame(ALEPlot(cervical, pred.cervical, J = "IUD..years.", pred.fun = y.fun))
 ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous(".IUD..years.") + scale_y_continuous(expression(hat(y))) 
+  scale_x_continuous("Hormonal.Contraceptives..years.") + scale_y_continuous(expression(hat(y))) 
 
 ```
 
-```{r ale-cervical, fig.cap = ""}
+```{r ale-cervical-1D, fig.cap = "ALE plots of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the partial dependence plot shows that on average the cancer probability is until 40 and increases after that. The sparseness of data points after age of 50 indicates that the model did not have many data points to learn from above that age. The number of years on hormonal contraceptives is associated with a higher cancer risk after 10 years. But again, there are not many data points in that region, which implies that we might not be able to rely on the machine learning model predictions for >10 years on contraceptives "}
 gridExtra::grid.arrange(ale1, ale2, ncol = 2)
 ```
 
-```{r ale-cervical-cor, fig.cap = ''}
-kable(cor(cervical[c("Age", "IUD..years.")]))
+Now let's look at the interaction between number of pregnancies and age, as we did in the partial dependence chapter.
+
+
+```{r ale-cervical-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of number of pregnancies and the age on the predicted risk of cancer. We see a little bit of interaction, but the effects are rather week. Cells without data are blanked out.'}
+x = ALEPlot(cervical, pred.cervical, J = which(names(cervical) %in% c("Num.of.pregnancies", "Age")), pred.fun = y.fun, NA.plot = FALSE)
 ```
 
-```{r pdp-cervical-compare, fig.cap = ''}
-pdp = Partial$new(pred.cervical, "Age", ice = FALSE) 
-p1 = pdp$plot() + 
-  scale_x_continuous(limits = c(0, NA)) + 
-  scale_y_continuous('Predicted cancer probability', limits = c(0.03, 0.15))
-pdp$set.feature("IUD..years.")
-p2 = pdp$plot() + 
-  scale_x_continuous(limits = c(0, NA)) + 
-  scale_y_continuous('', limits = c(0.03, 0.15))
-
-gridExtra::grid.arrange(p1, p2, ncol = 2)
-```
-
-
-```{r ale-cervical-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of number of pregnancies and the age on the predicted risk of cancer.'}
-ALEPlot(cervical, pred.cervical, J = which(names(cervical) %in% c("Num.of.pregnancies", "Age")), pred.fun = y.fun, K = 50)
-```
+The ALE plot shows similar interactions between Age and number of pregnancies as we have seen with [partial dependence plots](#pdp).
+The age and number of pregnancies are naturally correlated, with a correlation of `r sprintf("%.2f", cor(cervical$Age, cervical$Num.of.pregnancies))`.
+This means I would trust the ALE more than the marginal effect.
 
 
 ### Advantages
@@ -391,6 +402,10 @@ Partial dependence plots fail in this scenario because they marginalize over unl
 The PDP needs n times number of grid points estimations. 
 For, let's say, 20 grid points, this would be 20x more predictions the model has to make.
 - The interpretation of ALE plots is also clear: Conditional on a given x value, the effect of the feature on the prediction can be read from the ALE plot.
+- 2D plot only shows interaction: The good thing is, when two features don't interact, the plot doesn't show anything.
+This choice has also some negative consequences.
+After all it's just a technical decision that's not inherent to the idea of ALE plots. 
+It's technically possible to add the first order effects and show both.
 
 ### Disadvantages
 - ALE plots can become a bit wobbly (many small ups and downs) with a high number of intervals
