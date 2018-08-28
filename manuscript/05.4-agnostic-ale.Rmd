@@ -5,40 +5,66 @@ set.seed(42)
 
 ## Accumulated Local Effects (ALE) {#ale}
 
-Accumulated Local Effects show the effect of a single feature or of two features on the predicted outcome.
-The Accumulated Local Effects (ALE) plot [^ALE] is an alternative to the [partial dependence plots](#pdp) and fixes the problem that they have when features are correlated.
+Accumulated Local Effects [^ALE] plots show how a single feature (or of two features) affect predicted outcome of a machine learning model on average.
+ALE Plots are an alternative to the [partial dependence plots](#pdp) (PDPs) and the bias of PDPs when features are correlated.
 
 *Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects, ALE plot*
 
+**The Problem: Correlated features**
 
-There is a problem with partial dependence plots, and that's correlated features.
-When two input features are strongly correlated, the partial dependence plot for one of those features will not make sense.
-How come? 
-When features are correlated and we compute the partial dependence, we use grid values in combination with the correlated feature that don't make sense. 
-For example we want to predict the worth of a house using number of rooms and the size of the living area.
-Then we analyse the partial dependence of the predicted price on the living area.
-For the first grid values - let's say a living area of 30 square meters - we use all data points, even flats with 10 rooms, which don't yield a realistic data instance. 
-But in PD plots we use those to compute the average effect. 
-So what can we do?
-The answer is to only use instance for which the grid values that are forced as feature values make realistic instances.
-One solution is to use only the neighbours, meaning that for the 30 square meters, we only compute the partial dependence with houses that are between let's say 25 and 35 square meters (wait, are those real houses? maybe houses for ants). 
-The solution also has a name: ALE plots, which is short for [Accumulated Local Effects (ALE) Plots](#ale).
+When features of a machine learning model are correlated, the partial dependence plot cannot be trusted.
+Calculating the partial dependence plots for correlated features involves creating and averaging over data instances that are unlikely in reality.
+This can bias the resulting effect heavily.
+For example, we compute the partial dependence plots for a  machine learning model that predicts the worth of a house depending on the number of rooms and the size of the living area.
+We calculate the partial dependence plot for the living area.
+To compute the first grid value - let's say a living area of 30 square meters - we replace the living area for all instances with 30, even for houses with 10 rooms.
+Sounds like a very unlikely house to me, but in partial dependence plots with correlated features, these instances are created and used for computing the averages, biasing the interpretation.
+For interpreting what the model on average predicts, the partial dependence plots includes these unrealistic houses into it's calculation and pretend that that behaviour is ok.
+The following plot gives an impression of that problem.
+
+```{r aleplot-motivation1, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP averages the prediction over the whole range of x2."}
+
+set.seed(1)
+n = 100
+intercept = 0.75
+
+x1 = runif(n)
+x2 = x1 + rnorm(n, sd = 0.1)
+df = data.frame(x1, x2)  
+
+p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +  
+  theme(panel.grid.major.y = element_blank(), 
+    panel.grid.minor.y = element_blank(), 
+    panel.grid.major.x = element_blank(), 
+    panel.grid.minor.x = element_blank())
+
+p.int = p + geom_vline(xintercept = intercept)
+x1.dens = density(x1)
+x1.dens.df = data.frame(dens = x1.dens$y, x = x1.dens$x)
 
 
-ALEplots are partial dependence plots that solve the problem the PDPs have with correlated features.
-Both types solve the problem of computing the average marginal effects: 
+p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) + 
+  ggtitle(sprintf("Marginal distribution p(x2)", intercept)) + 
+  scale_y_continuous(limits = c(-0.2, 1.2))
+p1
+```
+What can we do to get a better estimate how a feature influences the prediction?
 
-$$E_{x_C}\left[\hat{f}(x_S,x_C)\right]$$
+The problem of partial dependence plots with correlated features stems from the fact that PDPs average over the marginal distribution of features, which kind of assumes that the features are independent.
+A first step to improvement is to use the conditional distribution of features,  meaning for each grid value, we only look at the predictions of nearby data instances.
+Given the living area is 30 square meters, what is the average prediction?
+The solution for computing feature effects using the the conditional distribution is called Marginal Plots, or M-Plots (confusing naming, I know).
+Wait, what?
+Didn't I promise to talk about ALE Plots?
+Where are M Plots coming from?
+M Plots are not the solution, but a step into the right direction with ALE Plots as the final solution.
+Why are M-Plots not solving our problem?
+If we average over all houses that are around 30 square meters, we don't get the pure effect of the living area, but also the effect of the number of rooms, because of their correlation.
+Assume that the living area itself has no effect on the predicted worth of a house, only the numbers of rooms have.
+The M-Plot would still show that the size of the living affects the prediction, since we use the conditional distribution and the number of rooms grows with the living area, so we mix up both effects.
+The following plot shows how M-Plots work:
 
-The difference is that PDPs assume that the feature are not strongly correlated for computing the average effects. 
-The ALEplot also works for correlated features, by only computing the partial effects locally.
-So how do ALEplots solve this problem?
-First, the method divides a feature into intervals instead of grid points.
-This is almost the same, but the difference is important. 
-Because ALEplots now use all the data points in each interval to compute the partial effects.
-
-
-```{r aleplot-motivation, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP averages the prediction over the whole range of x2 (left plot), even if unrealistic combinations of x1 and x2 are used. ALE plots average only over the conditional distribution at x1 = 0.75 (right plot). "}
+```{r aleplot-motivation2, fig.cap = "Two strongly correlated features x1 and x2. M-Plots average only over the conditional distribution, here shown conditional on x1 = 0.75. Also ALE-Plots are based on the conditional distribution, but acumulate the average (conditional) change in prediction."}
 
 set.seed(1)
 n = 100
@@ -66,13 +92,18 @@ p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) +
 x1.dens.ale = density(x1[(x1 > (intercept - 0.1)) & (x1 < (intercept + 0.1))])
 x1.dens.ale.df = data.frame(dens = x1.dens.ale$y, x = x1.dens.ale$x)
 
-p2 = p.int + geom_path(data = x1.dens.ale.df, aes(x = intercept - dens/10, y = x)) + 
+p2 = p.int + geom_path(data = x1.dens.ale.df, aes(x = intercept - dens/20, y = x)) + 
   ggtitle(sprintf("Conditional distribution p(x2|x1=%.2f)", intercept)) + 
   scale_y_continuous(limits = c(-0.2, 1.2))
-
-gridExtra::grid.arrange(p1, p2, ncol = 2)
+p2
 ```
 
+
+We solve the problem of averaging over unlikely data points, but our effect estimate is now mixing up the effects of two features.
+This problem can be overcome by computing local effects in the form of differences, conditional on the distribution.
+This mean for the effect of 30 square meter houses, we first condition on similar small houses and instead of averaging their predictions (M-Plots) we compute the difference in prediction when we would increase the living area for these houses slightly (the slope or gradient of the price dependent on the living area).
+In this way, we get the pure effect of the living area, conditional that living area is small and without mixing the effect up with the effects of any correlated features.
+The solution also has a name: ALE plots, which is short for [Accumulated Local Effects (ALE) Plots](#ale).
 The following graphic show how the ALEplots are calculated. 
 
 
@@ -109,23 +140,81 @@ p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) +
   geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches")))
 ```
 
+
+To summarizes how each type of plot handles the effect of a feature j at a certain grid value v:  
+Partial Dependence Plots: "Let me show you what the model predicts on average if every data instance had value v for feature j. I don't care if value v is a meaningful value for the other data instances".  
+M-Plots: "Let me show you what the model predicts on average for data instances that have values close to v for feature j. I can't promise you that the averages you see are from feature j or from some correlated feature".  
+ALE Plots: "Let me show you how the model predictions change when we slightly increase value v for data instances that have values close to v for feature j".
+
+### Theory
+
+**How do PD, M and ALE Plots compare mathematically?**
+
+All plots have in common that they reduce our complex prediction function f to one or two dimensions, depending on the feature(s) we choose.
+They also have in common that they estimate the expectation of the model prediction function, but differ fo what they compute the expectation (f or derivative of f) and over what distribution (marginal or conditional).
+
+Partial dependence plots average the predicted outcome over the marginal distribution.
+
+$$\hat{f}_{x_S,PDP}(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C)d{}x_C$$
+
+That's the value of our prediction function f, at $x_S$, averaged over all features in $x_C$.
+Because we are only interested in the effect of $x_S$ on the prediction, we need to average out the effects of the other features, which get the index C here. 
+Averaging out means computing their marginal expectation E here, which is the integral over the prediction weighted by the probability distribution.
+Sounds fancy pants, but when it gets down to computing this, we simply take all our data, get their prediction by forcing them to have a certain (grid) values for our feature ov interest, and average over the predictions.
+By taking the data we have, this already ensures that we average over the distribution of the features.
+
+M plots average the predicted outcome over the conditional distribution:
+
+$$\hat{f}_{x_S,M}(x_S)=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C|x_S)d{}x_C$$
+The only thing that changes compared to PDPs is that we take the average of the data instance not over all the data, but conditional on a certain grid point at which we are with the feature of interest.
+In practice this means that we have to define a neighbourhood and average over it, for example for the effect of 30 square meters, we average over all houses between 28 and 32 square meters.
+
+ALE Plots average the change in the predicted outcome and acumulate it over the grid (more on the computation later).
+
+$$\hat{f}_{x_S,ALE}(x_S)=\int_{z_{0,1}}^{x_S}E_{X_C|X_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-constant\\=\int_{z_{0,1}}^{x_S}\int_{x_C}\hat{f}^S(z_s,x_c)\mathbb{P}(x_C|z_S)d{}x_C{}dz_S-constant$$
+
+
+There are three differences to M Plots. 
+First, we do not average over the prediction, but we average over the change of prediction, represented by the gradient:
+
+
+$$\hat{f}^S(x_s,x_c)=\frac{\delta\hat{f}(x_S,x_C)}{\delta{}x_S}$$
+
+The second difference is the additional integral that integrates over some z.
+That's because we acumulate these local gradient effects over the range of $x_S$, which gives us the effect of the feature on the prediction.
+The z's indicate that we acumulate the effects over some intervals, where in each of them we compute this changes in prediction.
+The third difference is that we subtract some constant from the results.
+The constant is here to center the ALE, so that they are zero on average.
+Let's dive a bit deeper into ALE Plots computation:
+
+**How to compute the ALE Plots**
+
 ALE plots are plots for estimates of the first order (1D) or second order (2D) effects of features on the prediction.
-An ALE plot for feature $x_j$ is the accumulated integral of the expected gradient of the prediction over values of $x_j$.
-We are interested in the partial function of the prediction dependent on only a single (or two) features.
-Instead of directly computing the average of the function, the authors calculate the derivative and integrate again over the derivative to get the value of the function. 
-Now, that sound stupid. 
+An ALE plot for feature $x_j$ is the accumulated integral of the expected gradient of the prediction over intervals of $x_j$.
+Instead of directly computing the average of the function, the ALE method calculates the derivative in each interval and integrates again over the derivative to get the value of the function. 
+Now, that sounds stupid. 
 Derivation and integration cancel each other out, like first subtracting, then adding the same number. 
 Why does this make sense?
 Because the derivative is computed at different grid values and averages the effects locally, avoiding the mistake of partial dependence plots of averaging over the marginal distribution which is so problematic when the features are correlated.
+It also avoids the mistakes of M Plots that we mix up our effect estimates with the effect that correlated features have on the predicted outcome.
+One problem remains for how I described ALE Plots so far: 
+Not all models come with a gradient, for example random forests have no gradient.
+For the actual estimation of the local effects, we divide the feature into many intervals and compute the differences in the prediction.
+This approximates the gradients, but is also computable for models without gradients.
 
-$$\tilde{f}_{j,ALE}(x_j)=\int^{x_j}_{z_{0,j}}E\left[f^j(X_j,X_{\setminus{}j})|X_j=z_j\right]dz_j$$
-This is the theoretic construct, also it is also centered as you will see in the estimator.
-You might notice that this would require that we f has a derivative.
-But for the actual estimation, we use a sample estimator and divide the feature into many intervals, so it is not a problem.
-First we have to estimate the uncentered effect: 
+First we have to estimate the uncentered effect, here for a single feature: 
 
 $$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{i,j}\in{}N_j(k)}\left[f(z_{k,j},x_{i\setminus{}j})-f(z_{k-1,j},x_{i\setminus{}j})\right]$$
-
+Let's break this formula down, starting from the right side. 
+The name *Acumulated Local Effects* nicely reflects all individual components of this formula.
+At it's heart, the ALE Plot computes the differences in predictions, where we replace the feature we are interested in with grid values z.
+This difference in prediction is the *Effect* (in ALE) the feature has for an individual instance in a certain interval.
+The inner sum is the sum over all instances within one interval, indicated as neighbourhood N(k).
+We divide this sum by the number of instances that are in this interval, to get the mean difference in the prediction for that interval.
+This average in the interval reflects the *Local* in the name ALE.
+The left sum symbol means that we acumulate this mean prediction difference over all intervals.
+The (uncentered) ALE at a feature value that lies in the third interval is the sum of the effects of the first, second and third interval.
+The *Acumulated* in ALE comes from this outer sum.
 
 This effect is then centered, so that the mean effect is zero:
 
@@ -134,12 +223,16 @@ $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\t
 The value of the ALE can be interpreted as the effect of the feature at a certain feature value compared to the mean. 
 For example if the curve at $x_j=3$ is -2, it means that when $x_j$ has value 2, then the prediction is lower by 2 compared to the average prediction.
 
-Let's see this thing now in action. 
-I create a data situation in which the partial dependence plot fails. 
-Namely a situation in which the features are strongly correlated and the prediction model does something weird at a combination of the two features for which we never observed instances.
+
+**Demonstration that ALE Plots fix correlation problem**
+
+Let's see ALE Plots now in action. 
+I created a scenario in which the partial dependence plot fails, consisting of two features, one outcome to predict and a prediction model.
+The features are strongly correlated and the prediction model does something weird at a combination of the two features for which we never observed instances.
+The following figure shows how this scenario looks like.
 
 
-```{r correlation-problem, fig.cap = "Two features and a predicted outcome. The model simply predicts for y (shaded background) the sum of the two features, but there is also some artifact where the model always predicts 2, when x1 is larger than 0.7 and x2 smaller than 0.3. Since the distribution doesn't touch this area, there shouldn't be a problem. Shoudl the distribution shift, then there would be one."}
+```{r correlation-problem, fig.cap = "Two features and a predicted outcome. The model simply predicts the sum of the two features (shaded background), but there is also some artifact where the model always predicts 2, when x1 is larger than 0.7 and x2 smaller than 0.3. This artifact lies far away from the distribution of the data and are as such unrealistic values, so this artifact shouldn't affect our interpretation of the model."}
 
 set.seed(12)
 n = 25
@@ -165,18 +258,18 @@ ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) +
   scale_fill_gradient(low = "white", high = "blue")
 ```
 
-"This is a completely made up example", I here some people yelling.
-"What kind of model would do such a thing?! Unrealistic!", other join. 
-Yes, this is a toy example. 
+"This is a completely made up example", I here some angry people yelling.  
+"What kind of model would do such a thing?! Unrealistic!", other join.  
+Yes, this is a toy example.  
 BUT, remember that, when you train a model, the model only fits the existing data points. 
-Any area outside of the distributions, depending on the type of model anything can happen, because the model will not be penalized for doing weird stuff abroad.
-"Where there is no judge, there will be no judgement".
-It's like dancing like nobodies watching.
-Linear models for example have extreme behaviour outside the are of the data, because they are linear functions. 
+Anything can happen outside of the distribution of the training data, depending on the type of model, because the model will not be penalized for doing weird stuff abroad.
+Since we optimize the model based on the training data, anything can happen outside of that distribution.
+That's how we can generate [adversarial examples](#adversarial).
+Linear models for example have extreme behaviour outside the distribution of the data, because they are linear functions. 
 Imagine a linear regression model for predicting the worth of a house which has a postive weight for the influence of the living area.
 Going outside the data means going beyond certain levels of square meters (let's say 3000) will make your predictions grow extreme.
 The phenomenon is called extrapolation and that's also what's happening when you have correlated features with partial dependence plots.
-Extrapolation of values to values that don't even exist.
+Extrapolation leads to values that are very unlikely given the distribution of our training data.
 See what happens with the PD plots and how they compare to the ALE plots in our little example:
 
 
@@ -199,10 +292,25 @@ ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) +
 ```
 
 
-```{r correlation-pdp-ale-plot, fig.cap = "Comparing the marginal feature effects computed with PDP and ALE. The PDP picks up on the artifact in the data, which is not part of the data distribution, which shows as a jump in the plot. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and prediction, ignoring areas where no data points are."}
+```{r correlation-pdp-ale-plot, fig.cap = "Comparing the feature effects computed with PDP and ALE. The PDP picks up on the artifact in the data (steep jumps in the plots), which lies outside of the data distribution. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and prediction, ignoring areas where no data instances lie"}
 gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
 ```
 
+
+In the area of our training data, the model is simply a linear model, which the ALE Plots capture nicely.
+The PDP plots, extrapolating into areas they shouldn't extrapolate, pick up the model artefact and give us a very weird impression of what the model does.
+But is it not interesting to see that our model makes something weird?
+Well, yes and no.
+These data instances might be physically impossible or at least extremely unlikely, then I don't see how looking into these instances might be interesting. 
+But if you suspect that you had this correlation between the training instances, but your test distribution might be somewhat different and some instances may actually lie in this area, then it would be interesting. 
+But this has to be a deliberate choice to include areas where we haven't observed any data yet and not a side-effect of the method.
+I recommend to still use ALE Plots, but generate the data you are expecting by simulating it for example, instead of relying on a flawed method.
+
+TODO: CONTINUE HERE WITH ROUGH DRAFT
+
+
+
+**ALE Plots for two features**
 
 ALE plot can also be used with more features, but, as with PDP,  only makes sense with two at maximum.
 Two feature works as one feature, with the difference that we don't build intervals, but rectangles and use for the computation of the marginal effects the  data instances in each rectangle.
@@ -253,12 +361,10 @@ But when plotting the 2D ALE plot it should remain zero, because the second-orde
 The same as the first-order effect is centered at zero and does not evovle around the mean prediction like partial dependence plots do.
 
 
-
 The Accumulated Local Effects can also be computed for arbitrary higher orders (combinations of more than two features), but as argued in the [PDP chapter](#pdp), only up to 2D makes sense, because higher interactions can't be visualized meaningfully.
 
 
-
-*What happens with categorical features?*
+**What happens with categorical features?**
 
 Accumulated Local Effects need - by definition - an order within a feature to work.
 That means that they also work for categorical features once you can decide on an order of the categories.
@@ -425,6 +531,7 @@ This means I would trust the ALE more than the marginal effect.
 
 
 ### Advantages
+
 - ALE plots also work when features are correlated.
 Partial dependence plots fail in this scenario because they marginalize over unlikely or even physically impossible combinations of feature values.
 - ALE plots are faster to compute than PDPs and they scale with O(n), since the maximum number of intervals is the number of instances, amounting to one interval per data instance.
@@ -437,6 +544,7 @@ After all it's just a technical decision that's not inherent to the idea of ALE 
 It's technically possible to add the first order effects and show both.
 
 ### Disadvantages
+
 - ALE plots can become a bit wobbly (many small ups and downs) with a high number of intervals
 - No perfect solution for setting the number of intervals. 
 If the number is too small, than the ALE plots will not be very accurate. 
