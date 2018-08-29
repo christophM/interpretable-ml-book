@@ -223,6 +223,13 @@ $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\t
 The value of the ALE can be interpreted as the effect of the feature at a certain feature value compared to the mean. 
 For example if the curve at $x_j=3$ is -2, it means that when $x_j$ has value 2, then the prediction is lower by 2 compared to the average prediction.
 
+One thing I haven't spoken about yet is how to choose the grid.
+While many solutions are admissable, like random selection or uniform grid, the one that makes most sense are quantiles of the distribution of the feauture.
+Using the quantiles assures that there are roughly the same amount of data points in each of the intervalls. 
+Quantiles have the drawback that the intervals can have very different lenghts.
+This can result in some weird ALE plots, when the feature of interest is very skewed, for example lots of low values and just a few very high values.
+Then the intervals in the beginning are very short and much larger for higher values.
+
 
 **Demonstration that ALE Plots fix correlation problem**
 
@@ -306,20 +313,22 @@ But if you suspect that you had this correlation between the training instances,
 But this has to be a deliberate choice to include areas where we haven't observed any data yet and not a side-effect of the method.
 I recommend to still use ALE Plots, but generate the data you are expecting by simulating it for example, instead of relying on a flawed method.
 
-TODO: CONTINUE HERE WITH ROUGH DRAFT
-
 
 
 **ALE Plots for two features**
 
-ALE plot can also be used with more features, but, as with PDP,  only makes sense with two at maximum.
-Two feature works as one feature, with the difference that we don't build intervals, but rectangles and use for the computation of the marginal effects the  data instances in each rectangle.
-I'll spare you with the formula for 2D plots. 
+ALE plot can also be used with more features, but, as with PDP, only makes sense with two at maximum and current software implementation allow only two at maximum.
+The principles are the same as with a single feature, but we now work with rectangular cells instead of intervals, because we have to accumulate the effects in two dimensions.
+Also, we don't only adjust for the overall mean prediction, but for the the accumulated local effects of the single features.
+This means that the ALE for two features represents the second-order effects and doesn't include the first-order effect.
+This means that ALE for two features only shows the additional interaction effect of the two features, where the main effects of the features was subtracted.
+Conceptually that's same thing we did for the single feature ALE, where we subtracted the overall mean, only extended now to the next dimension.
+If we would compute the 3-feature ALE, then we would subtract all the 2-feature ALE.
+I'll spare you with the formula for 2D ALE plots, as it is long and uncomfortable to read.
 If you are interested, I refer to the paper, formulas (13) - (16) for the computation.
-Here is some intuition how it is computed:
+Let's go for some visual intuition how it is computed: 
 
-```{r aleplot-computation-2d, fig.cap = "Illustration on how to calculate the second-order Accumulated Local Effects. We lay a grid over the two features we are interested in. In each cell of that grid (one is exemplary highlighted), we compute the second-order differences, which is the joint effect (indicated by arrow from cell bottom left to top right) minus the two first order effects, as indicated by the vertical and horizontal arrows next to the cell. In each cell the effects are averaged for the points within that cell."}
-
+```{r aleplot-computation-2d, fig.cap = "Illustration on how to calculate second-order Accumulated Local Effects for two features. We lay a grid over the two features we are interested in. In each cell of that grid (one is exemplary highlighted), we compute the second-order differences, which is the joint effect (indicated by an arrow from bottom left to top right of the cell) minus the two first order effects, as indicated by the vertical and horizontal arrows next to the cell and minus the overall weighted mean prediction of the cells. In each cell the effects are averaged for the points within that cell."}
 
 p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
   theme(panel.grid.major.y = element_blank(), 
@@ -342,60 +351,79 @@ p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) +
     geom_segment(data = chosen.tile, aes(x = x, xend = xend, y = y - mv.arr, yend = y - mv.arr), arrow = arrow(angle = 10))  
 ```
 
-
 When spanning the grid, which is the cartesian product of the quantiles of both features, some cells might remain empty, especially when the features are correlated. 
 In the example in the figure before, many cells were empty because of the correlation.
-In this case, the ALE can either be omitted and visualized with a greyed out box. 
-Alternatively, you can can replace the average local effect for an empty cell by the corresponding value for the
-nearest nonempty cell.
-How is this problem distinct from the extrapolation problem that PDPs have?
-Well, for PDPs these empty areas are involved in estimating first-order univariate effects, which biases the estimates.
+In this case, the ALE can either be omitted and visualized with a greyed or blacked out box. 
+Alternatively, you can replace the missing ALE of an empty cell by the ALE estimate of the nearest non-empty cell.
+Is this problem distinct from the extrapolation problem that PDPs have?
+Yes, for PDPs these empty areas are involved in estimating first-order univariate effects, which biases the estimates.
 For ALE plots the empty cells only play a role in second-order effects and when a cell is empty it can also be indicated by plotting points where data lie into the plot to make it clear.
 
-
-Interpretation of the second-order ALE:
-The second-order effect is the additional interaction effect of the features, when we account for the main effects of the features.
-Let's say two features don't interact, but have each a linear main-effect on the predicted. 
-In the 1D ALE plot for each feature we will see a line as effect curve. 
-But when plotting the 2D ALE plot it should remain zero, because the second-order effect is only the additional effect of the interaction.
-The same as the first-order effect is centered at zero and does not evovle around the mean prediction like partial dependence plots do.
-
+Since the ALE estimates for two features only show the second-order effect of the features, the interpretation needs some extra attention.
+The second-order effect is the additional interaction effect of the features, after we have accounted for the main effects of the features and the mean effect.
+Let's say two features don't interact, but each has a linear main-effect on the predicted outcome. 
+In the 1D ALE plot for each feature we will see a straight line as the estimated ALE curve, with the slope equal to the estimated weight when the underlying model was a linear model.
+But when we plot the 2D ALE estimates, they should be close to zero, because the second-order effect is only the additional effect of the interaction, which is zero in our little example.
 
 The Accumulated Local Effects can also be computed for arbitrary higher orders (combinations of more than two features), but as argued in the [PDP chapter](#pdp), only up to 2D makes sense, because higher interactions can't be visualized meaningfully.
 
 
 **What happens with categorical features?**
 
-Accumulated Local Effects need - by definition - an order within a feature to work.
-That means that they also work for categorical features once you can decide on an order of the categories.
+Accumulated Local Effects need - by definition - an order within a feature to work, because it has to accumulate the effects in some direction.
+Categorical features - by definition - don't have any order.
+So no ALE plots for categorical features, I am sorry.
+Just kidding.
+Once you have ordered the categories and enumerate them, you can compute ALE.
+But how can we meaningfully order the categories?
 Some categorical features have a natural order, for example grades in school or hierarchy ranks in a company.
 For those it might make sense to keep that order, but for other features like the season or color there is no obvious order.
-Then there are some features inbetween like day of the week (Monday, Tuesday, ...) which look like they have an order, but where do we start (monday? sunday?) and for some prediction model Mondays might be more similar to Thursdays than to Tuesdays.
+Then there are some features like the day of the week (Monday, Tuesday, ...) which look like they have an order, but it's not clear if you want to use that order for computing ALE plots. 
+Where do we start? Monday? Sunday?)
+For some prediction model Mondays might be more similar to Thursdays than to Tuesdays.
 
-The order of the categories influences the interpretation and calculation of the local effects.
+The order of the categories influences the interpretation and calculation of the accumulated local effects.
 One solution is to order the categories based on how similar the categories are.
-For a given category, the 'lower' and the 'larger' categories in the ordering should be the most similar categories and the farther you move a way from the category, the more dissimilar the categories should be.
-Now, how can we compute similarity of classes?
-We can, for the data instances within each of the classes of a categorical feature compute the similarities to the instances in the other categories (or levels) by using the values of the other feature values.
-The distance between two categories is measured as the sum of the distance per feature.
-For continuous features, we measure the distance with Kolmogorov-Smirnov distance, which compares the empirical distribution of the feature for all instances in one category with the empirical distribution of feature values in the other category.
-For categorical features ALE uses the quadratic distance of the probability distributions in the categories.
-Let's say with have two categorical features and one numerical.
-For the first categorical feature we want to calculate the ALEs and it has the categories "Spring", "Summer", "Fall", "Winter".
-The numerical feature is temperature, and the other categorical feature is the type of weather with categories "good", "misty", "rainy".
-We start to compute the distance between categories "Spring" and "Summer". 
-The distance is the sum of distance over temperature and weather.
-For temperature, we take all instances which "Spring", compute the empirical cumulative distribution function and do the same for instances with "Summer" and compare both with Kolmogorov-Smirnov test statistic.
-For the weather feature, we compute for all "Spring" instance the probabilities for each weather type, do the same for the "Summer"-instances and sum up the absolute distance in the probability distribution.
-If "Spring" and "Summer" have very different temperatures and weather, the distance will be large.
-This procedure gives us a matrix that tells us the distances between each category with each other category. 
+For a given category, the next 'lower' and the next 'larger' categories in the ordering should be similar and the farther you move a way from the category, the more dissimilar the categories should be.
+How can we compute the similarity of categories?
+A solution is to measure how different the instances of different categories in their feature values of the other features.
+
+
+Here a short pseudo-code for calculating ALEs for categorical features.
+
+Goal: Compute the distances between two categories.
+Input: Instances from category 1 and 2
+
+1. For all features, do (excluding the categorical feature for which we are computing the order):
+   - If the feature is numerical: Take instances from category 1, calculate the empirical cumulative probability distribution function (ecdf) of the feature. The ecdf is a function that tells us for a given feature value, how many values are smaller. Do the same for category 2. The distance is the absolute maximum point-wise distance of the two ecdf. Practically, this value is high when the distribution from one category is strongly shifted far away from the other. This measure is also known as the [Kolmogorov-Smirnov distance](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test). 
+   - If the feature is categorical: Take instances from category 1 and calculate a table with the relative frequency of each category of the other feature. Do the same for instances from category 2. The distance is the sum of the absolute difference of both relative frequency tables.
+2. Sum up the distances over all features
+
+This algorithm we run for all pairs of categories.
+Then we have a k times k matrix, when k is the number of categories, where each entry is the distance between two categories.
 Still not enough to have a single order, because, a (dis)similarity tells you the pair-wise distances, but does not give you a one-dimensional ordering of the classes.
+To kind of force this thing into a single dimension, we have to use a dimension reduction trick called multi-dimensional scaling. 
 This can be solved using multi-dimensional scaling, which takes in a distance matrix and returns a distance matrix with reduced dimension.
 In our case, we only want 1 dimension left, so that we have a single ordering of the categories and can compute the accumulated local effects.
+After reducing it to a single ordering, we are done and can use this ordering to compute ALE.
 This is not the holy grale how to order the factors, but one possibility.
 
-### Examples
+To make is a bit clearer, here is one example:
+Let's say with have two categorical features (season and weather) and one numerical (temperature).
+For the first categorical feature we want to calculate the ALEs. 
+The feature has the categories "Spring", "Summer", "Fall", "Winter".
+The numerical feature is temperature, and the other categorical feature is the type of weather with categories "good", "misty", "rainy".
+We start to compute the distance between categories "Spring" and "Summer". 
+The distance is the sum of distance over the features temperature and weather.
+For temperature, we take all instances with "Spring", compute the empirical cumulative distribution function and do the same for instances with "Summer" and compare both with Kolmogorov-Smirnov test statistic.
+For the weather feature, we compute for all "Spring" instances the probabilities for each weather type, do the same for the "Summer"-instances and sum up the absolute distance in the probability distribution.
+If "Spring" and "Summer" have very different temperatures and weather, the distance will be large.
+We repeat the procedure with the other season pairs, which results in the distance matrix, which is then reduced to a single dimension using multi-dimensional scaling.
 
+TODO: CONTINUE HERE
+
+
+### Examples
 
 It's time to predict [bike rentals](#bike-data) dependent on weather and day
 We fit a regression tree model for this.
