@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2018-08-29">
+<meta name="date" content="2018-08-30">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -285,7 +285,7 @@ window.cookieconsent.initialise({
 <div id="the-theory" class="section level3">
 <h3><span class="header-section-number">6.4.1</span> The Theory</h3>
 <p>The concept is really straightforward: We measure a feature’s importance by calculating the increase of the model’s prediction error after permuting the feature. A feature is “important” if permuting its values increases the model error, because the model relied on the feature for the prediction. A feature is “unimportant” if permuting its values keeps the model error unchanged, because the model ignored the feature for the prediction. The permutation feature importance measurement was introduced for Random Forests by Breiman (2001)<a href="#fn29" class="footnoteRef" id="fnref29"><sup>29</sup></a>. Based on this idea, Fisher, Rudin, and Dominici (2018)<a href="#fn30" class="footnoteRef" id="fnref30"><sup>30</sup></a> proposed a model-agnostic version of the feature importance - they called it model reliance. They also introduce more advanced ideas about feature importance, for example a (model-specific) version that accounts for the fact that many prediction models may fit the data well. Their paper is worth a read.</p>
-<p><strong>The permutation feature importance algorithm based on Breiman (2011) and Fisher, Rudin, and Dominici (2018):</strong></p>
+<p><strong>The permutation feature importance algorithm based on Breiman (2001) and Fisher, Rudin, and Dominici (2018):</strong></p>
 <p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, feature matrix <span class="math inline">\(X\)</span>, target vector <span class="math inline">\(Y\)</span>, error measure <span class="math inline">\(L(Y,\hat{Y})\)</span></p>
 <ol style="list-style-type: decimal">
 <li>Estimate the original model error <span class="math inline">\(e_{orig}(\hat{f})=L(Y,\hat{f}(X))\)</span> (e.g. mean squared error)</li>
@@ -333,6 +333,7 @@ FIGURE 6.13: The importance for each of the features in predicting bike rentals 
 <ul>
 <li>The feature importance measure is tied to the error of the model. This is not inherently bad, but in some cases not what you need. In some cases you would prefer to know how much the model’s output varies for one feature, ignoring what it means for the performance. For example: You want to find out how robust your model’s output is, given someone manipulates the features. In this case, you wouldn’t be interested in how much the model performance drops given the permutation of a feature, but rather how much of the model’s output variance is explained by each feature. Model variance (explained by the features) and feature importance correlate strongly when the model generalizes well (i.e. it doesn’t overfit).</li>
 <li>You need access to the actual outcome target. If someone only gives you the model and unlabeled data - but not the actual target - you can’t compute the permutation feature importance.</li>
+<li>When features are correlated, the permutation feature importance measure can be biased by unrealistic data instances. The problem is the same as for <a href="pdp.html#pdp">partial dependence plots</a>: The permutation of features generates unlikely data instances when two features are correlated. When they are positively correlated (like height and weight of a person) and I shuffle one of the features, then I create new instances that are unlikely or even physically impossible (2m person weighting 30kg for example), yet I use those new instances to measure the importance. In other words, for the permutation feature importance of a correlated feature we consider how much the model performance drops when we exchange the feature with values that we would never observe in reality. Check if the features are strongly correlated and be careful with the interpretation of the feature importance when they are.</li>
 </ul>
 
 </div>
