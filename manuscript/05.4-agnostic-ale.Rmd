@@ -420,18 +420,14 @@ For the weather feature, we compute for all "Spring" instances the probabilities
 If "Spring" and "Summer" have very different temperatures and weather, the distance will be large.
 We repeat the procedure with the other season pairs, which results in the distance matrix, which is then reduced to a single dimension using multi-dimensional scaling.
 
-TODO: CONTINUE HERE
-
 
 ### Examples
 
-It's time to predict [bike rentals](#bike-data) dependent on weather and day
-We fit a regression tree model for this.
-We first fit a machine learning model on the dataset, for which we want to analyse the partial dependencies.
-In this case, we fitted a RandomForest to predict the bike rentals and use the partial dependence plot to visualize the relationships the model learned.
-The influence of the weather features on the predicted bike counts:
+It's time to predict [bike rentals](#bike-data) dependent on weather and day and checkout if the ALE plots really do their job as well as promised.
+We fit a regression tree to predict the number of rentals on a given day and use ALE plots to analyse how the temperature on a given day, the relative humidity and the windspeed influence the predictions.
+Let's see what the ALE plots tell use: 
 
-```{r ale-bike-train, fig.cap = 'Partial dependence plots for the rental bike prediction model and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in the temperature: On average, the hotter the more bikes are rented, until 20C degrees, where it stays the same also for hotter temperatures and drops a bit again towards 30C degrees. The marks on the x-axis indicate the distribution of the feature in the data.'}
+```{r ale-bike-train}
 data(bike)
 library("mlr")
 library("ggplot2")
@@ -462,17 +458,49 @@ ale3 = ggplot(ale3.df) + geom_line(aes(x = x.values, y = f.values)) +
   scale_x_continuous("windspeed") + scale_y_continuous(expression(hat(y)), limits = limits)
 ```
 
-```{r ale-bike, fig.cap = "ALE  plots for the rental bike prediction model and different weather measurements (Temperature, Humidity, Windspeed). The overall tendencies are similar to partial dependence plots. One difference is that the effects are centered at 0. For very high temperature or humidity, the ALE and PD plot differ. The ALE plot detects much larger negative effects on the predicted bike rentals when it's very hot or very humid."}
+```{r ale-bike, fig.cap = "ALE  plots for the rental bike prediction model and different weather measurements (Temperature, Humidity, Windspeed). The biggest differences can be seen in the temperature: On average, the hotter the more bikes are rented, until 20C degrees, stays high for some degrees and drops again when the temperature approaches 30 degrees. The marks on the x-axis indicate the distribution of the features in the data. The overall tendencies are similar to partial dependence plots. One difference is that the effects are centered at 0. For very high temperature or humidity, the ALE and PD plot differ. The ALE plot detects much larger negative effects on the predicted bike rentals when it's very hot or very humid."}
 gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 ```
 
-Let's look at the correlation of the feature temperature, humidity and windspeed.
+Of course we have to look how they actually compare to partial dependence plots.
 
-```{r ale-bike-cor}
-kable(cor(bike[c("temp", "hum", "windspeed")]), digits = 2)
+Let's look at the correlation of the feature temperature, humidity and windspeed.
+Since I have a mix of numerical features and categorical features, we can't only use the standard Pearson correlation coefficients, since it works only when both features are numerical.
+Instead, I fit a linear model where temperature is the outcome to predict and one of the features is the input feature.
+Then I measure how much variance is explained and take the square root. 
+If the other feature was numerical, then the outcome is the absolute value of the standard Pearson correlation coefficient.
+But it also works when the second feature is categorical. 
+The measure is between 0 (no assocation) and 1 (temperature can be perfectly predicted from the other feature).
+We compute the assocation of temperature, humidity and windspeed with all the other features to see how much in trouble we are potentially in, when we would use partial dependence plots. 
+The higher the assocation (correlation), the more trouble for PD plots.
+The approach might be familiar to some of you as ANOVA which stands for analysis of variance.
+
+```{r ale-bike-cor, fig.cap="The strength of correlation between temperature, humidity and windspeed with all features, measured as the amount of variance explained, when we fit a linear model with e.g. temperature as outcome to predict and e.g. season as feature. For the temperature, we observe - not surprisingly - a high correlation with the season and the month. Humidity is correlated with the weather situation."}
+
+mycor = function(cnames, dat) {
+  x.num = dat[cnames[1]][[1]]
+  x.cat = dat[cnames[2]][[1]]
+  av = anova(lm(x.num ~ x.cat))
+  sqrt(av$`Sum Sq`[1] / sum(av$`Sum Sq`))
+}
+
+cnames = c("temp", "hum", "windspeed")
+combs = expand.grid(y = cnames, x = setdiff(colnames(bike), "cnt"))
+combs$cor = apply(combs, 1, mycor, dat = bike)
+combs$lab = sprintf("%.2f", combs$cor)
+forder = c(cnames, setdiff(unique(combs$x), cnames))
+combs$x = factor(combs$x, levels = forder)
+combs$y = factor(combs$y, levels = rev(cnames))
+ggplot(combs, aes(x = x, y = y, fill = cor, label = lab)) + geom_tile() + geom_label(fill = "white") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-They are a bit correlated, but not strongly, so when we use a partial dependence plot, it should also yield reasonable results.
+This little analysis reveals that we might run into problems using partial dependence plots especially for the temperature feature.
+When we create a partial dependence plot for temperature, we estimate the average prediction of the model for any temperature grid point (e.g. -5 degree Celsius) by using all the data. 
+This means we also use instance with season summer and month August, fill in -5 degrees, get the model prediction and pretend everything is legit.
+But this data instance is highly unlikely and might bias the estimation of the partial effect the temperature has.
+Well, let's see how partial dependence plots handle the situation.
+
+CONTINUE HERE
 
 ```{r pdp-bike-compare, fig.cap = "Partial dependence plots for the features temperature, humidity and windspeed. Compared to the ALE plots, the PDPs show a smaller drop in bike rentals for high temperature or high humidity. The PDP uses all data points for calculating the effect of high temperature for example, even for instances with season 'winter' for example, so the results of the ALE plot are more reliable."}
 pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
