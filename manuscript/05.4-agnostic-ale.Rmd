@@ -388,7 +388,6 @@ For a given category, the next 'lower' and the next 'larger' categories in the o
 How can we compute the similarity of categories?
 A solution is to measure how different the instances of different categories in their feature values of the other features.
 
-
 Here a short pseudo-code for calculating ALEs for categorical features.
 
 Goal: Compute the distances between two categories.
@@ -419,6 +418,20 @@ For temperature, we take all instances with "Spring", compute the empirical cumu
 For the weather feature, we compute for all "Spring" instances the probabilities for each weather type, do the same for the "Summer"-instances and sum up the absolute distance in the probability distribution.
 If "Spring" and "Summer" have very different temperatures and weather, the distance will be large.
 We repeat the procedure with the other season pairs, which results in the distance matrix, which is then reduced to a single dimension using multi-dimensional scaling.
+
+Now that we have an order, we can compute the Accumulated Local Effects. 
+It works very similar to numerical features, but there are some differences.
+The ALE computation is slightly difference for categorical features.
+We quantify the effect of a category on the prediction as the accumulated 'jumps' between the categories.
+We start at 0 for the first category (well, not for the end result, because we subtract the mean effect, but for educational reasons it's good to start like this).
+The effect of the second category is the 'jump' in prediction between the first and the second category.
+We quantify the jump, by first looking at all instances that have category one. 
+We artificially increase their category to two and measure the difference in prediction.
+But we also take all instance that already have category two, decrease their category to one and measure the difference.
+So we take both directions into account.
+These differences are averaged so that only one value for each jump between categories remain.
+We add a 0 for the first category, take the cummulative sum over the effects of the categories and subtract the overall average of effects. 
+Then we are done.
 
 
 ### Examples
@@ -500,9 +513,7 @@ This means we also use instance with season summer and month August, fill in -5 
 But this data instance is highly unlikely and might bias the estimation of the partial effect the temperature has.
 Well, let's see how partial dependence plots handle the situation.
 
-CONTINUE HERE
-
-```{r pdp-bike-compare, fig.cap = "Partial dependence plots for the features temperature, humidity and windspeed. Compared to the ALE plots, the PDPs show a smaller drop in bike rentals for high temperature or high humidity. The PDP uses all data points for calculating the effect of high temperature for example, even for instances with season 'winter' for example, so the results of the ALE plot are more reliable."}
+```{r pdp-bike-compare, fig.cap = "Partial dependence plots for the features temperature, humidity and windspeed. Compared to the ALE plots, the PDPs show a smaller drop in bike rentals for high temperature or high humidity. The PDP uses all data instances for calculating the effect of high temperature, even for instances with season 'winter' for example. The results of the ALE plot are more reliable."}
 pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
 p1 = pdp$plot() +  scale_x_continuous('Temperature') + scale_y_continuous('Predicted number of bike rentals', limits = c(3700, 5300))
 pdp$set.feature("hum")
@@ -513,21 +524,30 @@ p3 = pdp$plot() + scale_x_continuous('Windspeed') + scale_y_continuous('', limit
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
 
+TODO: CONTINUE HERE
 
 ALE plots also work for categorical features.
+For this the categories of the feature of interest are ordered according to the similarity of the instances in each category based on the other features.
+The month is a categorical feature. 
+Arguably the months already have some order (January to December), but let's try and see what happens if we allow ALE to first reorder the categories by similarity and compute the effects. 
 
 ```{r ale-bike-cat-prep, include = FALSE}
-alecat1.df = data.frame(ALEPlot(bike, pred.bike, J = "weathersit", pred.fun = y.fun))
+alecat1.df = data.frame(ALEPlot(bike, pred.bike, J = "mnth", pred.fun = y.fun))
+alecat1.df$x.values = factor(alecat1.df$x.values, levels = unique(alecat1.df$x.values))
 alecat1 = ggplot(alecat1.df) + geom_col(aes(x = x.values, y = f.values)) + 
-  scale_x_discrete("Weather situation") + scale_y_continuous(expression(hat(y)))
+  scale_x_discrete("Month") + scale_y_continuous(expression(hat(y)))
 ```
 
-```{r ale-bike-cat, fig.cap = "ALE plots for categorical feature weather situation. Weather categories are ordered by their similarity to each other, based on the distributions of the other features within each weather category. For good weather the predicted number of bikes is almost 600 bikes larger, compared to misty or worse weather. The underlying model treats misty and rainy weather equally."}
+```{r ale-bike-cat, fig.cap = "ALE plots for categorical feature month. The months are ordered by their similarity to each other, based on the distributions of the other features within each month. We observe that in January, March and April, but especially in December and November have a lowering effect on the predicted bike rentals compared to the other months."}
 alecat1
 ```
 
+Since many of the feature are related to weather, the order of the months strongly reflects how similar the months are in weather. 
+All the colder months are on the left (February to April) and the warmer months on the right (Oktober to August). 
+Keep in mind that other features were considered for the similarity, for example the probability for holidays for each month has the same weight as the temperature for calculating the similarity between the months.
 
-Next we look at the second-order effect of humidity and temperature on the predicted number of bike rentals. 
+
+Next we look at the second-order effect of humidity and temperature on the predicted number of bike rentals.
 Remember that the second-order effect is the additional interaction effect of the two features and does not cover the first-order effects. 
 This means that you won't see the for example the trend that high humidity causes less rented bikes.
 
