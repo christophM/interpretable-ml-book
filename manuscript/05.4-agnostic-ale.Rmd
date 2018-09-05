@@ -3,26 +3,32 @@ devtools::load_all()
 set.seed(42)
 ```
 
-## Accumulated Local Effects (ALE) {#ale}
+## Accumulated Local Effects (ALE) Plot {#ale}
 
-Accumulated Local Effects [^ALE] plots show how a single feature (or of two features) affect predicted outcome of a machine learning model on average.
-ALE Plots are an alternative to the [partial dependence plots](#pdp) (PDPs) and the bias of PDPs when features are correlated.
+Accumulated Local Effects [^ALE] describe how features affect the predicted outcome of a machine learning model on average.
+ALE plots are a faster and unbiased alternative the [partial dependence plots](#pdp) (PDPs).
 
-*Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects, ALE plot*
+*Keywords: ALE plots, partial dependence plots, marginal means, predictive margins, marginal effects*
 
-**The Problem: Correlated features**
+I recommend reading the chapter on [partial dependence plots](#pdp) first, because the goal of both methods is the same:
+Describe how a feature on average influences the prediction.
+In the following section, I will convince you that partial dependence plots have a severe problem when the features are correlated.
+
+
+### Motivation and Intuition
 
 When features of a machine learning model are correlated, the partial dependence plot cannot be trusted.
-Calculating the partial dependence plots for correlated features involves creating and averaging over data instances that are unlikely in reality.
-This can bias the resulting effect heavily.
-For example, we compute the partial dependence plots for a  machine learning model that predicts the worth of a house depending on the number of rooms and the size of the living area.
-We calculate the partial dependence plot for the living area.
-To compute the first grid value - let's say a living area of 30 square meters - we replace the living area for all instances with 30, even for houses with 10 rooms.
-Sounds like a very unlikely house to me, but in partial dependence plots with correlated features, these instances are created and used for computing the averages, biasing the interpretation.
-For interpreting what the model on average predicts, the partial dependence plots includes these unrealistic houses into it's calculation and pretend that that behaviour is OK.
-The following plot gives an impression of that problem.
+Calculating a partial dependence plot for a feature that is strongly correlated with other features, involves creating and averaging over data instances that are unlikely in reality.
+This can bias the estimated feature effect heavily.
+Imagine we compute partial dependence plots for a  machine learning model that predicts the value of a house depending on the number of rooms and the size of the living area.
+We care interested in the effect of the living area on the predicted value.
+As a reminder, the recipe for partial dependence plots is: 1) Select feature 2) Define grid 3) Per grid value: a) Replace feature with grid value b) Average predictions 4) Draw curve.
+For the first grid value - let's say a living area of 30 square meters - we replace the living area for all instances with 30, even for houses with 10 rooms.
+Sounds like a very unlikely house to me.
+The partial dependence plots includes these unrealistic houses into it's calculation and pretends everything is fine.
+The following plot illustrates two correlated features and why the partial dependence plot method averages over unlikely data areas.
 
-```{r aleplot-motivation1, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP averages the prediction over the whole range of x2."}
+```{r aleplot-motivation1, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP replaces x1 with 0.75 for all distances, over the whole range of x2. This creates combinations of x1 and x2 that are unlikely, given their strong correlation. PDPs average over the marginal distribution of features, which assumes that features are independent."}
 
 set.seed(1)
 n = 100
@@ -50,21 +56,17 @@ p1
 ```
 What can we do to get a better estimate how a feature influences the prediction?
 
-The problem of partial dependence plots with correlated features stems from the fact that PDPs average over the marginal distribution of features, which kind of assumes that the features are independent.
-A first step to improvement is to use the conditional distribution of features,  meaning for each grid value, we only look at the predictions of nearby data instances.
-Given the living area is 30 square meters, what is the average prediction?
-The solution for computing feature effects using the conditional distribution is called Marginal Plots, or M-Plots (confusing naming, I know).
-Wait, what?
-Didn't I promise to talk about ALE Plots?
-Where are M Plots coming from?
-M Plots are not the solution, but a step into the right direction with ALE Plots as the final solution.
+We could use the conditional distribution of features,  meaning at a grid value, we average over predictions of nearby data instances.
+The solution for computing feature effects using the conditional distribution is called Marginal Plots, or M-Plots (confusing naming, since they average over the conditional, not the marginal distribution).
+Wait, didn't I promise you to talk about ALE Plots?
+M Plots are a step into the right direction, but not quite the solution we are looking for.
 Why are M-Plots not solving our problem?
-If we average over all houses that are around 30 square meters, we don't get the pure effect of the living area, but also the effect of the number of rooms, because of their correlation.
-Assume that the living area itself has no effect on the predicted worth of a house, only the numbers of rooms have.
-The M-Plot would still show that the size of the living affects the prediction, since we use the conditional distribution and the number of rooms grows with the living area, so we mix up both effects.
-The following plot shows how M-Plots work:
+If we average over predictions of all houses that have around 30 square meters, we estimate the joint effect of the living area and of the number of rooms, because of their correlation.
+Assume the living area has no effect on the predicted value of a house, only the numbers of rooms has.
+The M-Plot would still show that the size of the living area increases the predicted value, since we use the conditional distribution and the number of rooms grows with the living area.
+The following plot shows for two correlated features how M-Plots average over the conditional distribution.
 
-```{r aleplot-motivation2, fig.cap = "Two strongly correlated features x1 and x2. M-Plots average only over the conditional distribution, here shown conditional on x1 = 0.75. Also ALE-Plots are based on the conditional distribution, but accumulate the average (conditional) change in prediction."}
+```{r aleplot-motivation2, fig.cap = "Two strongly correlated features x1 and x2. M-Plots average over the conditional distribution, here showing the conditional distribution of x2 at x1 = 0.75."}
 
 set.seed(1)
 n = 100
@@ -99,15 +101,15 @@ p2
 ```
 
 
-We solve the problem of averaging over unlikely data points, but our effect estimate is now mixing up the effects of two features.
-This problem can be overcome by computing local effects in the form of differences, conditional on the distribution.
-This mean for the effect of 30 square meter houses, we first condition on similar small houses and instead of averaging their predictions (M-Plots) we compute the difference in prediction when we would increase the living area for these houses slightly (the slope or gradient of the price dependent on the living area).
-In this way, we get the pure effect of the living area, conditional that living area is small and without mixing the effect up with the effects of any correlated features.
-The solution also has a name: ALE plots, which is short for [Accumulated Local Effects (ALE) Plots](#ale).
-The following graphic show how the ALEplots are calculated. 
+M-Plots solve the problem of averaging over unlikely data instances, but the estimate mixes up the effects of two features.
+ALE plots overcome this issue by computing - conditional on the distribution of the features -  local effects in the form of differences in the prediction instead of averages.
+This means for the effect of the living are at 30 square meter, we first condition on houses with 30 m2 and instead of averaging their local predictions (M-Plots) we compute the difference in prediction if those houses were e.g. 31 m2 or if they were 29 m2 large.
+This gives us the pure effect of the living area without mixing the effect up with the effects of any correlated features.
+Using the differences blocks out the effect of the other features.
+The following graphic provides intuition how ALE plots are calculated.
 
 
-```{r aleplot-computation, fig.cap = "For the computation of ALE plots, we first divide the feature into intervals (vertical lines). In each interval, we select the data instances (points) and compute the difference in prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). Not shown in the plot: These difference are later cumulated and centered, which yields the ALE curve."}
+```{r aleplot-computation, fig.cap = "Computation of ALE plots for feature x1, which is correlated with x2. We first divide the feature into intervals (vertical lines).For the data instances (points) in a given interval we compute the difference in prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). Not shown in the plot: These difference are later accumulated and centered, which yields the ALE curve."}
 
 set.seed(12)
 n = 25
@@ -141,25 +143,26 @@ p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) +
 ```
 
 
-To summarizes how each type of plot handles the effect of a feature j at a certain grid value v:  
-Partial Dependence Plots: "Let me show you what the model predicts on average if every data instance had value v for feature j. I don't care if value v is a meaningful value for the other data instances".  
-M-Plots: "Let me show you what the model predicts on average for data instances that have values close to v for feature j. I can't promise you that the averages you see are from feature j or from some correlated feature".  
-ALE Plots: "Let me show you how the model predictions change when we slightly increase value v for data instances that have values close to v for feature j".
+To summarize how each type of plot (PDP, M, ALE) computes the effect of a feature xj at a certain grid value v:  
+Partial Dependence Plots: "Let me show you what the model predicts on average if every data instance had value v for feature j. 
+I ignore whether the value v is meaningful for all data instances".  
+M-Plots: "Let me show you what the model predicts on average for data instances that have values close to v for feature xj. 
+The effects I show you could be due to feature xj, but also due to some correlated features.  
+ALE Plots: "Let me show you how the model predictions change when we slightly increase value v for data instances that have values close to v for feature xj".
 
 ### Theory
 
-**How do PD, M and ALE Plots compare mathematically?**
+How do PD, M and ALE Plots differ mathematically?
 
-All plots have in common that they reduce our complex prediction function f to one or two dimensions, depending on the feature(s) we choose.
-They also have in common that they estimate the expectation of the model prediction function, but differ fo what they compute the expectation (f or derivative of f) and over what distribution (marginal or conditional).
+All three methods have in common that they reduce the complex prediction function f to a function that only depends on a single (or two) features.
+All three methods reduce the function by averaging out the effects of the other features, but they differ in whether averages of predictions or averages over *differences in prediction* are computed and whether averaging is done over the marginal or conditional distribution.
 
-Partial dependence plots average the predicted outcome over the marginal distribution.
+Partial dependence plots average the predicted outcome f over the marginal distribution.
 
 $$\hat{f}_{x_S,PDP}(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C)d{}x_C$$
 
-That's the value of our prediction function f, at $x_S$, averaged over all features in $x_C$.
-Because we are only interested in the effect of $x_S$ on the prediction, we need to average out the effects of the other features, which get the index C here. 
-Averaging out means computing their marginal expectation E here, which is the integral over the prediction weighted by the probability distribution.
+That's the value of the prediction function f, at feature values $x_S$, averaged over all features in $x_C$.
+Averaging out means computing the marginal expectation E over the feature xc, which is the integral over the prediction weighted by the probability distribution.
 Sounds fancy pants, but when it gets down to computing this, we simply take all our data, get their prediction by forcing them to have a certain (grid) values for our feature of interest, and average over the predictions.
 By taking the data we have, this already ensures that we average over the distribution of the features.
 
