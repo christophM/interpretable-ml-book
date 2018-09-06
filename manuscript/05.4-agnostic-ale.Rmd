@@ -5,7 +5,7 @@ set.seed(42)
 
 ## Accumulated Local Effects (ALE) Plot {#ale}
 
-Accumulated Local Effects [^ALE] describe how features affect the predicted outcome of a machine learning model on average.
+Accumulated local effects [^ALE] describe how features affect the predicted outcome of a machine learning model on average.
 ALE plots are a faster and unbiased alternative the [partial dependence plots](#pdp) (PDPs).
 
 *Keywords: ALE plots, partial dependence plots, marginal means, predictive margins, marginal effects*
@@ -249,7 +249,7 @@ The following figure shows how this scenario looks like.
 
 ```{r correlation-problem, fig.cap = "Two features and the predicted outcome. The model simply predicts the sum of the two features (shaded background). When x1 is larger than 0.7 and x2 smaller than 0.3 the model always predicts 2. This area lies far away from the distribution of the data and it doesn't affect the performance of the model and also shouldn't affect its interpretation."}
 
-set.seed(12)
+set.seed(1)
 n = 25
 
 x1 = runif(n)
@@ -293,45 +293,42 @@ pdp2 = pdp$plot() + ggtitle("PDP")
 
 ale1.df = data.frame(ALEPlot(df, mod, J = "x1", pred.fun = y.fun))
 ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("x1") + scale_y_continuous(expression(hat(y))) + 
+  scale_x_continuous("x1") + scale_y_continuous("ALE") + 
   ggtitle("ALE plot")
 ale2.df = data.frame(ALEPlot(df, mod, J = "x2", pred.fun = y.fun))
 ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("x2") + scale_y_continuous(expression(hat(y))) + 
+  scale_x_continuous("x2") + scale_y_continuous("ALE") + 
   ggtitle("ALE plot")
 ```
 
 
-```{r correlation-pdp-ale-plot, fig.cap = "Comparing the feature effects computed with PDP and ALE. The PDP picks up on the artifact in the data (steep jumps in the plots), which lies outside of the data distribution. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and prediction, ignoring areas where no data instances lie"}
+```{r correlation-pdp-ale-plot, fig.cap = "Comparing the feature effects computed with PDP (top row) and ALE (bottom row). The PDP picks up on the artifact in the data (steep jumps in the plots), which lies outside of the data distribution. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and the prediction, ignoring areas without data."}
 gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
 ```
 
 
-In the area of our training data, the model is simply a linear model, which the ALE plots capture nicely.
-The PDP plots, extrapolating into areas they shouldn't extrapolate, pick up the model artefact and give us a very weird impression of what the model does.
-But is it not interesting to see that our model makes something weird?
+
+But isn't it interesting to see that our model behaves oddly at x1 > 0.7 and x2 < 0.3?
 Well, yes and no.
-These data instances might be physically impossible or at least extremely unlikely, then I don't see how looking into these instances might be interesting. 
-But if you suspect that you had this correlation between the training instances, but your test distribution might be somewhat different and some instances may actually lie in this area, then it would be interesting. 
-But this has to be a deliberate choice to include areas where we haven't observed any data yet and not a side-effect of the method.
-I recommend to still use ALE plots, but generate the data you are expecting by simulating it for example, instead of relying on a flawed method.
+Given these are data instances might be physically impossible or at least extremely unlikely, it's usually irrelevant to look into thos instances.
+But if you suspect that your test distribution might be somewhat different and some instances may actually lie in this area, then it would be interesting to include this are in the calculation of the feature effects. 
+But it has to be a deliberate choice to include areas where we haven't observed any data yet and shouldn't be a side-effect of the method of choice like PDP.
+If you suspect that the model will later be used with differently distributed data, I recommend to use ALE plots and to simulate the distribution of data you are expecting.
 
 
 
-**ALE plots for two features**
+**ALE plots for the interaction of two features**
 
-ALE plot can also be used with more features, but, as with PDP, only makes sense with two at maximum and current software implementation allow only two at maximum.
-The principles are the same as with a single feature, but we now work with rectangular cells instead of intervals, because we have to accumulate the effects in two dimensions.
-Also, we don't only adjust for the overall mean prediction, but for the accumulated local effects of the single features.
-This means that the ALE for two features represents the second-order effects and doesn't include the first-order effect.
-This means that ALE for two features only shows the additional interaction effect of the two features, where the main effects of the features was subtracted.
-Conceptually that's same thing we did for the single feature ALE, where we subtracted the overall mean, only extended now to the next dimension.
-If we would compute the 3-feature ALE, then we would subtract all the 2-feature ALE.
+ALE plot can also who interaction of two features.
+The principles of the computation are the same as for a single feature, but we work with rectangular cells instead of intervals, because we have to accumulate the effects in two dimensions.
+Also, additionally to adjusting for the overall mean effect, we adjust for the main effects of both features.
+This means that ALE for two features represents the second-order effects and doesn't include the main effects of the features.
+In other words, ALE for two features only shows the additional interaction effect of the two features.
 I'll spare you with the formula for 2D ALE plots, as it is long and uncomfortable to read.
 If you are interested, I refer to the paper, formulas (13) - (16) for the computation.
-Let's go for some visual intuition how it is computed: 
+Let's instead rel on some visual intuition how second-order ALE plots are computed.
 
-```{r aleplot-computation-2d, fig.cap = "Illustration on how to calculate second-order Accumulated Local Effects for two features. We lay a grid over the two features we are interested in. In each cell of that grid (one is exemplary highlighted), we compute the second-order differences, which is the joint effect (indicated by an arrow from bottom left to top right of the cell) minus the two first order effects, as indicated by the vertical and horizontal arrows next to the cell and minus the overall weighted mean prediction of the cells. In each cell the effects are averaged for the points within that cell."}
+```{r aleplot-computation-2d, fig.cap = "Computation of accumulated local effects for two features. We lay a grid over the two features. In each grid cell (one is exemplary highlighted), we compute the second-order differences for all instance inside the cell. For the second order difference of an instance in that cell we first replace values for x1 and x2 with the values from the cell corners. Let a, b, c and d represent the 'corner'-predictions of the manipulated instance, then the second order difference is (d - c) - (b - a). The mean 2nd-order difference in each cell is  accumulated over the grid and centered."}
 
 p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
   theme(panel.grid.major.y = element_blank(), 
@@ -343,107 +340,66 @@ p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
 grid.df1 = data.frame(x1 = seq(from = min(df$x1),  to = max(df$x1), length.out = 6)[1:6], x2 = NA)
 grid.df2 = data.frame(x2 = seq(from = min(df$x2),  to = max(df$x2), length.out = 6)[1:6], x1 = NA)
 
-chosen.tile = data.frame(x = grid.df1$x1[4], xend = grid.df1$x1[5], y = grid.df2$x2[4], yend = grid.df2$x2[5])
+chosen.tile = expand.grid(x1 = grid.df1$x1[4:5], x2 = grid.df2$x2[4:5])
+chosen.tile2 = data.frame(x = grid.df1$x1[4], xend = grid.df1$x1[5], y = grid.df2$x2[4], yend = grid.df2$x2[5])
 
+points.df =  df[df$x1 < grid.df1$x1[5] & df$x1 > grid.df1$x1[4] & df$x2 < grid.df2$x2[5] & df$x2 > grid.df2$x2[4], ]
 mv.arr = 0.02
 p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) + 
   geom_hline(data = grid.df2, aes(yintercept = x2), linetype = 3) + 
-  geom_rect(aes(xmin = x, xmax = xend,  ymin = y, ymax = yend), data = chosen.tile, alpha = 0, color = "black", size = 1.1) + 
-  geom_segment(data = chosen.tile, aes(x = x, xend = xend, y = y, yend = yend), arrow = arrow(angle = 10)) + 
-    geom_segment(data = chosen.tile, aes(x = x - mv.arr, xend = x - mv.arr, y = y, yend = yend), arrow = arrow(angle = 10)) + 
-    geom_segment(data = chosen.tile, aes(x = x, xend = xend, y = y - mv.arr, yend = y - mv.arr), arrow = arrow(angle = 10))  
+  geom_rect(aes(xmin = x, xmax = xend,  ymin = y, ymax = yend), data = chosen.tile2, alpha = 0, color = "black", size = 1.1) +
+  geom_label(data = chosen.tile, aes(x = x1, y = x2), label = letters[1:4]) + 
+  geom_point(aes(x = x1, y = x2), data = points.df, size = 3)
+
 ```
 
-When spanning the grid, which is the Cartesian product of the quantiles of both features, some cells might remain empty, especially when the features are correlated. 
-In the example in the figure before, many cells were empty because of the correlation.
-In this case, the ALE can either be omitted and visualized with a greyed or blacked out box. 
-Alternatively, you can replace the missing ALE of an empty cell by the ALE estimate of the nearest non-empty cell.
-Is this problem distinct from the extrapolation problem that PDPs have?
-Yes, for PDPs these empty areas are involved in estimating first-order univariate effects, which biases the estimates.
-For ALE plots the empty cells only play a role in second-order effects and when a cell is empty it can also be indicated by plotting points where data lie into the plot to make it clear.
+In the example in the figure before, many cells are empty because of the correlation.
+This can be visualized with a greyed or blacked out box. 
+Alternatively, you can replace the missing ALE estimate of an empty cell by the ALE estimate of the nearest non-empty cell.
 
 Since the ALE estimates for two features only show the second-order effect of the features, the interpretation needs some extra attention.
-The second-order effect is the additional interaction effect of the features, after we have accounted for the main effects of the features and the mean effect.
-Let's say two features don't interact, but each has a linear main-effect on the predicted outcome. 
-In the 1D ALE plot for each feature we will see a straight line as the estimated ALE curve, with the slope equal to the estimated weight when the underlying model was a linear model.
-But when we plot the 2D ALE estimates, they should be close to zero, because the second-order effect is only the additional effect of the interaction, which is zero in our little example.
+The second-order effect is the additional interaction effect of the features, after we have accounted for the main effects of the features.
+Let's say two features don't interact, but each has a linear effect on the predicted outcome. 
+In the 1D ALE plot for each feature we will see a straight line as the estimated ALE curve.
+But when we plot the 2D ALE estimates, they should be close to zero, because the second-order effect is only the additional effect of the interaction.
 ALE plots and PD plots differ in this regard:
-PDPs always show the total effects, ALE plots only the first- or second-order effects.
+PDPs always show the total effects, ALE plots only the first- or second-order effect.
 These are design choices by the one who implement the methods, and does not depend on the underlying math or anything.
-You can subtract the lower order effects in a partial dependence plots to get the pure first- or second-order effects or you could have an estimate of the total ALE plots by refraining from subtracting the lower-order effects.
+You can subtract the lower order effect in a partial dependence plot to get the pure main or second-order effects or you could have an estimate of the total ALE plots by refraining from subtracting the lower-order effects.
 
-The Accumulated Local Effects could also be computed for arbitrary higher orders (combinations of more than two features), but as argued in the [PDP chapter](#pdp), only up to 2D makes sense, because higher interactions can't be visualized meaningfully.
+The accumulated local effects could also be computed for arbitrary higher orders (combinations of more than two features), but as argued in the [PDP chapter](#pdp), only up to 2D makes sense, because higher interactions can't be visualized meaningfully.
 
 
-**What happens with categorical features?**
+**ALE for categorical features?**
 
-Accumulated Local Effects need - by definition - an order within a feature to work, because it has to accumulate the effects in some direction.
-Categorical features - by definition - don't have any order.
-So no ALE plots for categorical features, I am sorry.
-Just kidding.
-Once you have ordered the categories and enumerate them, you can compute ALE.
-But how can we meaningfully order the categories?
-Some categorical features have a natural order, for example grades in school or hierarchy ranks in a company.
-For those it might make sense to keep that order, but for other features like the season or color there is no obvious order.
-Then there are some features like the day of the week (Monday, Tuesday, ...) which look like they have an order, but it's not clear if you want to use that order for computing ALE plots. 
-Where do we start? Monday? Sunday?)
-For some prediction model Mondays might be more similar to Thursdays than to Tuesdays.
+Accumulated local effects need - by definition - the feature values to have an order, because it accumulates effects in some direction.
+Categorical features don't have any natural order.
+In order to compute an ALE plot for a categorical feature we have to somehow create or find some order.
 
 The order of the categories influences the interpretation and calculation of the accumulated local effects.
-One solution is to order the categories based on how similar the categories are.
-For a given category, the next 'lower' and the next 'larger' categories in the ordering should be similar and the farther you move a way from the category, the more dissimilar the categories should be.
-How can we compute the similarity of categories?
-A solution is to measure how different the instances of different categories in their feature values of the other features.
+One solution is to order the categories based on how similar the categories are, when looking at the other features.
 
-Here a short pseudo-code for calculating ALEs for categorical features.
+The distance between two categories is the sum over the distances of each feature.
+The feature-wise distance compares either the cummulative distribution in both categories, also called Kolmogorov-Smirnov distance (for numerical features) or compares the relative frequency tables (for categorical features).
+Once we have the distances between all categories, we use mult-dimensional scaling to reduce the distance matrix to a one-dimensional distance measure.
+This gives us a similarity-based ordering of the categories.
 
-Goal: Compute the distances between two categories.
-Input: Instances from category 1 and 2
-
-1. For all features, do (excluding the categorical feature for which we are computing the order):
-   - If the feature is numerical: Take instances from category 1, calculate the empirical cumulative probability distribution function (ecdf) of the feature. The ecdf is a function that tells us for a given feature value, how many values are smaller. Do the same for category 2. The distance is the absolute maximum point-wise distance of the two ecdf. Practically, this value is high when the distribution from one category is strongly shifted far away from the other. This measure is also known as the [Kolmogorov-Smirnov distance](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test). 
-   - If the feature is categorical: Take instances from category 1 and calculate a table with the relative frequency of each category of the other feature. Do the same for instances from category 2. The distance is the sum of the absolute difference of both relative frequency tables.
-2. Sum up the distances over all features
-
-This algorithm we run for all pairs of categories.
-Then we have a k times k matrix, when k is the number of categories, where each entry is the distance between two categories.
-Still not enough to have a single order, because, a (dis)similarity tells you the pair-wise distances, but does not give you a one-dimensional ordering of the classes.
-To kind of force this thing into a single dimension, we have to use a dimension reduction trick called multi-dimensional scaling. 
-This can be solved using multi-dimensional scaling, which takes in a distance matrix and returns a distance matrix with reduced dimension.
-In our case, we only want 1 dimension left, so that we have a single ordering of the categories and can compute the accumulated local effects.
-After reducing it to a single ordering, we are done and can use this ordering to compute ALE.
-This is not the Holy Grail how to order the factors, but one possibility.
 
 To make is a bit clearer, here is one example:
-Let's say with have two categorical features (season and weather) and one numerical (temperature).
+Let's say with have the two categorical features 'season' and 'weather' and one numerical feature 'temperature'.
 For the first categorical feature we want to calculate the ALEs. 
 The feature has the categories "Spring", "Summer", "Fall", "Winter".
-The numerical feature is temperature, and the other categorical feature is the type of weather with categories "good", "misty", "rainy".
 We start to compute the distance between categories "Spring" and "Summer". 
-The distance is the sum of distance over the features temperature and weather.
-For temperature, we take all instances with "Spring", compute the empirical cumulative distribution function and do the same for instances with "Summer" and compare both with Kolmogorov-Smirnov test statistic.
+The distance is the sum of distances over the features temperature and weather.
+For temperature, we take all instances with "Spring", compute the empirical cumulative distribution function and do the same for instances with "Summer" and measure their distance with the Kolmogorov-Smirnov statistic.
 For the weather feature, we compute for all "Spring" instances the probabilities for each weather type, do the same for the "Summer"-instances and sum up the absolute distance in the probability distribution.
-If "Spring" and "Summer" have very different temperatures and weather, the distance will be large.
-We repeat the procedure with the other season pairs, which results in the distance matrix, which is then reduced to a single dimension using multi-dimensional scaling.
-
-Now that we have an order, we can compute the Accumulated Local Effects. 
-It works very similar to numerical features, but there are some differences.
-The ALE computation is slightly difference for categorical features.
-We quantify the effect of a category on the prediction as the accumulated 'jumps' between the categories.
-We start at 0 for the first category (well, not for the end result, because we subtract the mean effect, but for educational reasons it's good to start like this).
-The effect of the second category is the 'jump' in prediction between the first and the second category.
-We quantify the jump, by first looking at all instances that have category one. 
-We artificially increase their category to two and measure the difference in prediction.
-But we also take all instance that already have category two, decrease their category to one and measure the difference.
-So we take both directions into account.
-These differences are averaged so that only one value for each jump between categories remain.
-We add a 0 for the first category, take the cumulative sum over the effects of the categories and subtract the overall average of effects. 
-Then we are done.
+If "Spring" and "Summer" have very different temperatures and weather, the overall distance will be large.
+We repeat the procedure with the other season pairs and reduce the resulting matrix to a single dimension using multi-dimensional scaling.
 
 
 ### Examples
 
-It's time to predict [bike rentals](#bike-data) dependent on weather and day and checkout if the ALE plots really do their job as well as promised.
+Let's predict [bike rentals](#bike-data) based on weather and day and check if the ALE plots really work as well as promised.
 We fit a regression tree to predict the number of rentals on a given day and use ALE plots to analyse how the temperature on a given day, the relative humidity and the wind speed influence the predictions.
 Let's see what the ALE plots tell use: 
 
@@ -461,41 +417,39 @@ pred.bike = Predictor$new(mod.bike, data = bike, y = "cnt")
 
 ```{r ale-bike-prep, fig.keep = FALSE, include = FALSE}
 y.fun = function(X.model, newdata) {
- X.model$predict(newdata)[[1]]
+  X.model$predict(newdata)[[1]]
 }
 
 limits = c(-1500, 800)
 
 ale1.df = data.frame(ALEPlot(bike, pred.bike, J = "temp", pred.fun = y.fun))
 ale1 = ggplot(ale1.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("temp") + scale_y_continuous(expression(hat(y)), limits = limits)
+  scale_x_continuous("Temperature") + scale_y_continuous(limits = limits)
 ale2.df = data.frame(ALEPlot(bike, pred.bike, J = "hum", pred.fun = y.fun))
 ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("hum") + scale_y_continuous(expression(hat(y)), limits = limits)
+  scale_x_continuous("Humidity") + scale_y_continuous(limits = limits)
 
 ale3.df = data.frame(ALEPlot(bike, pred.bike, J = "windspeed", pred.fun = y.fun))
 ale3 = ggplot(ale3.df) + geom_line(aes(x = x.values, y = f.values)) + 
-  scale_x_continuous("windspeed") + scale_y_continuous(expression(hat(y)), limits = limits)
+  scale_x_continuous("Wind speed") + scale_y_continuous(limits = limits)
 ```
 
-```{r ale-bike, fig.cap = "ALE  plots for the rental bike prediction model and different weather measurements (Temperature, humidity, wind speed). The biggest differences can be seen in the temperature: On average, the hotter the more bikes are rented, until 20C degrees, stays high for some degrees and drops again when the temperature approaches 30 degrees. The marks on the x-axis indicate the distribution of the features in the data. The overall tendencies are similar to partial dependence plots. One difference is that the effects are centered at 0. For very high temperature or humidity, the ALE and PD plot differ. The ALE plot detects much larger negative effects on the predicted bike rentals when it's very hot or very humid."}
+```{r ale-bike, fig.cap = "ALE  plots for the rental bike prediction model and different weather measurements (temperature, humidity, wind speed). Temperature has a strong effect on the predicted number of bike rentals. The average prediction increases the hotter it gets, but drops again above 25 degrees Celsius. Humidity is negatively impacting the prediction: The higher the relative humidity, the lower the prediction, notably when above 60 percent humidity."}
 gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 ```
 
-Of course we have to look how they actually compare to partial dependence plots.
-
-Let's look at the correlation of the feature temperature, humidity and wind speed.
-Since I have a mix of numerical features and categorical features, we can't only use the standard Pearson correlation coefficients, since it works only when both features are numerical.
-Instead, I fit a linear model where temperature is the outcome to predict and one of the features is the input feature.
-Then I measure how much variance is explained and take the square root. 
-If the other feature was numerical, then the outcome is the absolute value of the standard Pearson correlation coefficient.
-But it also works when the second feature is categorical. 
-The measure is between 0 (no association) and 1 (temperature can be perfectly predicted from the other feature).
-We compute the association of temperature, humidity and wind speed with all the other features to see how much in trouble we are potentially in, when we would use partial dependence plots. 
+Let's look at the correlation of temperature, humidity and wind speed with all other features.
+Since the data also contains categorical features, we can't only use the standard Pearson correlation coefficients, since it works only when both features are numerical.
+Instead, I fit a linear model where e.g. temperature is the outcome to predict and one of the features is the input feature.
+Then I measure how much variance the linear model  explains and take the square root. 
+If the other feature was numerical, then the outcome is equal to the absolute value of the standard Pearson correlation coefficient.
+But this model-based approach (also called ANOVA, which stands for analysis of variance) also works when the second feature is categorical. 
+The measure is between always 0 (no association) and 1 (temperature can be perfectly predicted from the other feature).
+We compute the association of temperature, humidity and wind speed with all the other features to see how much in trouble we might be, when we use partial dependence plots. 
 The higher the association (correlation), the more trouble for PD plots.
-The approach might be familiar to some of you as ANOVA which stands for analysis of variance.
+The following figure visualizes how much the weather features are correlated with other features.
 
-```{r ale-bike-cor, fig.cap="The strength of correlation between temperature, humidity and wind speed with all features, measured as the amount of variance explained, when we fit a linear model with e.g. temperature as outcome to predict and e.g. season as feature. For the temperature, we observe - not surprisingly - a high correlation with the season and the month. Humidity is correlated with the weather situation."}
+```{r ale-bike-cor, fig.cap="The strength of correlation between temperature, humidity and wind speed with all the features, measured as the amount of variance explained, when we fit a linear model with e.g. temperature as outcome to predict and e.g. season as feature. For the temperature we observe - not surprisingly - a high correlation with the season and the month. Humidity is correlated with the weather situation."}
 
 mycor = function(cnames, dat) {
   x.num = dat[cnames[1]][[1]]
@@ -511,16 +465,22 @@ combs$lab = sprintf("%.2f", combs$cor)
 forder = c(cnames, setdiff(unique(combs$x), cnames))
 combs$x = factor(combs$x, levels = forder)
 combs$y = factor(combs$y, levels = rev(cnames))
-ggplot(combs, aes(x = x, y = y, fill = cor, label = lab)) + geom_tile() + geom_label(fill = "white") + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(combs, aes(x = x, y = y, fill = cor, label = lab)) + 
+  geom_tile() + 
+  geom_label(fill = "white") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  + 
+  scale_x_discrete("") + 
+  scale_y_discrete("") + 
+  scale_fill_continuous("Variance\nexplained")
 ```
 
-This little analysis reveals that we might run into problems using partial dependence plots especially for the temperature feature.
-When we create a partial dependence plot for temperature, we estimate the average prediction of the model for any temperature grid point (e.g. -5 degree Celsius) by using all the data. 
-This means we also use instance with season summer and month August, fill in -5 degrees, get the model prediction and pretend everything is legit.
-But this data instance is highly unlikely and might bias the estimation of the partial effect the temperature has.
-Well, let's see how partial dependence plots handle the situation.
+This correlation analysis reveals that we might run into problems using partial dependence plots especially for the temperature feature.
+When we compute a partial dependence plot for temperature, we estimate the average prediction of the model for any temperature grid point (e.g. -5 degree Celsius) with all instances.
+This means we also use instances with season 'Summer' and month 'August', fill in -5 degrees, get the model prediction and pretend everything is legit.
+But this data instance is highly unlikely and might bias the estimation of the effect the temperature has.
+Well, let's see how partial dependence plots estimates the effects.
 
-```{r pdp-bike-compare, fig.cap = "Partial dependence plots for the features temperature, humidity and wind speed. Compared to the ALE plots, the PDPs show a smaller drop in bike rentals for high temperature or high humidity. The PDP uses all data instances for calculating the effect of high temperature, even for instances with season 'winter' for example. The results of the ALE plot are more reliable."}
+```{r pdp-bike-compare, fig.cap = "Partial dependence plots for the features temperature, humidity and wind speed. Compared to the ALE plots, the PDPs show a smaller drop in bike rentals for high temperature or high humidity. The PDP uses all data instances for calculating the effect of high temperature, even for instances with season 'winter' for example. The ALE plots are more reliable."}
 pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
 p1 = pdp$plot() +  scale_x_continuous('Temperature') + scale_y_continuous('Predicted number of bike rentals', limits = c(3700, 5300))
 pdp$set.feature("hum")
@@ -531,10 +491,10 @@ p3 = pdp$plot() + scale_x_continuous('Windspeed') + scale_y_continuous('', limit
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
 
-Now let's see ALE plots in action for a categorical feature.
-The month is a categorical feature for which we will analyse the effect on the predicted number of bike rentals.
-Arguably the months already have some order (January to December), but let's try and see what happens if we allow ALE to first reorder the categories by similarity and compute the effects. 
-The categories of the feature of interest are ordered according to the similarity of the instances in each category based on the other features.
+Next, let's see ALE plots in action for a categorical feature.
+The month is a categorical feature for which we want to analyse the effect on the predicted number of bike rentals.
+Arguably, the months already have some order (January to December), but let's try and see what happens if we first reorder the categories by similarity and then compute the effects. 
+The months are ordered according to the similarity of tdays of each month based on the other features, like temperature or whether it's a holiday.
 
 ```{r ale-bike-cat-prep, include = FALSE}
 alecat1.df = data.frame(ALEPlot(bike, pred.bike, J = "mnth", pred.fun = y.fun))
@@ -543,41 +503,44 @@ alecat1 = ggplot(alecat1.df) + geom_col(aes(x = x.values, y = f.values)) +
   scale_x_discrete("Month") + scale_y_continuous(expression(hat(y)))
 ```
 
-```{r ale-bike-cat, fig.cap = "ALE plots for categorical feature month. The months are ordered by their similarity to each other, based on the distributions of the other features within each month. We observe that in January, March and April, but especially in December and November have a lowering effect on the predicted bike rentals compared to the other months."}
+```{r ale-bike-cat, fig.cap = "ALE plot for the categorical feature 'month'. The months are ordered by their similarity to each other, based on the distributions of the other features by month. We observe that January, March and April, but especially December and November have a lowering effect on the predicted bike rentals compared to the other months."}
 alecat1
 ```
 
-Since many of the features are related to weather, the order of the months strongly reflects how similar the months are in weather. 
+Since many of the features are related to weather, the order of the months strongly reflects how similar the weather is between the months.
 All the colder months are on the left (February to April) and the warmer months on the right (October to August). 
-Keep in mind that also other features were considered for the similarity, for example the probability for holidays for each month has the same weight as the temperature for calculating the similarity between the months.
-
+Keep in mind that also other features were considered for the similarity, for example relative frequency of holidays has the same weight as the temperature for calculating the similarity between the months.
 
 Next, we look at the second-order effect of humidity and temperature on the predicted number of bike rentals.
-Remember that the second-order effect is the additional interaction effect of the two features and does not include the first-order effects. 
-This means that for example you won't see  in the ALE 2D plot that high humidity results in a lower number of predicted bike rentals on average.
+Remember that the second-order effect is the additional interaction effect of the two features and does not include the main effects. 
+This means that, for example, you won't see the main effect that high humidity results in a lower number of predicted bike rentals on average in the ALE 2D plot.
 
-```{r ale-bike-2d, fig.cap = 'Accumulated local effect plot for the second-order effect of humidity and temperature on the predicted number of bike rentals. Yellow color indicates above average and red color below average number of predicted bike rentals, when the first-order effects are already accounted for. The plot reveals an interaction between temperature and humidity: Hot and humid weather increases the number of bike rentals (keep in mind that both first-order effects of humidity and temperature say that the number of bike rentals are decreased when hot and humid). So for hot and humid weather, the joint effect of temperature and humidity is not the sum of the first-order effects, but actually less. For cold and humid weather, an additional negative effect on the number of predicted bike rentals is shown.'}
+```{r ale-bike-2d, fig.cap = 'Accumulated local effect plot for the second-order effect of humidity and temperature on the predicted number of bike rentals. Yellow color indicates above average and red color below average number of predicted bike rentals, when the main effects are already accounted for. The plot reveals an interaction between temperature and humidity: Hot and humid weather increases the number of bike rentals. Keep in mind that both main effects of humidity and temperature say that the number of bike rentals are decreased when very hot and humid. So for hot and humid weather, the joint effect of temperature and humidity is not the sum of the main effects, but less than the sum. For cold and humid weather, an additional negative effect on the number of predicted bike rentals is shown.'}
 x = ALEPlot::ALEPlot(bike, pred.bike, J = c("hum", "temp"), pred.fun = y.fun, K = 100)
 ```
 
-To emphasize the difference between the pure second-order effect (the 2D ALE plot you just saw) and the total effect, let's look at the partial dependence plot, which shows the total effect, which is the sum of the mean prediction, the two first-order effects and the second-order effect (the interaction).
+To emphasize the difference between the pure second-order effect (the 2D ALE plot you just saw) and the total effect, let's look at the partial dependence plot.
+The PDP shows the total effect, which adds up the mean prediction, the two main effects and the second-order effect (the interaction).
 
-```{r pdp-bike-vs-ale-2D, fig.cap = "Partial dependence plot of the effect of temperature and humidity on the predicted bike rentals. The plot combines the main effect of each of the features and their interaction effect, unlike the 2D-ALE plot which only shows the interaction."}
+```{r pdp-bike-vs-ale-2D, fig.cap = "Partial dependence plot of the total effect of temperature and humidity on the predicted bike rentals. The plot combines the main effect of each of the features and their interaction effect, unlike the 2D-ALE plot which only shows the interaction."}
 pdp = Partial$new(pred.bike, c("hum", "temp"))
-pdp$plot() + scale_fill_gradient(low = "red", high = "yellow")
+pdp$plot() + 
+  scale_fill_gradient(low = "red", high = "yellow") + 
+  scale_x_continuous("Humidity") + 
+  scale_y_continuous("Temperature")
 ```
 
-When you are only interested in the interaction, you should look at the second-order effects, because the total effects mingles the first-order effects into the plot.
+In case you are only interested in the interaction, you should look at the second-order effects, because the total effects mingle the main effects into the plot.
 But if you want to know the combined effect of the features, you should be looking at the total effects (like the PDP shows).
-For example, if you want to the expected number of bike rentals at 30 degrees Celsius and 80 percent humidity, you can directly read it from the 2D PDP. 
-When you want to know the same thing using ALE plots, than you have to look at three plots: The ALE plot for temperature, for humidity and for temperature + humidity and you also need to know the overall mean prediction.
-In a scenario in which two features have no interaction, the 2D total effects plot might be misleading, because it will show some complex landscape, which is simply the product of the to first-order effects.
-The second-order effect would immediately reveal, that there is no interaction.
+For example, if you want to know the expected number of bike rentals at 30 degrees Celsius and 80 percent humidity, you can directly read it from the 2D PDP. 
+When you want to know the same thing using ALE plots, then you have to look at three plots: The ALE plot for temperature, for humidity and for temperature + humidity and you also need to know the overall mean prediction.
+In a scenario in which two features have no interaction, the 2D total effects plot might be misleading, because it will show some complex landscape, but it is simply the product of the to main effects.
+The second-order effect would immediately reveal that there is no interaction.
 
 
 Enough bikes for now, let's turn to a classification task.
 We train a random forest to predict the probability for [cervical cancer](#cervical) for a woman dependent on some risk factors.
-For the random forest we visualize the Accumulated Local Effects for two of the features:
+We visualize the accumulated local effects for two of the features:
 
 ```{r ale-cervical-prep, fig.keep = FALSE, include = FALSE}
 data(cervical)
@@ -595,59 +558,60 @@ ale2 = ggplot(ale2.df) + geom_line(aes(x = x.values, y = f.values)) +
 
 ```
 
-```{r ale-cervical-1D, fig.cap = "ALE plots of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the partial dependence plot shows that on average the cancer probability is until 40 and increases after that. The sparseness of data points after age of 50 indicates that the model did not have many data points to learn from above that age. The number of years on hormonal contraceptives is associated with a higher cancer risk after 10 years. But again, there are not many data points in that region, which implies that we might not be able to rely on the machine learning model predictions for >10 years on contraceptives "}
+```{r ale-cervical-1D, fig.cap = "ALE plots of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the ALE shows that on average the cancer probability is low until 40 and increases after that. The number of years on hormonal contraceptives is associated with a higher cancer risk after 3 years."}
 gridExtra::grid.arrange(ale1, ale2, ncol = 2)
 ```
 
-Now let's look at the interaction between number of pregnancies and age, as we did in the partial dependence chapter.
+Next we look at the interaction between number of pregnancies and age.
 
 
-```{r ale-cervical-2d, fig.cap = 'Accumulated Local Effects Plot for the second-order effect of number of pregnancies and the age on the predicted risk of cancer. We see a little bit of interaction. The model shows some odd behaviour at age below 20 years and 3 pregnancies and also at age 18/19 and more than 3 pregnancies. There are not many women in the data with those constellations of age and number of pregnancies, so the model is not punished much during the training for making mistakes for those women.'}
+```{r ale-cervical-2d, fig.cap = 'Accumulated local effects plot for the second-order effect of number of pregnancies and the age on the predicted risk of cancer. We see some interaction. The model shows some odd behaviour at age below 20 years and 3 pregnancies and also at age 18/19 and more than 3 pregnancies. There are not many women in the data with those constellations of age and number of pregnancies, so the model is not punished much during the training for making mistakes for those women.'}
 x = ALEPlot(cervical, pred.cervical, J = which(names(cervical) %in% c("Num.of.pregnancies", "Age")), pred.fun = y.fun, NA.plot = TRUE)
 ```
 
-The ALE plot shows similar interactions between Age and number of pregnancies as we have seen with [partial dependence plots](#pdp).
+The ALE plot shows similar interactions between age and number of pregnancies as the [partial dependence plots](#pdp) showed.
 The age and number of pregnancies are naturally correlated, with a correlation of `r sprintf("%.2f", cor(cervical$Age, cervical$Num.of.pregnancies))`.
 This means I would trust the ALE plot more than the partial dependence plot.
 
 
 ### Advantages
 
-- The ALE plot **also works when features are correlated**.
+- **ALE plots are unbiased**, meaning they still work when  features are correlated.
 Partial dependence plots fail in this scenario because they marginalize over unlikely or even physically impossible combinations of feature values.
-- **ALE plots are faster to compute** than PDPs and they scale with O(n), since the maximum number of intervals is the number of instances, with one interval per instance at maximum.
+- **ALE plots are faster to compute** than PDPs and they scale with O(n), since the highest possible number of intervals is the number of instances, with one interval per instance.
 The PDP needs n times the number of grid points estimations. 
-For 20 grid points, this results in 20x more predictions the model has to make compared to the worst case ALE plot (one interval per instance).
+For 20 grid points, PDPs need 20x more predictions compared to the worst case ALE plot, where each interval has only one instance.
 - The **interpretation of ALE plots is also clear**: Conditional on a given x value, the effect of the feature on the prediction can be read from the ALE plot.
 - **ALE plots are centered at zero**.
 This makes their interpretation nice, because the value at each point of the ALE curve is the difference to the mean prediction.
-- **The 2D ALE plot only shows the interaction**: The good thing is, when two features don't interact, the plot doesn't show anything.
-But it's just a technical decision that's not inherent to the idea of ALE plots. 
-It's technically possible to add the first order effects and show both.
+**The 2D ALE plot only shows the interaction**: When two features don't interact, the plot doesn't show anything.
+- All in all, I would in most situations prefer ALE plots over PDPs, because usually features are almost always correlated to some degree.
 
 ### Disadvantages
-
+- When the features are uncorrelated and computation time is not an issue, PDPs are preferable, because they are easier to understand and can be plotted together with ICE curves.
 - **ALE plots can become a bit wobbly** (many small ups and downs) with a high number of intervals. 
 In this case reducing the number of intervals makes the estimates more stable, but also smooths out and hides some of the true complexity of the prediction model.
 - There is **no perfect solution for setting the number of intervals**. 
 If the number is too small, than the ALE plots will not be very accurate. 
 If the number is too high, the curve can become wobbly.
 - Unlike PDPs, **ALE plots are not accompanied by ICE curves**.
-For PDPs, ICE curves are great because they can reveal effect heterogeneity in the data, meaning that the effect of a feature looks different for subsets of the data.
-For ALE plot you could only check per interval if the effect differs between the instances, but each interval has different instances so it is not equivalent to ICE curves.
+For PDPs, ICE curves are great because they can reveal heterogeneity in the feature effect, meaning that the effect of a feature looks different for subsets of the data.
+For ALE plots you could only check per interval if the effect differs between the instances, but each interval has different instances so it is not equivalent to ICE curves.
 - **Each point of the ALE curve has a different variance, which is not in any way visualized.** 
 The reason is that each estimation of a local effect in an interval uses a different number of data instances.
-As a result all estimates have a different accuracy (but still the best possible estimate).
-- **Second-order effect for the 2D ALE computation can be a bit annoying to interpret**, since you always have to hold in your mind the first-order effects.
+As a result all estimates have a different accuracy (but they are still the best possible estimates).
+- **Second-order effect plots can be a bit annoying to interpret**, since you always have to hold in your mind the main effects.
 It's tempting to read the heat maps as the total effect of the two features, but it is only the additional effect of the interaction.
-The pure second-order effect is interesting for discovering and exploring interactions, but for the interpretation of how the effect looks like, I think it more useful when the first-order effect is integrated into the heatmap.
-- The implementation of ALE plots is a lot more complex and less intuitive compared with partial dependence plots.
+The pure second-order effect is interesting for discovering and exploring interactions, but for the interpretation of how the effect looks like, I think it more useful when the main effects are integrated into the plot.
+- The implementation of ALE plots is a lot more complex and less intuitive compared to partial dependence plots.
+- Even though ALE plots are not biased in case of correlated features, the interpretation remains difficult when features are very strongly correlated.
+Because when they have a very strong correlation, it only make sense to analyse the effect of changing both features together and not in isolation.
 
 
 ### Implementation and Alternatives
 
 - Did I mention that [partial dependence plots](#pdp) together with [individual conditional expectation curves](#ice) are an alternative? =) 
-Another alternative are Marginal plots (M-Plots), but they are more interesting for the historical reasons than for actual use.
+Another alternative is the Marginal plot (M-Plot), but they are more interesting for historical reasons than for actual use.
 - To my best knowledge, ALE plots are currently only implemented in R, once in the [ALEPlot R package](https://cran.r-project.org/web/packages/ALEPlot/index.html) by the inventor himself and once in the [iml package](https://cran.r-project.org/web/packages/iml/index.html)
 
 
