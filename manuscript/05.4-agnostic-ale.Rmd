@@ -5,30 +5,30 @@ set.seed(42)
 
 ## Accumulated Local Effects (ALE) Plot {#ale}
 
-Accumulated local effects [^ALE] describe how features affect the predicted outcome of a machine learning model on average.
-ALE plots are a faster and unbiased alternative the [partial dependence plots](#pdp) (PDPs).
+Accumulated local effects [^ALE] describe how features influence the predicted outcome of a machine learning model on average.
+ALE plots are a faster and unbiased alternative to the [partial dependence plots](#pdp) (PDPs).
 
 *Keywords: ALE plots, partial dependence plots, marginal means, predictive margins, marginal effects*
 
-I recommend reading the chapter on [partial dependence plots](#pdp) first, because the goal of both methods is the same:
-Describe how a feature on average influences the prediction.
-In the following section, I will convince you that partial dependence plots have a severe problem when the features are correlated.
+I recommend reading the chapter on [partial dependence plots](#pdp) first, as the goal of both methods is the same:
+Describe how a feature affect the prediction on average.
+In the following section, I will convince you that partial dependence plots have a serious problem when the features are correlated.
 
 
 ### Motivation and Intuition
 
-When features of a machine learning model are correlated, the partial dependence plot cannot be trusted.
-Calculating a partial dependence plot for a feature that is strongly correlated with other features, involves creating and averaging over data instances that are unlikely in reality.
-This can bias the estimated feature effect heavily.
-Imagine we compute partial dependence plots for a  machine learning model that predicts the value of a house depending on the number of rooms and the size of the living area.
-We care interested in the effect of the living area on the predicted value.
+If features of a machine learning model are correlated, the partial dependence plot cannot be trusted.
+Calculating a partial dependence plot for a feature that is strongly correlated with other features involves creating and averaging over data instances that are in reality unlikely.
+This can greatly bias the estimated feature effect.
+Imagine calculating partial dependence plots for a  machine learning model that predicts the value of a house depending on the number of rooms and the size of the living area.
+We are interested in the effect of the living area on the predicted value.
 As a reminder, the recipe for partial dependence plots is: 1) Select feature 2) Define grid 3) Per grid value: a) Replace feature with grid value b) Average predictions 4) Draw curve.
-For the first grid value - let's say a living area of 30 square meters - we replace the living area for all instances with 30, even for houses with 10 rooms.
-Sounds like a very unlikely house to me.
-The partial dependence plots includes these unrealistic houses into it's calculation and pretends everything is fine.
-The following plot illustrates two correlated features and why the partial dependence plot method averages over unlikely data areas.
+For the first grid value - say a living area of 30 square meters - we replace the living area for all instances by 30, even for houses with 10 rooms.
+Sounds to me like a very unusual house.
+The partial dependence plots includes these unrealistic houses in their calculation and pretend that everything is fine.
+The following figure illustrates two correlated features and why the partial dependence plot method averages over unlikely data areas.
 
-```{r aleplot-motivation1, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP replaces x1 with 0.75 for all distances, over the whole range of x2. This creates combinations of x1 and x2 that are unlikely, given their strong correlation. PDPs average over the marginal distribution of features, which assumes that features are independent."}
+```{r aleplot-motivation1, fig.cap = "Two strongly correlated features x1 and x2. To compute the partial dependence at x1 = 0.75, the PDP replaces x1 with 0.75 for all instances, over the entire range of x2. This results in combinations of x1 and x2 that are unlikely due to their strong correlation. PDPs average over the marginal distribution of features, which assumes that features are uncorrelated."}
 
 set.seed(1)
 n = 100
@@ -54,6 +54,10 @@ p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) +
   scale_y_continuous(limits = c(-0.2, 1.2))
 p1
 ```
+
+
+TODO: CONTINUE HERE
+
 What can we do to get a better estimate how a feature influences the prediction?
 
 We could use the conditional distribution of features,  meaning at a grid value, we average over predictions of nearby data instances.
@@ -368,7 +372,7 @@ The order of the categories influences the interpretation and calculation of the
 One solution is to order the categories based on how similar the categories are, when looking at the other features.
 
 The distance between two categories is the sum over the distances of each feature.
-The feature-wise distance compares either the cummulative distribution in both categories, also called Kolmogorov-Smirnov distance (for numerical features) or compares the relative frequency tables (for categorical features).
+The feature-wise distance compares either the cumulative distribution in both categories, also called Kolmogorov-Smirnov distance (for numerical features) or compares the relative frequency tables (for categorical features).
 Once we have the distances between all categories, we use mult-dimensional scaling to reduce the distance matrix to a one-dimensional distance measure.
 This gives us a similarity-based ordering of the categories.
 
