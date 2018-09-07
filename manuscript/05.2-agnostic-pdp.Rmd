@@ -60,12 +60,18 @@ bike.task = makeRegrTask(data = bike, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
 
 pred.bike = Predictor$new(mod.bike, data = bike)
-pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
-p1 = pdp$plot() +  scale_x_continuous('Temperature', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, 5500))
+pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp") 
+p1 = pdp$plot() +  
+  scale_x_continuous('Temperature', limits = c(0, NA)) + 
+  scale_y_continuous('Predicted number of bike rentals', limits = c(0, 5500))
 pdp$set.feature("hum")
-p2 = pdp$plot() +  scale_x_continuous('Humidity', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
+p2 = pdp$plot() + 
+  scale_x_continuous('Humidity', limits = c(0, NA)) + 
+  scale_y_continuous('', limits = c(0, 5500))
 pdp$set.feature("windspeed")
-p3 = pdp$plot() + scale_x_continuous('Windspeed', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
+p3 = pdp$plot() + 
+  scale_x_continuous('Windspeed', limits = c(0, NA)) + 
+  scale_y_continuous('', limits = c(0, 5500))
 
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
@@ -88,7 +94,7 @@ cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
 
 pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
-pdp = Partial$new(pred.cervical, "Age", ice = FALSE) 
+pdp = FeatureEffect$new(pred.cervical, "Age", method = "pdp") 
 
 p1 = pdp$plot() + 
   scale_x_continuous(limits = c(0, NA)) + 
@@ -104,7 +110,7 @@ gridExtra::grid.arrange(p1, p2, ncol = 2)
 We can also visualizes the partial dependence of two features at once:
 
 ```{r pdp-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45, regardless of number of pregnancies. An interesting interaction happens at ages below 25: Young women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had zero or above two pregnancies. The model predicts a - kind of - protective effect against cancer for 1 or 2 pregnancies. But be careful with drawing conclusions: This might just be a correlation and not causal! The cancer risk and number of pregnancies could be caused by another, unmeasured factor in which the young women differ.'}
-pd = Partial$new(pred.cervical, c("Age", "Num.of.pregnancies"), ice = FALSE) 
+pd = FeatureEffect$new(pred.cervical, c("Age", "Num.of.pregnancies"), method = "pdp") 
 pd$plot()
 ```
 

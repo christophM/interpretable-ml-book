@@ -39,8 +39,11 @@ cervical_subset_index = sample(1:nrow(cervical), size = 300)
 cervical_subset = cervical[cervical_subset_index, ]
 cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
-pd1 = mlr::generatePartialDependenceData(mod, cervical_subset, 'Age', individual = TRUE)
-mlr::plotPartialDependence(pd1) + my_theme() + scale_color_discrete(guide='none') + scale_y_continuous('Predicted cancer probability')
+pred.cervical = Predictor$new(mod, cervical)
+ice = FeatureEffect$new(pred.cervical, "Age", method = "ice")$plot() + 
+  scale_color_discrete(guide='none') + 
+  scale_y_continuous('Predicted cancer probability')
+ice
 ```
 
 The next figures shows an ICE plot for the [bike rental prediction](#bike-data) (the underlying prediction model is a RandomForest).
@@ -52,8 +55,12 @@ bike.subset.index = sample(1:nrow(bike), size = 300)
 bike.subset = bike[bike.subset.index,]
 bike.task = makeRegrTask(data = bike, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
-pd.data = mlr::generatePartialDependenceData(mod.bike, bike.subset, c('temp', 'hum', 'windspeed'), individual = TRUE)
-mlr::plotPartialDependence(pd.data) + my_theme()+ scale_x_continuous('',limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, NA))
+pred.bike = Predictor$new(mod.bike, bike)
+
+p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() + scale_x_continuous("Temperature")
+p2 = FeatureEffect$new(pred.bike, "hum", method = "ice")$plot() + scale_x_continuous("Humidity") + scale_y_continuous("")
+p3 = FeatureEffect$new(pred.bike, "windspeed", method = "ice")$plot() + scale_x_continuous("Windspeed")+ scale_y_continuous("")
+gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
 
 All curves seem to follow the same course, so there seem to be no obvious interactions.
@@ -78,8 +85,8 @@ Taking for example the cervical cancer ICE plot for age and centering the lines 
 ```{r ice-cervical-centered, fig.cap=sprintf("Centered ICE plot for predicted cervical cancer risk probability by age. The lines are fixed to 0 at age %i and each point shows the difference to the prediction with age %i. Compared to age 18, the predictions for most instances stay the same and see an increase up to 20 percent. A few cases show the opposite behavior: The predicted probability decreases with increasing age.", min(cervical_subset$Age), min(cervical_subset$Age))}
 library("iml")
 predictor = Predictor$new(mod, data = cervical_subset)
-ice = Partial$new(predictor, feature = "Age", center.at = min(cervical_subset$Age))
-ice$plot() + my_theme() + scale_color_discrete(guide='none') +
+ice = FeatureEffect$new(predictor, feature = "Age", center.at = min(cervical_subset$Age), method = "pdp+ice")
+ice$plot()  + scale_color_discrete(guide='none') +
     scale_y_continuous('Cancer probability difference to age 18')
 ```
 
@@ -95,12 +102,10 @@ bike.subset.index = sample(1:nrow(bike), size = 100)
 bike.subset = bike[bike.subset.index,]
 
 predictor = Predictor$new(mod.bike, data = bike.subset)
-ice1 = Partial$new(predictor, feature = "temp", center.at = min(bike$temp))$plot() + my_theme()
-ice2 = Partial$new(predictor, feature = "hum", center.at = min(bike$hum))$plot() + my_theme()
-ice3 = Partial$new(predictor, feature = "windspeed", center.at = min(bike$windspeed))$plot() + my_theme()
-
-library("gridExtra")
-grid.arrange(ice1, ice2, ice3, nrow = 1)
+ice1 = FeatureEffect$new(predictor, feature = "temp", center.at = min(bike$temp), method = "pdp+ice")$plot() 
+ice2 = FeatureEffect$new(predictor, feature = "hum", center.at = min(bike$hum), method = "pdp+ice")$plot() 
+ice3 = FeatureEffect$new(predictor, feature = "windspeed", center.at = min(bike$windspeed), method = "pdp+ice")$plot() 
+gridExtra::grid.arrange(ice1, ice2, ice3, nrow = 1)
 ```
 
 #### Derivative ICE Plot
