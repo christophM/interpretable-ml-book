@@ -225,34 +225,31 @@ The (uncentered) ALE of a feature value that lies, for example, in the third int
 The word *Accumulated* in ALE reflects this.
 
 
-TODO: Continue here
 
-
-This effect is centered, so that the mean effect is zero:
+This effect is centered so that the mean effect is zero.
 
 $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x_{i,j})$$
 
-The value of the ALE can be interpreted as the effect of the feature at a certain feature value compared to the average prediction of the data. 
-For example if them ALE curve at $x_j=3$ is -2, it means that when $x_j$ has value 2, then the prediction is lower by 2 compared to the average prediction.
+The value of the ALE can be interpreted as the effect of the feature at a certain  value compared to the average prediction of the data. 
+For example, an ALE estimate of -2 at $x_j=3$ is, it means that when $x_j$ has value 2, then the prediction is lower by 2 compared to the average prediction.
 
 The quantiles of the distribution of the feature are used as the grid that defines the intervals.
-Using the quantiles assures that there are roughly the same amount of data points in each of the intervals. 
-Quantiles have the drawback that the intervals can have very different lengths.
-This can result in some weird ALE plots, when the feature of interest is very skewed, for example lots of low values and just a few very high values.
-Then the intervals are first are very short and later much larger.
+Using the quantiles ensures that there is the same number of data instances in each of the intervals. 
+Quantiles have the disadnvantage that the intervals can have very different lengths.
+This can leat to some weird ALE plots if the feature of interest is very skewed, for example many low values and only a few very high values.
 
 
 ### Motivation, Part II
 
 Let's see ALE plots in action. 
-I constructed a scenario in which partial dependence plot fail.
+I have constructed a scenario in which partial dependence plots fail.
 The scenario consists of two features, one outcome to predict and a prediction model.
 The features are strongly correlated.
-The prediction model does something weird at a combination of the two features for which we never observed instances.
-The following figure shows how this scenario looks like.
+The prediction model does something weird at a combination of the two features for which we have never observed instances.
+The following figure shows what this scenario looks like.
 
 
-```{r correlation-problem, fig.cap = "Two features and the predicted outcome. The model simply predicts the sum of the two features (shaded background). When x1 is larger than 0.7 and x2 smaller than 0.3 the model always predicts 2. This area lies far away from the distribution of the data and it doesn't affect the performance of the model and also shouldn't affect its interpretation."}
+```{r correlation-problem, fig.cap = "Two features and the predicted outcome. The model simply predicts the sum of the two features (shaded background), with the exception that if x1 is greater than 0.7 and x2 less than 0.3, the model always predicts 2. This area is far from the distribution of data and doesn't affect the performance of the model and also shouldn't affect its interpretation."}
 
 set.seed(1)
 n = 25
@@ -278,16 +275,15 @@ ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) +
   scale_fill_gradient(low = "white", high = "blue")
 ```
 
-Is this even a realistic, relevant scenario?
-When you train a model, the learning algorithm minimizes the loss for the existing training points.
-Weird stuff can happen outside the distribution of the training data, because the model will not be penalized for doing weird stuff in those areas.
+Is this a realistic, relevant scenario, at all?
+When you train a model, the learning algorithm minimizes the loss for the existing training data instances.
+Weird stuff can happen outside the distribution of training data, because the model is not penalized for doing weird stuff in these areas.
 Leaving the data distribution is called extrapolation.
 By the way, extrapolation is also used to fool machine learning models, see [adversarial examples](#adversarial).
-Extrapolation leads to values that are very unlikely, given the distribution of our training data.
-See how the partial dependence performs in our little example and how it compares to an ALE plot.
+See in our little example how the partial dependence plots behave compared to ALE plots.
 
 
-```{r correlation-pdp-ale-plot, fig.cap = "Comparing the feature effects computed with PDP (top row) and ALE (bottom row). The PDP picks up on the artifact in the data (steep jumps in the plots), which lies outside of the data distribution. The ALE plot correctly identifies that the machine learning model has a linear relationship between features and the prediction, ignoring areas without data."}
+```{r correlation-pdp-ale-plot, fig.cap = "Comparison of the feature effects computed with PDP (upper row) and ALE (lower row). The PDP estimate is influenced by the odd behaviour of the model outside the data distribution (steep jumps in the plots). The ALE plot correctly identifies that the machine learning model has a linear relationship between features and prediction, ignoring areas without data."}
 pred = Predictor$new(mod, data = df, predict.fun = y.fun)
 pdp = FeatureEffect$new(pred, feature = "x1", method = "pdp")
 pdp1 = pdp$plot() + ggtitle("PDP")
@@ -303,12 +299,13 @@ gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
 
 But isn't it interesting to see that our model behaves oddly at x1 > 0.7 and x2 < 0.3?
 Well, yes and no.
-Given these are data instances might be physically impossible or at least extremely unlikely, it's usually irrelevant to look into thos instances.
-But if you suspect that your test distribution might be somewhat different and some instances may actually lie in this area, then it would be interesting to include this are in the calculation of the feature effects. 
-But it has to be a deliberate choice to include areas where we haven't observed any data yet and shouldn't be a side-effect of the method of choice like PDP.
-If you suspect that the model will later be used with differently distributed data, I recommend to use ALE plots and to simulate the distribution of data you are expecting.
+Since these are data instances that are physically impossible or at least extremely unlikely, it's usually irrelevant to look into these instances.
+But if you suspect that your test distribution might be slightly different and some instances are actually in that range, then it would be interesting to include this aree in the calculation of feature effects. 
+But it has to be a conscious decision to include areas where we haven't observed data yet and that shouldn't be a side-effect of the method of choice like PDP.
+If you suspect that the model will later be used with differently distributed data, I recommend to use ALE plots and simulate the distribution of data you are expecting.
 
 
+TODO: CONTINUE HERE
 
 **ALE plots for the interaction of two features**
 
@@ -578,9 +575,13 @@ If the number is too high, the curve can become wobbly.
 - Unlike PDPs, **ALE plots are not accompanied by ICE curves**.
 For PDPs, ICE curves are great because they can reveal heterogeneity in the feature effect, meaning that the effect of a feature looks different for subsets of the data.
 For ALE plots you could only check per interval if the effect differs between the instances, but each interval has different instances so it is not equivalent to ICE curves.
-- **Each point of the ALE curve has a different variance, which is not in any way visualized.** 
-The reason is that each estimation of a local effect in an interval uses a different number of data instances.
+- **The second-order ALE estimates have a varying stability over the feature space , which is not in any way visualized.** 
+The reason is that each estimation of a local effect in a cell uses a different number of data instances.
 As a result all estimates have a different accuracy (but they are still the best possible estimates).
+The problem exists in a less severe version for main effect ALE plots.
+The number of instances is the same in all intervals, thanks to the use of quantiles as grid, but in some areas there will be many short intervals and the ALE curve will consist of much more estimates.
+But for long intervals, which will be responsible for a big part of the entire curve, there are comparably less instances.
+This for example happened in the [cervical cancer prediction ALE plot](# ale-cervical-1D) for high ages and for years on hormonal contraceptives.
 - **Second-order effect plots can be a bit annoying to interpret**, since you always have to hold in your mind the main effects.
 It's tempting to read the heat maps as the total effect of the two features, but it is only the additional effect of the interaction.
 The pure second-order effect is interesting for discovering and exploring interactions, but for the interpretation of how the effect looks like, I think it more useful when the main effects are integrated into the plot.
@@ -588,6 +589,8 @@ The pure second-order effect is interesting for discovering and exploring intera
 - Even though ALE plots are not biased in case of correlated features, the interpretation remains difficult when features are very strongly correlated.
 Because when they have a very strong correlation, it only make sense to analyse the effect of changing both features together and not in isolation.
 
+The list of disadvantages has become quite long, but don't be fooled by the number of words I am using:
+Use accumulated local effect plots, dump partial dependence plots.
 
 ### Implementation and Alternatives
 
