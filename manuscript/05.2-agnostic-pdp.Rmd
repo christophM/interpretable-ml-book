@@ -4,11 +4,11 @@ set.seed(42)
 ```
 
 ## Partial Dependence Plot (PDP) {#pdp}
-The partial dependence plot shows the marginal effect of a feature on the predicted outcome of a previously fit model (J. H. Friedman 2001[^Friedman2001]). 
+
+The partial dependence plot (PDP or PD plot) shows the marginal effect of a feature on the predicted outcome of a previously fit model (J. H. Friedman 2001[^Friedman2001]). 
 The prediction function is fixed at a few values of the chosen features and averaged over the other features.
 
-
-Other names: marginal means, predictive margins, marginal effects.
+*Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects*
 
 
 A partial dependence plot can show if the relationship between the target and a feature is linear, monotonic or more complex.
@@ -60,12 +60,18 @@ bike.task = makeRegrTask(data = bike, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
 
 pred.bike = Predictor$new(mod.bike, data = bike)
-pdp = Partial$new(pred.bike, "temp", ice = FALSE) 
-p1 = pdp$plot() + my_theme() + scale_x_continuous('Temperature', limits = c(0, NA)) + scale_y_continuous('Predicted number of bike rentals', limits = c(0, 5500))
+pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp") 
+p1 = pdp$plot() +  
+  scale_x_continuous('Temperature', limits = c(0, NA)) + 
+  scale_y_continuous('Predicted number of bike rentals', limits = c(0, 5500))
 pdp$set.feature("hum")
-p2 = pdp$plot() + my_theme()+ scale_x_continuous('Humidity', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
+p2 = pdp$plot() + 
+  scale_x_continuous('Humidity', limits = c(0, NA)) + 
+  scale_y_continuous('', limits = c(0, 5500))
 pdp$set.feature("windspeed")
-p3 = pdp$plot() + my_theme()+ scale_x_continuous('Windspeed', limits = c(0, NA)) + scale_y_continuous('', limits = c(0, 5500))
+p3 = pdp$plot() + 
+  scale_x_continuous('Windspeed', limits = c(0, NA)) + 
+  scale_y_continuous('', limits = c(0, 5500))
 
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
@@ -76,36 +82,39 @@ Also, the more wind the less people like to bike, which makes sense.
 Interestingly, the predicted bike counts don't drop between 25 and 35 km/h windspeed, but there is just not so much training data, so we can't be confident about the effect.
 At least intuitively I would expect the bike rentals to drop with any increase in windspeed, especially when the windspeed is very high.
 
+
+
 We also compute the partial dependence for [cervical cancer classification](#cervical).
-Again, we fit a RandomForest to predict whether a woman has cervical cancer given some risk factors. 
+This time, we fit a random forest to predict whether a woman has cervical cancer given some risk factors. 
 Given the model, we compute and visualize the partial dependence of the cancer probability on different features: 
 
-```{r pdp-cervical, fig.cap = 'Partial dependence plot of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the partial dependence plot shows that on average the cancer probability is until 40 and increases after that. The sparseness of data points after age of 50 indicates that the model did not have many data points to learn from above that age. The number of years on hormonal contraceptives is associated with a higher cancer risk after 10 years. But again, there are not many data points in that region, which implies that we might not be able to rely on the machine learning model predictions for >10 years on contraceptives.', dev.args = list(pointsize = 5.5)}
+```{r pdp-cervical, fig.cap = 'Partial dependence plots of cancer probability and the risk factors age and number of years with hormonal contraceptives. For the age feature, the partial dependence plot shows that on average the cancer probability is until 40 and increases after that. The sparseness of data points after age of 50 indicates that the model did not have many data points to learn from above that age. The number of years on hormonal contraceptives is associated with a higher cancer risk after 10 years. But again, there are not many data points in that region, which implies that we might not be able to rely on the machine learning model predictions for >10 years on contraceptives.', dev.args = list(pointsize = 5.5)}
 data(cervical)
 cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
 
 pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
-pdp = Partial$new(pred.cervical, "Age", ice = FALSE) 
+pdp = FeatureEffect$new(pred.cervical, "Age", method = "pdp") 
 
-p1 = pdp$plot() + my_theme() + 
+p1 = pdp$plot() + 
   scale_x_continuous(limits = c(0, NA)) + 
   scale_y_continuous('Predicted cancer probability', limits = c(0, 0.4))
 pdp$set.feature("Hormonal.Contraceptives..years.")
-p2 = pdp$plot() + my_theme() + 
+p2 = pdp$plot() + 
   scale_x_continuous(limits = c(0, NA)) + 
   scale_y_continuous('', limits = c(0, 0.4))
 
 gridExtra::grid.arrange(p1, p2, ncol = 2)
 ```
 
-
 We can also visualizes the partial dependence of two features at once:
 
 ```{r pdp-cervical-2d, fig.cap = 'Partial dependence plot of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45, regardless of number of pregnancies. An interesting interaction happens at ages below 25: Young women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had zero or above two pregnancies. The model predicts a - kind of - protective effect against cancer for 1 or 2 pregnancies. But be careful with drawing conclusions: This might just be a correlation and not causal! The cancer risk and number of pregnancies could be caused by another, unmeasured factor in which the young women differ.'}
-pd = Partial$new(pred.cervical, c("Num.of.pregnancies", "Age"), ice = FALSE) 
-pd$plot()+ my_theme() 
+pd = FeatureEffect$new(pred.cervical, c("Age", "Num.of.pregnancies"), method = "pdp") 
+pd$plot()
 ```
+
+
 
 
 
@@ -125,27 +134,23 @@ The relationship is causal for the model - because we explicitly model the outco
 
 
 ### Disadvantages
-- The **maximum number of features** you can look at jointly is - realistically - two and - if you are stubborn and pretend that 3D plots on a 2D medium are useful - three.
+- The **maximum number of features** you can look at jointly is realistically two or - if you are stubborn and pretend that 3D plots on a 2D medium are useful - three.
 That's not the fault of PDPs, but of the 2-dimensional representation (paper or screen) and also our inability to imagine more than 3 dimensions.
-- Some PD visualisations don't include the **feature distribution**. 
+- Some PD plots don't include the **feature distribution**. 
 Omitting the distribution can be misleading, because you might over-interpret the line in regions, with almost no feature values.
 This problem is easy to fix by showing a rug (indicators for data points on the x-axis) or a histogram.
-- The **assumption of independence** poses the biggest issue. 
+- The **assumption of independence** poses the biggest issue of PD plots. 
 The feature(s), for which the partial dependence is computed, is/are assumed to be independently distributed from the other model features we average over.
 For example: Assume you want to predict how fast a person walks, given the person's weight and height. 
 For the partial dependence of one of the features, let's say height, we assume that the other features (weight) are not correlated with height, which is obviously a wrong assumption. 
 For the computation of the PDP at some height (for example at height = 200cm) we average over the marginal distribution of weight, which might include a weight below 50kg, which is unrealistic for a 2 meter person. 
 In other words: When the features are correlated, we put weight on areas of the feature distribution where the actual probability mass is very low (for example it is unlikely that someone is 2 meters tall but weighting below 50kg).
-A solution to this problem are ALEPlots[^ALE], that only average over close data points. 
-- **Heterogenous effects might be hidden** because the PDP only shows the average over the observations. 
+A solution to this problem are [Accumulated Local Effect plots](#ale) or short ALE plots, which work with the conditional instead of the marginal distribution.
+- **Heterogenous effects might be hidden** because PD plots only show the average over the observations. 
 Assume that for feature $x_j$ half your data points have a positive assocation with the outcome - the greater $x_j$ the greater $\hat{y}$ - and the other half has negative assocation - the smaller $x_j$ the greater $\hat{y}$.
-The PDP curve might be a straight, horizontal line, because the effects of both dataset halves cancel each other out. 
+The curve might be a straight, horizontal line, because the effects of both dataset halves cancel each other out. 
 You then conclude that the feature has no effect on the outcome. 
 By plotting the [individiual conditional expectation curves](#ice) instead of the aggregated line, we can uncover heterogeneous effects.
-
-
-[^ALE]: Apley, D. W. (n.d.). Visualizing the Effects of Predictor Variables in Black Box Supervised Learning Models, 1–36. Retrieved from https://arxiv.org/ftp/arxiv/papers/1612/1612.08468.pdf
-
 
 
 [^Friedman2001]: Friedman, Jerome H. 2001. "Greedy Function Approximation: A Gradient Boosting Machine." Annals of Statistics. JSTOR, 1189–1232.
