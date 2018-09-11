@@ -1,12 +1,36 @@
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+```
+
 ## Linear model extensions: GLM, GAM and more {#extend-lm}
 
-The chapter will cover:
 
-What to do when  the target y is not normal -> GLM
-What to do when the relation between the features and y is not linear -> feature transformations, GAMs (splines)
-What to do when there are interactions between features -> manual integration of interaction effects, automatic detection
-What to do when the data is not i.i.d. -> mixed models, GEEs (not going to deep into this topic)
+Recall the formula of a linear model:
 
+$$y_{i}=\beta_{0}+\beta_{1}x_{i1}+\ldots+\beta_{p}x_{ip}+\epsilon_{i}$$
+
+The i-th instance's outcome $y_i$ is assumed to be a weighted sum of its $p$ features $x_j$ with an individual error $\epsilon_i$ that follows a Gaussian distribution.
+
+This formula is too restrictive for many real world prediction problems.
+The only allowed relationship between the prediction and the features is linear.
+But what if the real relationship is multiplicative or the influence of the feature follows a complex curve?
+The errors are assumed to have a Gaussian distribution.
+As a consequence, we also assume a Gausisan distribution of the target Y, after accounting for the features X. 
+This assumption is often violated, for example when the outcome can only have positive values, like the duration of an event.
+What if we want to model a classification task, or if the output we are interested in is a count of something, like number of children in a family?
+
+The linear regression model has been extensively studied and extended.
+The chapter will cover some of those extensions that leverage the linear model for more complex tasks.
+
+- What to do when  the target y is not normal -> GLM  
+- What to do when the relation between the features and y is not linear -> feature transformations, GAMs (splines)
+- What to do when there are interactions between features -> manual integration of interaction effects, automatic detection  
+
+
+Other scenarios, not covered here:
+- What to do when observations are not i.i.d? Mixed models or GEEs.
+- What to do with heterogeneity in the errors? 
 
 
 ### Different types of targets
@@ -20,8 +44,8 @@ That's certainly not a Gaussian distribution and also not Bernoulli.
 So we need a more flexible approach to handle different types of outcomes, but would love to keep the interpretability of linear models and all the tools connected to it, like having weights that can be interpreted, having confidence intervals, being able to make predictions and so on.
 The solution to generalizing linear models to arbitrary outcome distributions is called GLM: generalized linear model.
 
-At the core, the generalized linear model has still a linear composition of the features, but it is wrapped into a link function h, which can be chosen flexibly depending on the type of outcome. 
-The link function links the linear predicted to our expected outcome:
+At the core, the generalized linear model has still a linear composition of the features, but it is linked to a function g of the distribution mean, which can be chosen flexibly depending on the type of outcome. 
+The link function links the linear predicted to the mean of the distribution we are assuming.
 
 $$\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p=g(E(y))$$
 The GLM consists of three components. 
@@ -37,18 +61,54 @@ Then the Poisson distribution might be a good choice.
 Your outcome is always positive (e.g. time between two events)?
 Then the Exponential distribution might be a good choice.
 
-You also have to choose the link function and have some kind of flexibility there.
-But each distribution also comes with a canonical link function.
-When using the canonical link, then:
+Each distribution comes with parameters that describe the distribution.
+For example, the Gaussian distribution is described by the $\mu$ which tells us where the expected value of the distribution is and the variance $\sigma$ which tells us how flat or peaked the distribution is.
 
-$$\theta_{i}=\beta_i{}x_i$$
+GLMs are easier to understand when you don't think of the linear regression model as a model of $y$, but of the $\mu$ of the Gaussian distribution, conditional on the features.
+When we formulate a linear model, we use the link function to link the linear equation - the weighted sum of the features - to the mean of the Gaussian distribution.
+The link function for the Gaussian distribution, the standard linear model, is the identity function.
+This concept generalizes under the name GLM to any distribution.
+For example, when we switch out the Gaussian distribution with the Poisson distribution, which is used for counts, the natural link function is the logarithm with the natural base.
+
+$$x\beta=ln(\lambda)$$
+Where $\lambda$ is the parameter describing the intensity of the poisson distribution, a larger value means that we expect a higher outcome.
+
+You have also come across the logit link function already in the logistic regression formula:
+
+$$X\beta=ln\left(\frac{\mu}{1-\mu}\right)$$
+The mean $\mu$ of the binomial distribution, which is used in logistic regression is the probability that y is 1.
+So you might also see:
+
+$$x\beta=ln\left(\frac{P(Y=1)}{1-P(Y=1)}\right)$$
+And if we solve this equation to have P(Y=1) on one side, we get the classic logistic regression formula:
+
+$$P(y_{i}=1)=\frac{1}{1+exp(-x_i\beta)}$$
+
+You are quite flexible with the link function you choose.
+But each distribution also comes with a canonical link function, which can be derived mathematically from the distribution, when it is reformulated as the exponential family.
+
 
 If you are reading the book from start to end, you have already came across a GLM: logistic regression. 
-The link (?) function is the logistic function.
-
 
 *Examples*
 
+```{r linear_model}
+data(bike)
+X = bike[bike.features.of.interest]
+y = bike[,'cnt']
+dat = cbind(X, y)
+
+mod = glm(y ~ ., data = dat, x = TRUE, family = "poisson")
+lm_summary = summary(mod)$coefficients
+
+lm_summary_print = lm_summary
+rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
+
+kable(lm_summary_print[,c('Estimate', 'Std. Error')], digits = 1, col.names = c('Weight estimate', 'Std. Error'))
+```
+
+TODO: Explain why it is okay for the bike data to also use Gaussian dist
+TODO: Poisson regression with bike?
 Poisson regression.
 
 ### Adding interactions
@@ -56,11 +116,24 @@ Poisson regression.
 What if the features interact with each other?
 We can simply add interactions.
 
+Adding interactions manually. 
+
+Interaction plots
+
+
 *Examples*
+
+
+Example: Interaction between features in bike sharing.
+Interaction between temperature and the season.
+
 
 ### Non-linear effects
 
 Simple solution: Transform your features
+
+Example with log-transformed feature
+Example with sqrt transformed feature
 
 Advanced and more flexible: GAMs.
 
@@ -81,6 +154,7 @@ Different link function make the interpretation more complicated;
 Interactions make the interpretation more complicated;
 Non-linear feature effects are either not very intuitive (like log transform) or cannot be summarized with single number any longer.
 - The world of linear regression models and their extensions can be quite overwhelming
+- There are attempts to automate these steps, but mainly it's manual.
 - 
 
 
