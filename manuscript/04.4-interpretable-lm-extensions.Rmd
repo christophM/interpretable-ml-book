@@ -92,24 +92,55 @@ If you are reading the book from start to end, you have already came across a GL
 
 *Examples*
 
-```{r linear_model}
-data(bike)
-X = bike[bike.features.of.interest]
-y = bike[,'cnt']
-dat = cbind(X, y)
+How many coffees did you drink today?
+Features:
+- Stress level between 1 and 100
+- How well did you sleep last night on a scala from 1 to 10?
+- If you like the taste of coffee?
 
-mod = glm(y ~ ., data = dat, x = TRUE, family = "poisson")
-lm_summary = summary(mod)$coefficients
+```{r poisson-data}
+# simulate data where the normal linear model fails.
+n = 100
+df = data.frame(x1  = runif(n = n, min = 1, max = 100), 
+  x2 = runif(n = n, min = 1, max = 2), 
+  x3 = sample(c("a", "b"), size = n, replace = TRUE))
+lambda = log( pmax(df$x1/100 + df$x2  - 1 * (df$x3 == "a"), 1))
+df$y = rpois(lambda = lambda, n = n)
 
-lm_summary_print = lm_summary
-rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 
-kable(lm_summary_print[,c('Estimate', 'Std. Error')], digits = 1, col.names = c('Weight estimate', 'Std. Error'))
+kable(table(df$y))
+
 ```
 
-TODO: Explain why it is okay for the bike data to also use Gaussian dist
-TODO: Poisson regression with bike?
-Poisson regression.
+
+```{r failing-linear-model}
+mod.gaus = glm(y ~ ., data = df, x = TRUE)
+pred.gauss = data.frame(pred = predict(mod.gaus), actual = df$y)
+ggplot(pred.gauss)  + geom_histogram(aes(x = pred))
+```
+
+Predicting negative values. well. That's awkward.
+
+
+Better idea: Use poisson distribution with exp link function.
+
+```{r linear-model-positive}
+mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson())
+pred.pois = data.frame(pred = predict(mod.pois, type = "response"), actual = df$y)
+ggplot(pred.pois)  + geom_histogram(aes(x = pred))
+```
+
+
+Interpretation of parameters
+```{r poisson-model-params}
+kable(summary(mod.pois)$coefficients)
+```
+
+TODO: Interpretation, combined with the link function.
+
+TODO: Add general statement how to interpret results in glm, depending on the link function.
+
+
 
 ### Adding interactions
 
@@ -120,25 +151,44 @@ Adding interactions manually.
 
 Interaction plots
 
+TODO: Research options to add interactions automatically
+TODO: Link to RuleFit for automatically detecting interactions
+
+TODO: Talk about different types of interaction (multiplicative, nested, etc.)
+TODO: Explain how the interpretation becomes a lot more difficult
+
 
 *Examples*
 
 
-Example: Interaction between features in bike sharing.
-Interaction between temperature and the season.
+TODO: Example: Interaction between features in bike sharing.
+e.g. Interaction between temperature and the season.
 
 
 ### Non-linear effects
 
 Simple solution: Transform your features
 
+TODO: Plot with single feature, where a log transformation makes sense
 Example with log-transformed feature
-Example with sqrt transformed feature
+TODO: Plot with some arbitrary function
+
 
 Advanced and more flexible: GAMs.
 
+TODO: Figure explaining splines, reusing plot with arbitrary function
+      Plot 1: function
+      Plot 2: splines 
+      Plot 3: arrows showing how splines are weighted
+      plot 4: fitted curve
+TODO: Text for explaining splines
+
+TODO:  Explain how to interpret splines
+
 *Examples*
 
+TODO: Example with manually transformed features. e.g. bike sharing with temperature as sqrt or so, whatever makes sense.
+TODO: Example with bike sharing data with temperature with splines
 
 
 ### Advantages
@@ -146,6 +196,8 @@ Advanced and more flexible: GAMs.
 - Has lots of theory behind it for calculating things like confidence intervals and testing hypothesis
 - Very rich literature and experience with these models
 - Accepted in many fields as the standard for testing hypothesis
+
+TODO: continues advantages
 
 ### Disadvantages
 
@@ -157,9 +209,14 @@ Non-linear feature effects are either not very intuitive (like log transform) or
 - There are attempts to automate these steps, but mainly it's manual.
 - 
 
+TODO: Continues disadvantages
 
 
+### Software and Further Readings
 
+- Any major programming language for stats has all those
+- TODO: List languages
+- TODO: List good book reference
 
 
 
