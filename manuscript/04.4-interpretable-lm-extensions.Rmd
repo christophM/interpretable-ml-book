@@ -94,17 +94,19 @@ If you are reading the book from start to end, you have already came across a GL
 
 How many coffees did you drink today?
 Features:
-- Stress level between 1 and 100
+- Stress level between 1 and 10
 - How well did you sleep last night on a scala from 1 to 10?
-- If you like the taste of coffee?
+- Is it weekend?
+
+(Writing this as I am sipping my second coffee at 11AM).
 
 ```{r poisson-data}
 # simulate data where the normal linear model fails.
-n = 100
-df = data.frame(x1  = runif(n = n, min = 1, max = 100), 
-  x2 = runif(n = n, min = 1, max = 2), 
-  x3 = sample(c("a", "b"), size = n, replace = TRUE))
-lambda = log( pmax(df$x1/100 + df$x2  - 1 * (df$x3 == "a"), 1))
+n = 200
+df = data.frame(stress  = runif(n = n, min = 1, max = 10), 
+  sleep = runif(n = n, min = 1, max = 10), 
+  weekend = sample(c("YES", "NO"), size = n, replace = TRUE))
+lambda = exp(1* df$stress/10 - 2 * (df$sleep - 5)/10  - 1 * (df$weekend == "YES"))
 df$y = rpois(lambda = lambda, n = n)
 
 
@@ -125,22 +127,49 @@ Predicting negative values. well. That's awkward.
 Better idea: Use poisson distribution with exp link function.
 
 ```{r linear-model-positive}
-mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson())
+mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson(link = "log"))
 pred.pois = data.frame(pred = predict(mod.pois, type = "response"), actual = df$y)
 ggplot(pred.pois)  + geom_histogram(aes(x = pred))
 ```
 
 
 Interpretation of parameters
+
+
+The interpretation depends on the chosen distribution and how we link the weighted sum of features to the expected outcome.
+In this case, the assumed distribution of the outcome given the features is a poisson distribution.
+The link function between the weighted sum and the number of expected coffees is:
+
+$$\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{like}x_{like}=ln(E(coffees|stress,sleep,like))$$
+
+A Poisson distribution has one parameter: $\lambda$, the intensity at which 'events' happen (here the number of consumed coffees)
+A high value of $\lambda$ means that we expect a high count.
+The expected number of counts is $\lambda$.
+Ok, how do we connect that to the interpretation of the $\beta$'s?
+
+Here it comes:
+By increasing an x by one, the expected outcome increases multiplicatively by $exp(\beta)$.
+The exp comes from inversing the link function:
+
+$$exp(\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{like}x_{like})=E(coffees|stress,sleep,like)$$
+Let's have a look at the weights and the exp(weights) and their variance:
 ```{r poisson-model-params}
-kable(summary(mod.pois)$coefficients)
+cc = data.frame(summary(mod.pois)$coefficients)
+cc = cc[,c("Estimate", "Std..Error")]
+colnames(cc) = c("beta", 'var.beta')
+cc$exp.beta = exp(cc[, 'beta'])
+cc = cc[c("beta", "exp.beta")]
+cc = cbind(cc, exp(confint(mod.pois)))
+cc$ci = sprintf("%.2f [%.2f, %.2f]", cc$exp.beta, cc$`2.5 %`, cc$`97.5 %`)
+kable(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2)
 ```
 
-TODO: Interpretation, combined with the link function.
+Let's interpret the parameters in the made-up coffee prediction example.
+Increasing the stress by one point increases the expected number of coffees by a factor of `r round(cc["stress", "exp.beta"], 2)`. 
+Increasing the sleep by one point decreases the expected number of coffees by a factor of `r round(cc["sleep", "exp.beta"], 2)`.
+Compared to a weekday, on a weekend the predicted number of cofees is lower by a factor of `r round(cc["weekendYES", "exp.beta"], 2)`.
 
-TODO: Add general statement how to interpret results in glm, depending on the link function.
-
-
+In the next part, we will talk about the solution when the features interact with each other.
 
 ### Adding interactions
 
@@ -202,6 +231,7 @@ TODO: Example with bike sharing data with temperature with splines
 - Has lots of theory behind it for calculating things like confidence intervals and testing hypothesis
 - Very rich literature and experience with these models
 - Accepted in many fields as the standard for testing hypothesis
+- Can be made sparse by using regularization, which favors estimation of weights with 0.
 
 TODO: continues advantages
 
@@ -225,6 +255,9 @@ TODO: Continues disadvantages
 - Any major programming language for stats has all those
 - TODO: List languages
 - TODO: List good book reference
+- TODO: Mention Lasso
+- TODO: Mention GEE and mixed models
+
 
 
 
