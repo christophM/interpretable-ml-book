@@ -6,6 +6,8 @@ set.seed(42)
 ## Linear model extensions: GLM, GAM and more {#extend-lm}
 
 
+I recommend reading the [chapter on linear regression models](#linear) first.
+
 Recall the formula of a linear model:
 
 $$y_{i}=\beta_{0}+\beta_{1}x_{i1}+\ldots+\beta_{p}x_{ip}+\epsilon_{i}$$
@@ -174,24 +176,99 @@ In the next part, we will talk about the solution when the features interact wit
 ### Adding interactions
 
 What if the features interact with each other?
-We can simply add interactions.
+Say for predicting the number of bikes that will be rented, there might be an interaction betweeen the temperature and if it's a working day or not.
+Maybe when people have to work, the temperature does not affect the number of rented bikes, because only the tough people ride, because they have to get to work.
+On the free days, many people decide more based on the weather. 
+So we might suspect an interaction between the two.
+By default, the linear model doesn't model interactions explicitly.
+It might actually suck pretty hard when interactions are involved, because the effects are not independent from each other any more.
 
-Adding interactions manually. 
+What can you do about it?
+You can simply add a term to the features that represents the interaction between features.
+In the working day x temperature example, we would add a new features, that is zero whenever it's a weekend, otherwise the temperature.
+The working day is then the reference category.
 
-Interaction plots
+A toy example.
+Let's say our features look like this:
+```{r data-frame}
+x = data.frame(workingday = c("Yes", "No", "No", "Yes"), temp = c(25, 12, 30, 5))
+knitr::kable(x)
+```
+What the model receives, when we want both the linear effects and the additional interaction effect:
+```{r data-frame-lm}
+mod = lm(1:4 ~ workingday * temp, data = x)
+knitr::kable(data.frame(model.matrix(mod)))
+```
 
-TODO: Research options to add interactions automatically
-TODO: Link to RuleFit for automatically detecting interactions
+The first term is the intercept term which usually gets added automatically in the most programs for linear regression models.
+The second column is the workingday feature, which is now only the indicator for the feature value Yes, since No is assumed as the reference category.
+Where the workingdayY column is 1, the original category was "Y".
+The column temp is the same as before.
+New is the column "workingdayYes" which captures the interaction between the features workingday and temperature.
+This new feature is zero when the workingday feature has the reference category "No", otherwise it takes on the value of the temp feature.
+With this type of coding, the linear model can learn a different linear effect of the temperature for both types of days.
+This is the interaction effect between the two features.
+For two categorical features, the process is the same:
+We create additional features which represents combinations of categories. 
+So this artificial data: 
 
-TODO: Talk about different types of interaction (multiplicative, nested, etc.)
-TODO: Explain how the interpretation becomes a lot more difficult
+```{r data-frame-lm-cat}
+x = data.frame(workingday = c("Yes", "No", "No", "Yes"), wday = c("Mon", "Sun", "Sat", "Mon"))
+knitr::kable(x)
+```
 
-TODO: example showing how complicated the interpretation is
-      first model with the two features
-      second model with the two features with interaction
-      show that substantially different
-      
-TODO: link AME as a solution
+Becomes this: 
+
+```{r data-frame-lm-cat2}
+mod = lm(1:4 ~ workingday * wday, data = x)
+knitr::kable(data.frame(model.matrix(mod)))
+```
+For any category of both features (excluding the reference categories), we create a new feature column that is 1 if both features have a certain category, otherwise 0.
+For two numerical features, the interaction column is even easier to construct: 
+We simply multiply both numerical features.
+There are lots of ways and types of interactions that can be added (nested, 2way, 3way, ...). 
+There are approaches to detect and add interaction terms automatically. 
+One is presented in this book called [RuleFit](#rulefit), which first mines interaction terms and then estimates a linear regression model with this new data.
+
+### Example
+
+
+```{r example-lm-interaction}
+data(bike)
+X = bike[bike.features.of.interest]
+y = bike[,'cnt']
+dat = cbind(X, y)
+
+mod = lm(y ~ . + temp * workingday, data = dat, x = TRUE)
+lm_summary = summary(mod)$coefficients
+
+lm_summary_print = lm_summary
+rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
+confint(mod)
+
+kable(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight estimate', 'Std. Error', "2.5%","97.5%"))
+```
+
+The interaction term drastically changes how we interpret the terms of the involved features.
+Does the temperature have a negative effect on a working day?
+The answer is no, even though the weights suggest it in the first moment.
+We can't interpret the "workingdayWORKING DAY:temp" interaction term directly, since the interpretation would be
+All feature values being equal, increasing the additional temperature effect for the working day, decreases the predicted number of bike rents. 
+But this comes only on top of the effect of the temperature feature, which we would have to increase at the same time.
+Let's say we have a working day, and want to know what would happen if the temperature today would be 1 degree warmer. 
+Then we have to add both the temp and "workindayWORKING DAY:temp" weights to get how much the estimate increases.
+
+It's easier to understand visually. 
+By introducing an interaction term between a categorical and a numerical feature, we now have two slopes for the temperature instead of one.
+```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bike rental for a linear model. Effectively we get two slopes for the temperature, by the factor working day or not. Without the interaction it would be a single slope for the temperature, only shifted by the different means of non-working vs. working day."}
+jtools::interact_plot(mod, pred = "temp", modx = "workingday")
+```
+
+
+Problem: The interpretation of the weights is always given that all else stays equal. 
+This is problematic with interaction term, since they consist of two other features that are in the model.
+It is not meaningful to interpret an increase of the interaction feature, but leave the main feature as is.
+
 
 *Examples*
 
@@ -202,28 +279,94 @@ e.g. Interaction between temperature and the season.
 
 ### Non-linear effects
 
-Simple solution: Transform your features
+What if we suspect or know that one of the features has a non-linear effect on the prediction.
+For example, the temperature effect might be linear for lower temperatures up to a certain degree, but then level off.
+The linear regression model would not capture that effect on it's own.
 
-TODO: Plot with single feature, where a log transformation makes sense
-Example with log-transformed feature
-TODO: Plot with some arbitrary function
+We have multiple solutions for allowing non-linear effects:
+- Simple transformation of the feature
+- Categorize the feature
+- Use splines, which is a new model class called Generalized Additive Models (GAMs).
+
+Before I explain each of them, will start with an example right away.
+We take the bike rental dataset and try to predict the number of rented bikes using only the temperature feature.
+The following figure shows the estimated slope without doing anything and with either transforming the feautre (the square root), cutting it into intervals or using splines (also called GAM then).
+
+```{r non-linear-effects, fig.cap = "Predicting the number of rented bikes given the temperature. Using a standard linear model (top left) doesn't capture the flattening of the temperature effect as suggested by the point cloud and overestimates the number of bikes at low temperatures. One solution is to transform the feature (top right), to categorize it (bottom left), which is usually a bad decision or to use Generalized Additive Models, which can automatically fit a smooth curve for temperature (bottom right), which is most often the best solution."}
+mod.simpel = lm(cnt ~ temp, data = bike)
+bike.plt = bike
+bike.plt$pred.lm = predict(mod.simpel)
+
+bike.plt$sqrt.temp = log(bike$temp + 10)
+mod.simpel = lm(cnt ~ sqrt.temp, data = bike.plt)
+bike.plt$pred.sqrt = predict(mod.simpel)
+
+bike.plt$cat.temp = cut(bike$temp, breaks = seq(from = min(bike$temp), to = max(bike$temp), length.out = 10), include.lowest = TRUE)
+mod.simpel = lm(cnt ~ cat.temp, data = bike.plt)
+bike.plt$pred.cat = predict(mod.simpel)
+
+library(mgcv)
+mod.gam = gam(cnt ~ s(temp), data = bike)
+bike.plt$pred.gam = predict(mod.gam)
 
 
-Advanced and more flexible: GAMs.
+bike.plt = data.table::melt(bike.plt[c("pred.lm", "pred.sqrt", "pred.cat", "pred.gam")])
+bike.plt$temp = rep(bike$temp, times = 4)
+bike.plt$cnt = rep(bike$cnt, times = 4)
 
-TODO: Figure explaining splines, reusing plot with arbitrary function
-      Plot 1: function
-      Plot 2: splines 
-      Plot 3: arrows showing how splines are weighted
-      plot 4: fitted curve
-TODO: Text for explaining splines
+model.type = c(pred.lm = "Linear model", 
+  pred.sqrt = "Linear model with sqrt(temp)", 
+  pred.cat = "Linear model with categorized temp", 
+  pred.gam = "GAM")
+
+ggplot(bike.plt) + 
+  geom_point(aes(x = temp, y = cnt), size = 1 , alpha = 0.3)  + 
+  geom_line(aes(x = temp, y = value), size = 1.2, color = "blue") + 
+  facet_wrap("variable", labeller = labeller(variable = model.type)) + 
+  scale_x_continuous("Temperature (temp)") + 
+  scale_y_continuous("(Predicted) Number of rented bikes")
+```
+
+
+You can be very creative when transforming your feature:
+Very common is taking the logarithm of the feature. 
+Maybe the logarithm of the temperature has a linear effect on the outcome?
+Meaning that each 10x increase of the temperature has the same linear effect on the number of bikes, 
+so going from 1 degree Celsius to 10 degree celsius has the same effect as going from 0.1 to 1 (sounds wrong).
+
+Another solution: We discretize the feature, turn it into many categorical features.
+So the temperature would have values [-10, -5), [-5, 0), ... you get it.
+Then the linear model would estimate a step function, because each level get's it's own estimate.
+The problem with this approach is that you need a lot more data, are more likely to overfit and have no clue what meaningful way to discretize it.
+Also, you loose information, like going from an anlogue picture to a pixel image (which is definitely not 4K). 
+I would only use discretiziation if you have a very strong case for it:
+For example to make the model comparable to another study or so.
+
+The more sophisticated solution: Use splines.
+Splines are actually similar to discretization, because you replace the feature by many new columns with which you allow to estimate a non-linear effect on the outcome.
+
+When you use splines, then most people will call their linear model generalized additive models (GAMs), which are - well - GLMs with non-linear effects.
+
+
+```{r splines, fig.cap = "Instead of a single temperature feature, we use 10 spline functions. Each temperature value gets mapped to (here) 9 spline values. If an instance has a temperature of 30 C, then the value for the first spline feature is -1, for the second 0.5 ... and for the 9th it's 2. The we feed the the GAM with those features."}
+mm = model.matrix(mod.gam)
+mm2 = data.table::melt(mm)
+mm2 = mm2[mm2$Var2 != "(Intercept)",]
+
+ggplot(mm2) + geom_line(aes(x = rep(bike$temp, times = 9), y = value)) + facet_wrap("Var2") + 
+  scale_x_continuous("Temperature") + 
+  scale_y_continuous("Value of spline feature")
+```
+
+But don't we have the same problem as with categorizing the feature:
+We get too many parameters and might overfit the data.
+GAMs introduce some penalty term for the weights, so that they can't change to much away from zero. 
+This effectively reduces the flexibility of the splines approach (how much they can overfit). 
+How flexible the spline curve is usually tuned by some smoothness parameter, which is usually tuned using cross-validation.
+
 
 TODO:  Explain how to interpret splines
 
-*Examples*
-
-TODO: Example with manually transformed features. e.g. bike sharing with temperature as sqrt or so, whatever makes sense.
-TODO: Example with bike sharing data with temperature with splines
 
 
 ### Advantages
@@ -232,6 +375,8 @@ TODO: Example with bike sharing data with temperature with splines
 - Very rich literature and experience with these models
 - Accepted in many fields as the standard for testing hypothesis
 - Can be made sparse by using regularization, which favors estimation of weights with 0.
+- Really good interfaces (for example in R) to describe how the relationship between input and output should be handled. 
+Can be written as formula.
 
 TODO: continues advantages
 
@@ -257,8 +402,3 @@ TODO: Continues disadvantages
 - TODO: List good book reference
 - TODO: Mention Lasso
 - TODO: Mention GEE and mixed models
-
-
-
-
-
