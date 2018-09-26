@@ -1,0 +1,1 @@
+source("../.Rprofile", chdir = TRUE)
