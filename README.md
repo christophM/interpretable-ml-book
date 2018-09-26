@@ -44,6 +44,10 @@ browseURL('_book/index.html')
 ## Changelog
 All notable changes to the book will be documented here.
 
+### v0.6 (IN PROGRESS)
+- Added chapter on accumulated local effects plots
+- Added some advantages and disadvantages to pdps
+
 ### v0.5 (2018-08-14)
 - Added chapter on influential instances
 - Added chapter on Decision Rules
