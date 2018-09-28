@@ -3,39 +3,93 @@ devtools::load_all()
 set.seed(42)
 ```
 
-## Linear model extensions: GLM, GAM and more {#extend-lm}
+## Linear model 2.0: GLMs, GAMs and more {#extend-lm}
+
+Linear regression models handle the relationship between features and outcome with a weighted sum.
+The bad news is (well, not really news), that they are very restrictive in terms of how the output may look like, not handling interactions between features (by default), only allowing linear relationships.
+The good news is that the statistics community has come up with a vast array of modifications that make the linear regression model a powerful swiss knife.
 
 
-I recommend reading the [chapter on linear regression models](#linear) first.
+If you don't feel familiar enough with the standard linear regression model, I recommend reading the [chapter on linear regression models](#linear) first.
 
-Recall the formula of a linear model:
+Let's recall the formula of a linear regression model:
 
 $$y_{i}=\beta_{0}+\beta_{1}x_{i1}+\ldots+\beta_{p}x_{ip}+\epsilon_{i}$$
 
-The i-th instance's outcome $y_i$ is assumed to be a weighted sum of its $p$ features $x_j$ with an individual error $\epsilon_i$ that follows a Gaussian distribution.
-
-This formula is too restrictive for many real world prediction problems.
-The only allowed relationship between the prediction and the features is linear.
-But what if the real relationship is multiplicative or the influence of the feature follows a complex curve?
-The errors are assumed to have a Gaussian distribution.
-As a consequence, we also assume a Gausisan distribution of the target Y, after accounting for the features X. 
-This assumption is often violated, for example when the outcome can only have positive values, like the duration of an event.
-What if we want to model a classification task, or if the output we are interested in is a count of something, like number of children in a family?
-
-The linear regression model has been extensively studied and extended.
-The chapter will cover some of those extensions that leverage the linear model for more complex tasks.
-
-- What to do when  the target y is not normal -> GLM  
-- What to do when the relation between the features and y is not linear -> feature transformations, GAMs (splines)
-- What to do when there are interactions between features -> manual integration of interaction effects, automatic detection  
+The linear regression model assumes that the i-th instance's outcome $y_i$ can be expressed by a weighted sum of its $p$ features $x_{ij}$ with an individual error $\epsilon_i$ which follows a Gaussian distribution.
+By forcing the data into this corset-type of formula, we get a lot of interpretability: 
+The features don't act in arbitrary ways like in many machine learning methods and the relationship is linear, meaning an increase of a feature by one unit, can be directly translated into an increase/decrease of the predicted outcome.
+Knowing a single number per feature, the weight or coefficient, is enough.
 
 
-Other scenarios, not covered here:
-- What to do when observations are not i.i.d? Mixed models or GEEs.
-- What to do with heterogeneity in the errors? 
+But this formula is too restrictive for many real world prediction problems.
+In this chapter, we will talk about three problems with the classic linear regression model and how to solve them.
+There are much more problems with possibly violated assumptions, but we will focus on those three.
+
+*Problem*: The target outcome y is not normal distributed given the features.  
+*Example*: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.
+When I use a linear model, it can happen that it predicts negative values, because it assumes a Gaussian distribution which does not stop at 0 minutes.
+The same problem arises when we want to predict probabilities.
+*Solution*: Generalized Linear Models (GLMs)
+
+*Problem*: The relation between the features and y is not linear.
+*Example*: The world is full of non-linearities are more often than not violated.
+For example the effect of the temperature on my desire to go biking might be linear between 0 and 25 degrees Celsius, meaning that an increase from 0 to 1 degree causes the same increase in biking desire than  from 20 to 21. 
+But at a certain point, it levels of and might even have a negative effect - I don't like to bike when it is too hot.
+*Solutions*: Generalized Additive Models (GAMs); manually transforming features interactions.
+
+*Problem*: The features interact.
+*Example*: The world is full of interactions.
+On average, light rain has a slight negative effect on my biking desire.
+But in Summer during rush hour, I welcome rain, because than all those fair-weather riders stay at home and I have the cycling routes for myself!
+So there is an interaction between the time and the weather, which can't be explained in an additive model.
+*Solution*: Manually adding interactions.
 
 
-### Different types of targets
+There are many other scenarios in which you will reach the boundaries of the linear regression model, but I don't have the time nor the motivation to cover it all here.
+This would quickly become a book within a book.
+But I understand that it's very useful to have it in one place, so here are some other common problems or "boundaries" of the linear model and a search term that can be your starting place to solve that problem.
+So here is a list of problem statement + the name of a solution that you can copy-paste into search:
+
+- My data is not iid (independent and identically distributed).
+For example you might have repeated measurements from the same patient.
+Search for: *mixed models* or *generalized estimation equations*.
+- My model has heteroscedastic errors.
+For example when predicting the value of a house, the errors are usually higher for expensive houses. 
+Search for: *robust regression*.
+- I have outliers that severely influence my model.
+Search for: *robust regression*.
+- I want to predict time to event.
+Time to event data usually comes with censored measurements, meaning for some instances we didn't have enough time to observe the event.
+For example when we a company wants to predict the failure of machines, but has only data for two years.
+Some machines will still be intact after two years, but might break later. 
+Search for: *parametric survival models*, *cox regression*, *survival analysis*.
+- My outcome to predict is a category. 
+If you have only two categories use a [logistic regression model](#logistic), which will model the probability for the categories.
+If more categories, search for: *multinomial regression*.
+Both regression models are GLMs.
+- My outcome is ordered categories. 
+Search for: *proportional odds model*.
+- My outcome is a count (like number of children in a family).
+Search for: *poisson regression*.
+This model is a GLM as well.
+Additionally, if you have the problem that the count value of 0 is very frequent:
+Search for: *zero-inflated poisson regression*, *hurdle model*.
+- I am not sure which features to include to do proper inference. 
+For example I want to know the effect of a drug on some outcome.
+The drug directly affects also some blood value, but this blood value also affects the outcome. 
+Should I include the blood value into the regression model?
+(Answer is no btw., because it will hide the effect of the drug.)
+Search for: *causal inference*, *mediation analysis*.
+- I have missing data. 
+Search for:  *multiple imputation*.
+- I want to integrate prior knowledge into my models.
+Search for: *bayesian inference*.
+- I am feeling a bit down lately.
+Search for: *"Amazon Alexa Gone Wild!!! Full version from beginning to end"*
+
+
+### Different types of targets: GLMs
 
 Normal linear regression assumes that the target has a Gaussian distribution, given the input features.
 Logistic regression assumes that the target has a Bernoulli distribution, given the input features.
@@ -270,14 +324,8 @@ This is problematic with interaction term, since they consist of two other featu
 It is not meaningful to interpret an increase of the interaction feature, but leave the main feature as is.
 
 
-*Examples*
 
-
-TODO: Example: Interaction between features in bike sharing.
-e.g. Interaction between temperature and the season.
-
-
-### Non-linear effects
+### Non-linear effects: GAMs and more.
 
 What if we suspect or know that one of the features has a non-linear effect on the prediction.
 For example, the temperature effect might be linear for lower temperatures up to a certain degree, but then level off.
@@ -365,20 +413,29 @@ This effectively reduces the flexibility of the splines approach (how much they 
 How flexible the spline curve is usually tuned by some smoothness parameter, which is usually tuned using cross-validation.
 
 
-TODO:  Explain how to interpret splines
-
+The interpretation of splines is more visual, but still in line with other features.
+To interpret the effect, you can first look at the curve, which will show you if an effect is monotone, and what shape it has.
+To understand how much it contributes to a prediction at a given value, you look at the x-axis for that given value, for example 25 degrees C temperature and read the y-axis value, which will be added to the weighted sum of features.
 
 
 ### Advantages
 
-- Has lots of theory behind it for calculating things like confidence intervals and testing hypothesis
+- Has lots of theory behind it for calculating things like confidence intervals and testing hypothesis.
 - Very rich literature and experience with these models
-- Accepted in many fields as the standard for testing hypothesis
+- Accepted in many fields as the standard for testing hypothesis.
+- Understanding linear models helps you understanding statistical hypothesis testing.
+Replaces many tests, like analysis of variance stuff, t-tests and so on.
 - Can be made sparse by using regularization, which favors estimation of weights with 0.
 - Really good interfaces (for example in R) to describe how the relationship between input and output should be handled. 
 Can be written as formula.
-
-TODO: continues advantages
+- GAM makes very smooth non-linear effects, which usually also have derivatives, so you can more automatically quantify them. 
+Other models, like tree-based methods (random forest) have often ugly effects
+- What's the source of machine learning opaqueness compared to a linear model? I would say it's that the feature are treated in a non-linear fashion (meaning you need more than a single weight to describe the effect) and also you have lots of interactions in the model.
+If we assume that the linear regression model is the easiest interpretable model, but not so flexible and therefore often underfitting reality, than the tools in this chapter provide a good way to transition towards more flexibility, while keeping some of the interpretability.
+- Lots of theory to deal with repeated measurements.
+- Frameworks for survival analysis
+- Heterocedasticity can be solved by using more robut estimators
+- 
 
 ### Disadvantages
 
@@ -390,15 +447,11 @@ Non-linear feature effects are either not very intuitive (like log transform) or
 - The world of linear regression models and their extensions can be quite overwhelming
 - There are attempts to automate these steps, but mainly it's manual.
 - For interactions: the estimated coefficient (main effect) of each feature only caries meaning of an unconditional marginal effect when the effect of the interaction is zero, which is neve
+- Relies on assumptions for lots of the interpretaiton stuff
+- 
 
 
-TODO: Continues disadvantages
+### Software
 
+Any major programming language for stats has all those. The R language, SPSS, SAS, Python, ...
 
-### Software and Further Readings
-
-- Any major programming language for stats has all those
-- TODO: List languages
-- TODO: List good book reference
-- TODO: Mention Lasso
-- TODO: Mention GEE and mixed models
