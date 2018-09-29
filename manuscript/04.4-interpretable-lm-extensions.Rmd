@@ -10,7 +10,7 @@ The bad news is (well, not really news), that they are very restrictive in terms
 The good news is that the statistics community has come up with a vast array of modifications that make the linear regression model a powerful swiss knife.
 
 
-If you don't feel familiar enough with the standard linear regression model, I recommend reading the [chapter on linear regression models](#linear) first.
+If you don't feel familiar enough with the linear regression model, I recommend reading the [chapter on linear regression models](#linear) first.
 
 Let's recall the formula of a linear regression model:
 
@@ -26,10 +26,10 @@ But this formula is too restrictive for many real world prediction problems.
 In this chapter, we will talk about three problems with the classic linear regression model and how to solve them.
 There are much more problems with possibly violated assumptions, but we will focus on those three.
 
-*Problem*: The target outcome y is not normal distributed given the features.  
-*Example*: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.
+*Problem*: The target outcome y is not normal distributed given the features. 
+*Example*: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.  
 When I use a linear model, it can happen that it predicts negative values, because it assumes a Gaussian distribution which does not stop at 0 minutes.
-The same problem arises when we want to predict probabilities.
+The same problem arises when we want to predict probabilities.  
 *Solution*: Generalized Linear Models (GLMs)
 
 *Problem*: The relation between the features and y is not linear.
@@ -38,8 +38,8 @@ For example the effect of the temperature on my desire to go biking might be lin
 But at a certain point, it levels of and might even have a negative effect - I don't like to bike when it is too hot.
 *Solutions*: Generalized Additive Models (GAMs); manually transforming features interactions.
 
-*Problem*: The features interact.
-*Example*: The world is full of interactions.
+*Problem*: The features interact.  
+*Example*: The world is full of interactions.  
 On average, light rain has a slight negative effect on my biking desire.
 But in Summer during rush hour, I welcome rain, because than all those fair-weather riders stay at home and I have the cycling routes for myself!
 So there is an interaction between the time and the weather, which can't be explained in an additive model.
@@ -49,89 +49,53 @@ So there is an interaction between the time and the weather, which can't be expl
 There are many other scenarios in which you will reach the boundaries of the linear regression model, but I don't have the time nor the motivation to cover it all here.
 This would quickly become a book within a book.
 But I understand that it's very useful to have it in one place, so here are some other common problems or "boundaries" of the linear model and a search term that can be your starting place to solve that problem.
-So here is a list of problem statement + the name of a solution that you can copy-paste into search:
+If you scroll to the end of the chapter, there is a list of problem statement + the name of a solution that you can copy-paste into search.
 
-- My data is not iid (independent and identically distributed).
-For example you might have repeated measurements from the same patient.
-Search for: *mixed models* or *generalized estimation equations*.
-- My model has heteroscedastic errors.
-For example when predicting the value of a house, the errors are usually higher for expensive houses. 
-Search for: *robust regression*.
-- I have outliers that severely influence my model.
-Search for: *robust regression*.
-- I want to predict time to event.
-Time to event data usually comes with censored measurements, meaning for some instances we didn't have enough time to observe the event.
-For example when we a company wants to predict the failure of machines, but has only data for two years.
-Some machines will still be intact after two years, but might break later. 
-Search for: *parametric survival models*, *cox regression*, *survival analysis*.
-- My outcome to predict is a category. 
-If you have only two categories use a [logistic regression model](#logistic), which will model the probability for the categories.
-If more categories, search for: *multinomial regression*.
-Both regression models are GLMs.
-- My outcome is ordered categories. 
-Search for: *proportional odds model*.
-- My outcome is a count (like number of children in a family).
-Search for: *poisson regression*.
-This model is a GLM as well.
-Additionally, if you have the problem that the count value of 0 is very frequent:
-Search for: *zero-inflated poisson regression*, *hurdle model*.
-- I am not sure which features to include to do proper inference. 
-For example I want to know the effect of a drug on some outcome.
-The drug directly affects also some blood value, but this blood value also affects the outcome. 
-Should I include the blood value into the regression model?
-(Answer is no btw., because it will hide the effect of the drug.)
-Search for: *causal inference*, *mediation analysis*.
-- I have missing data. 
-Search for:  *multiple imputation*.
-- I want to integrate prior knowledge into my models.
-Search for: *bayesian inference*.
-- I am feeling a bit down lately.
-Search for: *"Amazon Alexa Gone Wild!!! Full version from beginning to end"*
 
+
+Now, let's start
 
 ### Different types of targets: GLMs
 
-Normal linear regression assumes that the target has a Gaussian distribution, given the input features.
-Logistic regression assumes that the target has a Bernoulli distribution, given the input features.
-But what if we want to predict the time between two events? 
-This time is always positive and a Gaussian distribution might be just wrong.
-What if we want to predict some count feature, like the number of children a person will have in the lifetime?
-That's certainly not a Gaussian distribution and also not Bernoulli.
-So we need a more flexible approach to handle different types of outcomes, but would love to keep the interpretability of linear models and all the tools connected to it, like having weights that can be interpreted, having confidence intervals, being able to make predictions and so on.
-The solution to generalizing linear models to arbitrary outcome distributions is called GLM: generalized linear model.
+The linear regression model assumes that the outcome given the input features follows a Gaussian distribution.
+This assumption excludes a lot of cases:
+The outcome could also be a category (cancer vs. healthy), or a count (number of children), the time until an event happens (time until a machine breaks down) or a very skewed variable with many high values (household incomes).
+As we have seen in the [logistic regression chapter](#logistic), the binary categorization case can be handled when we modify the linear regression model with the logistic function, but at its core is still the weighted sum of the inputs.
+This concept of keeping the linear weighted sum at the core, but potentially transforming the sum and modeling the mean of a distribution different from the Gaussian (the Bernoulli distribution in the logistic regression case) is called Generalized Linear Models (GLMs).
+GLMs is a flexible class of models, which partially keeps the interpretability of the linear model, like interpretable weights, confidence intervals and so on.
 
-At the core, the generalized linear model has still a linear composition of the features, but it is linked to a function g of the distribution mean, which can be chosen flexibly depending on the type of outcome. 
-The link function links the linear predicted to the mean of the distribution we are assuming.
+Mathematically the GLM has the linear composition of the features at the core which is linked to the mean of the assumed distribution through a so called link function g, which can be chosen flexibly depending on the type of outcome. 
 
-$$\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p=g(E(y))$$
-The GLM consists of three components. 
-Besides the link function and the linear predictor, we also need a probability distribution from the exponential family.
-In the exponential family are all distribution function that kind of follow the same pattern.
-They can all be written in the same format, which involves and exponent, the mean and variance of the distribution and some other parameters.
+$$\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p=g(E_Y(y|X))$$
+
+The GLM consists of three components.
+Besides the link function g and the linear predictor ($\beta{}X$), we also need a probability distribution from the exponential family, which sets $E_Y$.
+The exponential family is a set of distributions that all follow the same pattern, meaning they can be formulated in a general form, which involves an exponent, the mean and variance of the distribution and some other parameters.
 I won't go into details here, because that's a very big universe of it's own I don't want to open up.
 Wikipedia has a nice [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
 Any distribution from this list can be chosen as the distribution.
-The choice depends on the nature of the outcome you have.
+Not all distributions that exist are in the exponential family, but enough for the average statistician/data scientist/machine learner.
+The choice of distribution depends on the nature of the outcome you have and is a bit of an art.
 Your outcome is some kind of count (e.g. number of children)?
 Then the Poisson distribution might be a good choice.
 Your outcome is always positive (e.g. time between two events)?
 Then the Exponential distribution might be a good choice.
 
-Each distribution comes with parameters that describe the distribution.
-For example, the Gaussian distribution is described by the $\mu$ which tells us where the expected value of the distribution is and the variance $\sigma$ which tells us how flat or peaked the distribution is.
+TODO: CONTINUE HERE
 
-GLMs are easier to understand when you don't think of the linear regression model as a model of $y$, but of the $\mu$ of the Gaussian distribution, conditional on the features.
-When we formulate a linear model, we use the link function to link the linear equation - the weighted sum of the features - to the mean of the Gaussian distribution.
-The link function for the Gaussian distribution, the standard linear model, is the identity function.
-This concept generalizes under the name GLM to any distribution.
-For example, when we switch out the Gaussian distribution with the Poisson distribution, which is used for counts, the natural link function is the logarithm with the natural base.
+Each distribution comes with parameters that describe it.
+The Gaussian distribution is parameterized by the mean $\mu$ and the variance $\sigma$.
+The mean describes the value that we expect on average and the variance how much the values vary around the mean.
+In the linear model the link function to links the weighted sum of the features to the mean of the Gaussian distribution.
+The link function for the Gaussian distribution in the classic linear model is simply the identity function.
+This concept generalizes under the name GLM to any distribution and arbitrary link functions.
+For example if y is a count of something, like the number of coffees someone drinks on a given day, we would use a GLM with a Poisson distribution and the natural logarithm as the link function:
 
-$$x\beta=ln(\lambda)$$
-Where $\lambda$ is the parameter describing the intensity of the poisson distribution, a larger value means that we expect a higher outcome.
+$$x\beta=ln(E_Y(y|x))$$
 
-You have also come across the logit link function already in the logistic regression formula:
+The logistic regression model is also a GLM, assuming a Bernoulli distribution and the logistic function as link.
 
-$$X\beta=ln\left(\frac{\mu}{1-\mu}\right)$$
+$$x\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
 The mean $\mu$ of the binomial distribution, which is used in logistic regression is the probability that y is 1.
 So you might also see:
 
@@ -140,11 +104,16 @@ And if we solve this equation to have P(Y=1) on one side, we get the classic log
 
 $$P(y_{i}=1)=\frac{1}{1+exp(-x_i\beta)}$$
 
-You are quite flexible with the link function you choose.
-But each distribution also comes with a canonical link function, which can be derived mathematically from the distribution, when it is reformulated as the exponential family.
+You can choose the link function independently from the distribution, but  each distribution also comes with a canonical link function.
+The canonical link can be derived mathematically from the distribution.
+How to choose a link function:
+There is no perfect recipe. 
+You take into account your knowledge about the distribution of your target, but also theoretical considerations and how well the model fits your actual data.
+For some distributions, like the exponential distribution, the canonical link (the negative inverse) can link the weighted sum to a off-domain value, in this case to negative numbers.
+A solution can be to use a noncanonical link.
+You can also simply check whether one link function or a another leads to better performance on test data and choose the better one.
 
-
-If you are reading the book from start to end, you have already came across a GLM: logistic regression. 
+TODO: CONTINUE HERE
 
 *Examples*
 
@@ -340,7 +309,7 @@ Before I explain each of them, will start with an example right away.
 We take the bike rental dataset and try to predict the number of rented bikes using only the temperature feature.
 The following figure shows the estimated slope without doing anything and with either transforming the feautre (the square root), cutting it into intervals or using splines (also called GAM then).
 
-```{r non-linear-effects, fig.cap = "Predicting the number of rented bikes given the temperature. Using a standard linear model (top left) doesn't capture the flattening of the temperature effect as suggested by the point cloud and overestimates the number of bikes at low temperatures. One solution is to transform the feature (top right), to categorize it (bottom left), which is usually a bad decision or to use Generalized Additive Models, which can automatically fit a smooth curve for temperature (bottom right), which is most often the best solution."}
+```{r non-linear-effects, fig.cap = "Predicting the number of rented bikes given the temperature. Using a linear model (top left) doesn't capture the flattening of the temperature effect as suggested by the point cloud and overestimates the number of bikes at low temperatures. One solution is to transform the feature (top right), to categorize it (bottom left), which is usually a bad decision or to use Generalized Additive Models, which can automatically fit a smooth curve for temperature (bottom right), which is most often the best solution."}
 mod.simpel = lm(cnt ~ temp, data = bike)
 bike.plt = bike
 bike.plt$pred.lm = predict(mod.simpel)
@@ -455,3 +424,43 @@ Non-linear feature effects are either not very intuitive (like log transform) or
 
 Any major programming language for stats has all those. The R language, SPSS, SAS, Python, ...
 
+### More extensions
+
+A list of problem statement + the name of a solution that you can copy-paste into search.
+
+- My data is not iid (independent and identically distributed).
+For example you might have repeated measurements from the same patient.
+Search for: *mixed models* or *generalized estimation equations*.
+- My model has heteroscedastic errors.
+For example when predicting the value of a house, the errors are usually higher for expensive houses. 
+Search for: *robust regression*.
+- I have outliers that severely influence my model.
+Search for: *robust regression*.
+- I want to predict time to event.
+Time to event data usually comes with censored measurements, meaning for some instances we didn't have enough time to observe the event.
+For example when we a company wants to predict the failure of machines, but has only data for two years.
+Some machines will still be intact after two years, but might break later. 
+Search for: *parametric survival models*, *cox regression*, *survival analysis*.
+- My outcome to predict is a category. 
+If you have only two categories use a [logistic regression model](#logistic), which will model the probability for the categories.
+If more categories, search for: *multinomial regression*.
+Both regression models are GLMs.
+- My outcome is ordered categories. 
+Search for: *proportional odds model*.
+- My outcome is a count (like number of children in a family).
+Search for: *poisson regression*.
+This model is a GLM as well.
+Additionally, if you have the problem that the count value of 0 is very frequent:
+Search for: *zero-inflated poisson regression*, *hurdle model*.
+- I am not sure which features to include to do proper inference. 
+For example I want to know the effect of a drug on some outcome.
+The drug directly affects also some blood value, but this blood value also affects the outcome. 
+Should I include the blood value into the regression model?
+(Answer is no btw., because it will hide the effect of the drug.)
+Search for: *causal inference*, *mediation analysis*.
+- I have missing data. 
+Search for:  *multiple imputation*.
+- I want to integrate prior knowledge into my models.
+Search for: *bayesian inference*.
+- I am feeling a bit down lately.
+Search for: *"Amazon Alexa Gone Wild!!! Full version from beginning to end"*
