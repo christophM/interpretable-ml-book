@@ -9,6 +9,11 @@ Linear regression models handle the relationship between features and outcome wi
 The bad news is (well, not really news), that they are very restrictive in terms of how the output may look like, not handling interactions between features (by default), only allowing linear relationships.
 The good news is that the statistics community has come up with a vast array of modifications that make the linear regression model a powerful swiss knife.
 
+There are just so many ways of extending linear models.
+And it's so confusing, because different disciplines use linear models and have (re-)invented methods but with different namings.
+This chapter will definitely not be your definite guide to extending linear models. 
+It serves rather as an overview to give you some intuition about some important extensions like GLMs and GAMs.
+After reading this chapter, you should have a solid overview over how to extend linear models, which should serve as a starting point if you want to apply those.
 
 If you don't feel familiar enough with the linear regression model, I recommend reading the [chapter on linear regression models](#linear) first.
 
@@ -79,9 +84,7 @@ The choice of distribution depends on the nature of the outcome you have and is 
 Your outcome is some kind of count (e.g. number of children)?
 Then the Poisson distribution might be a good choice.
 Your outcome is always positive (e.g. time between two events)?
-Then the Exponential distribution might be a good choice.
-
-TODO: CONTINUE HERE
+Then the exponential distribution might be a good choice.
 
 Each distribution comes with parameters that describe it.
 The Gaussian distribution is parameterized by the mean $\mu$ and the variance $\sigma$.
@@ -113,59 +116,80 @@ For some distributions, like the exponential distribution, the canonical link (t
 A solution can be to use a noncanonical link.
 You can also simply check whether one link function or a another leads to better performance on test data and choose the better one.
 
-TODO: CONTINUE HERE
-
 *Examples*
 
-How many coffees did you drink today?
-Features:
-- Stress level between 1 and 10
-- How well did you sleep last night on a scala from 1 to 10?
-- Is it weekend?
+I completely made up an artificial dataset about coffee drinking behaviour to highlight the need for GLMs.
+Suppose you collected data about yourself each day about your coffee drinking behaviour.
+Along with number of cups, you note your current stress level between 1 and 10, how well you slept the night before on a scale from 1 to 10 and if you have to work on that day.
+The goal is to predict the number of coffes given the features stress, sleep and work.
+I simulated 200 days.
+Stress and sleep were drawn uniformly between 1 and 10, work YES/NO was drawn with a 50/50 chance (what a life!). 
+The number was then drawn from a Poisson distribution, where the intensity $\lambda$ (which is also the expected value of the distribution) was modeled as a function of the features sleep, stress and work.
+The true data generating process is a Poisson distribution. 
+You can guess where my story will be going ("Hey let's model this data with a linear model ... Oh it doesn't work ... Let's try a GLM with Poisson distribution ... SURPRISE! Now it works!").
+I hope I didn't spoil the story to much for you.
 
-(Writing this as I am sipping my second coffee at 11AM).
+Let's have a look at the target variable, the number of coffees on a given day:
 
 ```{r poisson-data}
 # simulate data where the normal linear model fails.
 n = 200
 df = data.frame(stress  = runif(n = n, min = 1, max = 10), 
   sleep = runif(n = n, min = 1, max = 10), 
-  weekend = sample(c("YES", "NO"), size = n, replace = TRUE))
-lambda = exp(1* df$stress/10 - 2 * (df$sleep - 5)/10  - 1 * (df$weekend == "YES"))
+  work = sample(c("YES", "NO"), size = n, replace = TRUE))
+lambda = exp(1* df$stress/10 - 2 * (df$sleep - 5)/10  - 1 * (df$work == "NO"))
 df$y = rpois(lambda = lambda, n = n)
 
+tab = data.frame(table(df$y))
 
-kable(table(df$y))
+
+knitr::kable(tab, col.names = c("#coffees", "#days"))
 
 ```
 
+On `r tab[1,2]` days, you have no coffee at all and at the most extreme day you have `r tab[nrow(tab),1]`.
+Let's naively use a linear model to model this dataset, using the features sleep level, stress level and work Yes/No to predict the number of coffees.
+What can go wrong when we falsely assume a Gaussan distribution?
+A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights and all the interpretation we do about them. 
+Another, more obvious problem is that the predictions doesn't match the "allowed" domain of the true outcome.
 
-```{r failing-linear-model}
+```{r failing-linear-model, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The linear model also predicts negative values."}
 mod.gaus = glm(y ~ ., data = df, x = TRUE)
 pred.gauss = data.frame(pred = predict(mod.gaus), actual = df$y)
-ggplot(pred.gauss)  + geom_histogram(aes(x = pred))
+ggplot(pred.gauss) + 
+  geom_histogram(aes(x = pred)) + 
+  scale_x_continuous("Predicted number of coffees") + 
+  scale_y_continuous("Frequency")
 ```
 
-Predicting negative values. well. That's awkward.
+Negative amount of coffee?
+That's awkward and a failure of the linear model in respecting the domain of the count outcome.
+This problem can be solved using Generalized Linear Models (GLMs).
+There are two things we can change:
+The link function and the distribution assumption.
+We could keep the Gaussian assumption, but don't use the identity function as link, but something that always maps the weighted sum to a positve value, like the log-link (the inverse is the exp() function, which always yields positive values).
+The better idea here is to choose a distribution that matches the data generating process and an appropriate link function. 
+Since the outcome is a count, the Poisson distribution is a natural choice, along with the log link function (in our case, the data was even generated using the Poisson distribution, so this GLM is the perfect choice).
+Fitting a Poisson model yields the following predicted values:
 
-
-Better idea: Use poisson distribution with exp link function.
-
-```{r linear-model-positive}
+```{r linear-model-positive, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The GLM with Poisson assumption and log link is an appropriate model for this dataset."}
 mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson(link = "log"))
 pred.pois = data.frame(pred = predict(mod.pois, type = "response"), actual = df$y)
-ggplot(pred.pois)  + geom_histogram(aes(x = pred))
+ggplot(pred.pois)  + 
+  geom_histogram(aes(x = pred))+ 
+  scale_x_continuous("Predicted number of coffees") + 
+  scale_y_continuous("Frequency")
 ```
 
+TODO: CONTINUE HERE
 
-Interpretation of parameters
+*Interpretation of GLM parameters*
 
-
-The interpretation depends on the chosen distribution and how we link the weighted sum of features to the expected outcome.
-In this case, the assumed distribution of the outcome given the features is a poisson distribution.
+The interpretation depends on the chosen distribution and how we link the weighted sum of features to the expected outcome and what distribution we use.
+In this case, the assumed distribution of the outcome given the features is a Poisson distribution.
 The link function between the weighted sum and the number of expected coffees is:
 
-$$\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{like}x_{like}=ln(E(coffees|stress,sleep,like))$$
+$$\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{work}x_{work}=ln(E(coffees|stress,sleep,work))$$
 
 A Poisson distribution has one parameter: $\lambda$, the intensity at which 'events' happen (here the number of consumed coffees)
 A high value of $\lambda$ means that we expect a high count.
@@ -176,7 +200,7 @@ Here it comes:
 By increasing an x by one, the expected outcome increases multiplicatively by $exp(\beta)$.
 The exp comes from inversing the link function:
 
-$$exp(\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{like}x_{like})=E(coffees|stress,sleep,like)$$
+$$exp(\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{work}x_{work})=E(coffees|stress,sleep,work)$$
 Let's have a look at the weights and the exp(weights) and their variance:
 ```{r poisson-model-params}
 cc = data.frame(summary(mod.pois)$coefficients)
