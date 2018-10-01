@@ -31,6 +31,8 @@ But this formula is too restrictive for many real world prediction problems.
 In this chapter, we will talk about three problems with the classic linear regression model and how to solve them.
 There are much more problems with possibly violated assumptions, but we will focus on those three.
 
+TODO: INSERT FIGURE WITH 3 PLOTS FOR THE PROBLEMS
+
 *Problem*: The target outcome y is not normal distributed given the features. 
 *Example*: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.  
 When I use a linear model, it can happen that it predicts negative values, because it assumes a Gaussian distribution which does not stop at 0 minutes.
@@ -75,6 +77,8 @@ $$\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p=g(E_Y(y|X))$$
 
 The GLM consists of three components.
 Besides the link function g and the linear predictor ($\beta{}X$), we also need a probability distribution from the exponential family, which sets $E_Y$.
+Note that I also replaced the y from the linear model with $E_Y(y|X)$. 
+For the Gaussian model it's the same, but for example for logistic regression, y is either 0 or 1, and the expected y is the probability for the event.
 The exponential family is a set of distributions that all follow the same pattern, meaning they can be formulated in a general form, which involves an exponent, the mean and variance of the distribution and some other parameters.
 I won't go into details here, because that's a very big universe of it's own I don't want to open up.
 Wikipedia has a nice [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
@@ -99,6 +103,7 @@ $$x\beta=ln(E_Y(y|x))$$
 The logistic regression model is also a GLM, assuming a Bernoulli distribution and the logistic function as link.
 
 $$x\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
+
 The mean $\mu$ of the binomial distribution, which is used in logistic regression is the probability that y is 1.
 So you might also see:
 
@@ -181,27 +186,19 @@ ggplot(pred.pois)  +
   scale_y_continuous("Frequency")
 ```
 
-TODO: CONTINUE HERE
+*Interpretation of GLM weights*
 
-*Interpretation of GLM parameters*
-
-The interpretation depends on the chosen distribution and how we link the weighted sum of features to the expected outcome and what distribution we use.
-In this case, the assumed distribution of the outcome given the features is a Poisson distribution.
-The link function between the weighted sum and the number of expected coffees is:
+The assumed distribution and the link function dictate the interpretation of the features.
+In the coffee example I assumed a Poisson distribution and used a log link.
+This results in the following relationship between the features and the expected outcome:
 
 $$\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{work}x_{work}=ln(E(coffees|stress,sleep,work))$$
 
-A Poisson distribution has one parameter: $\lambda$, the intensity at which 'events' happen (here the number of consumed coffees)
-A high value of $\lambda$ means that we expect a high count.
-The expected number of counts is $\lambda$.
-Ok, how do we connect that to the interpretation of the $\beta$'s?
-
-Here it comes:
-By increasing an x by one, the expected outcome increases multiplicatively by $exp(\beta)$.
-The exp comes from inversing the link function:
+For the interpretation of the parameters we have to invert the link function, so that we can interpret the effect of the features on the expected outcome, not on the logarithm of the expected outcome. 
 
 $$exp(\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{work}x_{work})=E(coffees|stress,sleep,work)$$
-Let's have a look at the weights and the exp(weights) and their variance:
+Last ingredient for showing the interpretation of the weights: The actual weights for the toy example.
+The following table shows the weights and the exponent of the weights together with the 95% confidence interval:
 ```{r poisson-model-params}
 cc = data.frame(summary(mod.pois)$coefficients)
 cc = cc[,c("Estimate", "Std..Error")]
@@ -213,42 +210,56 @@ cc$ci = sprintf("%.2f [%.2f, %.2f]", cc$exp.beta, cc$`2.5 %`, cc$`97.5 %`)
 kable(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2)
 ```
 
-Let's interpret the parameters in the made-up coffee prediction example.
-Increasing the stress by one point increases the expected number of coffees by a factor of `r round(cc["stress", "exp.beta"], 2)`. 
-Increasing the sleep by one point decreases the expected number of coffees by a factor of `r round(cc["sleep", "exp.beta"], 2)`.
-Compared to a weekday, on a weekend the predicted number of cofees is lower by a factor of `r round(cc["weekendYES", "exp.beta"], 2)`.
+Let's interpret the weights from the made-up coffee prediction example.
+Increasing the stress by one point multiplicatively increases the expected number of coffees by a factor of `r round(cc["stress", "exp.beta"], 2)`. 
+Increasing the sleep by one point multiplicatively decreases the expected number of coffees by a factor of `r round(cc["sleep", "exp.beta"], 2)`.
+The predicted number of coffees is lower by a factor of `r round(cc["weekendYES", "exp.beta"], 2)` on a non-working day compared to a working day.
 
-In the next part, we will talk about the solution when the features interact with each other.
+In this section you have learned a bit about Generalized Linear Models which are useful when the target does not follow a Gaussian distribution. 
+Next we will look into the case when features interact with each other, so the relationship is not covered with the default additive model.
 
 ### Adding interactions
 
-What if the features interact with each other?
-Say for predicting the number of bikes that will be rented, there might be an interaction betweeen the temperature and if it's a working day or not.
-Maybe when people have to work, the temperature does not affect the number of rented bikes, because only the tough people ride, because they have to get to work.
-On the free days, many people decide more based on the weather. 
-So we might suspect an interaction between the two.
-By default, the linear model doesn't model interactions explicitly.
-It might actually suck pretty hard when interactions are involved, because the effects are not independent from each other any more.
+The classic linear model assumes that feature effects can just be added independently from each other, but in real life, the features often have some kind of interaction effect on the target.
+Say for predicting the [number of bikes](#bike-data) that will be rented, there might be an interaction between the temperature and whether it's a working day or not.
+Maybe when people have to work, the temperature doesn't affect the number of rented bikes much, because the people will ride the bike to work no matter what.
+On free days many people bike for pleasure, but only if it warm enough.
+In this case we might suspect an interaction between temperature and working day on the rented bikes.
+The linear regression model doesn't consider interactions by itself.
 
-What can you do about it?
-You can simply add a term to the features that represents the interaction between features.
-In the working day x temperature example, we would add a new features, that is zero whenever it's a weekend, otherwise the temperature.
-The working day is then the reference category.
+How can we make the linear model include interactions?
+You can add a column to the feature matrix that represents the interaction between the features and fit the model as usual.
+In the working day and temperature example, we would add a new feature that is zero whenever it's a weekend, otherwise the value of the temperature feature.
+This assumes that working day is the reference category.
+Let's say our data looks like this:
 
-A toy example.
-Let's say our features look like this:
 ```{r data-frame}
 x = data.frame(workingday = c("Yes", "No", "No", "Yes"), temp = c(25, 12, 30, 5))
 knitr::kable(x)
 ```
-What the model receives, when we want both the linear effects and the additional interaction effect:
-```{r data-frame-lm}
-mod = lm(1:4 ~ workingday * temp, data = x)
+
+The following table shows what the model receives when we don't specify interactions.
+
+
+```{r data-frame-lm-no-interaction}
+mod = lm(1:4 ~ ., data = x)
 knitr::kable(data.frame(model.matrix(mod)))
 ```
 
-The first term is the intercept term which usually gets added automatically in the most programs for linear regression models.
-The second column is the workingday feature, which is now only the indicator for the feature value Yes, since No is assumed as the reference category.
+The first term is the intercept term.
+The categorical feature is coded, with 0 for the reference category and 1 for the other.
+
+TODO: CONTINUE HERE
+
+
+When we add the interaction between temperature and the working day feature, the model will receive the following matrix with the additional column for the interaction:
+
+```{r data-frame-lm}
+mod = lm(1:4 ~ workingday * temp, data = x)
+knitr::kable(data.frame(model.matrix(mod)))[,-1]
+```
+
+The first column is the working day feature, which is now only the indicator for the feature value Yes, since No is assumed as the reference category.
 Where the workingdayY column is 1, the original category was "Y".
 The column temp is the same as before.
 New is the column "workingdayYes" which captures the interaction between the features workingday and temperature.
@@ -452,39 +463,39 @@ Any major programming language for stats has all those. The R language, SPSS, SA
 
 A list of problem statement + the name of a solution that you can copy-paste into search.
 
-- My data is not iid (independent and identically distributed).
-For example you might have repeated measurements from the same patient.
+- My data is not iid (independent and identically distributed).  
+For example you might have repeated measurements from the same patient.  
 Search for: *mixed models* or *generalized estimation equations*.
-- My model has heteroscedastic errors.
+- My model has heteroscedastic errors.  
 For example when predicting the value of a house, the errors are usually higher for expensive houses. 
+Search for: *robust regression*.  
+- I have outliers that severely influence my model.  
 Search for: *robust regression*.
-- I have outliers that severely influence my model.
-Search for: *robust regression*.
-- I want to predict time to event.
+- I want to predict time to event.  
 Time to event data usually comes with censored measurements, meaning for some instances we didn't have enough time to observe the event.
 For example when we a company wants to predict the failure of machines, but has only data for two years.
-Some machines will still be intact after two years, but might break later. 
+Some machines will still be intact after two years, but might break later.  
 Search for: *parametric survival models*, *cox regression*, *survival analysis*.
-- My outcome to predict is a category. 
-If you have only two categories use a [logistic regression model](#logistic), which will model the probability for the categories.
+- My outcome to predict is a category.   
+If you have only two categories use a [logistic regression model](#logistic), which will model the probability for the categories.  
 If more categories, search for: *multinomial regression*.
 Both regression models are GLMs.
-- My outcome is ordered categories. 
+- My outcome is ordered categories.  
 Search for: *proportional odds model*.
 - My outcome is a count (like number of children in a family).
-Search for: *poisson regression*.
+Search for: *poisson regression*.  
 This model is a GLM as well.
-Additionally, if you have the problem that the count value of 0 is very frequent:
+Additionally, if you have the problem that the count value of 0 is very frequent:  
 Search for: *zero-inflated poisson regression*, *hurdle model*.
-- I am not sure which features to include to do proper inference. 
+- I am not sure which features to include to do proper inference.  
 For example I want to know the effect of a drug on some outcome.
 The drug directly affects also some blood value, but this blood value also affects the outcome. 
 Should I include the blood value into the regression model?
-(Answer is no btw., because it will hide the effect of the drug.)
+(Answer is no btw., because it will hide the effect of the drug.)  
 Search for: *causal inference*, *mediation analysis*.
-- I have missing data. 
+- I have missing data.  
 Search for:  *multiple imputation*.
-- I want to integrate prior knowledge into my models.
+- I want to integrate prior knowledge into my models.  
 Search for: *bayesian inference*.
-- I am feeling a bit down lately.
+- I am feeling a bit down lately.  
 Search for: *"Amazon Alexa Gone Wild!!! Full version from beginning to end"*
