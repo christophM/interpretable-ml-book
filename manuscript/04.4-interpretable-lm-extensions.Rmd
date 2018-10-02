@@ -246,42 +246,42 @@ mod = lm(1:4 ~ ., data = x)
 knitr::kable(data.frame(model.matrix(mod)))
 ```
 
-The first term is the intercept term.
-The categorical feature is coded, with 0 for the reference category and 1 for the other.
+The first column is the intercept term.
+The categorical feature is coded (2nd column), with 0 for the reference category and 1 for the other.
+The third column contains the temperature.
 
-TODO: CONTINUE HERE
-
-
-When we add the interaction between temperature and the working day feature, the model will receive the following matrix with the additional column for the interaction:
+When we want the linear model to include the interaction between temperature and the working day feature, we have to give it the following matrix with the additional column for the interaction:
 
 ```{r data-frame-lm}
 mod = lm(1:4 ~ workingday * temp, data = x)
 knitr::kable(data.frame(model.matrix(mod)))
 ```
 
-The first column is the working day feature, which is now only the indicator for the feature value Yes, since No is assumed as the reference category.
-Where the workingdayY column is 1, the original category was "Y".
-The column temp is the same as before.
-New is the column "workingdayYes" which captures the interaction between the features workingday and temperature.
+The new column "workingdayYes" column captures the interaction between the features workingday and temperature.
 This new feature is zero when the workingday feature has the reference category "No", otherwise it takes on the value of the temp feature.
 With this type of coding, the linear model can learn a different linear effect of the temperature for both types of days.
 This is the interaction effect between the two features.
-For two categorical features, the process is the same:
+Without interaction, the combined effect of a categorical and a numerical feature can be described by a line which is shifted vertically for the different categories.
+When we include interactions, we allow the effect of the numerical features (the slope) have a different value in each category.
+
+For two categorical features, the process is the same.
 We create additional features which represents combinations of categories. 
 So this artificial data: 
 
 ```{r data-frame-lm-cat}
-x = data.frame(workingday = c("Yes", "No", "No", "Yes"), wday = c("Mon", "Sun", "Sat", "Mon"))
+x = data.frame(workingday = c("Yes", "No", "No", "Yes"), weekday = c("Mon", "Sun", "Sat", "Mon"))
 knitr::kable(x)
 ```
 
 Becomes this: 
 
 ```{r data-frame-lm-cat2}
-mod = lm(1:4 ~ workingday * wday, data = x)
+mod = lm(1:4 ~ workingday * weekday, data = x)
 knitr::kable(data.frame(model.matrix(mod)))
 ```
+
 For any category of both features (excluding the reference categories), we create a new feature column that is 1 if both features have a certain category, otherwise 0.
+
 For two numerical features, the interaction column is even easier to construct: 
 We simply multiply both numerical features.
 There are lots of ways and types of interactions that can be added (nested, 2way, 3way, ...). 
@@ -290,6 +290,9 @@ One is presented in this book called [RuleFit](#rulefit), which first mines inte
 
 ### Example
 
+Let's return to the bike rental prediction task that we already modeled with a linear model in the [linear model chapter](#linear).
+This time, we additionally include an interaction between the temperature and working day.
+This results in the following estimated weights and confidence intervals.
 
 ```{r example-lm-interaction}
 data(bike)
@@ -304,30 +307,27 @@ lm_summary_print = lm_summary
 rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 confint(mod)
 
-kable(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight estimate', 'Std. Error', "2.5%","97.5%"))
+kable(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight', 'Std. Error', "2.5%","97.5%"))
 ```
 
-The interaction term drastically changes how we interpret the terms of the involved features.
+The additional interaction effect is negative (`r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`) and significantly different from zero, as indicated by the 95% confidence interval boundaries.
+The interaction term changes how we interpret the terms of the involved features.
 Does the temperature have a negative effect on a working day?
-The answer is no, even though the weights suggest it in the first moment.
-We can't interpret the "workingdayWORKING DAY:temp" interaction term directly, since the interpretation would be
-All feature values being equal, increasing the additional temperature effect for the working day, decreases the predicted number of bike rents. 
-But this comes only on top of the effect of the temperature feature, which we would have to increase at the same time.
+The answer is no, even though the weights suggest it to the untrained eye.
+We can't interpret the "workingdayWORKING DAY:temp" interaction term directly, since the interpretation would be:
+"All feature values being equal, increasing the additional temperature effect for the working day, decreases the predicted number of bike rents."
+But this comes only on top of the main effect of the temperature, which we would have to increase at the same time.
 Let's say we have a working day, and want to know what would happen if the temperature today would be 1 degree warmer. 
 Then we have to add both the temp and "workindayWORKING DAY:temp" weights to get how much the estimate increases.
 
-It's easier to understand visually. 
+It's easier to understand the interaction visually. 
 By introducing an interaction term between a categorical and a numerical feature, we now have two slopes for the temperature instead of one.
-```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bike rental for a linear model. Effectively we get two slopes for the temperature, by the factor working day or not. Without the interaction it would be a single slope for the temperature, only shifted by the different means of non-working vs. working day."}
+The temperature slope for the reference category ('NO WORKING DAY') can be read directly from the table (`r round(lm_summary_print['temp','Estimate'], 1)`).
+The temperature slope for the category 'WORKING DAY' is the sum of both temperature weights (`r round(lm_summary_print['temp','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`).
+
+```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bike rental for a linear model. Effectively we get two slopes for the temperature one for each category of the  working day feature. Without the interaction it would be a single slope for the temperature, only shifted by the different means of no working vs. working day."}
 jtools::interact_plot(mod, pred = "temp", modx = "workingday")
 ```
-
-
-Problem: The interpretation of the weights is always given that all else stays equal. 
-This is problematic with interaction term, since they consist of two other features that are in the model.
-It is not meaningful to interpret an increase of the interaction feature, but leave the main feature as is.
-
-
 
 ### Non-linear effects: GAMs and more.
 
