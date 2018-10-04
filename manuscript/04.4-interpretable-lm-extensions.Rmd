@@ -5,33 +5,31 @@ set.seed(42)
 
 ## Linear model 2.0: GLMs, GAMs and more {#extend-lm}
 
-Linear regression models handle the relationship between features and outcome with a weighted sum.
-The bad news is (well, not really news), that they are very restrictive in terms of how the output may look like, not handling interactions between features (by default), only allowing linear relationships.
-The good news is that the statistics community has come up with a vast array of modifications that make the linear regression model a powerful swiss knife.
+[Linear regression models](#linear) restrict the outcome to be modeled by a weighted sum of the features.
+Additionally it comes with a lot of other assumptions and restrictions.
+The bad news is (well, not really news) that all those assumptions are often violated in reality: the output may have a non-Gaussian distribution given the features, there might be interactions between the features, the relationship between a feature and the outcome might be non-linear.
+The good news is that the statistics community has come up with a vast array of modifications that turns the linear regression model from a simple blade into a resourceful Swiss knife.
 
-There are just so many ways of extending linear models.
-And it's so confusing, because different disciplines use linear models and have (re-)invented methods but with different namings.
-This chapter will definitely not be your definite guide to extending linear models. 
-It serves rather as an overview to give you some intuition about some important extensions like GLMs and GAMs.
-After reading this chapter, you should have a solid overview over how to extend linear models, which should serve as a starting point if you want to apply those.
 
-If you don't feel familiar enough with the linear regression model, I recommend reading the [chapter on linear regression models](#linear) first.
+This chapter is definitely not your definite guide to extending linear models. 
+It rather serves as a high-level overview over extensions like Generalized Linear Models (GLMs) and Generative Additive Models (GAMs) and give you some intuition.
+After reading you should have a solid overview over how to extend linear models.
+If you want to learn more about the linear regression model first, I recommend reading the [chapter on linear regression models](#linear), if you haven't already.
 
 Let's recall the formula of a linear regression model:
 
 $$y_{i}=\beta_{0}+\beta_{1}x_{i1}+\ldots+\beta_{p}x_{ip}+\epsilon_{i}$$
 
-The linear regression model assumes that the i-th instance's outcome $y_i$ can be expressed by a weighted sum of its $p$ features $x_{ij}$ with an individual error $\epsilon_i$ which follows a Gaussian distribution.
-By forcing the data into this corset-type of formula, we get a lot of interpretability: 
-The features don't act in arbitrary ways like in many machine learning methods and the relationship is linear, meaning an increase of a feature by one unit, can be directly translated into an increase/decrease of the predicted outcome.
-Knowing a single number per feature, the weight or coefficient, is enough.
-
+The linear regression model assumes that the i-th instance's outcome $y_i$ can be expressed by a weighted sum of its p features $x_{ij}$ with an individual error $\epsilon_i$ which follows a Gaussian distribution.
+By forcing the data into this corset of a formula, we get a lot of interpretability: 
+The feature effects are additive, meaning no crazy interaction like in many machine learning methods, and the relationship is linear, meaning an increase of a feature by one unit can be directly translated into an increase/decrease of the predicted outcome.
+The linear model allows us to compress the relationship between a feature and the expected outcome into a single number, the estimated weight or coefficient.
 
 But this formula is too restrictive for many real world prediction problems.
-In this chapter, we will talk about three problems with the classic linear regression model and how to solve them.
-There are much more problems with possibly violated assumptions, but we will focus on those three that are visualized in the following figure:
+In this chapter, we will see three possible problems of the classic linear regression model and how to solve them.
+There are many more problems with possibly violated assumptions, but we will focus on those three that are visualized in the following figure:
 
-```{r three-lm-problems, fig.cap = "Left: Some assumptions of the linear model. Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Right: Reality usually doesn't adhere to those assumptions. Real life outcomes can have many non-Gaussian distributions, features interact with each other regarding the effect on the outcome and the relationship is often non-linear."}
+```{r three-lm-problems, fig.cap = "Left: Three assumptions of the linear model. Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Right: Reality usually doesn't adhere to those assumptions. Outcomes might have non-Gaussian distributions, features might interact and the relationship might be non-linear."}
 theme_blank = theme(axis.line=element_blank(),axis.text.x=element_blank(),
           axis.text.y=element_blank(),axis.ticks=element_blank(),
           axis.title.x=element_blank(),
@@ -76,47 +74,39 @@ gridExtra::grid.arrange(p.glm, p.interaction, p.gam)
 
 For all those problems, there is a solution.
 
-*Problem*: The target outcome y is not normal distributed given the features. 
-*Example*: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.  
-When I use a linear model, it can happen that it predicts negative values, because it assumes a Gaussian distribution which does not stop at 0 minutes.
-The same problem arises when we want to predict probabilities.  
-*Solution*: Generalized Linear Models (GLMs)
+**Problem**: The target outcome y is not Gaussian distributed given the features. 
+**Example**: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.  
+When I use a linear model, it might predict negative minutes, because it assumes a Gaussian distribution which does not stop at 0 minutes.
+Wwhen you want to predict probabilities with a linear model, you might also get probabilities that are negative or larger than 1.
+**Solution**: [Generalized Linear Models (GLMs)](#glm)
 
-*Problem*: The relation between the features and y is not linear.
-*Example*: The world is full of non-linearities are more often than not violated.
-For example the effect of the temperature on my desire to go biking might be linear between 0 and 25 degrees Celsius, meaning that an increase from 0 to 1 degree causes the same increase in biking desire than  from 20 to 21. 
-But at a certain point, it levels of and might even have a negative effect - I don't like to bike when it is too hot.
-*Solutions*: Generalized Additive Models (GAMs); manually transforming features interactions.
+**Problem**: The features interact.  
+**Example**: On average, light rain has a slight negative effect on my biking desire.
+But in summer during rush hour, I welcome rain, because then all those fair-weather riders stay at home and I have the cycling routes for myself!
+This is an interaction between time and weather, which can't be explained in a purely additive model.
+**Solution**: [Manually adding interactions](#lm-interact)
 
-*Problem*: The features interact.  
-*Example*: The world is full of interactions.  
-On average, light rain has a slight negative effect on my biking desire.
-But in Summer during rush hour, I welcome rain, because than all those fair-weather riders stay at home and I have the cycling routes for myself!
-So there is an interaction between the time and the weather, which can't be explained in an additive model.
-*Solution*: Manually adding interactions.
+**Problem**: The relation between the features and y is not linear.
+**Example**: The effect of the temperature on my desire to go cycling might be linear between 0 and 25 degrees Celsius, meaning that an increase from 0 to 1 degree causes the same increase in biking desire than  from 20 to 21. 
+But at a certain point, it levels off and might even decrease the my motivation to cycle - I don't like to bike when it's too hot.
+**Solutions**: [Generalized Additive Models (GAMs); manually transforming features interactions.](#gam)
 
 
-There are many other scenarios in which you will reach the boundaries of the linear regression model, but I don't have the time nor the motivation to cover it all here.
-This would quickly become a book within a book.
-But I understand that it's very useful to have it in one place, so here are some other common problems or "boundaries" of the linear model and a search term that can be your starting place to solve that problem.
-If you scroll to the end of the chapter, there is a list of problem statement + the name of a solution that you can copy-paste into search.
+There are many other scenarios in which you will reach the boundaries of the linear regression model, but I don't have the time nor the motivation to cover it all here. because this would quickly become a book within a book.
+But it's very useful to have all the stuff in one place, so at the [end of the chapter](#more-lm-extension) is a list of problem statements + the name of a solution that you can copy-paste into search.
 
-
-
-Now, let's start
-
-### Different types of targets: GLMs
+### Different types of targets: GLMs {#glm}
 
 The linear regression model assumes that the outcome given the input features follows a Gaussian distribution.
 This assumption excludes a lot of cases:
-The outcome could also be a category (cancer vs. healthy), or a count (number of children), the time until an event happens (time until a machine breaks down) or a very skewed variable with many high values (household incomes).
-As we have seen in the [logistic regression chapter](#logistic), the binary categorization case can be handled when we modify the linear regression model with the logistic function, but at its core is still the weighted sum of the inputs.
-This concept of keeping the linear weighted sum at the core, but potentially transforming the sum and modeling the mean of a distribution different from the Gaussian (the Bernoulli distribution in the logistic regression case) is called Generalized Linear Models (GLMs).
-GLMs is a flexible class of models, which partially keeps the interpretability of the linear model, like interpretable weights, confidence intervals and so on.
+Some outcomes are categories (cancer vs. healthy), a count (number of children), the time until an event happens (time until a machine breaks down) or a very skewed variable with many high values (household incomes).
+As we have seen in the [logistic regression chapter](#logistic), the binary categorization case can be handled when we modify the linear regression model with the logistic function, while the weighted sum of the inputs remains at the core.
+This concept of keeping the linear weighted sum at the core, but transforming the sum and modeling the mean of a distribution different from the Gaussian (the Bernoulli distribution in the logistic regression case) is called **Generalized Linear Models (GLMs)**.
+GLMs are a flexible class of models, which (partially) keeps the interpretability of the linear model.
 
-Mathematically the GLM has the linear composition of the features at the core which is linked to the mean of the assumed distribution through a so called link function g, which can be chosen flexibly depending on the type of outcome. 
+Mathematically the GLM links the weighted sum of the features to the mean of the assumed distribution through a so called link function g, which can be chosen flexibly depending on the type of outcome. 
 
-$$\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p=g(E_Y(y|X))$$
+$$g(E_Y(y|X))=\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p$$
 
 The GLM consists of three components.
 Besides the link function g and the linear predictor ($\beta{}X$), we also need a probability distribution from the exponential family, which sets $E_Y$.
@@ -261,7 +251,7 @@ The predicted number of coffees is lower by a factor of `r round(cc["weekendYES"
 In this section you have learned a bit about Generalized Linear Models which are useful when the target does not follow a Gaussian distribution. 
 Next we will look into the case when features interact with each other, so the relationship is not covered with the default additive model.
 
-### Adding interactions
+### Adding interactions {#lm-interact}
 
 The classic linear model assumes that feature effects can just be added independently from each other, but in real life, the features often have some kind of interaction effect on the target.
 Say for predicting the [number of bikes](#bike-data) that will be rented, there might be an interaction between the temperature and whether it's a working day or not.
@@ -372,7 +362,7 @@ The temperature slope for the category 'WORKING DAY' is the sum of both temperat
 jtools::interact_plot(mod, pred = "temp", modx = "workingday")
 ```
 
-### Non-linear effects: GAMs and more.
+### Non-linear effects: GAMs and more. {#gam}
 
 
 *The world is not linear.*
@@ -529,6 +519,8 @@ Assuming that linear regression is highly interpretable but often underfits real
 Actually it's multiple universes, because lots of communities have their own naming for methods that actually do the same.
 Research is happening in parallel in different communities. 
 Also the sheer number of ways how you can extend the simple linear model is overwhelming.
+There are just so many ways of extending the linear regression model.
+And it's so confusing, because researchers and practitioners from different disciplines use linear models and use different names and notation.
 - Most of the modifications of the linear model make the model less interpretable.
 Link function that are not the simple identity function make the interpretation more complicated;
 Interactions make the interpretation of the weights more complicated;
@@ -540,7 +532,7 @@ If those are violated, then the interpretation of the weights is not valid any l
 This is partly my own experience and partly observations from the winning models on plattforms like kaggle.com.
 
 
-### More extensions
+### More extensions {#more-lm-extension}
 
 As promised, there are a lot more ways to expand the linear model.
 Here you find a list of problem statements and the name of a solution for that problem, which you can copy-paste into your favorite search engine.
