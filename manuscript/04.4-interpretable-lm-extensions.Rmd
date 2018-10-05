@@ -74,7 +74,7 @@ gridExtra::grid.arrange(p.glm, p.interaction, p.gam)
 
 For all those problems, there is a solution.
 
-**Problem**: The target outcome y is not Gaussian distributed given the features. 
+**Problem**: The target outcome y given the features doesn't follow a Gaussian distributed . 
 **Example**: Let's say I want to predict how many minutes I will ride my bike on a given day, depending on type of day, weather and so on.  
 When I use a linear model, it might predict negative minutes, because it assumes a Gaussian distribution which does not stop at 0 minutes.
 Wwhen you want to predict probabilities with a linear model, you might also get probabilities that are negative or larger than 1.
@@ -91,68 +91,75 @@ This is an interaction between time and weather, which can't be explained in a p
 But at a certain point, it levels off and might even decrease the my motivation to cycle - I don't like to bike when it's too hot.
 **Solutions**: [Generalized Additive Models (GAMs); manually transforming features interactions.](#gam)
 
+The presented extensions (GLM, GAM, ...) are only more or less superficially presented here. 
+Many other extensions of the linear model are omitted.
+If I attempted to cover it all here, the chapter would quickly turn into a book within a book on a topic which is covered in many books already.
+But since you are here already, I made a little problem - solution overview for linear model extensions, which you will find at the [end of the chapter](#more-lm-extension).
+The name of the solution is meant to be a starting point for a search.
 
-There are many other scenarios in which you will reach the boundaries of the linear regression model, but I don't have the time nor the motivation to cover it all here. because this would quickly become a book within a book.
-But it's very useful to have all the stuff in one place, so at the [end of the chapter](#more-lm-extension) is a list of problem statements + the name of a solution that you can copy-paste into search.
-
-### Different types of targets: GLMs {#glm}
+### Non-Gaussian Outcomes - GLMs
 
 The linear regression model assumes that the outcome given the input features follows a Gaussian distribution.
 This assumption excludes a lot of cases:
-Some outcomes are categories (cancer vs. healthy), a count (number of children), the time until an event happens (time until a machine breaks down) or a very skewed variable with many high values (household incomes).
-As we have seen in the [logistic regression chapter](#logistic), the binary categorization case can be handled when we modify the linear regression model with the logistic function, while the weighted sum of the inputs remains at the core.
-This concept of keeping the linear weighted sum at the core, but transforming the sum and modeling the mean of a distribution different from the Gaussian (the Bernoulli distribution in the logistic regression case) is called **Generalized Linear Models (GLMs)**.
-GLMs are a flexible class of models, which (partially) keeps the interpretability of the linear model.
+The outcome can also be a categories (cancer vs. healthy), a count (number of children), the time until an event happens (time until a machine breaks down) or a very skewed variable with many high values (household incomes).
+The binary classification case can be handled when we modify the linear regression model with the logistic function, while the weighted sum of the inputs remains at the core as described in the [logistic regression chapter](#logistic).
+The linear regression model can be extended to model all those kinds of outcomes.
+This new class of models are called **Generalized Linear Models**, or short **GLMs**.
+Throughout the chapter I will use the name GLM for both the general framework and particular models that are from that framework.
+The core concept of any GLM is: 
+Keep the  weighted sum of features, but allow non-Gaussian outcome distributions connect the expected mean of that distribution and the weighted sum through a possibly non-linear function.
+The logistic regression model, for example, assumes a Bernoulli distribution for the outcome and uses the logistic function to connect the expected mean and the weighted sum.
 
-Mathematically the GLM links the weighted sum of the features to the mean of the assumed distribution through a so called link function g, which can be chosen flexibly depending on the type of outcome. 
+Mathematically, the GLM links the weighted sum of the features to the mean of the assumed distribution through the link function g, which can be chosen flexibly depending on the type of outcome. 
+In the following formula, y from the linear model is replaced with $E_Y(y|X)$. 
+The observed y's in the data and the expected outcome can be different things.
+In logistic regression we observe either class 0 or class 1 and the expected outcome is the probability for class 1.
 
 $$g(E_Y(y|X))=\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p$$
 
-The GLM consists of three components.
-Besides the link function g and the linear predictor ($\beta{}X$), we also need a probability distribution from the exponential family, which sets $E_Y$.
-Note that I also replaced the y from the linear model with $E_Y(y|X)$. 
-For the Gaussian model it's the same, but for example for logistic regression, y is either 0 or 1, and the expected y is the probability for the event.
-The exponential family is a set of distributions that all follow the same pattern, meaning they can be formulated in a general form, which involves an exponent, the mean and variance of the distribution and some other parameters.
-I won't go into details here, because that's a very big universe of it's own I don't want to open up.
-Wikipedia has a nice [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
-Any distribution from this list can be chosen as the distribution.
-Not all distributions that exist are in the exponential family, but enough for the average statistician/data scientist/machine learner.
-The choice of distribution depends on the nature of the outcome you have and is a bit of an art.
-Your outcome is some kind of count (e.g. number of children)?
+GLMs consist of three components:
+The link function g, the weighted sum (sometimes called linear predictor) ($\beta{}X$), and a probability distribution from the exponential family, which defines $E_Y$.
+
+The exponential family is a set of distributions that can be written with the same (parameterized) formula involving an exponent, the mean and variance of the distribution and some other parameters.
+I won't go into the mathematical details because that's a very big universe of it's own that I don't want to open up.
+Wikipedia has a neat [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
+Any distribution from this list can be chosen for your GLM.
+Based on the nature of the outcome to be predicted, a suitable distribution has to be chosen.
+The outcome a count of something (e.g. number of children living in a household)?
 Then the Poisson distribution might be a good choice.
-Your outcome is always positive (e.g. time between two events)?
+The outcome is always positive (e.g. time between two events)?
 Then the exponential distribution might be a good choice.
 
-Each distribution comes with parameters that describe it.
-The Gaussian distribution is parameterized by the mean $\mu$ and the variance $\sigma$.
-The mean describes the value that we expect on average and the variance how much the values vary around the mean.
-In the linear model the link function to links the weighted sum of the features to the mean of the Gaussian distribution.
+Let's look at the classic linear model as a GLM.
 The link function for the Gaussian distribution in the classic linear model is simply the identity function.
-This concept generalizes under the name GLM to any distribution and arbitrary link functions.
-For example if y is a count of something, like the number of coffees someone drinks on a given day, we would use a GLM with a Poisson distribution and the natural logarithm as the link function:
+The Gaussian distribution is parameterized by the mean $\mu$ and the variance $\sigma^2$.
+The mean describes the value that we expect on average and the variance how much the values vary around that mean.
+In the linear model the link function links the weighted sum of the features to the mean of the Gaussian distribution.
+
+This concept generalizes under the GLM framework to any distribution and arbitrary link functions.
+If y is a count of something, like the number of coffees someone drinks on a given day, we could model it with a GLM with a Poisson distribution and the natural logarithm as the link function:
 
 $$x\beta=ln(E_Y(y|x))$$
 
 The logistic regression model is also a GLM, assuming a Bernoulli distribution and the logistic function as link.
+The mean $\mu$ of the binomial distribution, which is used in logistic regression is the probability that y is 1.
 
 $$x\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
 
-The mean $\mu$ of the binomial distribution, which is used in logistic regression is the probability that y is 1.
-So you might also see:
-
-$$x\beta=ln\left(\frac{P(Y=1)}{1-P(Y=1)}\right)$$
 And if we solve this equation to have P(Y=1) on one side, we get the classic logistic regression formula:
 
 $$P(y_{i}=1)=\frac{1}{1+exp(-x_i\beta)}$$
 
-You can choose the link function independently from the distribution, but  each distribution also comes with a canonical link function.
-The canonical link can be derived mathematically from the distribution.
-How to choose a link function:
+Each distribution comes with a canonical link function, which can be derived mathematically from the distribution.
+The GLM framework allos to choose the link function independently from the distribution.
+How do you choose the right link function?
 There is no perfect recipe. 
 You take into account your knowledge about the distribution of your target, but also theoretical considerations and how well the model fits your actual data.
-For some distributions, like the exponential distribution, the canonical link (the negative inverse) can link the weighted sum to a off-domain value, in this case to negative numbers.
-A solution can be to use a noncanonical link.
-You can also simply check whether one link function or a another leads to better performance on test data and choose the better one.
+For some distributions the canonical link function can lead to values that are invalide for that distribution.
+In the case of the exponential distribution, the link function is the negative inverse, which can lead to negative predictions, which are outside the domain of the exponential distribution.
+Snce you can choose any link function, the simple solution is to choose another function that respects the domain of the distribution.
+
+TODO: CONTINUE HERE
 
 *Examples*
 
@@ -251,7 +258,7 @@ The predicted number of coffees is lower by a factor of `r round(cc["weekendYES"
 In this section you have learned a bit about Generalized Linear Models which are useful when the target does not follow a Gaussian distribution. 
 Next we will look into the case when features interact with each other, so the relationship is not covered with the default additive model.
 
-### Adding interactions {#lm-interact}
+### Interactions {#lm-interact}
 
 The classic linear model assumes that feature effects can just be added independently from each other, but in real life, the features often have some kind of interaction effect on the target.
 Say for predicting the [number of bikes](#bike-data) that will be rented, there might be an interaction between the temperature and whether it's a working day or not.
@@ -321,7 +328,7 @@ There are lots of ways and types of interactions that can be added (nested, 2way
 There are approaches to detect and add interaction terms automatically. 
 One is presented in this book called [RuleFit](#rulefit), which first mines interaction terms and then estimates a linear regression model with this new data.
 
-### Example
+**Example**
 
 Let's return to the bike rental prediction task that we already modeled with a linear model in the [linear model chapter](#linear).
 This time, we additionally include an interaction between the temperature and working day.
@@ -362,7 +369,7 @@ The temperature slope for the category 'WORKING DAY' is the sum of both temperat
 jtools::interact_plot(mod, pred = "temp", modx = "workingday")
 ```
 
-### Non-linear effects: GAMs and more. {#gam}
+### Non-linear effects - GAMs {#gam}
 
 
 *The world is not linear.*
