@@ -115,7 +115,7 @@ In the following formula, y from the linear model is replaced with $E_Y(y|X)$.
 The observed y's in the data and the expected outcome can be different things.
 In logistic regression we observe either class 0 or class 1 and the expected outcome is the probability for class 1.
 
-$$g(E_Y(y|X))=\beta_0+\beta_1{}x_1+\ldots{}\beta_p{}x_p$$
+$$g(E_Y(y_i|x_i))=\beta_0+\beta_1{}x_{i1}+\ldots{}\beta_p{}x_{ip}$$
 
 GLMs consist of three components:
 The link function g, the weighted sum (sometimes called linear predictor) ($\beta{}X$), and a probability distribution from the exponential family, which defines $E_Y$.
@@ -139,12 +139,12 @@ In the linear model the link function links the weighted sum of the features to 
 This concept generalizes under the GLM framework to any distribution and arbitrary link functions.
 If y is a count of something, like the number of coffees someone drinks on a given day, we could model it with a GLM with a Poisson distribution and the natural logarithm as the link function:
 
-$$x\beta=ln(E_Y(y|x))$$
+$$ln(E_Y(y|x_i))=x\beta$$
 
 The logistic regression model is also a GLM, assuming a Bernoulli distribution and the logistic function as link.
 The mean $\mu$ of the binomial distribution, which is used in logistic regression is the probability that y is 1.
 
-$$x\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
+$$x_i\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x_i)}{1-P(y=1|x_i)}\right)$$
 
 And if we solve this equation to have P(Y=1) on one side, we get the classic logistic regression formula:
 
@@ -159,22 +159,20 @@ For some distributions the canonical link function can lead to values that are i
 In the case of the exponential distribution, the link function is the negative inverse, which can lead to negative predictions, which are outside the domain of the exponential distribution.
 Snce you can choose any link function, the simple solution is to choose another function that respects the domain of the distribution.
 
-TODO: CONTINUE HERE
-
 *Examples*
 
-I completely made up an artificial dataset about coffee drinking behaviour to highlight the need for GLMs.
-Suppose you collected data about yourself each day about your coffee drinking behaviour.
-Along with number of cups, you note your current stress level between 1 and 10, how well you slept the night before on a scale from 1 to 10 and if you have to work on that day.
-The goal is to predict the number of coffes given the features stress, sleep and work.
-I simulated 200 days.
+I simulated a dataset about coffee drinking behaviour to highlight the need for GLMs.
+Suppose you collected data about your daily coffee drinking behaviour.
+Along with number of cups, you note down your current stress level on a scale from 1 to 10, how well you slept the night before on a scale from 1 to 10 and if you work on that day.
+The goal is to predict the number of coffees given the features stress, sleep and work.
+I simulated data for 200 days.
 Stress and sleep were drawn uniformly between 1 and 10, work YES/NO was drawn with a 50/50 chance (what a life!). 
-The number was then drawn from a Poisson distribution, where the intensity $\lambda$ (which is also the expected value of the distribution) was modeled as a function of the features sleep, stress and work.
-The true data generating process is a Poisson distribution. 
-You can guess where my story will be going ("Hey let's model this data with a linear model ... Oh it doesn't work ... Let's try a GLM with Poisson distribution ... SURPRISE! Now it works!").
-I hope I didn't spoil the story to much for you.
+The number of coffees was then drawn from a Poisson distribution, where the intensity $\lambda$ (which is also the expected value of the Poisson distribution) was modeled as a function of the features sleep, stress and work.
+You can guess where this story will be going:
+*"Hey let's model this data with a linear model ... Oh it doesn't work ... Let's try a GLM with Poisson distribution ... SURPRISE! Now it works!".*
+I hope I didn't spoil the story too much for you.
 
-Let's have a look at the target variable, the number of coffees on a given day:
+Let's have a look at the distribution target variable, the number of coffees on a given day:
 
 ```{r poisson-data}
 # simulate data where the normal linear model fails.
@@ -187,16 +185,17 @@ df$y = rpois(lambda = lambda, n = n)
 
 tab = data.frame(table(df$y))
 
-
-knitr::kable(tab, col.names = c("#coffees", "#days"))
+ggplot(tab) + geom_col(aes(x = Var1, y = Freq)) +
+  scale_x_discrete("Number of coffees on a given day") + 
+  scale_y_continuous("Number of days")
 
 ```
 
-On `r tab[1,2]` days, you have no coffee at all and at the most extreme day you have `r tab[nrow(tab),1]`.
-Let's naively use a linear model to model this dataset, using the features sleep level, stress level and work Yes/No to predict the number of coffees.
+On `r tab[1,2]` of the `r n` days, you have no coffee at all and at the most extreme day you have `r tab[nrow(tab),1]`.
+Let's naively use a linear model to predict the number of coffees using sleep level, stress level and work Yes/No as features.
 What can go wrong when we falsely assume a Gaussan distribution?
-A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights and all the interpretation we do about them. 
-Another, more obvious problem is that the predictions doesn't match the "allowed" domain of the true outcome.
+A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights. 
+A more obvious problem is that the predictions don't match the "allowed" domain of the true outcome, as the following figure shows.
 
 ```{r failing-linear-model, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The linear model also predicts negative values."}
 mod.gaus = glm(y ~ ., data = df, x = TRUE)
@@ -207,15 +206,15 @@ ggplot(pred.gauss) +
   scale_y_continuous("Frequency")
 ```
 
-Negative amount of coffee?
-That's awkward and a failure of the linear model in respecting the domain of the count outcome.
-This problem can be solved using Generalized Linear Models (GLMs).
-There are two things we can change:
-The link function and the distribution assumption.
-We could keep the Gaussian assumption, but don't use the identity function as link, but something that always maps the weighted sum to a positve value, like the log-link (the inverse is the exp() function, which always yields positive values).
-The better idea here is to choose a distribution that matches the data generating process and an appropriate link function. 
-Since the outcome is a count, the Poisson distribution is a natural choice, along with the log link function (in our case, the data was even generated using the Poisson distribution, so this GLM is the perfect choice).
-Fitting a Poisson model yields the following predicted values:
+The linear model is not useful, because it predicts negative amount of coffee.
+This problem can be solved with Generalized Linear Models (GLMs).
+We can change the link function and the assumed distribution. 
+One option is to keep the Gaussian distribution and use a link function that always results in positive predictions, like the log-link (the inverse is the exp-function) instead of the identity function.
+Even better: 
+We choose a distribution that matches the data generating process and an appropriate link function. 
+Since the outcome is a count, the Poisson distribution is a natural choice, along with the log link function. 
+In this case, the data was even generated using the Poisson distribution, so the GLM is the perfect choice.
+The fitted Poisson GLM yields the following distribution of predicted values:
 
 ```{r linear-model-positive, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The GLM with Poisson assumption and log link is an appropriate model for this dataset."}
 mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson(link = "log"))
@@ -226,19 +225,23 @@ ggplot(pred.pois)  +
   scale_y_continuous("Frequency")
 ```
 
-*Interpretation of GLM weights*
+Looks much better now.
 
-The assumed distribution and the link function dictate the interpretation of the features.
-In the coffee example I assumed a Poisson distribution and used a log link.
-This results in the following relationship between the features and the expected outcome:
+**Interpretation of GLM weights**
 
-$$\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{work}x_{work}=ln(E(coffees|stress,sleep,work))$$
+The assumed distribution together with the link function dictate how tho intepret the estimated feature weights.
+In the coffee count example I used a GLM with Poisson distribution and log link, which implies the following relationship between the features and the expected outcome.
 
-For the interpretation of the parameters we have to invert the link function, so that we can interpret the effect of the features on the expected outcome, not on the logarithm of the expected outcome. 
+$$ln(E(\text{coffees}|\text{stress},\text{sleep},\text{work}))=\beta_0+\beta_{\text{stress}}x_{\text{stress}}+\beta_{\text{sleep}}x_{\text{sleep}}+\beta_{\text{work}}x_{\text{work}}$$
 
-$$exp(\beta_0+\beta_{stress}x_{stress}+\beta_{sleep}x_{sleep}+\beta_{work}x_{work})=E(coffees|stress,sleep,work)$$
-Last ingredient for showing the interpretation of the weights: The actual weights for the toy example.
-The following table shows the weights and the exponent of the weights together with the 95% confidence interval:
+For the interpretation of the weights we invert the link function, so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome. 
+
+$$E(\text{coffees}|\text{stress},\text{sleep},\text{work})=exp(\beta_0+\beta_{\text{stress}}x_{\text{stress}}+\beta_{\text{sleep}}x_{\text{sleep}}+\beta_{\text{work}}x_{\text{work}})$$
+
+Since all the weights are in the exponential function, the effect interpretation is not additive, but multiplicative (because exp(a + b) is exp(a) times exp(b)).
+The last ingredient for the interpretation are actual weights of the toy example.
+The following table lists the estimated weights and exp(weights) together with the 95% confidence interval:
+
 ```{r poisson-model-params}
 cc = data.frame(summary(mod.pois)$coefficients)
 cc = cc[,c("Estimate", "Std..Error")]
@@ -250,17 +253,18 @@ cc$ci = sprintf("%.2f [%.2f, %.2f]", cc$exp.beta, cc$`2.5 %`, cc$`97.5 %`)
 kable(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2)
 ```
 
-Let's interpret the weights from the made-up coffee prediction example.
 Increasing the stress by one point multiplicatively increases the expected number of coffees by a factor of `r round(cc["stress", "exp.beta"], 2)`. 
 Increasing the sleep by one point multiplicatively decreases the expected number of coffees by a factor of `r round(cc["sleep", "exp.beta"], 2)`.
 The predicted number of coffees is lower by a factor of `r round(cc["weekendYES", "exp.beta"], 2)` on a non-working day compared to a working day.
+In summary the more stress, the less sleep and on work days the most coffee is consumed.
 
-In this section you have learned a bit about Generalized Linear Models which are useful when the target does not follow a Gaussian distribution. 
-Next we will look into the case when features interact with each other, so the relationship is not covered with the default additive model.
+In this section you learned a bit about Generalized Linear Models which are useful when the target does not follow a Gaussian distribution. 
+Next, we take a look into how to incorporate interactions between two features in the linear regression model.
 
 ### Interactions {#lm-interact}
 
-The classic linear model assumes that feature effects can just be added independently from each other, but in real life, the features often have some kind of interaction effect on the target.
+The linear model estimates feature effects independently from each other.
+But often there are interactions in the data.
 Say for predicting the [number of bikes](#bike-data) that will be rented, there might be an interaction between the temperature and whether it's a working day or not.
 Maybe when people have to work, the temperature doesn't affect the number of rented bikes much, because the people will ride the bike to work no matter what.
 On free days many people bike for pleasure, but only if it warm enough.
