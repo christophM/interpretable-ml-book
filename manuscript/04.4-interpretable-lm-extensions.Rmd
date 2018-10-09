@@ -384,23 +384,23 @@ jtools::interact_plot(mod, pred = "temp", modx = "workingday")
 
 
 *The world is not linear.*
-Linearity means no matter the value an instance has in a particular feature, increasing the value by one unit always has the same effect on predicted outcome.
-Is it reasonable to assume that increasing the temperature by one degree has the same effect at 10 degrees Celsius and at 40 C for the number of rented bikes? 
-As you will see throughout the book, the intuition is correct:
+Linearity means no matter which value an instance has in a particular feature, increasing the value by one unit always has the same effect on the predicted outcome.
+Is it reasonable to assume that increasing the temperature by one degree has the same effect at 10 degrees C as at 40 C for the effect on the number of rented bikes? 
+Intuitively you would expect that increasing the temperature from 10 to 11 degrees Celsius has a positive effect and from 40 to 41 a negative effect, which is also the case as you will see in many examples in the book.
 Increasing the temperature has a linear, positive effect on the number of rented bikes, but at some point it levels off and even has a negative effect at high temperatures.
-
 The linear model doesn't care about that. 
-If you feed it the data, it will dutifully find the best plane (= least squares).
-You have a chance to model non-linear relationships with one of the following techniques:
-- Simple transformation of the feature
+If you feed it the data, it will dutifully find the best plane (by minimizing the Euclidean distance).
+
+You can model non-linear relationships with one of the following techniques:
+- Simple transformation of the feature (e.g. logarithm)
 - Categorization of the feature
 - Generalized Additive Models (GAMs) which use regression splines
 
-Before I explain each of them, we will start with an example right away.
-We take the [bike rental dataset](#bike-data) and fit a linear model with only the temperature feature to predict the number of rented bikes.
-The following figure shows the estimated slope with: 1) the default linear model, 2) a linear model with a transformed features (logarithm of temperature), 3) a linear model with temperature treated as categorical feature or 4) using regression splines (GAM).
+Before I go into details of each method, we will start with an example that illustrates all three right away.
+I took the [bike rental dataset](#bike-data) and fit a linear model with only the temperature feature to predict the number of rented bikes.
+The following figure shows the estimated slope with: 1) the default linear model, 2) a linear model with a transformed temperature feature (logarithm), 3) a linear model with temperature treated as categorical feature or 4) using regression splines (GAM).
 
-```{r non-linear-effects, fig.cap = "Predicting the number of rented bikes given the temperature. Using a linear model (top left) doesn't capture the flattening of the temperature effect as suggested by the point cloud and overestimates the number of bikes at low temperatures. One solution is to transform the feature with e.g. the logarithm (top right), to categorize it (bottom left) which is usually a bad decision or to use Generalized Additive Models, which can automatically fit a smooth curve for temperature (bottom right), often the best solution."}
+```{r non-linear-effects, fig.cap = "Predicting the number of rented bikes given only the temperature. Using a linear model (top left) doesn't capture the flattening of the temperature effect at high temperatures as suggested by the data and overestimates the number of bikes at low temperatures. One solution is to transform the feature with e.g. the logarithm (top right), to categorize it (bottom left) which is usually a bad decision or to use Generalized Additive Models, which can automatically fit a smooth curve for temperature (bottom right). GAMs are often the best solution."}
 mod.simpel = lm(cnt ~ temp, data = bike)
 bike.plt = bike
 bike.plt$pred.lm = predict(mod.simpel)
@@ -442,16 +442,22 @@ You can be very creative when you transform the feature:
 Very common is taking the logarithm of the feature. 
 Using the logarithm suggests that each 10x increase of the temperature has the same linear effect on the number of bikes, so going from 1 degree Celsius to 10 degree Celsius has the same effect as going from 0.1 to 1 (sounds wrong).
 Other options are the square root, the square function, the exponential function and so on.
+Using a feature transformation means that you replace the column of that feature in the data with a function of the feature, like the logarithm and fit the linear model as usual.
+Some statistical programs allow specifying transformations also in the call of the linear model.
+The interpretation of the feature changes with the transformation. 
+When you use a log transformation, the interpretation becomes:
+"Increasing the logarithm of the feature by one increases the prediction by the corresponding weight."
 
 **Feature categorization**
 
-Another solution: We discretize the feature, turn it into a categorical feature.
-So the temperature would become a categorical feature with the categories [-10, -5), [-5, 0), ... and so on, you get it.
-Then the linear model would estimate a step function, because each level gets its own estimate.
-The problem with this approach is that you need a lot more data, are more likely to overfit and have the additional problem to choose a meaningful way to discretize the feature (equidistant intervals? quantiles? how many intervals?).
-Also, you loose information, the same way as capturing an analogue audio signal as a discrete digital signal always comes with a loss.
-I would only use discretiziation if you have a very strong case for it:
-For example to make the model comparable to another study or so.
+Another, perhaps naive solution to get a non-linear effect is to discretize the feature; turn it into a categorical feature.
+For example, you could cut the temperature feature into 20 into 12 intervals with the categories [-10, -5), [-5, 0), ... and so on, you get it.
+When you use the categorized temperature instead of the continuous, the linear model would estimate a step function, because each level gets its own estimate.
+The problem with this approach is that it needs more data, it's more likely to overfit and it's additionally unclear how to meaningfully discretize the feature (equidistant intervals? quantiles? how many intervals?).
+I would only use discretiziation if you have a very strong case for it.
+For example to make the model comparable to another study.
+
+CONTINUE HERE
 
 **Generalized Additive Models (GAMs)**
 
