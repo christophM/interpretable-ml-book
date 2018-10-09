@@ -457,43 +457,46 @@ The problem with this approach is that it needs more data, it's more likely to o
 I would only use discretiziation if you have a very strong case for it.
 For example to make the model comparable to another study.
 
-CONTINUE HERE
-
 **Generalized Additive Models (GAMs)**
 
 Why not 'simply' allow the (generalized) linear model to learn non-linear relationships?
 That's the motivation behind GAMs. 
-The relationship becomes this:
+GAMs loosen the restriction that the relationship must be a simple weighted sum, and instead assume that it's a sum of arbitrary function of each feature.
+Mathematically, the relationship looks like this then:
 
 $$\beta_0+f_1(x_1)+f_2(x_2)+\ldots+f_m(x_m)=g(E_Y(y|x))$$
 
-The formula is the same as the GLM formula, except that the linear $\beta_j{}x_J$ became a more flexible function $f_j(x_j)$.
-The core of a GAM is still a sum, because the effects are all added up, and you can mix flexible function for some of the features and estimate weights for other features.
+The formula is similar to the GLM formula with the difference that the linear term $\beta_j{}x_J$ is exchanged with a more flexible function $f_j(x_j)$.
+The core of a GAM is still a sum of feature effects, but you have the option to allow more complex, non-linear relationships between some features and the output.
+Linear effects are also covered by the framework, because for feature that you want to be handled linearly you can restrict their $f_j(x_j)$ to only take on the form $x_j\beta_j$.
 
-Now the big question is, how do we have to modify the generalized linear regression model to enable it to learn non-linear functions of some features.
-The answer is called splines.
+The big question is how to learn non-linear functions of some features.
+The answer for GAMs is called splines.
 Splines are functions that can be added up to approximate arbitrary functions.
-A bit like Lego. 
+A bit like stacking Lego bricks to build something more complex.
 There is a confusing amount of different ways to define these spline functions.
-If you are interested in learning more about those different ways to define splines, good luck and have fun. 
-I will not go into details here, but build up some intuition.
-What helped me personally the most was the realization that you can simply visualize the splines and the realization what actually happens in the data matrix: 
-For the temperature feature, we remove the temperature, and replace it with e.g. 10 columns, where each represents a spline function and estimate weights for those instead of the original feature.
-It's a little more complex than that, because GAMs introduce some penalty term for the weights, so that they can't change to much away from zero. 
-This effectively reduces the flexibility of the splines approach (how much they can overfit). 
-How flexible the spline curve is usually tuned by some smoothness parameter, which is usually tuned using cross-validation.
-But ignoring the penalty stuff, spline function can also be seen as fancy feature engineering.
+If you are interested in learning more about all those different ways to define splines, I wish you good luck on your journey.
+I will not go into details here, but only build up some intuition.
+What helped me personally the most for understanding splines was to simply visualize the individual spline functions and to look into how the data matrix is modified.
+For example, to model the temperature with splines, we remove the temperature feature from the data, and replace it with, say, 10 columns, where each represents a spline function.
+The value for each instance for those new spline features depends on their temperature value.
+Together with all linear effects, the GAM also estimates then those spline weights.
+GAMs additionally introduce some penalty term for the weights to keep them close to zero. 
+This effectively reduces the flexibility of the splines and reduces the danger of overfitting. 
+A smoothness parameter that is usually used to control the flexibility of the curved is then tuned via cross-validations.
+Penalty aside, non-linear modeling with splines is fancy feature engineering.
 
-In the example where we predict the number of bikes using only temperature with a GAM, the model feature matrix becomes this:
+In the example where we predict the number of bikes using only temperature with splines in a GAM, the model feature matrix looks like this:
 
 ```{r splines-df}
 kable(head(model.matrix(mod.gam)), digits = 2)
 ```
 
-Each row is still an instance from the data (a day) and each column is the value of the spline function at each particular temperature value of the instance. 
-The following graphic shows how those functions look like:
+Each row still represents an individual instance from the data (a day).
+Each spline column contains the value of the spline function at the particular temperature values. 
+The following graphic shows how these spline functions look like:
 
-```{r splines, fig.cap = "Instead of a single temperature feature, we use 10 spline functions. Each temperature value gets mapped to (here) 9 spline values. If an instance has a temperature of 30 C, then the value for the first spline feature is -1, for the second 0.5 ... and for the 9th it's 2. The we feed the the GAM with those features."}
+```{r splines, fig.cap = "To model the temperature effect smoothly we use 10 spline functions. Each temperature value gets mapped to (here) 9 spline values. If an instance has a temperature of 30 C, then the value for the first spline feature is -1, for the second 0.5 ... and for the 9th it's 2. We feed the GAM with those  spline features."}
 mm = model.matrix(mod.gam)
 mm2 = data.table::melt(mm)
 mm2 = mm2[mm2$Var2 != "(Intercept)",]
@@ -509,17 +512,19 @@ The GAM assigns weights to each temperature spline feature:
 kable(coef(mod.gam), digits = 2, col.names = "weight")
 ```
 
-And the actual curve looks like this:
+And the actual curve, which is the sum of the spline function times the weights looks like this:
 
-```{r splines-curve, fig.cap = "Fitted smooth feature effect of the temperature for predicting the number of rented bikes (temperature used as the only feature)"}
+```{r splines-curve, fig.cap = "GAM feature effect of the temperature for predicting the number of rented bikes (temperature used as the only feature)."}
 plot(mod.gam)
 ```
 
 
-The interpretation of splines requires to visually explore the fitted curve, but is otherwise similar to the weight interpretation.
-The effect of a feature fitted with splines can be read directly from the curve.
+The interpretation of smooth effects requires to visually examine the fitted curve.
 Splines are usually centered around the mean prediction, so the value of the curve is the difference to the mean prediction.
-For example, at 0 degrees C, the predicted number of bikes is on 3000 lower than average.
+For example, at 0 degrees C, the predicted number of bikes is 3000 lower than the average prediction.
+
+
+CONTINUE HERE
 
 ### Advantages
 
