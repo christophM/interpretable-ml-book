@@ -1,7 +1,3 @@
-
-
-## Defining functions
-
 #' Kernel function
 #'
 #' @param d Distance between center and point
@@ -10,7 +6,7 @@ kernel = function(d, kernel_width){
   sqrt(exp(-(d^2) / kernel_width^2))
 }
 
-#' Get euclidean distances of samples to instances to be explainedß
+#' Get euclidean distances of samples to instances to be explained
 #' @param point_explain Vector of scaled features
 #' @param points_sample data.frame of scaled features for the sample points
 #' @return Vector with distances of samples to instance to be explained
