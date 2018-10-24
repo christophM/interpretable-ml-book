@@ -3,9 +3,9 @@ devtools::load_all()
 set.seed(42)
 ```
 
-## Linear model 2.0: GLMs, GAMs and more {#extend-lm}
+## Linear Model 2.0 - GLMs, GAMs and more {#extend-lm}
 
-The biggest strength and also the biggest weakness of the [linear regression model](#linear) is that the outcome to be predicted is modeled as a weighted sum of the features.
+The biggest strength but also the biggest weakness of the [linear regression model](#linear) is that the prediction is modeled as a weighted sum of the features.
 In addition, the linear model comes with  many other assumptions.
 The bad news is (well, not really news) that all those assumptions are often violated in reality: 
 The outcome given the features might have a non-Gaussian distribution, the features might interact and the relationship between the features and the outcome might be nonlinear.
@@ -21,7 +21,7 @@ Let's remember the formula of a linear regression model:
 
 $$y_{i}=\beta_{0}+\beta_{1}x_{i1}+\ldots+\beta_{p}x_{ip}+\epsilon_{i}$$
 
-The linear regression model assumes that the outcome of the i-th instance $y_i$ can be expressed by a weighted sum of its p features $x_{ij}$ with an individual error $\epsilon_i$ followig a Gaussian distribution.
+The linear regression model assumes that the outcome y of the i-th instance can be expressed by a weighted sum of its p features $x_{ij}$ with an individual error $\epsilon_i$, which is following a Gaussian distribution.
 By forcing the data into this corset of a formula, we obtain a lot of model interpretability.
 The feature effects are additive, meaning no interactions, and the relationship is linear, meaning an increase of a feature by one unit can be directly translated into an increase/decrease of the predicted outcome.
 The linear model allows us to compress the relationship between a feature and the expected outcome into a single number, namely the estimated weight.
@@ -30,7 +30,7 @@ But a simple weighted sum is too restrictive for many real world prediction prob
 In this chapter we will learn about three problems of the classical linear regression model and how to solve them.
 There are many more problems with possibly violated assumptions, but we will focus on the three shown in the following figure:
 
-```{r three-lm-problems, fig.cap = "Three assumptions of the linear model (left half): Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Reality usually doesn't adhere to those assumptions (right half): Outcomes might have non-Gaussian distributions, features might interact and the relationship might be nonlinear."}
+```{r three-lm-problems, fig.cap = "Three assumptions of the linear model (left side): Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Reality usually doesn't adhere to those assumptions (right side): Outcomes might have non-Gaussian distributions, features might interact and the relationship might be nonlinear."}
 theme_blank = theme(axis.line=element_blank(),axis.text.x=element_blank(),
           axis.text.y=element_blank(),axis.ticks=element_blank(),
           axis.title.x=element_blank(),
@@ -40,7 +40,7 @@ theme_blank = theme(axis.line=element_blank(),axis.text.x=element_blank(),
 
 ## For the GLM
 n = 10000
-df = data.frame(x = c(rnorm(n), rexp(n, rate = 0.5)), dist = rep(c("Gaussian", "Definitely not Gaussian"), each = n))
+df = data.frame(x = c(rnorm(n), rexp(n, rate = 0.5)), dist = rep(c("Gaussian", "Definitely Not Gaussian"), each = n))
 df$dist  = relevel(factor(df$dist), "Gaussian")
 p.glm = ggplot(df) + geom_density(aes(x = x)) + facet_grid(. ~ dist, scales = "free") + theme_blank
 
@@ -64,7 +64,7 @@ df$y = 5 + 2 * df$x
 df$type = "Linear"
 df2 = df
 df2$y = 3 + 2 * df$x + 3 * sin(df$x)
-df2$type = "nonlinear"
+df2$type = "Nonlinear"
 df = rbind(df, df2)
 
 p.gam = ggplot(df) + geom_line(aes(x = x, y = y)) + facet_grid(. ~ type) + theme_blank
@@ -75,22 +75,22 @@ gridExtra::grid.arrange(p.glm, p.interaction, p.gam)
 
 There is a solution to all these problems:
 
-**Problem**: The target outcome y given the features doesn't follow a Gaussian distribution.
+**Problem**: The target outcome y given the features doesn't follow a Gaussian distribution.  
 **Example**: Suppose I want to train a model to predict how many minutes I will ride my bike on a given day.
-As features I have the type of day, the weather and so on.  
+As features I have the type of day, the weather and so on.
 If I use a linear model, it could predict negative minutes because it assumes a Gaussian distribution which does not stop at 0 minutes.
-Also if you want to predict probabilities with a linear model, you can get probabilities that are negative or greater than 1.
+Also if I want to predict probabilities with a linear model, I can get probabilities that are negative or greater than 1.  
 **Solution**: [Generalized Linear Models (GLMs)](#glm)
 
 **Problem**: The features interact.  
 **Example**: On average, light rain has a slight negative effect on my desire to go cycling.
 But in summer during rush hour I welcome rain, because then all these fair-weather cyclists stay at home and I have the bike paths for myself!
-This is an interaction between time and weather that can't be captured by a purely additive model.
+This is an interaction between time and weather that can't be captured by a purely additive model.  
 **Solution**: [Adding interactions manually](#lm-interact)
 
-**Problem**: The relationship between the features and y is not linear.
-**Example**: The influence of the temperature on my desire to ride a bike could be linear between 0 and 25 degrees Celsius, which means that an increase from 0 to 1 degree causes the same increase in cycling desire as an increase from 20 to 21. 
-But at a certain point it levels off and could even decrease the my motivation to cycle - I don't like to bike when it's too hot.
+**Problem**: The relationship between the features and y is not linear.  
+**Example**: Between 0 and 25 degrees Celsius, the influence of the temperature on my desire to ride a bike could be linear, which means that an increase from 0 to 1 degree causes the same increase in cycling desire as an increase from 20 to 21. 
+But at higher temperatures my motivation to cycle levels off and even decreases - I don't like to bike when it's too hot.  
 **Solutions**: [Generalized Additive Models (GAMs); transformation of features](#gam)
 
 The solutions to these three problems are presented in this chapter.
@@ -103,8 +103,7 @@ The name of the solution is meant to serve as a starting point for a search.
 
 The linear regression model assumes that the outcome given the input features follows a Gaussian distribution.
 This assumption excludes many cases:
-The outcome can also be a category (cancer vs. healthy), a count (number of children), the time to the occurence of an event (time to failure of a machine) or a very skewed outcome with unusually many high values (household income).
-The binary classification case can be handled by modifying the linear regression model with the logistic function as described in the [logistic regression chapter](#logistic).
+The outcome can also be a category (cancer vs. healthy), a count (number of children), the time to the occurence of an event (time to failure of a machine) or a very skewed outcome with a few very high values (household income).
 The linear regression model can be extended to model all these types of outcomes.
 This extension is called **Generalized Linear Models** or **GLMs** for short.
 Throughout this chapter, I will use the name GLM for both the general framework and for particular models from that framework.
@@ -113,16 +112,13 @@ Keep the weighted sum of the features, but allow non-Gaussian outcome distributi
 For example, the logistic regression model assumes a Bernoulli distribution for the outcome and links the expected mean and the weighted sum using the logistic function.
 
 The GLM mathematically links the weighted sum of the features with the mean value of the assumed distribution using the link function g, which can be chosen flexibly depending on the type of outcome. 
-In the following formula, y is replaced with $E_Y(y|X)$. 
-The observed y in the data and the expected outcome can be different things.
-In logistic regression we observe either class 0 or class 1 and the expected outcome is the probability for class 1.
 
 $$g(E_Y(y_i|x_i))=\beta_0+\beta_1{}x_{i1}+\ldots{}\beta_p{}x_{ip}$$
 
 GLMs consist of three components:
-The link function g, the weighted sum (sometimes called linear predictor) ($\beta{}X$), and a probability distribution from the exponential family that defines $E_Y$.
+The link function g, the weighted sum $\beta{}X$ (sometimes called linear predictor) and a probability distribution from the exponential family that defines $E_Y$.
 
-The exponential family is a set of distributions that can be written with the same (parameterized) formula that inclues an exponent, the mean and variance of the distribution and some other parameters.
+The exponential family is a set of distributions that can be written with the same (parameterized) formula that includes an exponent, the mean and variance of the distribution and some other parameters.
 I won't go into the mathematical details because this is a very big universe of its own that I don't want to enter.
 Wikipedia has a neat [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
 Any distribution from this list can be chosen for your GLM.
@@ -131,6 +127,7 @@ The outcome is a count of something (e.g. number of children living in a househo
 Then the Poisson distribution could be a good choice.
 The outcome is always positive (e.g. time between two events)?
 Then the exponential distribution could be a good choice.
+
 
 Let's consider the classic linear model as a special case of a GLM.
 The link function for the Gaussian distribution in the classic linear model is simply the identity function.
@@ -148,11 +145,11 @@ The mean $\mu$ of the binomial distribution used in logistic regression is the p
 
 $$x_i\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x_i)}{1-P(y=1|x_i)}\right)$$
 
-And if we solve this equation to have P(Y=1) on one side, we get the classic logistic regression formula:
+And if we solve this equation to have P(Y=1) on one side, we get the logistic regression formula:
 
 $$P(y_{i}=1)=\frac{1}{1+exp(-x_i\beta)}$$
 
-Each distribution has a canonical link function that can be derived mathematically from the distribution.
+Each distribution from the exponential family has a canonical link function that can be derived mathematically from the distribution.
 The GLM framework makes it possible to choose the link function independently of the distribution.
 How to choose the right link function?
 There is no perfect recipe. 
@@ -161,20 +158,21 @@ For some distributions the canonical link function can lead to values that are i
 In the case of the exponential distribution, the canonical link function is the negative inverse, which can lead to negative predictions outside the domain of the exponential distribution.
 Since you can choose any link function, the simple solution is to choose another function that respects the domain of the distribution.
 
-*Examples*
+**Examples**
 
 I have simulated a dataset on coffee drinking behaviour to highlight the need for GLMs.
 Suppose you have collected data about your daily coffee drinking behaviour.
-Along with number of cups, you record your current stress level on a scale of 1 to 10, how well you slept the night before on a scale of 1 to 10 and whether you worked that day.
+If you don't like coffee, pretend it's about tea.
+Along with number of cups, you record your current stress level on a scale of 1 to 10, how well you slept the night before on a scale of 1 to 10 and whether you worked on that day.
 The goal is to predict the number of coffees given the features stress, sleep and work.
 I simulated data for 200 days.
-Stress and sleep were drawn uniformly between 1 and 10, work YES/NO was drawn with a 50/50 chance (what a life!). 
-The number of coffees was then drawn from a Poisson distribution, modelling the intensity $\lambda$ (which is also the expected value of the Poisson distribution) as a function of the features sleep, stress and work.
+Stress and sleep were drawn uniformly between 1 and 10 and work yes/no was drawn with a 50/50 chance (what a life!). 
+For each day, the number of coffees was then drawn from a Poisson distribution, modelling the intensity $\lambda$ (which is also the expected value of the Poisson distribution) as a function of the features sleep, stress and work.
 You can guess where this story will lead:
 *"Hey, let's model this data with a linear model ... Oh it doesn't work ... Let's try a GLM with Poisson distribution ... SURPRISE! Now it works!".*
 I hope I didn't spoil the story too much for you.
 
-Let's look at the distribution target variable, the number of coffees on a given day:
+Let's look at the distribution of the target variable, the number of coffees on a given day:
 
 ```{r poisson-data}
 # simulate data where the normal linear model fails.
@@ -193,13 +191,13 @@ ggplot(tab) + geom_col(aes(x = Var1, y = Freq)) +
 
 ```
 
-On `r tab[1,2]` of the `r n` days you have no coffee at all and on the most extreme day you have `r tab[nrow(tab),1]`.
-Let's naively use a linear model to predict the number of coffees using sleep level, stress level and work Yes/No as features.
+On `r tab[1,2]` of the `r n` days you had no coffee at all and on the most extreme day you had `r tab[nrow(tab),1]`.
+Let's naively use a linear model to predict the number of coffees using sleep level, stress level and work yes/no as features.
 What can go wrong when we falsely assume a Gaussian distribution?
 A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights. 
 A more obvious problem is that the predictions don't match the "allowed" domain of the true outcome, as the following figure shows.
 
-```{r failing-linear-model, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The linear model also predicts negative values."}
+```{r failing-linear-model, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The linear model predicts negative values."}
 mod.gaus = glm(y ~ ., data = df, x = TRUE)
 pred.gauss = data.frame(pred = predict(mod.gaus), actual = df$y)
 ggplot(pred.gauss) + 
@@ -215,7 +213,7 @@ One possibility is to keep the Gaussian distribution and use a link function tha
 Even better: 
 We choose a distribution that corresponds to the data generating process and an appropriate link function. 
 Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as link function. 
-In this case, the data was even generated from the Poisson distribution, so the Poisson GLM is the perfect choice.
+In this case, the data was even generated with the Poisson distribution, so the Poisson GLM is the perfect choice.
 The fitted Poisson GLM leads to the following distribution of predicted values:
 
 ```{r linear-model-positive, fig.cap = "Predicted number of coffees dependent on stress, sleep and working day. The GLM with Poisson assumption and log link is an appropriate model for this dataset."}
@@ -240,7 +238,7 @@ To interpret the weights we invert the link function so that we can interpret th
 
 $$E(\text{coffees}|\text{stress},\text{sleep},\text{work})=exp(\beta_0+\beta_{\text{stress}}x_{\text{stress}}+\beta_{\text{sleep}}x_{\text{sleep}}+\beta_{\text{work}}x_{\text{work}})$$
 
-Since all the weights are in the exponential function, the effect interpretation is not additive, but multiplicative (because exp(a + b) is exp(a) times exp(b)).
+Since all the weights are in the exponential function, the effect interpretation is not additive, but multiplicative, because exp(a + b) is exp(a) times exp(b).
 The last ingredient for the interpretation are the actual weights of the toy example.
 The following table lists the estimated weights and exp(weights) together with the 95% confidence interval:
 
@@ -257,7 +255,7 @@ kable(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"),
 
 Increasing the stress by one point multiplies the expected number of coffees by the factor `r round(cc["stress", "exp.beta"], 2)`. 
 Increasing the sleep by one point multiplies the expected number of coffees by the factor `r round(cc["sleep", "exp.beta"], 2)`.
-The predicted number of coffees is on average `r round(cc["weekendYES", "exp.beta"], 2)` times the number of coffees on a non-working day compared to a working day.
+The predicted number of coffees is on average `r round(cc["workYES", "exp.beta"], 2)` times the number of coffees on a non-working day compared to a working day.
 In summary the more stress, the less sleep and the more work, the more coffee is consumed.
 
 In this section you learned a little about Generalized Linear Models that are useful when the target does not follow a Gaussian distribution. 
