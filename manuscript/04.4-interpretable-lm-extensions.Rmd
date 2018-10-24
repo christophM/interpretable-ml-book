@@ -103,7 +103,7 @@ The name of the solution is meant to serve as a starting point for a search.
 
 The linear regression model assumes that the outcome given the input features follows a Gaussian distribution.
 This assumption excludes many cases:
-The outcome can also be a category (cancer vs. healthy), a count (number of children), the time to the occurence of an event (time to failure of a machine) or a very skewed outcome with a few very high values (household income).
+The outcome can also be a category (cancer vs. healthy), a count (number of children), the time to the occurrence of an event (time to failure of a machine) or a very skewed outcome with a few very high values (household income).
 The linear regression model can be extended to model all these types of outcomes.
 This extension is called **Generalized Linear Models** or **GLMs** for short.
 Throughout this chapter, I will use the name GLM for both the general framework and for particular models from that framework.
@@ -138,12 +138,12 @@ In the linear model, the link function links the weighted sum of the features to
 Under the GLM framework, this concept generalizes to any distribution (from the exponential family) and arbitrary link functions.
 If y is a count of something, such as the number of coffees someone drinks on a certain day, we could model it with a GLM with a Poisson distribution and the natural logarithm as the link function:
 
-$$ln(E_Y(y|x_i))=x\beta$$
+$$ln(E_Y(y|x_i))=x_i\beta$$
 
 The logistic regression model is also a GLM that assumes a Bernoulli distribution and uses the logistic function as the link function.
 The mean $\mu$ of the binomial distribution used in logistic regression is the probability that y is 1.
 
-$$x_i\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x_i)}{1-P(y=1|x_i)}\right)$$
+$$x_i\beta=ln\left(\frac{E_Y(y|x_i)}{1-E_Y(y|x_i)}\right)=ln\left(\frac{P(y=1|x_i)}{1-P(y=1|x_i)}\right)$$
 
 And if we solve this equation to have P(Y=1) on one side, we get the logistic regression formula:
 
@@ -265,16 +265,15 @@ Next, we look at how to integrate interactions between two features into the lin
 
 The linear model assumes that the effect of one feature is the same regardless of the values of the other features (= no interactions).
 But often there are interactions in the data.
-To predict the [number of bicycles](#bike-data) rented, there may be an interaction between temperature and the fact whether it's a working day or not.
-Perhaps, when people have to work, the temperature doesn't influence the number of rented bikes much, becaus people will ride the rented bike to work no matter what happens.
+To predict the [number of bicycles](#bike-data) rented, there may be an interaction between temperature and whether it's a working day or not.
+Perhaps, when people have to work, the temperature doesn't influence the number of rented bikes much, because people will ride the rented bike to work no matter what happens.
 On days off, many people ride for pleasure, but only when it's warm enough.
 When it comes to rental bicycles, you might expect an interaction between temperature and working day.
 
-How can we get the linear model include interactions?
-The solution is elegant in a way, since it doesn't require any change of the linear model, only additional columns in the data.
+How can we get the linear model to include interactions?
 Before you fit the linear model, add a column to the feature matrix that represents the interaction between the features and fit the model as usual.
-In the working day and temperature example, we would add a new feature that is zero if it is non-working day, otherwise the value of the temperature feature.
-This assumes that working day is the reference category.
+The solution is elegant in a way, since it doesn't require any change of the linear model, only additional columns in the data.
+In the working day and temperature example, we would add a new feature that is zero for non-working days, otherwise the value of the temperature feature, assuming that working day is the reference category.
 Suppose our data looks like this:
 
 ```{r data-frame}
@@ -283,7 +282,7 @@ knitr::kable(x)
 ```
 
 The data matrix used by the linear model looks slightly different.
-The following table shows what the data looks like if we don't specify any interactions to model.
+The following table shows what the data prepared for the model looks like if we don't specify any interactions.
 Normally, this transformation is performed automatically by any statistical software.
 
 ```{r data-frame-lm-no-interaction}
@@ -295,15 +294,15 @@ The first column is the intercept term.
 The second column encodes the categorical feature, with 0 for the reference category and 1 for the other.
 The third column contains the temperature.
 
-If we want the linear model to include the interaction between temperature and the workday feature, we must give it the following matrix with the additional column for the interaction:
+If we want the linear model to consider the interaction between temperature and the workingday feature, we have to add a column for the interaction:
 
 ```{r data-frame-lm}
 mod = lm(1:4 ~ workingday * temp, data = x)
 knitr::kable(data.frame(model.matrix(mod)))
 ```
 
-The new column "workingdayYes" captures the interaction between the features workingday and temperature.
-This new feature is zero for an instance if the workingday feature is at the reference category ("No"), otherwise it assumes the value of the instances temperature feature.
+The new column "workingdayYes.temp" captures the interaction between the features workingday and temperature.
+This new feature column is zero for an instance if the workingday feature is at the reference category ("No"), otherwise it assumes the value of the instances temperature feature.
 With this type of encoding, the linear model can learn a different linear effect of temperature for both types of days.
 This is the interaction effect between the two features.
 Without an interaction term, the combined effect of a categorical and a numerical feature can be described by a line that is vertically shifted for the different categories.
@@ -314,14 +313,14 @@ We create additional features which represent combinations of categories.
 So these artificial data: 
 
 ```{r data-frame-lm-cat}
-x = data.frame(workingday = c("Yes", "No", "No", "Yes"), weekday = c("Mon", "Sun", "Sat", "Mon"))
+x = data.frame(workingday = c("Yes", "No", "No", "Yes"), weather = c("good", "bad", "ok", "good"))
 knitr::kable(x)
 ```
 
 Becomes this: 
 
 ```{r data-frame-lm-cat2}
-mod = lm(1:4 ~ workingday * weekday, data = x)
+mod = lm(1:4 ~ workingday * weather, data = x)
 knitr::kable(data.frame(model.matrix(mod)))
 ```
 
@@ -329,17 +328,18 @@ The first column again serves to estimate the intercept.
 The second column is the coded first categorical feature.
 Columns three and four are for the second categorical feature, which requires two columns because you need two weights to capture the effect for three categories, one of which is the reference category.
 The rest of the columns capture the interactions.
-For each category of both features (except the reference categories), we create a new feature column that is 1 if both features have a certain category, otherwise 0.
+For each category of both features (except for the reference categories), we create a new feature column that is 1 if both features have a certain category, otherwise 0.
 
 For two numerical features, the interaction column is even easier to construct: 
 We simply multiply both numerical features.
 
 There are approaches to automatically detect and add interaction terms. 
-One of them can be found in the [RuleFit chapter](#rulefit), which first mines interaction terms and then estimates a linear regression model including interactions.
+One of them can be found in the [RuleFit chapter](#rulefit).
+The RuleFit algorithm first mines interaction terms and then estimates a linear regression model including interactions.
 
 **Example**
 
-Let's return to the [bike rental prediction task](#bike-data) which we have already modeled with a linear model in the [linear model chapter](#linear).
+Let's return to the [bike rental prediction task](#bike-data) which we have already modeled in the [linear model chapter](#linear).
 This time, we additionally consider an interaction between the temperature and the working day feature.
 This results in the following estimated weights and confidence intervals.
 
@@ -354,27 +354,28 @@ lm_summary = summary(mod)$coefficients
 
 lm_summary_print = lm_summary
 rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
-confint(mod)
 
 kable(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight', 'Std. Error', "2.5%","97.5%"))
 ```
 
 The additional interaction effect is negative (`r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`) and differs significantly from zero, as shown by the 95% confidence interval, which does not include zero.
+By the way, the data are not iid, because days that are close to each other are not independent from each other.
+Confidence intervals might be misleading, just take it with a grain of salt.
 The interaction term changes the interpretation of the weights of the involved features.
 Does the temperature have a negative effect on a working day?
-The answer is no, even if the weights suggest it to the untrained eye.
-We can't interpret the "workingdayWORKING DAY:temp" interaction weight directly, since the interpretation would be:
+The answer is no, even if the table suggests it to an untrained user.
+We can't interpret the "workingdayWORKING DAY:temp" interaction weight in isolation, since the interpretation would be:
 "While leaving all other feature values unchanged, increasing the interaction effect of temperature for working day, decreases the predicted number of bikes."
 But the interaction effect only adds to the main effect of the temperature.
-Suppose we have a working day, and want to know what would happen if the temperature were 1 degree warmer today.
-Then we need to add both the weights for "temp" and "workindayWORKING DAY:temp" to determine how much the estimate increases.
+Suppose it's a working day and we want to know what would happen if the temperature were 1 degree warmer today.
+Then we need to sum both the weights for "temp" and "workindayWORKING DAY:temp" to determine how much the estimate increases.
 
 It's easier to understand the interaction visually. 
-By introducing an interaction term between a categorical and a numerical feature, we now have two slopes for the temperature instead of one.
+By introducing an interaction term between a categorical and a numerical feature, we get two slopes for the temperature instead of one.
 The temperature slope for days on which people don't have to work ('NO WORKING DAY') can be read directly from the table (`r round(lm_summary_print['temp','Estimate'], 1)`).
-The temperature slope for days on which people have to work ('WORKING DAY') is the sum of both temperature weights (`r round(lm_summary_print['temp','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`).
+The temperature slope for days on which people have to work ('WORKING DAY') is the sum of both temperature weights (`r round(lm_summary_print['temp','Estimate'], 1)`  `r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`).
 The intercept of the 'NO WORKING DAY'-line at temperature = 0 is determined by the intercept term of the linear model (`r round(lm_summary_print['(Intercept)','Estimate'], 1)`).
-The intercept of the 'WORKING DAY'-line ate temperature = 0 is determined by the intercept term + the effect of working day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)`).
+The intercept of the 'WORKING DAY'-line at temperature = 0 is determined by the intercept term + the effect of working day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)`).
 
 ```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bikes for a linear model. Effectively we get two slopes for the temperature, one for each category of the working day feature. Without the interaction it would be a single slope for the temperature, which is shifted by the different means of no working vs. working day."}
 jtools::interact_plot(mod, pred = "temp", modx = "workingday")
@@ -383,21 +384,22 @@ jtools::interact_plot(mod, pred = "temp", modx = "workingday")
 ### Nonlinear Effects - GAMs {#gam}
 
 
-*The world is not linear.*
-Linearity means no matter what value an instance has in a particular feature, increasing the value by one unit always has the same effect on the predicted outcome.
-Is it reasonable to assume that increasing the temperature by one degree at 10 degrees C  has the same effect on the number of rental bikes as increasing the temperature when it already has 40 degrees.
-Intuitively one expects that increasing the temperature from 10 to 11 degrees Celsius has a positive effect and from 40 to 41 a negative effect, which is also the case, as you will see from many examples in the book.
-The increase the temperature has a linear, positive effect on the number of rental bikes, but at some point it flattens out and even has a negative effect at high temperatures.
+**The world is not linear.**
+Linearity in linear models means that no matter what value an instance has in a particular feature, increasing the value by one unit always has the same effect on the predicted outcome.
+Is it reasonable to assume that increasing the temperature by one degree at 10 degrees C  has the same effect on the number of rental bikes as increasing the temperature when it already has 40 degrees?
+Intuitively one expects that increasing the temperature from 10 to 11 degrees Celsius has a positive effect and from 40 to 41 a negative effect, which is also the case, as you will see in many examples throughout the book.
+The temperature feature has a linear, positive effect on the number of rental bikes, but at some point it flattens out and even has a negative effect at high temperatures.
 The linear model doesn't care, it will dutifully find the best linear plane (by minimizing the Euclidean distance).
 
 You can model nonlinear relationships using one of the following techniques:
+
 - Simple transformation of the feature (e.g. logarithm)
 - Categorization of the feature
 - Generalized Additive Models (GAMs) that use regression splines
 
-Before I go into the details of each method, let's start with an example that illustrates all three methods.
+Before I go into the details of each method, let's start with an example that illustrates all three.
 I took the [bike rental dataset](#bike-data) and trained a linear model with only the temperature feature to predict the number of rental bikes.
-The following figure shows the estimated slope with: 1) the standard linear model, 2) a linear model with a transformed temperature feature (logarithm), 3) a linear model with temperature treated as categorical feature and 4) using regression splines (GAM).
+The following figure shows the estimated slope with: the standard linear model, a linear model with a transformed temperature feature (logarithm), a linear model with temperature treated as categorical feature and using regression splines (GAM).
 
 ```{r nonlinear-effects, fig.cap = "Predicting the number of rented bicycles using only the temperature feature. The use a linear model (top left) doesn't capture the flattening of the temperature effect at high temperatures suggested by the data and overestimates the number of bikes at low temperatures. One solution is to transform the feature with e.g. the logarithm (top right), categorize it (bottom left), which is usually a bad decision or use Generalized Additive Models that can automatically fit a smooth curve for temperature (bottom right). GAMs are often the best solution."}
 mod.simpel = lm(cnt ~ temp, data = bike)
@@ -446,15 +448,15 @@ You can be creative when you transform the feature.
 The interpretation of the feature changes according to the selected transformation. 
 If you use a log transformation, the interpretation in a linear model becomes:
 "If the logarithm of the feature is increased by one, the prediction is increased by the corresponding weight."
-When you use a GLM with a link function that is not the identity function, then the interpretation gets more complicated, because you have to incorporate both transformations into the interpretation.
+When you use a GLM with a link function that is not the identity function, then the interpretation gets more complicated, because you have to incorporate both transformations into the interpretation (except when they cancel each other out, like log and exp, then the interpretation gets easier).
 
 **Feature categorization**
 
-Another, perhaps naive, solution to achieve a nonlinear effect is to discretize the feature; turn it into a categorical feature.
-For example, you could cut the temperature feature into 20 intervals with the levels [-10, -5), [-5, 0), ... and so on, you get it.
+Another possibility to achieve a nonlinear effect is to discretize the feature; turn it into a categorical feature.
+For example, you could cut the temperature feature into 20 intervals with the levels [-10, -5), [-5, 0), ... and so on.
 When you use the categorized temperature instead of the continuous temperature, the linear model would estimate a step function because each level gets its own estimate.
 The problem with this approach is that it needs more data, it's more likely to overfit and it's unclear how to discretize the feature meaningfully (equidistant intervals or quantiles? how many intervals?).
-I would only use discretiziation if there is a very strong case for it.
+I would only use discretization if there is a very strong case for it.
 For example, to make the model comparable to another study.
 
 **Generalized Additive Models (GAMs)**
@@ -464,33 +466,34 @@ That's the motivation behind GAMs.
 GAMs relax the restriction that the relationship must be a simple weighted sum, and instead assume that the outcome can be modeled by  a sum of arbitrary functions of each feature.
 Mathematically, the relationship looks like this:
 
-$$\beta_0+f_1(x_1)+f_2(x_2)+\ldots+f_m(x_m)=g(E_Y(y|x))$$
+$$g(E_Y(y_i|x_i))=\beta_0+f_1(x_{i1})+f_2(x_{i2})+\ldots+f_p(x_{ip})$$
 
-The formula is similar to the GLM formula with the difference that the linear term $\beta_j{}x_J$ is replaced by a more flexible function $f_j(x_j)$.
+The formula is similar to the GLM formula with the difference that the linear term $\beta_j{}x_{ij}$ is replaced by a more flexible function $f_j(x_{xij})$.
 The core of a GAM is still a sum of feature effects, but you have the option to allow nonlinear relationships between some features and the output.
-Linear effects are also covered by the framework, because for features to be handled linearly, you can limit their $f_j(x_j)$ only to take the form of $x_j\beta_j$.
+Linear effects are also covered by the framework, because for features to be handled linearly, you can limit their $f_j(x_{ij})$ only to take the form of $x_{ij}\beta_j$.
 
 The big question is how to learn nonlinear functions of some features.
 The answer is called "splines" or "spline functions".
-Splines are functions that can be added to approximate arbitrary functions.
+Splines are functions that can combined to approximate arbitrary functions.
 A bit like stacking Lego bricks to build something more complex.
-There are a confusing number of different ways to define these spline functions.
-If you are interested in learning more about all the different ways to define splines, I wish you good luck on your journey.
-I'm not going to go into detail here, I'm just going to build an intuition.
+There is a confusing number of ways to define these spline functions.
+If you are interested in learning more about all the ways to define splines, I wish you good luck on your journey.
+I'm not going to go into details here, I'm just going to build an intuition.
 What personally helped me the most for understanding splines was to visualize the individual spline functions and to look into how the data matrix is modified.
-For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 10 columns, each representing a spline function.
+For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 4 columns, each representing a spline function.
+Usually you would have more spline functions, I only reduced the number for illustration purposes.
 The value for each instance of these new spline features depends on their temperature value.
 Together with all linear effects, the GAM then also estimates these spline weights.
 GAMs also introduce a penalty term for the weights to keep them close to zero. 
-This effectively reduces the flexibility of the splines and reduces the danger of overfitting. 
+This effectively reduces the flexibility of the splines and reduces overfitting. 
 A smoothness parameter that is commonly used to control the flexibility of the curve is then tuned via cross-validation.
 Ignoring the penalty term, nonlinear modeling with splines is fancy feature engineering.
-
-CONTINUE HERE
 
 In the example where we are predicting the number of bicycles with a GAM using only the temperature, the model feature matrix looks like this:
 
 ```{r splines-df}
+# fit GAM again with less splines
+mod.gam = gam(cnt ~ s(temp, k = 5), data = bike)
 kable(head(model.matrix(mod.gam)), digits = 2)
 ```
 
@@ -498,12 +501,13 @@ Each row represents an individual instance from the data (one day).
 Each spline column contains the value of the spline function at the particular temperature values. 
 The following graphic shows how these spline functions look like:
 
-```{r splines, fig.cap = "To smoothly model the temperature effect, we use 9 spline functions. Each temperature value is mapped to (here) 9 spline values. If an instance has a temperature of 30 C, then the value for the first spline feature is -1, for the second 0.5 ... and for the 9th it's 2. This feature matrix is provided to the GAM fitting function."}
+```{r splines, fig.cap = "To smoothly model the temperature effect, we use 4 spline functions. Each temperature value is mapped to (here) 4 spline values. If an instance has a temperature of 30 C, then the value for the first spline feature is -1, for the second 0.7, for the third -0.8 and for the 4th it's 1.7. This feature matrix is provided to the GAM fitting function."}
+
 mm = model.matrix(mod.gam)
 mm2 = data.table::melt(mm)
 mm2 = mm2[mm2$Var2 != "(Intercept)",]
 
-ggplot(mm2) + geom_line(aes(x = rep(bike$temp, times = 9), y = value)) + facet_wrap("Var2") + 
+ggplot(mm2) + geom_line(aes(x = rep(bike$temp, times = 4), y = value)) + facet_wrap("Var2") + 
   scale_x_continuous("Temperature") + 
   scale_y_continuous("Value of spline feature")
 ```
@@ -536,7 +540,7 @@ For this reason, many researchers and practitioners from industry are very **exp
 - In addition to making predictions, you can use the models to **do inference**, draw conclusions about the data - given all the assumptions are not violated.
 You get confidence intervals for weights, significance tests, prediction intervals and much more. 
 - Statistical software usually has really good interfaces to fit GLMs, GAMs and more special linear models.
-- The opacity of many machine learning models comes from 1) a lack of sparseness, which means that many features are used 2), features that are treated in a nonlineary, which means you need more than a single weight to describe the effect 3) the integration of interactions between the features.
+- The opacity of many machine learning models comes from 1) a lack of sparseness, which means that many features are used, 2) features that are treated in a nonlinear fashion, which means you need more than a single weight to describe the effect and 3) the modeling of interactions between the features.
 Assuming that linear models are highly interpretable but often underfit reality, the extensions described in this chapter offer a good way to achieve a **smooth transition to more flexible models**, while preserving some of the interpretability.
 
 
@@ -557,41 +561,41 @@ This is partly my own experience and partly observations from the winning models
 
 ### Further extensions {#more-lm-extension}
 
-As promised, here is a list of modeling problems you might have with your linear model, along with the name of a solution for this problem that you can copy and paste into your favorite search engine.
+As promised, here is a list of modeling problems you encounter with linear models, along with the name of a solution for this problem that you can copy and paste into your favorite search engine.
 
 - My data violates the assumption of being independent and identically distributed (iid).  
 For example, repeated measurements on the same patient.  
-Search for: *mixed models* or *generalized estimating equations*.
+Search for **mixed models** or **generalized estimating equations**.
 - My model has heteroscedastic errors.  
-For example, when predicting the value of a house, the errors are usually higher in expensive houses, which violates the homoscedasticity of the linear model.
-Search for: *robust regression*.  
+For example, when predicting the value of a house, the model errors are usually higher in expensive houses, which violates the homoscedasticity of the linear model.  
+Search for: **robust regression**.
 - I have outliers that strongly influence my model.  
-Search for: *robust regression*.
+Search for **robust regression**.
 - I want to predict the time until an event occurs.  
 Time-to-event data usually comes with censored measurements, which means that for some instances there wasn't enough time to observe the event.
 For example, a company wants to predict the failure of its ice machines, but only has data for two years.
 Some machines are still intact after two years, but might fail later.  
-Search for: *parametric survival models*, *cox regression*, *survival analysis*.
+Search for **parametric survival models**, **cox regression**, **survival analysis**.
 - My outcome to predict is a category.   
-If the outcome has two categories use a [logistic regression model](#logistic), that model sthe probability for the categories.  
-If you have more categories, search for: *multinomial regression*.  
+If the outcome has two categories use a [logistic regression model](#logistic), that models the probability for the categories.  
+If you have more categories, search for **multinomial regression**.  
 Logistic regression and multinomial regression are both GLMs.
-- I want to predict ordered categories.
-For example school grades.
-Search for: *proportional odds model*.
+- I want to predict ordered categories.  
+For example school grades.  
+Search for **proportional odds model**.
 - My outcome is a count (like number of children in a family).  
-Search for: *poisson regression*.  
+Search for **poisson regression**.  
 The Poisson model is also a GLM.
-Also, if you have the problem that the count value of 0 is very frequent:  
-Search for: *zero-inflated poisson regression*, *hurdle model*.
-- I am not sure what features need to be included in the model to draw correct causal conclusions  
+Also you might have the problem that the count value of 0 is very frequent.  
+Search for **zero-inflated Poisson regression**, **hurdle model**.
+- I am not sure what features need to be included in the model to draw correct causal conclusions.  
 For example, I want to know the effect of a drug on the blood pressure.
 The drug has a direct effect on some blood value and this blood value affects the outcome. 
 Should I include the blood value into the regression model?  
-Search for: *causal inference*, *mediation analysis*.
+Search for **causal inference**, **mediation analysis**.
 - I have missing data.  
-Search for:  *multiple imputation*.
+Search for  **multiple imputation**.
 - I want to integrate prior knowledge into my models.  
-Search for: *bayesian inference*.
+Search for: **Bayesian inference**.
 - I am feeling a bit down lately.  
-Search for: *"Amazon Alexa Gone Wild!!! Full version from beginning to end"*
+Search for **"Amazon Alexa Gone Wild!!! Full version from beginning to end"**
