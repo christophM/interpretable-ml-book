@@ -33,6 +33,115 @@ If you want to have a more accurate estimate, you can estimate the error of perm
 This gives you a dataset of size $n(n-1)$ to estimate the permutation error and it takes a big amount of computation time. 
 I can only recommend using the $n(n-1)$ - method when you are serious about getting extremely accurate estimates.
 
+
+### Should I Compute Importance on Training or Test Data? {#feature-importance-data}
+
+
+```{r prepare-garbage-svm}
+set.seed(1)
+n = 200
+p = 50
+X = data.frame(matrix(rnorm(n*p), nrow = n))
+y = rnorm(n)
+tsk = makeRegrTask(data = cbind(X, y), target = "y")
+
+X2 = data.frame(matrix(rnorm(n*p), nrow = n))
+y2 = rnorm(n)
+tsk2 = makeRegrTask(data = cbind(X2, y = y2), target = "y")
+
+lrn = makeLearner("regr.svm")
+mod = train(lrn, tsk)
+pred = predict(mod, tsk)
+perf1 = performance(pred, measures = list(mae))
+
+pred2 = predict(mod, tsk2)
+perf2 = performance(pred2, measures = list(mae))
+
+```
+
+
+*tl;dr: I don't have a definite answer.*  
+
+Answering the question about training or test data touches the fundamental question of what feature importance means.
+The best way to understand the difference between feature importance based on training vs. based on test data is an "extreme" example.
+I trained a support vector machine to predict a continuous, random target outcome given 50 random features (200 instances).
+By "random" I mean that the target outcome is independent of the 50 features.
+This is like predicting tomorrow's temperature given the latest lottery numbers.
+If the model "learns" any relationships, then it overfits.
+And in fact, the SVM did overfit on the training data.
+The mean absolute error for the training data is `r round(perf1,2)` and for the test data `r round(perf2,2)`, which is also the error of the best possible model that always predicts the mean outcome of 0 (mae of  `r round(mean(abs(y2)),2)`).
+In other words, the SVM model is garbage.
+What values for the feature importance would you expect for the 50 features of this overfitted SVM?
+Zero because none of the features contribute to improved performance on unseen test data?
+Or should the importances reflect how much the model depends on each of the features, regardless whether the learned relationships generalize to unseen data?
+Let's take a look at how the distributions of feature importances for training and test data differ.
+
+```{r feature-imp-sim, fig.cap="Distributions of feature importance values by data type. A support vector machine was trained on a regression dataset with 50 features and 200 instances. The features don't contain any information about the true target. The SVM overfits the data, so the feature importance based on the training data shows many important features. Computed on unseen test data, the feature importances are close to zero."}
+pred = Predictor$new(mod, cbind(X, y), y = "y")
+imp = FeatureImp$new(pred, loss = "mae")
+
+pred2 = Predictor$new(mod, cbind(X2, y2), y = y2)
+imp2 = FeatureImp$new(pred2, loss = "mhae")
+
+imp$results$dat.type = "Training data"
+imp2$results$dat.type = "Test data"
+
+imp.dat = rbind(imp$results, imp2$results)
+
+ggplot(imp.dat) + geom_boxplot(aes(x = dat.type, y = importance)) + 
+  scale_y_continuous("Feature importance of all features") + 
+  scale_x_discrete("Data the importance was computed with")
+```
+
+It's unclear to me which of the two results are more desirable.
+So I will try to make a case for both versions and let you decide for yourself.
+
+**The Case for Test Data**
+
+This is a simple case: 
+Model error estimates based on training data are garbage -> feature importance relies on model error estimates -> feature importance based on training data is garbage.  
+Really, it's one of the first things you learn in machine learning:
+If you measure the model error (or performance) on the same data on which the model was trained, the measurement is usually too optimistic, which means that the model seems to work much better than it does in reality.
+And since the permutation feature importance relies on measurements of the model error, we should use unseen test data.
+The feature importance based on training data makes us mistakenly believe that feature are important for the predictions, when in reality the model was just overfitting and the features weren't important at all.
+
+**The Case for Training Data**
+
+```{r garbage-svm-mvp}
+max.imp = imp$results[imp$results$importance == max(imp$results$importance),]
+```
+
+The arguments for using training data are somewhat more difficult to formulate, but are IMHO just as compelling as the arguments for using test data.
+We take another look at our garbage SVM.
+Based on the training data, the most important feature was `r max.imp$feature`.
+Let's look at a partial dependence plot of feature `r max.imp$feature`.
+The partial dependence plot shows how the model output changes based on changes of the feature inputs and doesn't rely on the generalization error.
+It doesn't matter whether the PDP is computed with training or test data.
+
+```{r garbage-svm-pdp, fig.cap=sprintf("The partial dependence of feature %s, which is the most important feature according to the feature importance based on the training data. The plot shows that the SVM depends on this feature to make predictions", max.imp$feature)}
+pdp = FeatureEffect$new(pred2, max.imp$feature, method = "pdp")
+pdp$plot()
+```
+
+The plot clearly shows that the SVM has learned to rely on feature `r max.imp$feature` for its predictions, but according to the feature importance based on the test data (`r round(imp2$results[imp2$results$feature == max.imp$feature, "importance"], 2)`), it's not important.
+Based on the training data, the importance is `r round(max.imp$importance, 2)`, reflecting that the model has learned to use this feature.
+Feature importance based on the training data tells us which features are important for the model in the sense that it depends on them for making predictions.
+
+As part of the case for using training data, I would like to introduce an argument against test data.
+In practice, you want to use all your data to train your model to get the best possible model in the end.
+This means no unused test data is left to compute the feature importance.
+You have the same problem when you want to estimate the generalization error of your model.
+One of the solutions is a (nested) cross-validation scheme.
+If you would use (nested) cross-validation for the feature importance estimation, you would have the problem that the feature importance is not calculated on the final model with all the data, but on models with subsets of the data that might behave differently.
+
+In the end, you need to decide whether you want to know how much the model relies on each feature for making predictions (-> training data) or how much the feature contributes to the performance of the model on unseen data (-> test data).
+To the best of my knowledge, there is no research addressing the question of training vs. test data.
+It will require more thorough examination than my "garbage-SVM" example.
+We need more research and more experience with these tools to gain a better understanding.
+
+Next, we will look at a some examples.
+I based the importance computation on the training data, because I had to choose one and using the training data needed a few lines less of code.
+
 ### Example and Interpretation
 
 We show examples for classification and regression. 
@@ -104,6 +213,7 @@ We remove the feature and retrain the model.
 Since another feature will be chosen as the first split, the whole tree can be very different, meaning that we compare the error rates of (potentially) completely different trees to decide how important that feature is.
 
 ### Disadvantages
+- It's very unclear whether you should use training or test data for computing the feature importance.
 - The feature importance measure is tied to the error of the model.
 This is not inherently bad, but in some cases not what you need.
 In some cases you would prefer to know how much the model's output varies for one feature, ignoring what it means for the performance.
