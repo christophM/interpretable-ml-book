@@ -49,6 +49,7 @@ All notable changes to the book will be documented here.
 - Added some advantages and disadvantages to pdps
 - Added chapter on extending linear models
 - Fixed missing square in the Friedman H-statistic
+- Added discussion about training vs. test data in feature importance chapter
 
 ### v0.5 (2018-08-14)
 - Added chapter on influential instances
