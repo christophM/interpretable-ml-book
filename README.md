@@ -54,8 +54,9 @@ Stuff that both works for leanpub and for bookdown:
 
 ## Changelog
 All notable changes to the book will be documented here.
-
 ### v0.6 (IN PROGRESS)
+
+### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots
 - Added some advantages and disadvantages to pdps
 - Added chapter on extending linear models
