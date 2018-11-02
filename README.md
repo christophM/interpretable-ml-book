@@ -51,6 +51,7 @@ All notable changes to the book will be documented here.
 - Fixed missing square in the Friedman H-statistic
 - Added discussion about training vs. test data in feature importance chapter
 - Improved the definitions, also added some graphics
+- Added an example with a categorical feature to PDP
 
 ### v0.5 (2018-08-14)
 - Added chapter on influential instances
