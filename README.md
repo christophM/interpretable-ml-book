@@ -50,6 +50,7 @@ All notable changes to the book will be documented here.
 - Added chapter on extending linear models
 - Fixed missing square in the Friedman H-statistic
 - Added discussion about training vs. test data in feature importance chapter
+- Improved the definitions, also added some graphics
 
 ### v0.5 (2018-08-14)
 - Added chapter on influential instances
