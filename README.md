@@ -40,6 +40,15 @@ browseURL('_book/index.html')
 ```
 
 
+## Writing
+
+Stuff that both works for leanpub and for bookdown:
+
+- Titles start with #, subtitles with ## and so on.
+- Titles can be tagged using {#tag-of-the-title}
+- Chapters can be referenced by using `[text of the link](#tag-of-the-title)`
+- Figures can be referenced by using `[text of the link](#fig:tag-of-r-chunk-that-produced-figure)`
+- Start and end mathematical expressions with `$` (inline) or with `$$` (extra line). Will be automatically changed for leanpub with a regexpr. Conversion script only works if no empty spaces are in the formula.
 
 ## Changelog
 All notable changes to the book will be documented here.
