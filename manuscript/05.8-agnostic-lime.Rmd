@@ -4,8 +4,8 @@ set.seed(42)
 ```
 
 ## Local Surrogate Models (LIME) {#lime}
-Local surrogate models are interpretable models that are used for explaining single predictions of black box machine learning models.
-Local interpretable model-agnostic explanations (LIME) (Ribeiro, M.T., Singh, S. and Guestrin, C., 2016[^Ribeiro2016lime]) is a paper in which the authors suggest a concrete implementation of local surrogate models.
+Local surrogate models are interpretable models used to explain individual predictions of black box machine learning models.
+Local interpretable model-agnostic explanations (LIME) (Ribeiro, M.T., Singh, S. and Guestrin, C., 2016[^Ribeiro2016lime]) is a paper in which the authors propose a concrete implementation of local surrogate models.
 Surrogate models are trained to approximate the predictions of the underlying black box model.
 Instead of trying to fit a global surrogate model, LIME focuses on fitting local surrogate models to explain why single predictions were made.
 
@@ -205,20 +205,20 @@ gridExtra::grid.arrange(p_boundaries, p_explain, p_weighted, p_boundaries_lime, 
 
 
 
-As always, the devil's in the details.
-Defining a meaningful neighbourhood around a point is not trivial.
-LIME currently uses an exponential smoothing kernel for defining the neighbourhood.
+As always, the devil's in the detail.
+The definition of a meaningful neighbourhood around a point is difficult.
+LIME currently uses an exponential smoothing kernel to define the neighbourhood.
 A smoothing kernel is a function that takes two data instances and returns a proximity measure.
-The kernel width controls how big the neighbourhood is: 
-A small kernel width means that an instance has to be very close to impact the local model, a larger width means that also instances that are farther away influence the model.
-If you look at [LIMEs Python code (file lime/lime_tabular.py)](https://github.com/marcotcr/lime) you will see that it uses an exponential smoothing kernel (on the normalized data) and the kernel width is 0.75 times the square root of the number of columns of the training data.
-It looks like an innocent line of code, but it's like a huge elephant sitting in your living room next to the good porcelain you got from your grandparents.
-The big issue is that we don't have a good way to figure out the best kernel or how to find the optimal width.
-And where the hell is the number 0.75 even coming from?
-In certain scenarios, you can easily flip your explanation, by changing the kernel width as demonstrated in the following figure:
+The kernel width determines how large the neighbourhood is: 
+A small kernel width means that an instance must be very close to impact the local model, a larger width means that instances that are farther away also influence the model.
+If you look at [LIME's Python implementation (file lime/lime_tabular.py)](https://github.com/marcotcr/lime/tree/ce2db6f20f47c3330beb107bb17fd25840ca4606) you will see that it uses an exponential smoothing kernel (on the normalized data) and the kernel width is 0.75 times the square root of the number of columns of the training data.
+It looks like an innocent line of code, but it's like an elephant sitting in your living room next to the good porcelain you got from your grandparents.
+The big problem is that we don't have a good way to find the best kernel or the optimal width.
+And where the hell does the 0.75 even come from?
+In certain scenarios, you can easily flip your explanation by changing the kernel width, as shown in the following figure:
 
 
-```{r lime-fail, fig.cap = "Explaining the prediction of instance x = 1.6. The black box models prediction dependent on feature x is shown as a black line and the distribution of the data is indicated with rugs. Three local surrogate models using different kernel widths are computed. The resulting linear regression model relies heavily on the chosen kernel width: Is the explanation for data point x=1.6 that the feature has a negative, positive or no effect? Decide yourself, I don't know the answer."}
+```{r lime-fail, fig.cap = "Explanation of the prediction of instance x = 1.6. The predictions of the black box model dependent on a single feature is represented as a black line and the distribution of the data is indicated with rugs. Three local surrogate models with different kernel widths are computed. The resulting linear regression model relies heavily on the kernel width: Has the feature a negative, positive or no effect for x = 1.6? Decide for yourself, I don't know the answer."}
 set.seed(42)
 df = data.frame(x = rnorm(200, mean = 0, sd = 3))
 df$x[df$x < -5] = -5
@@ -252,12 +252,11 @@ ggplot(df.all, aes(x = x, y = y)) +
 
 ```
 
-The example showed only a single feature.
-It gets much worse in high-dimensional feature spaces.
-It's also very unclear, whether the distance measure should treat all features equally.
-Is going one unit for normalized feature x1 the same as going one unit for feature x2?
+The example showed only one feature.
+In high-dimensional feature spaces it gets much worse.
+It's also very unclear whether the distance measure should treat all features equally.
+Is one distance unit for feature x1 the same as one unit for feature x2?
 Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all.
-and 
 
 
 #### Example
@@ -287,6 +286,7 @@ library("iml")
 library("gridExtra")
 instance_indices = c(295, 8)
 set.seed(44)
+bike.train.x$temp = round(bike.train.x$temp, 2)
 pred = Predictor$new(model, data = bike.train.x, class = "above", type = "prob")
 lim = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[1],], k = n_features_lime)
 
@@ -407,46 +407,43 @@ knitr::include_graphics("images/lime-images-package-example-1.png")
 
 
 ### Advantages
-- Even if you switch out the underlying machine learning model, you can still use the same local, interpretable models for explanation.
-Suppose the people looking at the explanations understand decision trees the best.
-Since you are using local surrogate models, you don't have to fit a decision tree to provide explanations using decision trees, but you could use an SVM and decision tress as explanation method.
-And if it turns out that an xgboost model works better, you can exchange the SVM and still keep the decision trees to explain the predictions.
-- By relying on interpretable models, local surrogate models benefit from all the experience with training and interpreting interpretable models.
-- When using L1 penalized linear regression models or short trees, the resulting explanations are short (=selective) and possibly contrastive. 
-Therefore they make [human-friendly explanations](#explanation).
-That's why I see LIME more in applications where the recipient of the explanation is a lay-person or someone with very little time.
-It is not sufficient for complete causal attributions, so I don't see LIME in compliance scenarios, where you might be legally required to fully explain a prediction.
-Also for debugging machine learning models it is useful to have all the reasons instead of a few.
+- Even if you exchange the underlying machine learning model, you can still use the same local, interpretable model for explanation.
+Suppose the people looking at the explanations understand decision trees best.
+Because you use local surrogate models, you use decision trees as explanation without having to actually use a decision tree to make the predictions.
+For example, you could use an SVM.
+And if it turns out that an xgboost model works better, you can replace the SVM and still keep the decision trees to explain the predictions.
+- Local surrogate models benefit from the literature and experience of training and interpreting interpretable models.
+- When using LASSO or short trees, the resulting explanations are short (=selective) and possibly contrastive. 
+Therefore, they make [human-friendly explanations](#explanation).
+That's why I see LIME more in applications where the recipient of the explanation is a lay person or someone with very little time.
+It is not sufficient for complete causal attributions, so I don't see LIME in compliance scenarios where you might be legally required to fully explain a prediction.
+Also for debugging machine learning models, it is useful to have all the reasons instead of a few.
 - LIME is one of the few methods that works for tabular data, texts and images.
-- The fidelity measure (how well the interpretable model approximates the black box predictions) gives us a good idea how reliable the interpretable model is in explaining the black box predictions in the neighbourhood of the data instance of interest.
-- LIME is implemented in [Python](https://github.com/marcotcr/lime) and [R](https://cran.r-project.org/web/packages/lime/index.html) and very easy to use.
+- The fidelity measure (how well the interpretable model approximates the black box predictions) gives us a good idea of how reliable the interpretable model is in explaining the black box predictions in the neighbourhood of the data instance of interest.
+- LIME is implemented in [Python](https://github.com/marcotcr/lime) and R ([lime package](https://cran.r-project.org/web/packages/lime/index.html) and [iml package](https://cran.r-project.org/web/packages/iml/index.html)) and is very easy to use.
 - The explanations created with local surrogate models can use other features than the original model. 
-This can be a big advantage over other methods, especially when the original features are not that interpretable. 
-A text classifier might rely on some abstract word embeddings as features, but the explanation might use the presence or absence of words in a sentence.
-A regression model might rely on non-interpretable transformation of some attributes, but the explanations can be built with the original attributes.
+This can be a big advantage over other methods, especially if the original features cannot bet interpreted. 
+A text classifier can rely on abstract word embeddings as features, but the explanation can use the presence or absence of words in a sentence.
+A regression model can rely on non-interpretable transformation of some attributes, but the explanations can be created with the original attributes.
 
 
 ### Disadvantages
-- Correctly defining the neighbourhood is a very big, unsolved issue when using LIME with tabular data.
-IMHO it is the biggest issue that LIME has and why I would only advise to use it with great care.
-For every application you have to try out different kernel setting and see for yourself if it makes sense.
-Unfortunately that's the best advice I can give for finding good kernel widths.
-Also think about if it makes sense for all features to be measured with the same length.
+- The correct definition of the neighbourhood is a very big, unsolved problem when using LIME with tabular data.
+IMHO it is the biggest problem with LIME and why I would only advise to use it with great care.
+For each application you have to try out different kernel settings and see for yourself if it makes sense.
+Unfortunately, that's the best advice I can give to find good kernel widths.
 - Sampling could be improved in the current implementation of LIME. 
-Data point are sampled from a Gaussian distribution, ignoring the correlation between features.
-This might lead to unlikely data points that are then used for learning local explanation models.
+Data point are sampled from a Gaussian distribution, ignoring the correlation between the features.
+This can lead to unlikely data points which are then used to learn local explanation models.
 - The complexity of the explanation model has to be defined in advance.
-That's just a small complaint, because in the end, I see no way around the user having to define the tradeoff between fidelity and sparsity.
-- When you fit a linear regression model as surrogate, the current LIME implementation shows the weights.
-This can be misleading, since a negative weight might imply that the feature has a negative effect.
-But when the actual feature value of the instance is also negative, then the effect was positive on the prediction.
-- Another, really big issue: Instability of the explanations.
+That's just a small complaint, because in the end I see no way around the user having to define the tradeoff between fidelity and sparsity.
+- Another, really big issue is the instability of the explanations.
 In one paper [^limerobustness] the authors showed that the explanations of two very close points in a simulated setting varied strongly.
-Also in my experience, when you repeat the sampling process, then the explantions that come out can be different.
-Instability means that it's hard to trust the explanations and you should be very critical.
+Also, in my experience, if you repeat the sampling process, then the explantions that come out can be different.
+Instability means that it's hard to trust the explanations, and you should be very critical.
 
-Conclusion: Local surrogate models, with LIME as a concrete implementation, are a very interesting idea. 
-But the method is still in development phase and many problems need to be solved before it can be applied with confidence.
+Conclusion: Local surrogate models, with LIME as a concrete implementation, are very promising. 
+But the method is still in development phase and many problems need to be solved before it can be safely applied.
 
 [^Ribeiro2016lime]: Ribeiro, M.T., Singh, S. and Guestrin, C., 2016, August. Why should i trust you?: Explaining the predictions of any classifier. In Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (pp. 1135-1144). ACM.
 
