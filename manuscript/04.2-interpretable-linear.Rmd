@@ -3,11 +3,11 @@ devtools::load_all()
 set.seed(42)
 ```
 
-## Linear Model {#limo}
+## Linear Regression Model {#limo}
 
-Linear models have been used for a long time by statisticians, computer scientists, and other people tackling quantitative problems.
-Linear models learn linear (and therefore monotonic) relationships between the features and the target.
+A linear regression model predicts the target as a weighted sum of the feature inputs.
 The linearity of the learned relationship makes the interpretation easy.
+Linear regression models have been used for a long time by statisticians, computer scientists, and other people tackling quantitative problems.
 
 
 Linear models can be used to model the dependency of a regression target $y$ on $p$ features $x$.
@@ -93,13 +93,26 @@ where $p$ is the number of features and $n$ the number of instances.
 It isn't helpful to do interpretation on a model with very low $R^2$ or $\bar{R}^2$, because basically the model is not explaining much of the variance, so any interpretation of the weights are not meaningful.
 
 
+**Feature Importance**
+
+The importance of a feature in a linear regression model can be measured by the absolute value of its t-statistic.
+The t-statistic is the estimated weight scaled with it's standard error.
+
+$$t_{\hat{\beta}}=\frac{\hat{\beta}}{SE(\hat{\beta})}$$
+
+The importance of a feature increases as its weight increases.
+This makes sense.
+The more variance the estimated weight has (= the less certain we are about the correct value), the less important the feature is.
+This also makes sense.
+
 ### Interpretation Example
 In this example we use the linear model to predict the [number of rented bikes](#bike-data) on a day, given weather and calendrical information.
 For the interpretation we examine the estimated regression weights.
 The features are a mix of numerical and categorical features.
-The table shows for each feature the estimated weight and the standard error of the estimation:
+The table shows for each feature the estimated weight, the standard error of the estimation and the absolute value of the t-statistic (feature importance).
 
 ```{r linear_model}
+
 data(bike)
 X = bike[bike.features.of.interest]
 y = bike[,'cnt']
@@ -109,9 +122,10 @@ mod = lm(y ~ ., data = dat, x = TRUE)
 lm_summary = summary(mod)$coefficients
 
 lm_summary_print = lm_summary
+lm_summary_print[,'t value'] = abs(lm_summary_print[,'t value'])
 rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 
-kable(lm_summary_print[,c('Estimate', 'Std. Error')], digits = 1, col.names = c('Weight estimate', 'Std. Error'))
+kable(lm_summary_print[,c('Estimate', 'Std. Error', 't value')], digits = 1, col.names = c('Weight estimate', 'Std. Error', "abs(t)"))
 ```
 
 Interpretation of a numerical feature ('Temperature'):
@@ -295,7 +309,7 @@ Since the L1-norm is used, many of the weights for the features will get an esti
 The parameter $\lambda$ controls the strength of the regularising effect and is usually tuned by doing cross-validation.
 Especially when $\lambda$ is large, many weights become 0.
 
-#### Other Methods for Sparsity in Linear Models
+**Other Methods for Sparsity in Linear Models**
 A big spectrum of methods can be used to reduce the number of features in a linear model.
 
 Methods that include a pre-processing step:
