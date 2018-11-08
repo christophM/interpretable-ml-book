@@ -309,6 +309,48 @@ Since the L1-norm is used, many of the weights for the features will get an esti
 The parameter $\lambda$ controls the strength of the regularising effect and is usually tuned by doing cross-validation.
 Especially when $\lambda$ is large, many weights become 0.
 
+The feature weights as a function of the penalty term lambda can be visualized as a curve per feature weight as shown in the following figure.
+
+```{r linear_model_lasso_path, fig.cap="With increasing penalty of the weights, fewer and fewer features receive a non-zero weight estimate. These curves are also called regularization paths."}
+library("glmnet")
+X.d = model.matrix(y ~ . -1, data = X)
+l.mod = glmnet(X.d, y)
+plot(l.mod,  xvar = "lambda")
+```
+
+What value should we choose for $\lambda$?
+If you see the regularization parameter as a tuning parameter, then you can use cross-validation to find the optimal  $\lambda$ that minimizes the model error.
+You can also consider $\lambda$ as a parameter to adjust model interpretability.
+The higher the parameter, the fewer features are in the model (because their weight is zero) and the better the model can be interpreted.
+
+**Example with LASSO**
+
+We will predict bike rentals with LASSO. 
+We determine the number of features we want to have in the L1 regularized model.
+
+Let's first set the number to 2 features:
+
+```{r lasso_effects}
+extract.glmnet.effects = function(betas, best.index) {
+  data.frame(beta = betas[, best.index])
+}
+n.features = apply(l.mod$beta, 2, function(x){sum(x!=0)})
+kable(extract.glmnet.effects(l.mod$beta, max(which(n.features == 2))), col.names = "Weight")
+```
+The first two features with non-zero weights in the lasso path are temperature ("temp") and the time trend ("days_since_2011").
+
+Now, let's select 5 features:
+
+```{r lasso_effects2}
+kable(extract.glmnet.effects(l.mod$beta, max(which(n.features == 5))), col.names = "Weight")
+```
+
+Note that the weights for "temp" and "days_since_2011" differ from the model with two features.
+The reason for this is that by decreasing $\lambda$ even features that are already "in" the model are less penalized and possibly get a larger absolute weight.
+The interpretation of the LASSO weights corresponds to the interpretation of weights in the linear regression model.
+You only have to be careful whether the features are standardized or not, because this affects the weights.
+In this example, the features were standardized by the software, but the weights were automatically re-transformed to match the original feature scales.
+
 **Other Methods for Sparsity in Linear Models**
 A big spectrum of methods can be used to reduce the number of features in a linear model.
 
@@ -319,8 +361,8 @@ Methods that include a pre-processing step:
 
 Step-wise procedures:
 
-- Forward selection: Fit the linear model with one feature. Do that with each feature. Choose the model that works best (for example decided by the highest R squared). Now again, for the remaining features, fit different versions of your model by adding each feature to your chosen model. Pick the one that performs best. Continue until some criterium is reached, like the maximum number of features in the model.
-- Backward selection: Same as forward selection, but instead of adding features, start with the model that includes all features and try out which feature you have to remove  to get the highest performance increase. Repeat until some stopping criterium is reached.
+- Forward selection: Fit the linear model with one feature. Do that with each feature. Choose the model that works best (for example decided by the highest R squared). Now again, for the remaining features, fit different versions of your model by adding each feature to your chosen model. Pick the one that performs best. Continue until some criterion is reached, like the maximum number of features in the model.
+- Backward selection: Same as forward selection, but instead of adding features, start with the model that includes all features and try out which feature you have to remove  to get the highest performance increase. Repeat until some stopping criterion is reached.
 
 I recommend using Lasso, because it can be automated, looks at all features at the same time and can be controlled via $\lambda$.
 It also works for the [logistic regression model](#logistic) for classification.
