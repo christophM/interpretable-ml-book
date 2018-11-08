@@ -59,6 +59,7 @@ All notable changes to the book will be documented here.
 ### v0.7 (IN PROGRESS)
 - Renames Definitions chapter to Terminology
 - Adds mathematical notation to Terminology (former Definitions) chapter
+- Adds LASSO example
 
 ### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots
