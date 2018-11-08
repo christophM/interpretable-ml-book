@@ -65,6 +65,17 @@ The interpretation of a weight in the linear model depends on the type of the co
 - Categorical feature with multiple levels: A feature with a fixed amount of possible values. An example is the feature "Flooring type", with possible levels "carpet", "laminate" and "parquet". One solution to deal with many levels is to one-hot-encode them, meaning each level gets its own binary column. From a categorical feature with $l$ levels, you only need $l-1$ columns, otherwise the coding is   overparameterised. The interpretation for each level is then according to the binary features. Some languages, like R, allow you to code categorical features in different ways, [described here](#cat-code).
 - Intercept $\beta_{0}$: The intercept is the feature weight for the constant feature, which is always 1 for all instances. Most software packages automatically add this feature for estimating the intercept. The interpretation is: Given all numerical features are zero and the categorical features are at the reference level, the estimated outcome of $y_{i}$ is $\beta_{0}$. The interpretation of $\beta_{0}$ is usually not relevant, because instances with all features at zero often don't make any sense, unless the features were standardised (mean of zero, standard deviation of one), where the intercept $\beta_0$ reflects the predicted outcome of an instance where all features are at their mean.
 
+The interpretation of the features in the linear model can be automated by using following text templates.
+
+**Interpretation of a Numerical Feature**
+
+An increase of $x_{k}$ by one unit increases the expectation for $y$ by $\beta_k$ units, given all other features stay the same.
+
+**Interpretation of a Categorical Feature**
+
+A change from $x_{k}$'s reference level to the other category increases the expectation for $y$ by $\beta_{k}$, given all other features stay the same.
+
+
 
 Another important measurement for interpreting linear models is the $R^2$ measurement.
 $R^2$ tells you how much of the total variance of your target outcome is explained by the model.
@@ -86,7 +97,7 @@ There is a catch, because $R^2$ increases with the number of features in the mod
 So it is better to use the adjusted R-squared ($\bar{R}^2$), which accounts for the number of features used in the model.
 Its calculation is 
 
-$$\bar{R}^2=R^2-(1-R^2)\frac{p}{n-p-1}$$, 
+$$\bar{R}^2=R^2-(1-R^2)\frac{p}{n-p-1}$$
 
 where $p$ is the number of features and $n$ the number of instances.
 
@@ -105,7 +116,7 @@ This makes sense.
 The more variance the estimated weight has (= the less certain we are about the correct value), the less important the feature is.
 This also makes sense.
 
-### Interpretation Example
+###  Example
 In this example we use the linear model to predict the [number of rented bikes](#bike-data) on a day, given weather and calendrical information.
 For the interpretation we examine the estimated regression weights.
 The features are a mix of numerical and categorical features.
@@ -145,19 +156,8 @@ If you think of the features as knobs that you can turn up or down, it is nice t
 On the bad side of things, the interpretation ignores the joint distribution with other features.
 Increasing one feature, but not changing others, might create unrealistic, or at least unlikely, data points.
 
-### Interpretation Templates
-The interpretation of the features in the linear model can be automated by using following text templates.
 
-**Interpretation of a Numerical Feature**
-
-An increase of $x_{k}$ by one unit increases the expectation for $y$ by $\beta_k$ units, given all other features stay the same.
-
-**Interpretation of a Categorical Feature**
-
-A change from $x_{k}$'s reference level to the other category increases the expectation for $y$ by $\beta_{k}$, given all other features stay the same.
-
-
-### Visual Parameter Interpretation
+### Visual Interpretation
 Different visualisations make the linear model outcomes easy and quick to grasp for humans.
 
 #### Weight Plot
@@ -255,22 +255,9 @@ Feature matrix: $$\begin{pmatrix}1&0&0\\1&0&0\\0&1&0\\0&1&0\\0&0&1\\0&0&1\\\end{
 If you want to dive a bit deeper into different encodings of categorical features, checkout [this webpage](http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/) and
 [this blog post](http://heidiseibold.github.io/page7/).
 
-### The disadvantages of linear models
-Linear models can only represent linear relationships.
-Each **non-linearity or interaction has to be hand-crafted** and explicitly given to the model as an input feature.
-
-Linear models are also often **not that good regarding predictive performance**, because the relationships that can be learned are so restricted and usually oversimplifies how complex reality is.
-
-The interpretation of a weight **can be unintuitive** because it depends on all other features.
-A feature with high positive correlation with the outcome $y$ and another feature might get a negative weight in the linear model, because, given the other correlated feature, it is negatively correlated with $y$ in the high-dimensional space.
-Completely correlated features make it even impossible to find a unique solution for the linear equation.
-An example:
-You have a model to predict the value of a house and have features like number of rooms and area of the house.
-House area and number of rooms are highly correlated: the bigger a house is, the more rooms it has. If you now take both features into a linear model, it might happen, that the area of the house is the better predictor and get's a large positive weight.
-The number of rooms might end up getting a negative weight, because either, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
 
 ### Do Linear Models Create Good Explanations?
-Judging by the attributes that constitute a good explanation as [presented in this section](#good-explanation), linear models don't create the best explanations.
+Judging by the attributes that constitute a good explanation as presented [in the Human-friendly Explanations chapter](#good-explanation), linear models don't create the best explanations.
 They are contrastive, but the reference instance is a data point for which all continuous features are zero and the categorical features at their reference levels.
 This is usually an artificial, meaningless instance, which is unlikely to occur in your dataset.
 There is an exception:
@@ -369,3 +356,44 @@ Step-wise procedures:
 
 I recommend using Lasso, because it can be automated, looks at all features at the same time and can be controlled via $\lambda$.
 It also works for the [logistic regression model](#logistic) for classification.
+
+
+
+
+### Advantages
+
+The modeling of the predictions as a **weighted sum** makes it transparent how predictions are produced.
+And with LASSO we can ensure that the number of summands remains small.
+
+Many people use linear regression models.
+This means that in many places it's **accepted** for predictive modeling and doing inference.
+There is a **high level of collective experience and expertise**, including teaching materials on linear regression models and   software implementations.
+Linear regression can be found in R, Python, Java, Julia, Scala, Javascript, ...
+
+Mathematically, it's straightforward to estimate the weights and you have a **guarantee to find optimal weights** (given all assumptions of the linear regression model are met by the data).
+
+Together with the weights you get confidence intervals, tests, a very solid statistical theory. 
+There are also many extensions of the linear regression model (see [chapter Linear Model 2.0 - GLMs, GAMs and more](#extend-lm)).
+
+
+### Disadvantages
+
+Linear models can only represent linear relationships, i.e. a weighted sum of the input features.
+Each **non-linearity or interaction has to be hand-crafted** and explicitly given to the model as an input feature.
+
+Linear models are also often **not that good regarding predictive performance**, because the relationships that can be learned are so restricted and usually oversimplifies how complex reality is.
+
+The interpretation of a weight **can be unintuitive** because it depends on all other features.
+A feature with high positive correlation with the outcome $y$ and another feature might get a negative weight in the linear model, because, given the other correlated feature, it is negatively correlated with $y$ in the high-dimensional space.
+Completely correlated features make it even impossible to find a unique solution for the linear equation.
+An example:
+You have a model to predict the value of a house and have features like number of rooms and area of the house.
+House area and number of rooms are highly correlated: the bigger a house is, the more rooms it has. If you now take both features into a linear model, it might happen, that the area of the house is the better predictor and get's a large positive weight.
+The number of rooms might end up getting a negative weight, because either, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
+
+
+
+
+
+
+
