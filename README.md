@@ -61,6 +61,9 @@ All notable changes to the book will be documented here.
 - Added mathematical notation to Terminology (former Definitions) chapter
 - Added LASSO example
 - Restructured lm chapter and added pros/cons
+- Renamed "Criteria of Interpretability Methods" to "Taxonomy of Interpretability Methods"
+
+
 
 ### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots
