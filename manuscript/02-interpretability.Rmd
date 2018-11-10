@@ -302,76 +302,90 @@ This makes experiments less expensive (especially when the domain experts are ra
 An example would be to show a user different explanations and the human would choose the best.
 
 **Function level evaluation (proxy task)** does not require any humans.
-This works best when the class of models used was already evaluated by someone else in a human level evaluation. For example it might be known that the end users understand decision trees.
+This works best when the class of models used was already evaluated by someone else in a human level evaluation. 
+For example it might be known that the end users understand decision trees.
 In this case, a proxy for explanation quality might be the depth of the tree.
 Shorter trees would get a better explainability rating.
 It would make sense to add the constraint that the predictive performance of the tree remains good and does not drop too much compared to a larger tree.
 
+The next chapter focuses on function level evaluation of explanations for individual predictions.
+What are the relevant properties of explanations that we would consider for their evaluation?
 
-## More on Function Level Evaluation: Properties of explanations
+## Properties of explanations {#properties}
 
-In this chapter we take a closer look at properties of explanations for individual predictions and properties of the methods that produce them (Robnik-Sikonja, Marko, and Marko Bohanec, 2018 [^human-ml]).
+We want to explain the predictions of a machine learning model.
+To achieve this, we rely on an explanation method that is the algorithm that generates explanations.
+An explanation usually relates the feature values of an instance to its model prediction in a humanly understandable way.
+Other types of explanations consist of a set of data instances (e.g in the case of the k-nearest neighbour model).
+For example, we could predict cancer risk using a support vector machine and explain predictions using the [local surrogate model method](#lime), which generates decision trees as explanations.
+Or we could use a linear regression model instead of a support vector machine.
+The linear regression model is already equipped with an explanation method (interpretation of the parameters in the weighted sum).
 
-**Properties of explanation methods (methods that produce explanations)**
+We take a closer look at the properties of explanation methods and explanations (Robnik-Sikonja, Marko, and Marko Bohanec, 2018 [^human-ml]).
+These properties can be used to judge how good an explanation (method) is.
+It's not clear for all these properties how to measure them correctly, so one of the challenges is to formalize how they could be calculated.
 
-- **Expressive Power** is the "language" or structure of the explanations the method produces.
-This can be IF-THEN rules, decision trees, a weighted sum (e.g. linear regression model), natural language, etc.
-- **Translucency** describes how much the explanation method relies on looking inside the machine learning model.
-Model-agnostic have a low translucency, model-specific methods have a very high translucency.
-Depending on the scenario, different translucency might be desirable.
-The advantage of high translucency is that the method has more information to produce explanations.
+
+**Properties of Explanation Methods**
+
+- **Expressive Power** is the "language" or structure of the explanations the method generates.
+The language could be IF-THEN rules, decision trees, a weighted sum, natural language, etc..
+- **Translucency** describes how much the explanation method relies on looking into the machine learning model, like its parameters.
+For example, explanation methods relying on intrinsically interpretable models like the linear regression model (model-specific) are highly translucent.
+Methods only relying on manipulating inputs and observing the predictions have zero translucency.
+Depending on the scenario, different levels of translucency might be desirable.
+The advantage of high translucency is that the method can rely on more information to generate explanations.
 The advantage of low translucency is that the explanation is more portable.
-- **Portability** describes how big the range of models is that the method covers.
-As such it is related to translucency. 
-Methods with a low translucency (i.e. they treat the model as black box) have a higher portability.
-For example [local-surrogate models](#lime) have one of the highest portability.
-Methods that only work for e.g. Recurrent Neural Networks have a low portability.
-- **Algorithmic Complexity** describes the computational complexity of the algorithm that produces the explanation.
-This property is important to look at when the computation time for producing explanations is an important factor.
+- **Portability** describes the range of machine learning models which which the explanation method can be used.
+Methods with a low translucency have a higher portability because they treat the machine learning model like a black box.
+[Local-surrogate models](#lime) might be the explanation method with the hightes portability.
+Methods that only work for e.g. Recurrent Neural Networks have low portability.
+- **Algorithmic Complexity** describes the computational complexity of the algorithm that generates the explanation.
+This property is important to consider when computating time is an important factor in generating explanations.
 
-**Properties of explanations (of individual predictions)**
+**Properties of Explanations**
 
-- **Accuracy**: How well does the explanations predict unseen data?
-High accuracy is especially important when the explanation might be used for making predictions in place of the black box model. 
-A low accuracy can be ok when the accuracy of the black box model is low as well, and when the goal is to explain what the black box model does.
-In that case, fidelity matters more.
-- **Fidelity**: How well does the explanation approximate the predictions of the black box model?
-High fidelity is one of the most important properties of an explanation, because with a low fidelity, the explanation is useless in explaining the machine learning model.
-Accuracy and fidelity are closely related.
-When the black box model has a high accuracy and the explanation a high fidelity, the explanation will also have high accuracy.
-Some explanations only offer local fidelity, meaning that the explanation only approximates the model prediction well for a subset of the data (e.g. [local surrogate models](#lime)) or even for only a data instance (e.g. [Shapley Values](#shapley)).
-- **Consistency**: How much do explanations vary across models trained on the same task with similar predictions?
-For example, I train an SVM and a decision tree for predicting the same task which produce very similar predictions.
-I compute explanations and analyse how different they are.
-If the explanations are very similar, the method for creating explanations has a high consistency.
-On that account, model-agnostic methods should, in theory, have a higher consistency then model-specific methods (= with higher translucency).
-I find this property a bit tricky, because the two models might e.g. use different features, but get similar predictions (also called ["Rashomon Effect"](https://en.wikipedia.org/wiki/Rashomon_effect)). 
-In this case, a high consistency is not desirable because IMHO the explanations have to be very different.
-High consistency is desirable when the models truly rely on similar relationships.
-- **Stability**: How similar are explanations for similar instances?
-While consistency compares explanations across models, stability compares explanations for only one model.
-High stability means that slight variations of the features of an instance doesn't change the explanation much (unless these slight variations also change the prediction a lot).
-A lack of stability can be the result of high variance of the explanation method, i.e. the explanation method is strongly affected by slight changes of the predictions or the features of the instance to be explained.
-A lack of stability can also come from random elements of the explanation method, like a data sampling step, like [local surrogate models](#lime) have.
+- **Accuracy**: How well does an explanation predict unseen data?
+High accuracy is especially important if the explanation is used for predictions in place of the machine learning model. 
+Low accuracy can be fine if the accuracy of the machine learning model is also low, and if the goal is to explain what the black box model does.
+In this case, only fidelity is important.
+- **Fidelity**: How well does the explanation approximate the prediction of the black box model?
+High fidelity is one of the most important properties of an explanation, because with low fidelity the explanation is useless to explain the machine learning model.
+Accuracy and fidelity are closely linked.
+If the black box model has high accuracy and the explanation has high fidelity, the explanation also has high accuracy.
+Some explanations offer only local fidelity, meaning the explanation only approximates well to the model prediction for a subset of the data (e.g. [local surrogate models](#lime)) or even for only an individual data instance (e.g. [Shapley Values](#shapley)).
+- **Consistency**: How much does an explanation differ between models that have been trained on the same task and that produce similar predictions?
+For example, I train an SVM and a linear regression model on the same task and both produce very similar predictions.
+I compute explanations using a method of my choice and analyse how different the explanations are.
+If the explanations are very similar, the explanation method has high consistency.
+I find this property somewhat tricky, since the two models could use different features, but get similar predictions (also called ["Rashomon Effect"](https://en.wikipedia.org/wiki/Rashomon_effect)). 
+In this case a high consistency is not desirable because the explanations have to be very different.
+High consistency is desirable if the models really rely on similar relationships.
+- **Stability**: How similar are the explanations for similar instances?
+While consistency compares explanations between models, stability compares explanations between similar instance for a fixed model.
+High stability means that slight variations in the features of an instance don't substantially change the explanation (unless these slight variations also strongly change the prediction).
+A lack of stability can be the result of a high variance of the explanation method, i.e. the explanation method is strongly affected by slight changes of the feature values of the instance to be explained.
+A lack of stability can also be caused by non-deterministic components of the explanation method, such as a data sampling step, like  the [local surrogate models method](#lime) has.
 High stability is always desirable.
 - **Comprehensibility**: How well do humans understand the explanations?
-This look just like one more property among many, but it's one of the most important and certainly the most undefined.
-And it certainly is difficult to measure.
+This look just like one more property among many, but it's the elephant in the room. 
+Difficult to define and measure, but extremely important to get right.
 Many people agree that comprehensibility depends on the audience.
-Ideas to measure comprehensibility include measuring the size of the explanation (number of features with non-zero weights in a linear model, number of decision rules, ...) or testing how well humans can predict the behaviour of the black box model based on the explanations.
-Also the comprehensibility of the features used in the explanation should be considered, e.g. complex transformation of features might be less comprehensible than the original features.
-- **Certainty**: Are the explanations reflecting the certainty of the machine learning model?
-Most prediction models only output predictions without a statement of confidence or certainty.
-When the model predicts a 40% chance of cancer for one patient, is it with the same confidence as the 40% another patient got?
-An explanation that reports that certainty is highly useful.
-- **Degree of Importance**: How well does the explanation reflect the importance for features or parts of the explanation?
-For example, when a decision rule is produced as an explanation for an individual prediction, is it clear which of the conditions of the rule was the most important one?
-- **Novelty**: Does the explanation reflect whether a data instance to be explained comes from a "new" region, one that is far away from the distribution of the training data?
-For such instances, the model might be inaccurate and, as a consequence, the explanation would be useless.
+Ideas for measuring comprehensibility include measuring the size of the explanation (number of features with a non-zero weights in a linear model, number of decision rules, ...) or testing how well people can predict the behaviour of the black box model from the explanations.
+The comprehensibility of the features used in the explanation should also be considered.
+A complex transformation of features might be less comprehensible than the original features.
+- **Certainty**: Does the explanation reflect the certainty of the machine learning model?
+Many machine learning models only give predictions without a statement about the model's confidence that the prediction is correct.
+If the model predicts a 4% probability of cancer for one patient, is it as certain as the 4% probability that another patient, with different attributes, received?
+An explanation that includes the model's certainty is very useful.
+- **Degree of Importance**: How well does the explanation reflect the importance of features or parts of the explanation?
+For example, if a decision rule is generated as an explanation for an individual prediction, is it clear which of the conditions of the rule was the most important?
+- **Novelty**: Does the explanation reflect whether a data instance to be explained comes from a "new" region far removed from the distribution of training data?
+In such cases, the model may be inaccurate and the explanation may be useless.
 The concept of novelty is related to the concept of certainty.
-The higher the novelty, the more likely it is that the model has a low certainty, because of a lack of data.
-- **Representativeness**: How representative is an explanation of the model?
-Explanations might cover the whole model (e.g. interpretation of weights in a linear regression model) or the might only represent an individual predictions (e.g. with the [Shapley value, an attribution method based on game theory](#shapley)).
+The higher the novelty, the more likely it is that the model will have low certainty due to lack of data.
+- **Representativeness**: How many instances does an explanation cover?
+Explanations can cover the entier model (e.g. interpretation of weights in a linear regression model) or represent only an individual predictions (e.g. with the [Shapley value, a game theoretical attribution method](#shapley)).
 
 
 
