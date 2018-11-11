@@ -62,7 +62,7 @@ All notable changes to the book will be documented here.
 - Added LASSO example
 - Restructured lm chapter and added pros/cons
 - Renamed "Criteria of Interpretability Methods" to "Taxonomy of Interpretability Methods"
-
+- Added advantages and disadvantages of logistic regression
 
 
 ### v0.6 (2018-11-02)
