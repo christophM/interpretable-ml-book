@@ -66,7 +66,7 @@ All notable changes to the book will be documented here.
 - Adds list of references at the end of book
 - Adds images to the short stories
 - Add drawback of shapley value: feature have to be independent
-
+- Adds tree decomposition and feature importance to tree chapter
 
 ### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots

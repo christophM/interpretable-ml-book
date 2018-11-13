@@ -53,8 +53,28 @@ All the edges are connected by 'AND'.
 
 Template: If feature x is [smaller/bigger] than threshold c AND ..., then the predicted outcome is $\hat{y}_{\text{leafnode}}$.
 
+**Feature Importance**
 
-### Interpretation Example
+The overall importance of a feature in a decision tree can be computed by going through all the splits for which the feature was used and adding up how much it has improved the predictions in the child nodes compared to the parent node (e.g. measured as decrease of Gini index).
+The sum of all importances is scaled to 100, so that the interpretation for each feature importance is percentage of the overall importance.
+
+**Tree Decomposition**
+
+Individual predictions of a decision tree can be explained by decomposing the decision path and breaking it down per feature.
+Similar to linear regression models, we can look at the contribution of each feature value to the prediction of an individual data instance, starting from the average prediction.
+
+The root node in a decision tree is our starting point.
+If we were to use the root node to make predictions, it would predict the mean of the outcome of the training data.
+With the next split, we either subtract or add some term to this average, depening on which child node we go to.
+We can track a decision through the tree and explain a prediction by the contributions  added at each decision node.
+
+
+$$\hat{f}(x^{(i)})=\bar{y}+\sum_{d=1}^D\text{split contrib(d,x)}=\bar{y}+\sum_{j=1}^p\text{feat contrib(j,x)}$$
+The prediction of an individual instance is the mean of the target outcome plus the sum of all contributions of the splits happening between the root node and the terminal node the instance ends up in.
+But we are not interested in the split contributions, but the feature contributions, and a feature might be used for more than one split or for none at all.
+We can add up the contributions for each of the p features and get an interpretation of how much each feature contributed to a prediction.
+
+### Example
 Let's have a look again at the [bike rental data](#bike-data).
 We want to predict the number of rented bikes on a given day. The learned tree visualized:
 
@@ -74,6 +94,18 @@ plot(xp, digits = 0, id = FALSE, terminal_node = node_boxplot)
 The first split and one of the second splits was done in the trend feature, which tells how many days passed since beginning of the data collection and covers the trend that the bike rental service became more popular over time.
 For days that came before the 105th day the predicted number of bikes is ca. 1800, between the 106th and 430th day it is around 3900.
 For days after the 430th day, depending on the temperature, the prediction is either 4600 (if below 12 degrees) or 6600 (if above 12 degrees).
+
+The importance of the features is computed as percentages of purity improvement.
+
+```{r tree-importance}
+imp = round(100 * x$variable.importance / sum(x$variable.importance),0)
+imp.df = data.frame(feature = names(imp), importance = imp)
+imp.df$feature = factor(imp.df$feature, levels = as.character(imp.df$feature)[order(imp.df$importance)])
+ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) + 
+  scale_y_discrete("")
+```
+
+While the visualized tree shows that both temperature and time trend are used for splits, the feature importance shows that the time trend is far more important than temperature.
 
 ### Advantages
 The tree structure is perfectly suited to **cover interactions** between features in the data.
@@ -112,3 +144,14 @@ Trees are also quite **unstable**, so a few changes in the training dataset migh
 That's because each split depends on the parent split.
 And if a different feature gets selected as the first split feature, the whole tree structure will change.
 It does not generate confidence in the model if the structure flips so easily.
+
+Decision trees are very interpretable - as long as they are short.
+**The number of terminal nodes increases quickly with increasing depth.**
+The more terminal nodes, the more difficult it becomes to understand the decision rules of a tree.
+A depth of 1 means 2 terminal nodes.
+Depth of 2 means max. 4 nodes. 
+Depth of 3 means max. 8 nodes.
+The maximum number of terminal nodes in a tree is 2 to the power of its depth.
+
+
+
