@@ -64,6 +64,8 @@ All notable changes to the book will be documented here.
 - Renamed "Criteria of Interpretability Methods" to "Taxonomy of Interpretability Methods"
 - Added advantages and disadvantages of logistic regression
 - Adds list of references at the end of book
+- Adds images to the short stories
+- Add drawback of shapley value: feature have to be independent
 
 
 ### v0.6 (2018-11-02)
