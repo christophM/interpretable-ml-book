@@ -63,10 +63,11 @@ All notable changes to the book will be documented here.
 - Restructured lm chapter and added pros/cons
 - Renamed "Criteria of Interpretability Methods" to "Taxonomy of Interpretability Methods"
 - Added advantages and disadvantages of logistic regression
-- Adds list of references at the end of book
-- Adds images to the short stories
-- Add drawback of shapley value: feature have to be independent
-- Adds tree decomposition and feature importance to tree chapter
+- Added list of references at the end of book
+- Added images to the short stories
+- Added drawback of shapley value: feature have to be independent
+- Added tree decomposition and feature importance to tree chapter
+- Improved explanation of individual prediction in lm
 
 ### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots
