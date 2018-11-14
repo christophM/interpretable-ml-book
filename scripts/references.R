@@ -39,7 +39,7 @@ reference_list = reference_list[order(reference_list$reference),]
 
 
 fileConn <-file(paste(path, out.file, sep = "/"))
-write_string = c("# References",
+write_string = c("# References {-}",
   "<!-- Generated automatically, please don't edit manually! -->")
 for(i in 1:nrow(reference_list)) {
   write_string = c(write_string, "", reference_list$reference[i])

@@ -15,7 +15,7 @@ leanpub : $(md.files)
 
 %.md : %.Rmd
 	Rscript  -e "knitr::knit('$<', envir = new.env())" 
-	R --no-save --args $@ < fixmath.R
+	R --no-save --args $@ < ../scripts/fix-leanpub.R
 
 
 pdf : interpretable-ml.pdf
