@@ -1,6 +1,7 @@
 library("data.table")
 library("readr")
-
+# load r packages so they are cited
+devtools::load_all()
 # relative project path to the .Rmd files
 path = "./"
 # name of the file where to write the references to
