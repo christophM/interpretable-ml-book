@@ -277,7 +277,7 @@ In the working day and temperature example, we would add a new feature that is z
 Suppose our data looks like this:
 
 ```{r data-frame}
-x = data.frame(workingday = c("Yes", "No", "No", "Yes"), temp = c(25, 12, 30, 5))
+x = data.frame(work = c("Y", "N", "N", "Y"), temp = c(25, 12, 30, 5))
 knitr::kable(x)
 ```
 
@@ -287,7 +287,9 @@ Normally, this transformation is performed automatically by any statistical soft
 
 ```{r data-frame-lm-no-interaction}
 mod = lm(1:4 ~ ., data = x)
-knitr::kable(data.frame(model.matrix(mod)))
+model.tab = data.frame(model.matrix(mod))
+colnames(model.tab)[1] = "Intercept"
+knitr::kable(model.tab)
 ```
 
 The first column is the intercept term.
@@ -297,12 +299,14 @@ The third column contains the temperature.
 If we want the linear model to consider the interaction between temperature and the workingday feature, we have to add a column for the interaction:
 
 ```{r data-frame-lm}
-mod = lm(1:4 ~ workingday * temp, data = x)
-knitr::kable(data.frame(model.matrix(mod)))
+mod = lm(1:4 ~ work * temp, data = x)
+model.tab = data.frame(model.matrix(mod))
+colnames(model.tab)[1] = "Intercept"
+knitr::kable(model.tab)
 ```
 
-The new column "workingdayYes.temp" captures the interaction between the features workingday and temperature.
-This new feature column is zero for an instance if the workingday feature is at the reference category ("No"), otherwise it assumes the value of the instances temperature feature.
+The new column "workY.temp" captures the interaction between the features working day (work) and temperature (temp).
+This new feature column is zero for an instance if the workingday feature is at the reference category ("N" for no working day), otherwise it assumes the value of the instances temperature feature.
 With this type of encoding, the linear model can learn a different linear effect of temperature for both types of days.
 This is the interaction effect between the two features.
 Without an interaction term, the combined effect of a categorical and a numerical feature can be described by a line that is vertically shifted for the different categories.
@@ -310,18 +314,20 @@ If we include the interaction, we allow the effect of the numerical features (th
 
 The interaction of two categorical features works similarly.
 We create additional features which represent combinations of categories. 
-So these artificial data: 
+So these artificial data containing working day (work) and a categorical weather feature (wthr): 
 
 ```{r data-frame-lm-cat}
-x = data.frame(workingday = c("Yes", "No", "No", "Yes"), weather = c("good", "bad", "ok", "good"))
+x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("Good", "Bad", "Ok", "Good"))
 knitr::kable(x)
 ```
 
 Becomes this: 
 
 ```{r data-frame-lm-cat2}
-mod = lm(1:4 ~ workingday * weather, data = x)
-knitr::kable(data.frame(model.matrix(mod)))
+mod = lm(1:4 ~ work * wthr, data = x)
+model.tab = data.frame(model.matrix(mod))
+colnames(model.tab)[1] = c("Intercept")
+knitr::kable(model.tab)
 ```
 
 The first column again serves to estimate the intercept.
