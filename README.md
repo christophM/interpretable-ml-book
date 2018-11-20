@@ -69,6 +69,7 @@ All notable changes to the book will be documented here.
 - Added tree decomposition and feature importance to tree chapter
 - Improved explanation of individual prediction in lm
 - Added "What's Wrong With my Dog" example to Adversarial Examples
+- Added links to data files and pre-processing R scripts
 
 ### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots
