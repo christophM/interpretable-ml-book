@@ -68,6 +68,7 @@ All notable changes to the book will be documented here.
 - Added drawback of shapley value: feature have to be independent
 - Added tree decomposition and feature importance to tree chapter
 - Improved explanation of individual prediction in lm
+- Added "What's Wrong With my Dog" example to Adversarial Examples
 
 ### v0.6 (2018-11-02)
 - Added chapter on accumulated local effects plots
