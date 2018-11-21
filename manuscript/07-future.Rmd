@@ -162,7 +162,7 @@ So why switch from analyzing assumption-based, transparent models to analyzing a
 Because making all these assumptions is problematic:
 They are usually wrong (unless you believe that most of the world follows a Gaussian distribution), difficult to check, very restricting for the relationships the model can represent and hard to automate.
 Assumption-based models typically have worse predictive performance on untouched test data than black box machine learning models.
-This is only true for big data sets, since interpretable models with good assumptions will perform better than black box models with many parameters.
+This is only true for big datasets, since interpretable models with good assumptions will perform better than black box models with many parameters.
 The black box machine learning approach needs a lot of data to work well.
 Because of the digitization of everything, we will have bigger and bigger datasets and therefore the approach of machine learning becomes more attractive: 
 We don't make assumptions, we approximate reality as closely as possible (while avoiding overfitting on the training data).
