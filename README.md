@@ -56,7 +56,7 @@ Stuff that both works for leanpub and for bookdown:
 All notable changes to the book will be documented here.
 
 
-### v0.7 (IN PROGRESS)
+### v0.7 (2018-11-21)
 - Renamed Definitions chapter to Terminology
 - Added mathematical notation to Terminology (former Definitions) chapter
 - Added LASSO example
