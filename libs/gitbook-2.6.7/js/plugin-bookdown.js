@@ -16,6 +16,18 @@ gitbook.require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
       }
     });
 
+    // add the History button (file history on Github)
+    var history = config.history;
+    if (history && history.link) gitbook.toolbar.createButton({
+      icon: 'fa fa-history',
+      label: history.text || 'History',
+      position: 'left',
+      onClick: function(e) {
+        e.preventDefault();
+        window.open(history.link);
+      }
+    });
+
     var down = config.download;
     var normalizeDownload = function() {
       if (!down || !(down instanceof Array) || down.length === 0) return;
