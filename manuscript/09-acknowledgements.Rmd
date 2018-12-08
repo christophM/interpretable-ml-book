@@ -19,7 +19,7 @@ I would like to thank all researchers who allowed me to use images from their pu
 In at least three aspects, the way I publish the book is unconventional.
 First, it's available both as a website and as an ebook/pdf.
 The software I used to build this book is called `bookdown`, written by [Yihui Xie](https://yihui.name/), who created many R packages that make it so easy to combine R code and text. Thanks a lot!
-Secondly, I self-publish the book on the platform [Leanpub](leanpub.com), instead of working with a traditional publisher.
+Secondly, I self-publish the book on the platform [Leanpub](https://leanpub.com/), instead of working with a traditional publisher.
 And third, I have published the book as in-progress book, which has helped me enormously to get feedback and to monetize it along the way.
 Many thanks to leanpub for making this possible and handling the fees fairly.
 I would also like to thank you, dear reader, for reading this book without having a big publisher name behind it.
