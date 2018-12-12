@@ -52,6 +52,8 @@ Stuff that both works for leanpub and for bookdown:
 - Leave empty lines between formulas and text (if formula not inline)
 - References have to be writen like this: `[^ref-tag]` and must be at the end of the respective file with `[^ref]: Details of the reference ...`. Make sure the space is included. References are collected in 10-reference.Rmd with the script references.R. Make sure not to use `[^ref-tag]: ` anywhere in the text, only at the bottom for the actual reference.
 
+Printing for  proofreading with extra line spacing: 
+Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line-height:1.7 to line-height:2.5, open local html with chrome, print to pdf with custom margin.
 ## Changelog
 All notable changes to the book will be documented here.
 
