@@ -25,7 +25,7 @@
 <meta name="author" content="Christoph Molnar">
 
 
-<meta name="date" content="2018-12-12">
+<meta name="date" content="2018-12-16">
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -318,18 +318,18 @@ window.cookieconsent.initialise({
 <h3><span class="header-section-number">5.5.1</span> The Theory</h3>
 <p>The concept is really straightforward: We measure a feature’s importance by calculating the increase of the model’s prediction error after permuting the feature. A feature is “important” if permuting its values increases the model error, because the model relied on the feature for the prediction. A feature is “unimportant” if permuting its values keeps the model error unchanged, because the model ignored the feature for the prediction. The permutation feature importance measurement was introduced for Random Forests by Breiman (2001)<a href="#fn32" class="footnoteRef" id="fnref32"><sup>32</sup></a>. Based on this idea, Fisher, Rudin, and Dominici (2018)<a href="#fn33" class="footnoteRef" id="fnref33"><sup>33</sup></a> proposed a model-agnostic version of the feature importance - they called it model reliance. They also introduce more advanced ideas about feature importance, for example a (model-specific) version that accounts for the fact that many prediction models may fit the data well. Their paper is worth a read.</p>
 <p><strong>The permutation feature importance algorithm based on Breiman (2001) and Fisher, Rudin, and Dominici (2018):</strong></p>
-<p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, feature matrix <span class="math inline">\(X\)</span>, target vector <span class="math inline">\(Y\)</span>, error measure <span class="math inline">\(L(Y,\hat{Y})\)</span></p>
+<p>Input: Trained model <span class="math inline">\(\hat{f}\)</span>, feature matrix X, target vector y, error measure <span class="math inline">\(L(y,\hat{y})\)</span></p>
 <ol style="list-style-type: decimal">
-<li>Estimate the original model error <span class="math inline">\(e_{orig}(\hat{f})=L(Y,\hat{f}(X))\)</span> (e.g. mean squared error)</li>
+<li>Estimate the original model error <span class="math inline">\(e_{orig}(\hat{f})=L(y,\hat{f}(X))\)</span> (e.g. mean squared error)</li>
 <li>For each feature <span class="math inline">\(j\in1,\ldots,p\)</span> do
 <ul>
-<li>Generate feature matrix <span class="math inline">\(X_{perm_{j}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in <span class="math inline">\(X\)</span>. This breaks the association between <span class="math inline">\(X_j\)</span> and <span class="math inline">\(Y\)</span>.</li>
+<li>Generate feature matrix <span class="math inline">\(X_{perm_{j}}\)</span> by permuting feature <span class="math inline">\(X_j\)</span> in X. This breaks the association between <span class="math inline">\(X_j\)</span> and y.</li>
 <li>Estimate error <span class="math inline">\(e_{perm}=L(Y,\hat{f}(X_{perm_j}))\)</span> based on the predictions of the permuted data.</li>
 <li>Calculate permutation feature importance <span class="math inline">\(FI_j=e_{perm}(\hat{f})/e_{orig}(\hat{f})\)</span>. Alternatively, the difference can be used: <span class="math inline">\(FI_j=e_{perm}(\hat{f})-e_{orig}(\hat{f})\)</span></li>
 </ul></li>
-<li>Sort variables by descending <span class="math inline">\(FI\)</span>.</li>
+<li>Sort variables by descending FI.</li>
 </ol>
-<p>In their paper, Fisher, Rudin, and Dominici (2018) propose to split the dataset in half and exchange the <span class="math inline">\(X_j\)</span> values of the two halves instead of permuting <span class="math inline">\(X_j\)</span>. This is exactly the same as permuting the feature <span class="math inline">\(X_j\)</span> if you think about it. If you want to have a more accurate estimate, you can estimate the error of permuting <span class="math inline">\(X_j\)</span> by pairing each instance with the <span class="math inline">\(X_j\)</span> value of each other instance (except with itself). This gives you a dataset of size <span class="math inline">\(n(n-1)\)</span> to estimate the permutation error and it takes a big amount of computation time. I can only recommend using the <span class="math inline">\(n(n-1)\)</span> - method when you are serious about getting extremely accurate estimates.</p>
+<p>In their paper, Fisher, Rudin, and Dominici (2018) propose to split the dataset in half and exchange the <span class="math inline">\(X_j\)</span> values of the two halves instead of permuting <span class="math inline">\(X_j\)</span>. This is exactly the same as permuting the feature <span class="math inline">\(X_j\)</span> if you think about it. If you want to have a more accurate estimate, you can estimate the error of permuting <span class="math inline">\(X_j\)</span> by pairing each instance with the <span class="math inline">\(X_j\)</span> value of each other instance (except with itself). This gives you a dataset of size <code>n(n-1)</code>to estimate the permutation error and it takes a big amount of computation time. I can only recommend using the <code>n(n-1)</code> - method when you are serious about getting extremely accurate estimates.</p>
 </div>
 <div id="feature-importance-data" class="section level3">
 <h3><span class="header-section-number">5.5.2</span> Should I Compute Importance on Training or Test Data?</h3>
@@ -362,7 +362,7 @@ FIGURE 5.28: The partial dependence of feature X13, which is the most important 
 <h3><span class="header-section-number">5.5.3</span> Example and Interpretation</h3>
 <p>We show examples for classification and regression.</p>
 <p><strong>Cervical cancer (Classification)</strong></p>
-<p>We fit a random forest model to predict <a href="cervical.html#cervical">cervical cancer</a>. We measure the error increase by: <span class="math inline">\(1-AUC\)</span> (one minus the area under the ROC curve). Features that are associated model error increase by a factor of 1 (= no change) were not important for predicting cervical cancer.</p>
+<p>We fit a random forest model to predict <a href="cervical.html#cervical">cervical cancer</a>. We measure the error increase by: 1-AUC (one minus the area under the ROC curve). Features that are associated model error increase by a factor of 1 (= no change) were not important for predicting cervical cancer.</p>
 <div class="figure"><span id="fig:importance-cervical"></span>
 <img src="images/importance-cervical-1.png" alt="The importance for each of the features in predicting cervical cancer with a random forest. The importance is the factor by which the error is increased compared to the original model error." width="1050" />
 <p class="caption">
