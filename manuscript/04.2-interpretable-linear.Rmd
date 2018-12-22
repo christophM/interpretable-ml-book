@@ -100,56 +100,62 @@ The interpretation of the features in the linear regression model can be automat
 
 **Interpretation of a Numerical Feature**
 
-An increase of $x_{k}$ by one unit increases the expectation for y by $\beta_k$ units, given all other features stay the same.
+An increase of feature $x_{k}$ by one unit increases the expectation for y by $\beta_k$ units, given all other feature values remain fixed.
 
 **Interpretation of a Categorical Feature**
 
-A change from $x_{k}$'s reference level to the other category increases the expectation for y by $\beta_{k}$, given all other features stay the same.
+Changing feature $x_{k}$ from the reference level to the other category increases the expectation for y by $\beta_{k}$, given all other features remain fixed.
 
 Another important measurement for interpreting linear models is the R-squared measurement.
 R-squared tells you how much of the total variance of your target outcome is explained by the model.
-The higher R-squared the better your model explains the data.
-The formula to calculate R-squared is: $R^2=1-SSE/SST$, where SSE is the squared sum of the error terms:
+The higher R-squared, the better your model explains the data.
+The formula for calculating R-squared is: 
+
+$$R^2=1-SSE/SST$$
+
+SSE is the squared sum of the error terms:
 
 $$SSE=\sum_{i=1}^n(y_i-\hat{y}_i)^2$$ 
 
-and SST is the squared sum of the data variance:
+SST is the squared sum of the data variance:
 
 $$SST=\sum_{i=1}^n(y_i-\bar{y})^2$$
 
-The SSE tells you how much variance remains after fitting the linear model, which is measured by looking at the squared differences between the predicted and actual target values.
-SST is the total variance of the target around the mean.
-So R-squared tells you how much of your variance can be explained by the linear model.
-R-squared ranges between 0 for models that explain nothing and 1 for models that explain all of the variance in your data.
+The SSE tells you how much variance remains after fitting the linear model, which is measured by the squared differences between the predicted and actual target values.
+SST is the total variance of the target outcome.
+R-squared tells you how much of your variance can be explained by the linear model.
+R-squared ranges between 0 for models where the model doens't explain the data at all and 1 for models that explain all of the variance in your data.
 
-There is a catch, because R-squared increases with the number of features in the model, even if they carry no information about the target value at all.
-So it is better to use the adjusted R-squared ($\bar{R}^2$), which accounts for the number of features used in the model.
+There is a catch, because R-squared increases with the number of features in the model, even if they don't contain any information about the target value at all.
+Therefore, it is better to use the adjusted R-squared ($\bar{R}^2$), which accounts for the number of features used in the model.
 Its calculation is 
 
 $$\bar{R}^2=R^2-(1-R^2)\frac{p}{n-p-1}$$
 
 where p is the number of features and n the number of instances.
 
-It isn't helpful to do interpretation on a model with very low (adjusted) R-squared, because basically the model is not explaining much of the variance, so any interpretation of the weights are not meaningful.
+It isn't meaningful to interpret a model with very low (adjusted) R-squared, because the model basically does not explain much of the variance, so any interpretation of the weights are is meaningful.
 
 
 **Feature Importance**
 
 The importance of a feature in a linear regression model can be measured by the absolute value of its t-statistic.
-The t-statistic is the estimated weight scaled with it's standard error.
+The t-statistic is the estimated weight scaled with its standard error.
 
 $$t_{\hat{\beta}}=\frac{\hat{\beta}}{SE(\hat{\beta})}$$
 
-The importance of a feature increases as its weight increases.
+Let's examine what this formula tells us:
+The importance of a feature increases with increasing weight.
 This makes sense.
 The more variance the estimated weight has (= the less certain we are about the correct value), the less important the feature is.
 This also makes sense.
 
 ###  Example
-In this example we use the linear model to predict the [number of rented bikes](#bike-data) on a day, given weather and calendrical information.
+
+In this example we use the linear regression model to predict the [number of rented bikes](#bike-data) on a day, given weather and calendar information.
 For the interpretation we examine the estimated regression weights.
-The features are a mix of numerical and categorical features.
-The table shows for each feature the estimated weight, the standard error of the estimation and the absolute value of the t-statistic (feature importance).
+The features consist of numerical and categorical features.
+For each feature, the table shows the estimated weight, the standard error of the estimate, and the absolute value of the t-statistic (feature importance).
 
 ```{r linear_model}
 
@@ -168,64 +174,69 @@ rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 kable(lm_summary_print[,c('Estimate', 'Std. Error', 't value')], digits = 1, col.names = c('Weight estimate', 'Std. Error', "abs(t)"))
 ```
 
-Interpretation of a numerical feature ('Temperature'):
-An increase of the temperature by 1 degree Celsius increases the expected number of bikes by `r sprintf('%.1f', lm_summary_print['temp', 'Estimate'])`, given all other features stay the same.
+Interpretation of a numerical feature (temperature):
+An increase of the temperature by 1 degree Celsius increases the expected number of bicycles by `r sprintf('%.1f', lm_summary_print['temp', 'Estimate'])`, when all other features remain fixed.
 
 Interpretation of a categorical feature ('weathersituation')):
-The estimated number of bikes is `r sprintf('%.1f', lm_summary_print['weathersitRAIN/SNOW/STORM', 'Estimate'])` lower when it is rainy, snowing or stormy, compared to good weather, given that all other features stay the same.
-Also if the weather was misty, the expected number of bikes was `r sprintf('%.1f', lm_summary_print['weathersitMISTY', 'Estimate'])` lower, compared to good weather, given all other features stay the same.
+The estimated number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitRAIN/SNOW/STORM', 'Estimate'])` lower when it is raining, snowing or stormy, compared to good weather - again assuming that all other features don't change.
+When the weather is misty, the expected number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitMISTY', 'Estimate'])` lower compared to good weather, given all other features remain the same.
 
-As you can see in the interpretation examples, the interpretations always come with the footnote that 'all other features stay the same'.
-That's because of the nature of linear models:
-The target is a linear combination of the weighted features.
-The estimated linear equation spans a hyperplane in the feature/target space (a simple line in the case of a single feature).
-The $\beta$ (weight) values specify the slope (gradient) of the hyperplane in each direction.
-The good side is that it isolates the interpretation.
-If you think of the features as knobs that you can turn up or down, it is nice to see what happens when you would just turn the knob for one feature.
-On the bad side of things, the interpretation ignores the joint distribution with other features.
-Increasing one feature, but not changing others, might create unrealistic, or at least unlikely, data points.
-
+All the interpretations always come with the footnote that 'all other features remain the same'.
+This is because of the nature of linear regression models:
+The predicted target is a linear combination of the weighted features.
+The estimated linear equation is a hyperplane in the feature/target space (a simple line in the case of a single feature).
+The $\beta$-weights specify the slope (gradient) of the hyperplane in each direction.
+The good side is that the additivity isolates the interpretation of an individual feature effect from all other features.
+That's possible because all the feature effects (= weight times feature value) in the equation are combined with a plus. 
+On the bad side of things, the interpretation ignores the joint distribution of the features.
+Increasing one feature, but not changing another, can lead to unrealistic or at least unlikely data points.
+For example increasing the number of rooms might be unrealistic without also increasing the size of an apartment.
 
 ### Visual Interpretation
-Different visualisations make the linear model outcomes easy and quick to grasp for humans.
+Various visualizations make the linear regression model easy and quick to grasp for humans.
 
 #### Weight Plot
-The information of the weights table (weight estimates and variance) can be visualised in a weight plot (showing the results from the linear model fitted before):
+The information of the weight table (weight and variance estimates) can be visualized in a weight plot.
+The following plot shows the results from the previous linear regression model:
 
-```{r linear-weights-plot, fig.cap="Each row in the plot represents one feature weight. The weights are displayed as points and the 0.95 confidence intervals with a line around the points. A 0.95 confidence interval means that if the linear model would be estimated 100 times on similar data, in 95 out of 100 times, the confidence interval would cover the true weight, under the linear model assumptions (linearity, normality, homoscedasticity, independence, fixed features, absence of multicolinearity)."}
+```{r linear-weights-plot, fig.cap="The weights are displayed as points and the 95 percent confidence intervals as lines. A 95 percent confidence interval means that if the linear model were estimated 100 times with similar data, in 95 out of 100 cases the confidence interval would cover the true weight. Assuming that the linear model assumptions hold."}
 coef_plot(mod)
 ```
 
-The weight plot makes clear that rainy/snowy/stormy weather has a strong negative effect on the expected number of bikes.
-The working day feature's weight is close to zero and the zero is included in the 95% interval, meaning it is not influencing the prediction significantly.
-Some confidence intervals are very short and the estimates are close to zero, yet the features were important.
-Temperature is such a candidate.
-The problem about the weight plot is that the features are measured on different scales.
-While for weather situation feature the estimated $\beta$ signifies the difference between good and rainy/storm/snowy weather, for temperature it signifies only an increase of 1 degree Celsius.
-You can improve the comparison by scaling the features to zero mean and unit standard deviation before fitting the linear model, to make the estimated weights comparable.
+The weight plot shows that rainy/snowy/stormy weather has a strong negative effect on the predicted number of bikes.
+The weight of the working day feature is close to zero and zero is included in the 95% interval, which means that the effect is not statistically significant.
+Some confidence intervals are very short and the estimates are close to zero, yet the features effects were statistically significant.
+Temperature is one such candidate.
+The problem with the weight plot is that the features are measured on different scales.
+While for the weather the estimated $\beta$ reflects the difference between good and rainy/storm/snowy weather, for temperature it only reflects an increase of 1 degree Celsius.
+You can make the estimated weights more comparable by scaling the features to zero mean and unit standard deviation before fitting the linear model.
 
 #### Effect Plot
-The weights of the linear model can be analysed more meaningfully when multiplied by the actual feature values.
-The weights depend on the scale of the features and will be different if you have a feature measuring some height and you switch from meters to centimetres.
+The weights of the linear regression model can be more meaningfully analyzed when they are multiplied by the actual feature values.
+The weights depend on the scale of the features and will be different if you have a feature that measures e.g. a person's height and you switch from meter to centimeter.
 The weight will change, but the actual relationships in your data will not.
-It is also important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances will get a similar contribution from this feature.
-The effect plot can help to understand how much the combination of a weight and a feature contributes to the predictions in your data.
-Start with the computation of the effects, which is the weight per feature times the feature of an instance:
-$\text{effect}_{i,j}=w_{j}x_{i,j}$.
-The resulting effects are visualised with boxplots:
-A box in a boxplot contains the effect range for half of your data (25% to 75% effect quantiles).
-The vertical line in the box is the median effect, i.e. 50% of the instances have a lower and the other half a higher effect on the prediction than the median value.
-The horizontal lines extend to$\pm1.58\text{IQR}/\sqrt{n}$, with IQR being the inter quartile range ($q_{0.75}-q_{0.25}$).
-The points are outliers.
-The categorical feature effects can be aggregated into one boxplot, compared to the weight plot, where each weight gets a row.
+It is also important to know the distribution of your feature in the data, because if you have a very low variance, it means that almost all instances have similar contribution from this feature.
+The effect plot can help you understand how much the combination of weight and feature contributes to the predictions in your data.
+Start by calculating the effects, which is the weight per feature times the feature value of an instance:
+$$\text{effect}_{i,j}=w_{j}x_{i,j}$$
 
-```{r linear-effects, fig.cap="The feature effect plot shows the distribution of the effects (= feature value times feature weight) over the dataset for each feature."}
+The resulting effects can be visualized with boxplots.
+A box in a boxplot contains the effect range for half of your data (25% to 75% effect quantiles).
+The vertical line in the box is the median effect, i.e. 50% of the instances have a lower and the other half a higher effect on the prediction.
+The horizontal lines extend to$\pm1.58\text{IQR}/\sqrt{n}$, with IQR being the inter quartile range ($q_{0.75}-q_{0.25}$).
+The dots are outliers.
+The categorical feature effects can be summarized in a single boxplot, compared to the weight plot, where each level has its own row.
+
+```{r linear-effects, fig.cap="The feature effect plot shows the distribution of effects (= feature value times feature weight) across the dataset for each feature."}
 effect_plot(mod, dat)
 ```
-The largest contributions to the expected number of rented bikes comes from temperature and from the days feature, which captures the trend that the bike rental became more popular over time. 
-The temperature has a broad contribution distribution.
-The day trend feature goes from zero to large positive contribution, because the first day in the dataset (01.01.2011) gets a very low day effect, and the estimated weight with this feature is positive (`r sprintf('%.2f', lm_summary_print['days_since_2011', 'Estimate'])`), so the effect increases with every day and is highest for the latest day in the dataset (31.12.2012).
-Note that for effects from a feature with a negative weight, the instances with a positive effect are the ones that have a negative feature value, so days with a high negative effect of windspeed on the bike count have the highest windspeeds.
+
+The largest contributions to the expected number of rented bikes comes from the temperature feature and the days feature, which captures the trend of bike rentals over time.
+The temperature has a broad range of how much it contributes to the prediction.
+The day trend feature goes from zero to large positive contribution, because the first day in the dataset (01.01.2011) has a very small trend effect and the estimated weight for this feature is positive (`r sprintf('%.2f', lm_summary_print['days_since_2011', 'Estimate'])`).
+This means that the effect increases with each day and is highest for the last day in the dataset (31.12.2012).
+Note that for effects with a negative weight, the instances with a positive effect are those that have a negative feature value.
+For example, days with a high negative effect of windspeed are the stormy ones.
 
 ### Explaining Individual Predictions
 ```{r linear-effects-single-preparation}
