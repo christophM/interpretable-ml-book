@@ -1,6 +1,14 @@
 # Review Guidelines
 
 
+Your review will help improve the book.
+This is an open peer-review.
+This means anyone can comment here in this issue.
+
+
+Link to the chapter: LINK
+Just in case: link to the Rmd of the chapter: LINK
+
 Please check the chapter for the following points:
 
 - Does the title of the chapter describe the chapter?
@@ -10,3 +18,6 @@ Please check the chapter for the following points:
 - Are the main claims of the chapter backed up with good arguments, proofs, examples, references?
 - Are alle the statements correct?
 - Anything else you think might improve this chapter?
+
+
+With your permission, your name will appear 
