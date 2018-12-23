@@ -78,20 +78,20 @@ The interpretation of a weight in the linear regression model depends on the typ
 An example of a numerical feature is the size of a house.
 - Binary feature: A feature that takes one of two possible values for each instance.
 An example is the feature "House comes with a garden".
-One of the values counts as the reference level (in some programming languages encoded with 0), such as "No garden".
-Changing the feature $x_{j}$ from the reference level to the other level changes the estimated outcome by $\beta_{j}$.
-- Categorical feature with multiple levels:
+One of the values counts as the reference category (in some programming languages encoded with 0), such as "No garden".
+Changing the feature $x_{j}$ from the reference category to the other category changes the estimated outcome by $\beta_{j}$.
+- Categorical feature with multiple categories:
 A feature with a fixed number of possible values.
-An example is the feature "Floor type", with possible levels "carpet", "laminate" and "parquet".
-A solution to deal with many levels is the one-hot-encoding, meaning that each level has its own binary column.
-For a categorical feature with l levels, you only need l-1 columns, because the l-th column would have redundant information (e.g. when columns 1 to l-1 all have value 0 for an instance, we know that the instance has category l).
-The interpretation for each level is then the same as the interpretation for binary features.
+An example is the feature "Floor type", with possible categories "carpet", "laminate" and "parquet".
+A solution to deal with many categories is the one-hot-encoding, meaning that each category has its own binary column.
+For a categorical feature with l categories, you only need l-1 columns, because the l-th column would have redundant information (e.g. when columns 1 to l-1 all have value 0 for an instance, we know that the instance has category l).
+The interpretation for each category is then the same as the interpretation for binary features.
 Some languages, such as R, allow you to encode categorical features in various ways, [described here](#cat-code).
 - Intercept $\beta_{0}$: 
 The intercept is the feature weight for the constant feature, which is always 1 for all instances.
 Most software packages automatically add this "1"-feature to estimate the intercept.
 The interpretation is:
-For an instance with all numerical feature values at zero and the categorical feature values at the reference level, the estimated outcome is the intercept weight $\beta_{0}$.
+For an instance with all numerical feature values at zero and the categorical feature values at the reference category, the estimated outcome is the intercept weight $\beta_{0}$.
 The interpretation of the intercept $\beta_{0}$ is usually not relevant because instances with all features values at zero often make no sense.
 The interpretation is only meaningful when the features have been standardised (mean of zero, standard deviation of one).
 Then the intercept $\beta_0$ reflects the predicted outcome of an instance where all features are at their mean value.
@@ -104,7 +104,7 @@ An increase of feature $x_{k}$ by one unit increases the expectation for y by $\
 
 **Interpretation of a Categorical Feature**
 
-Changing feature $x_{k}$ from the reference level to the other category increases the expectation for y by $\beta_{k}$, given all other features remain fixed.
+Changing feature $x_{k}$ from the reference category to the other category increases the expectation for y by $\beta_{k}$, given all other features remain fixed.
 
 Another important measurement for interpreting linear models is the R-squared measurement.
 R-squared tells you how much of the total variance of your target outcome is explained by the model.
@@ -225,7 +225,7 @@ A box in a boxplot contains the effect range for half of your data (25% to 75% e
 The vertical line in the box is the median effect, i.e. 50% of the instances have a lower and the other half a higher effect on the prediction.
 The horizontal lines extend to$\pm1.58\text{IQR}/\sqrt{n}$, with IQR being the inter quartile range ($q_{0.75}-q_{0.25}$).
 The dots are outliers.
-The categorical feature effects can be summarized in a single boxplot, compared to the weight plot, where each level has its own row.
+The categorical feature effects can be summarized in a single boxplot, compared to the weight plot, where each category has its own row.
 
 ```{r linear-effects, fig.cap="The feature effect plot shows the distribution of effects (= feature value times feature weight) across the dataset for each feature."}
 effect_plot(mod, dat)
@@ -238,7 +238,7 @@ This means that the effect increases with each day and is highest for the last d
 Note that for effects with a negative weight, the instances with a positive effect are those that have a negative feature value.
 For example, days with a high negative effect of windspeed are the stormy ones.
 
-### Explaining Individual Predictions
+### Explain Individual Predictions
 ```{r linear-effects-single-preparation}
 i = 6
 effects = get_effects(mod, dat)
@@ -251,9 +251,9 @@ names(predictions) = NULL
 pred_i = predictions[i]
 ```
 
-How much did each feature of an instance contribute towards the prediction?
-This can, again, be answered by bringing together the weights and feature values of this instance and computing the effects.
-An interpretation of instance specific effects is only meaningful in comparison with the distribution of each feature's effects.
+How much has each feature of an instance contributed to the prediction?
+This can be answered by computing the effects for this instance.
+An interpretation of instance-specific effects only makes sense in comparison to the distribution of the effect for each feature.
 We want to explain the prediction of the linear model for the `r i`-th instance from the bicycle dataset.
 The instance has the following feature values.
 
@@ -263,13 +263,13 @@ colnames(df) = c("feature", "value")
 kable(df, col.names = c("Feature", "Value"), row.names = FALSE)
 ```
 
-To obtain the feature effects of this instance, we have to multiply its features values by the corresponding weights from the linear regression model.
-For example, for the value `r df["workingday", "value"]` of feature `r df["workingday", "feature"]`, the effect is `r lm_summary_print[paste(df["workingday", "feature"], df["workingday", "value"], sep = ""), "Estimate"]`.
+To obtain the feature effects of this instance, we have to multiply its feature values by the corresponding weights from the linear regression model.
+For the value `r df["workingday", "value"]` of feature `r df["workingday", "feature"]`, the effect is, for example, `r lm_summary_print[paste(df["workingday", "feature"], df["workingday", "value"], sep = ""), "Estimate"]`.
 For the value `r df["temp", "value"]` of feature `r df["temp", "feature"]`, the effect is `r as.numeric(as.character(df["temp", "value"])) * lm_summary_print[as.character(df["temp", "feature"]), "Estimate"]`.
-We insert these individual effects as points in the effect plot, which shows us the distribution of effects in the data.
+We add these individual effects as dots to the effect plot, which shows us the distribution of the effects in the data.
 This allows us to compare the individual effects with the distribution of effects in the data. 
 
-```{r linear-effects-single, fig.cap="The effect for one instance shows the effect distribution while highlighting the effects of the instance of interest."}
+```{r linear-effects-single, fig.cap="The effect plot for one instance shows the effect distribution and highlighting the effects of the instance of interest."}
 i = 6
 effects = get_effects(mod, dat)
 predictions = predict(mod)
@@ -285,8 +285,8 @@ effect_plot(mod, dat) +
   ggtitle(sprintf('Predicted value for instance: %.0f\nAverage predicted value: %.0f\nActual value: %.0f', pred_i, predictions_mean, y[i]))
 ```
 
-When we average the predictions for the training data instances, we get a mean value of `r round(predictions_mean, 0)` (). 
-In comparison, the prediction of the `r i`-th instance is small with only `r round(pred_i, 0)` predicted bicycles.
+If we average the predictions for the training data instances, we get an average of `r round(predictions_mean, 0)` (). 
+In comparison, the prediction of the `r i`-th instance is small, since only `r round(pred_i, 0)` bicycles are predicted.
 The effect plot reveals the reason.
 The boxplots show the distributions of the effects for all instances of the dataset, the red markers show the effects for the `r i`-th instance.
 The `r i`-th instance has a low temperature effect because on this day the temperature was `r round(X[i, 'temp'],0)` degrees, which is low compared to most other days (and remember that the weight of the temperature feature is positive).
@@ -295,80 +295,96 @@ Also, the effect of the trend feature "days_since_2011" is small compared to the
 
 
 
-### Coding Categorical Features {#cat-code}
-There are several ways to encode a categorical feature and the choice influences the interpretation of the $\beta$-weights.
+### Encoding of Categorical Features {#cat-code}
+There are several ways to encode a categorical feature, and the choice influences the interpretation of the $\beta$-weights.
 
-The standard in linear regression models is the treatment coding, which is sufficient in most cases.
-Using different codings boils down to creating different matrices (=design matrix) from your one column with the categorical feature.
-This section presents three different codings, but there are many more.
-The example used has six instances and one categorical feature with 3 levels.
-For the first two instances, the feature takes on category A, for instances three and four category B and for the last two instances category C.
+The standard in linear regression models is treatment coding, which is sufficient in most cases.
+Using different encodings boils down to creating different matrices (=design matrix) from a single column with the categorical feature.
+This section presents three different encodings, but there are many more.
+The example used has six instances and a categorical feature with 3 categories.
+For the first two instances, the feature takes category A;
+for instances three and four, category B;
+and for the last two instances category C.
 
 **Treatment coding**: 
 
-The $\beta$ per level is the estimated difference in y compared to the reference level. The intercept of the linear model is the mean of the reference group (given all other features stay the same). The first column of the design matrix is the intercept, which is always 1. Column two is an indicator whether instance i is in category B, column three is an indicator for category C. There is no need for a column for category A, because then the linear equation would be overspecified and no unique solution (= unique $\beta$'s) can be found. Knowing that an instance is neither in category B or C is enough.
+The $\beta$ per category is the estimated difference in y to the reference category.
+The intercept of the linear model is the mean of the reference category (given all other features remain the same).
+The first column of the design matrix is the intercept, which is always 1.
+Column two indicates whether instance i is in category B, column three indicates whether it is in category C.
+There is no need for a column for category A, because then the linear equation would be overspecified and no unique solution for the weights can be found.
+It is sufficient to know that an instance is neither in category B or C.
 
 Feature matrix: $$\begin{pmatrix}1&0&0\\1&0&0\\1&1&0\\1&1&0\\1&0&1\\1&0&1\\\end{pmatrix}$$
 
 **Effect coding**: 
 
-The $\beta$ per level is the estimated y-difference from the level to the overall mean (again, given all other features are zero or the reference level). The first column is again used to estimate the intercept. The weight $\beta_{0}$ which is associated with the intercept represents the overall mean and $\beta_{1}$, the weight for column two is the difference between the overall mean and category B. The overall effect of category B is $\beta_{0}+\beta_{1}$. The interpretation for category C is equivalent. For the reference category A, $-(\beta_{1}+\beta_{2})$ is the difference to the overall mean and $\beta_{0}-(\beta_{1}+\beta_{2})$ the overall effect.
+The $\beta$ per category is the estimated y-difference from the category to the overall mean (again, given all other features are zero or the reference category).
+The first column is used to estimate the intercept.
+The weight $\beta_{0}$ associated with the intercept represents the overall mean and $\beta_{1}$, the weight for column two, is the difference between the overall mean and category B.
+The total effect of category B is $\beta_{0}+\beta_{1}$.
+The interpretation for category C is equivalent.
+For the reference category A, $-(\beta_{1}+\beta_{2})$ is the difference to the overall mean and $\beta_{0}-(\beta_{1}+\beta_{2})$ the overall effect.
 
 Feature matrix: $$\begin{pmatrix}1&-1&-1\\1&-1&-1\\1&1&0\\1&1&0\\1&0&1\\1&0&1\\\end{pmatrix}$$
 
 **Dummy coding**: 
 
-The $\beta$ per level is the estimated mean of y for each level (given all feature are at value zero or reference level). Note that the intercept was dropped here, so that a unique solution for the linear model weights can be found.
+The $\beta$ per category is the estimated mean value of y for each category (given all feature are at zero or reference category).
+Note that the intercept was has been omitted here so that a unique solution can be found for the linear model weights.
 
 Feature matrix: $$\begin{pmatrix}1&0&0\\1&0&0\\0&1&0\\0&1&0\\0&0&1\\0&0&1\\\end{pmatrix}$$
 
-If you want to dive a bit deeper into different encodings of categorical features, checkout [this webpage](http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/) and
+If you want to dive a little deeper into the different encodings of categorical features, checkout [this webpage](http://stats.idre.ucla.edu/r/library/r-library-contrast-coding-systems-for-categorical-variables/) and
 [this blog post](http://heidiseibold.github.io/page7/).
 
 
 ### Do Linear Models Create Good Explanations?
-Judging by the attributes that constitute a good explanation as presented [in the Human-friendly Explanations chapter](#good-explanation), linear models don't create the best explanations.
-They are contrastive, but the reference instance is a data point for which all continuous features are zero and the categorical features at their reference levels.
-This is usually an artificial, meaningless instance, which is unlikely to occur in your dataset.
+
+Judging by the attributes that constitute a good explanation, as presented [in the Human-friendly Explanations chapter](#good-explanation), linear models don't create the best explanations.
+They are contrastive, but the reference instance is a data point where all numerical features are zero and the categorical features are at their reference categories.
+This is usually an artificial, meaningless instance that is unlikely to occur in your data or reality.
 There is an exception:
-When all continuous features are mean centered (feature minus mean of feature) and all categorical features are effect coded, the reference instance is the data point for which each feature is at its mean.
+If all numerical features are mean centered (feature minus mean of feature) and all categorical features are effect coded, the reference instance is the data point where all the features take on the mean feature value.
 This might also be a non-existent data point, but it might be at least more likely or meaningful.
-In this case, the $\beta$-values times the feature values (feature effects)  explain the contribution to the predicted outcome contrastive to the reference mean-instance.
+In this case, the $\beta$-values times the feature values (feature effects) explain the contribution to the predicted outcome contrastive to the "mean-instance".
 Another aspect of a good explanation is selectivity, which can be achieved in linear models by using less features or by fitting sparse linear models.
 But by default, linear models don't create selective explanations.
-Linear models create truthful explanations, as long as the  linear equation can model the relationship between features and outcome.
-The more nonlinearities and interactions exist, the less accurate the linear model becomes and the less truthful explanations it will produce.
-The linearity makes the explanations more general and simple.
+Linear models create truthful explanations, as long as the linear equation is an appropriate model for the relationship between features and outcome.
+The more nonlinearities and interactions there are, the less accurate the linear model will be and the less truthful the explanations become.
+Linearity makes the explanations more general and simpler.
 The linear nature of the model, I believe, is the main factor why people like linear models for explaining relationships.
 
 
 ###  Sparse Linear Models {#sparse-linear}
-The examples for the linear models that I chose look all nice and tidy, right?
+The examples of the linear models that I have chosen all look nice and neat, don't they?
 But in reality you might not have just a handful of features, but hundreds or thousands.
 And your normal linear models?
-Interpretability goes downriver.
-You might even get into a situation with  more features than instances and you can't fit a standard linear model at all.
-The good news is that there are ways to introduce sparsity (= only keeping a few features) into linear models.
+Interpretability goes downhill.
+You might even find yourself in a situation where there are more features than instances, and you can't fit a standard linear model at all.
+The good news is that there are ways to introduce sparsity (= few features) into linear models.
 
 #### Lasso {#lasso}
-The most automatic and convenient way to introduce sparsity is to use the Lasso method.
-Lasso stands for "least absolute shrinkage and selection operator" and when added to a linear model, it performs feature selection and regularisation of the selected feature weights.
-Let's review the minimization problem, the $\beta$s optimise:
+
+Lasso is an automatic and convenient way to introduce sparsity into the linear regression model.
+Lasso stands for "least absolute shrinkage and selection operator" and, when applied for a linear model, performs feature selection and regularization of the selected feature weights.
+Let's consider the minimization problem that the $\beta$s optimize:
 
 $$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2\right)$$
 
-Lasso adds a term to this optimisation problem:
+Lasso adds a term to this optimization problem:
 
 $$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2+\lambda||\boldsymbol{\beta}||_1\right)$$
 
-The term $||\boldsymbol{\beta}||_1$, the L1-norm of the feature vector,  leads to a penalisation of large  $\boldsymbol{\beta}$-values.
-Since the L1-norm is used, many of the weights for the features will get an estimate of 0 and the others are shrunk.
-The parameter lambda ($\lambda$) controls the strength of the regularising effect and is usually tuned by doing cross-validation.
+The term $||\boldsymbol{\beta}||_1$, the L1-norm of the feature vector,  leads to a penalization of large  $\boldsymbol{\beta}$-values.
+Since the L1-norm is used, many of the weights for the features receive an estimate of 0 and the others are shrunk.
+The parameter lambda ($\lambda$) controls the strength of the regularizing effect and is usually tuned by cross-validation.
 Especially when lambda ($\lambda$) is large, many weights become 0.
 
-The feature weights as a function of the penalty term lambda can be visualized as a curve per feature weight as shown in the following figure.
+The feature weights can be visualized as a function of the penalty term lambda.
+Each feature weight is represented by a curve in the following figure.
 
-```{r llasso-path, fig.cap="With increasing penalty of the weights, fewer and fewer features receive a non-zero weight estimate. These curves are also called regularization paths."}
+```{r lasso-path, fig.cap="With increasing penalty of the weights, fewer and fewer features receive a non-zero weight estimate. These curves are also called regularization paths."}
 library("glmnet")
 X.d = model.matrix(y ~ . -1, data = X)
 l.mod = glmnet(X.d, y)
@@ -376,15 +392,14 @@ plot(l.mod,  xvar = "lambda")
 ```
 
 What value should we choose for $\lambda$?
-If you see the regularization parameter as a tuning parameter, then you can use cross-validation to find the optimal  $\lambda$ that minimizes the model error.
-You can also consider $\lambda$ as a parameter to adjust model interpretability.
-The higher the parameter, the fewer features are in the model (because their weight is zero) and the better the model can be interpreted.
+If you see the regularization parameter as a tuning parameter, then you can find the optimal  $\lambda$ that minimizes the model error with cross-validation.
+You can also consider lambda ($\lambda$) as a parameter to control the interpretability of the model.
+The larger the penalization, the fewer features are present in the model (because their weight is zero) and the better the model can be interpreted.
 
 **Example with LASSO**
 
-We will predict bike rentals with LASSO. 
-We determine the number of features we want to have in the L1 regularized model.
-
+We will predict bicycle rentals using LASSO. 
+We set the number of features we want to have in the model beforehand.
 Let's first set the number to 2 features:
 
 ```{r lasso_effects}
@@ -405,26 +420,42 @@ kable(extract.glmnet.effects(l.mod$beta, max(which(n.features == 5))), col.names
 
 
 Note that the weights for "temp" and "days_since_2011" differ from the model with two features.
-The reason for this is that by decreasing $\lambda$ even features that are already "in" the model are less penalized and possibly get a larger absolute weight.
-The interpretation of the LASSO weights corresponds to the interpretation of weights in the linear regression model.
-You only have to be careful whether the features are standardized or not, because this affects the weights.
-In this example, the features were standardized by the software, but the weights were automatically re-transformed to match the original feature scales.
+The reason for this is that by decreasing $\lambda$ even features that are already "in" the model are penalized less and may get a larger absolute weight.
+The interpretation of the LASSO weights corresponds to the interpretation of the weights in the linear regression model.
+You only need to pay attention to whether the features are standardized or not, because this affects the weights.
+In this example, the features were standardized by the software, but the weights were automatically transformed back for us to match the original feature scales.
 
 **Other Methods for Sparsity in Linear Models**
 
-A big spectrum of methods can be used to reduce the number of features in a linear model.
+A wide spectrum of methods can be used to reduce the number of features in a linear model.
 
 Methods that include a pre-processing step:
 
-- Hand selected features: You can always use expert knowledge to choose and discard some features. The big drawback is, that it can't be automated and you might not be an expert.
-- Use some measures to pre-select features: An example is the correlation coefficient. You only take features into account that exceed some chosen threshold of correlation between the feature and the target. Disadvantage is that it only looks at the features one at a time. Some features might only show correlation after the linear model has accounted for some other features. Those you will miss with this approach.
+- Manually selected features:
+You can always use expert knowledge to select or discard some features.
+The big drawback is that it can't be automated and you might not be an expert.
+- Use some measures to pre-select features:
+An example is the correlation coefficient.
+You only consider features that exceed a certain threshold of correlation between the feature and the target.
+The disadvantage is that it only considers the features individually.
+Some features might not show a correlation until the linear model has accounted for some other features.
+Those ones you will miss with univariate selection methods.
 
 Step-wise procedures:
 
-- Forward selection: Fit the linear model with one feature. Do that with each feature. Choose the model that works best (for example decided by the highest R-squared). Now again, for the remaining features, fit different versions of your model by adding each feature to your chosen model. Pick the one that performs best. Continue until some criterion is reached, like the maximum number of features in the model.
-- Backward selection: Same as forward selection, but instead of adding features, start with the model that includes all features and try out which feature you have to remove  to get the highest performance increase. Repeat until some stopping criterion is reached.
+- Forward selection:
+Fit the linear model with one feature.
+Do this with each feature.
+Select the model that works best (e.g. determined by the highest R-squared).
+Now again, for the remaining features, fit different versions of your model by adding each feature to your currently best model.
+Select the one that performs best.
+Continue until some criterion is reached, such as the maximum number of features in the model.
+- Backward selection:
+Similar to forward selection.
+But instead of adding features, start with the model that contains all features and try out which feature you have to remove to get the highest performance increase.
+Repeat this until some stopping criterion is reached.
 
-I recommend using Lasso, because it can be automated, looks at all features at the same time and can be controlled via $\lambda$.
+I recommend using Lasso, because it can be automated, considers all features simultaneously, and can be controlled via $\lambda$.
 It also works for the [logistic regression model](#logistic) for classification.
 
 
@@ -460,10 +491,3 @@ An example:
 You have a model to predict the value of a house and have features like number of rooms and area of the house.
 House area and number of rooms are highly correlated: the bigger a house is, the more rooms it has. If you now take both features into a linear model, it might happen, that the area of the house is the better predictor and get's a large positive weight.
 The number of rooms might end up getting a negative weight, because either, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
-
-
-
-
-
-
-
