@@ -4,20 +4,21 @@ set.seed(42)
 ```
 
 ## Decision Tree {#tree}
-Linear regression models and logistic regression fail in situations where the relationship between features and outcome is nonlinear or where the features are interacting with each other.
-Time to shine for the decision trees!
-Tree-based models split the data according to certain cutoff values in the features multiple times.
-Splitting means that different subsets of the dataset are created, where each instance belongs to one subset.
+
+Linear regression and logistic regression models fail in situations where the relationship between features and outcome is nonlinear or where features interact with each other.
+Time to shine for the decision tree!
+Tree based models split the data multiple times according to certain cutoff values in the features.
+Through splitting, different subsets of the dataset are created, with each instance belonging to one subset.
 The final subsets are called terminal or leaf nodes and the intermediate subsets are called internal nodes or split nodes.
-For predicting the outcome in each leaf node, a simple model is fitted with the instances in this subset (for example the subsets average target outcome).
+To predict the outcome in each leaf node, the average outcome of the training data in this node is used.
 Trees can be used for classification and regression.
 
-There are a lot of tree algorithms with different approaches for how to grow a tree.
-They differ in the possible structure of the tree (e.g. number of splits per node), criteria for how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes.
-Classification and regression trees (CART) is one of the more popular algorithms for tree induction.
-We will focus on CART, but the interpretation is similar for most of the tree types.
-I recommend the book 'The elements of statistical learning' (Hastie, Tibshirani, and Friedman 2009)[^Hastie] for a more detailed introduction.
-```{r tree-artificial, fig.cap="Decision tree with artificial data. Instances with a value bigger than 3 for feature x1 end up in node 5. All other instances are assigned to node 3 or node 4, depending whether feature x2 values exceed 1.", dev.args = list(pointsize = 16)}
+There are various algorithms that can grow a tree.
+They differ in the possible structure of the tree (e.g. number of splits per node), the criteria how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes.
+The classification and regression trees (CART) algorithm is probably the most popular algorithms for tree induction.
+We will focus on CART, but the interpretation is similar for most other tree types.
+I recommend the book 'The elements of statistical learning' (Hastie, Tibshirani, and Friedman 2009)[^Hastie] for a more detailed introduction to CART.
+```{r tree-artificial, fig.cap="Decision tree with artificial data. Instances with a value greater than 3 for feature x1 end up in node 5. All other instances are assigned to node 3 or node 4, depending on whether values of feature x2  exceed 1.", dev.args = list(pointsize = 16)}
 library("partykit")
 set.seed(42)
 n = 100
@@ -28,22 +29,26 @@ ct = ctree(y ~ feature_x1 + feature_x2, dat_sim)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
 ```
 
-The following formula describes the relationship between outcome y and the features x.
+The following formula describes the relationship between the outcome y and features x.
 
 $$\hat{y}_i=\hat{f}(x_i)=\sum_{m=1}^Mc_m{}I\{x_i\in{}R_m\}$$
 
-Each instance $x_i$ falls into exactly one leaf node (=subset $R_m$). $I_{\{x_i\in{}R_m\}}$ is the identity function which returns 1 if $x_i$ is in the subset $R_m$ and else 0.
-If $x_i$ falls into a leaf node $R_l$, the predicted outcome is $\hat{y}=c_l$, where $c_l$ is the mean of all the training instances in leaf node $R_l$.
+Each instance $x_i$ falls into exactly one leaf node (=subset $R_m$).
+$I_{\{x_i\in{}R_m\}}$ is the identity function that returns 1 if $x_i$ is in the subset $R_m$ and 0 otherwise.
+If $x_i$ falls into a leaf node $R_l$, the predicted outcome is $\hat{y}=c_l$, where $c_l$ is the average of all training instances in leaf node $R_l$.
 
 But where do the subsets come from?
 This is quite simple:
-The algorithm takes a feature and tries which cut-off point minimizes the sum of squares of y for a regression tasks or the Gini index of the class distribution of y for classification tasks.
-The best cut-off point makes the two resulting subsets as different as possible in terms of the target outcome.
-For categorical features the algorithm tries to build subsets by trying different groupings of categories.
-After this was done for each feature, the algorithm looks for the feature with the best cut-off and chooses it to split the node into two new nodes.
-The algorithm continues doing this recursively in both of the new nodes until a stopping criterium is reached.
+The algorithm takes a feature and determines which cut-off point minimizes the variance of y for a regression task or the Gini index of the class distribution of y for classification tasks.
+The variance tells us how much the y values in a node are spread around their mean value.
+The Gini index tells us how "impure" a node is, e.g. if all classes have the same frequency, the node is impure, if only one class is present, it's maximally pure.
+Variance and Gini index are minimized when the data points in the nodes have very similar values for y.
+As a consequence, the best cut-off point makes the two resulting subsets as different as possible with respect to the target outcome.
+For categorical features, the algorithm tries to create subsets by trying different groupings of categories.
+After the best cutoff per feature has been determined, the algorithm selects the feature for splitting that would result in the best partition in terms of the variance or Gini index and adds this split to the tree.
+The algorithm continues this search-and-split recursively in both new nodes until a stop criterion is reached.
 Possible criteria are:
-A minimum number of instances that have to be in a node before the split or the minimum number of instances that have to be in a terminal node.
+A minimum number of instances that have to be in a node before the split, or the minimum number of instances that have to be in a terminal node.
 
 ### Interpretation
 The interpretation is simple:
@@ -51,35 +56,38 @@ Starting from the root node you go to the next nodes and the edges tell you whic
 Once you reach the leaf node, the node tells you the predicted outcome.
 All the edges are connected by 'AND'.
 
-Template: If feature x is [smaller/bigger] than threshold c AND ..., then the predicted outcome is $\hat{y}_{\text{leafnode}}$.
+Template: If feature x is [smaller/bigger] than threshold c AND ... then the predicted outcome is $\hat{y}_{\text{leafnode}}$.
 
 **Feature Importance**
 
-The overall importance of a feature in a decision tree can be computed by going through all the splits for which the feature was used and adding up how much it has improved the predictions in the child nodes compared to the parent node (e.g. measured as decrease of Gini index).
-The sum of all importances is scaled to 100, so that the interpretation for each feature importance is percentage of the overall importance.
+The overall importance of a feature in a decision tree can be computed in the following way:
+Go through all the splits for which the feature was used and measure how much it has reduced the variance or Gini index compared to the parent node.
+The sum of all importances is scaled to 100.
+This means that each importance can be interpreted as share of the overall model importance.
 
 **Tree Decomposition**
 
-Individual predictions of a decision tree can be explained by decomposing the decision path and breaking it down per feature.
-Similar to linear regression models, we can look at the contribution of each feature value to the prediction of an individual data instance, starting from the average prediction.
+Individual predictions of a decision tree can be explained by decomposing the decision path by feature.
+We can track a decision through the tree and explain a prediction by the contributions  added at each decision node.
 
 The root node in a decision tree is our starting point.
 If we were to use the root node to make predictions, it would predict the mean of the outcome of the training data.
-With the next split, we either subtract or add some term to this average, depening on which child node we go to.
-We can track a decision through the tree and explain a prediction by the contributions  added at each decision node.
-
+With the next split, we either subtract or add a term to this sum, depending on the next node in the path.
+To get to the final prediction, we have to follow the path of the data instance that we want to explain and keep adding to the formula.
 
 $$\hat{f}(x^{(i)})=\bar{y}+\sum_{d=1}^D\text{split.contrib(d,x)}=\bar{y}+\sum_{j=1}^p\text{feat.contrib(j,x)}$$
 
-The prediction of an individual instance is the mean of the target outcome plus the sum of all contributions of the splits happening between the root node and the terminal node the instance ends up in.
-But we are not interested in the split contributions, but the feature contributions, and a feature might be used for more than one split or for none at all.
-We can add up the contributions for each of the p features and get an interpretation of how much each feature contributed to a prediction.
+The prediction of an individual instance is the mean of the target outcome plus the sum of all contributions of the splits that occur between the root node and the terminal node where the instance ends up.
+We are not interested in the split contributions though, but in the feature contributions.
+A feature might be used for more than one split or not at all.
+We can add the contributions for each of the p features and get an interpretation of how much each feature has contributed to a prediction.
 
 ### Example
-Let's have a look again at the [bike rental data](#bike-data).
-We want to predict the number of rented bikes on a given day. The learned tree visualized:
+Let's have another look at the [bike rental data](#bike-data).
+We want to predict the number of rented bikes on a certain day with a decision tree.
+The learned tree looks like this:
 
-```{r tree-example, fig.cap="Regression tree fitted on the bike rental data. The maximally allowed depth for the tree was set to 2. The features picked for the tree splits were the trend feature (days since 2011) and the temperature (temp). The boxplots show the distribution of bike counts in the terminal node.", dev.args = list(pointsize = 16)}
+```{r tree-example, fig.cap="Regression tree fitted on the bike rental data. The maximum allowed depth for the tree was set to 2. The the trend feature (days since 2011) and the temperature (temp) have been selected for the splits. The boxplots show the distribution of bicycle counts in the terminal node.", dev.args = list(pointsize = 16)}
 data(bike)
 X = bike[bike.features.of.interest]
 y = bike[,'cnt']
@@ -92,11 +100,12 @@ my_node = function(obj) {
 xp = as.party(x)
 plot(xp, digits = 0, id = FALSE, terminal_node = node_boxplot)
 ```
-The first split and one of the second splits was done in the trend feature, which tells how many days passed since beginning of the data collection and covers the trend that the bike rental service became more popular over time.
-For days that came before the 105th day the predicted number of bikes is ca. 1800, between the 106th and 430th day it is around 3900.
-For days after the 430th day, depending on the temperature, the prediction is either 4600 (if below 12 degrees) or 6600 (if above 12 degrees).
+The first split and one of the second splits were performed with the trend feature, which counts the days since  data collection began and covers the trend that the bike rental service has become more popular over time.
+For days prior to the 105th day, the predicted number of bicycles is around 1800, between the 106th and 430th day it is around 3900.
+For days after the 430th day, the prediction is either 4600 (if temperature is below 12 degrees) or 6600 (if temperature is above 12 degrees).
 
-The importance of the features is computed as percentages of purity improvement.
+The feature importance tells us how much a feature helped to improve the purity of all nodes.
+Here, the variance was used, since predicting bicycle rentals is a regression task.
 
 ```{r tree-importance, fig.cap = "Importance of the features measured by how much the node purity is improved on average."}
 imp = round(100 * x$variable.importance / sum(x$variable.importance),0)
@@ -106,54 +115,63 @@ ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) +
   scale_y_discrete("")
 ```
 
-While the visualized tree shows that both temperature and time trend are used for splits, the feature importance shows that the time trend is far more important than temperature.
+The visualized tree shows that both temperature and time trend were used for splits, but doesn't quantify which feature was more important.
+The feature importance measure shows that the time trend is far more important than temperature.
 
 ### Advantages
-The tree structure is perfectly suited to **cover interactions** between features in the data.
-The data also ends up in **distinct groups**, which are often easier to grasp than points on a hyperplane like in linear regression.
-The interpretation is arguably pretty straightforward.
+
+The tree structure is ideal for **capturing interactions** between features in the data.
+
+The data also ends up in **distinct groups** that are often easier to understand than points on a multi-dimensional hyperplane as in linear regression.
+The interpretation is arguably pretty simple.
+
 The tree structure also has a **natural visualization**, with its nodes and edges.
-Trees **create good explanations** [as defined here](#good-explanation).
-The tree structure automatically invites to think about predicted values for single instances in a counterfactual way:
-"If feature $x_j$ would have been bigger / smaller than the split point, the prediction would have been $\hat{y}_{1}$ instead of $\hat{y}_2$"
-The created explanations are contrastive, because you can always compare the prediction of an instance with relevant (as defined by the tree) "what-if"-scenarios, which are simply the other leaf nodes of the tree.
+
+Trees **create good explanations** as defined in the [chapter on "Human-friendly Explanations"](#good-explanation).
+The tree structure automatically invites to think about predicted values for individual instances as counterfactuals:
+"If feature $x_j$ had been greater / smaller than the split point, the prediction would have been $\hat{y}_{1}$ instead of $\hat{y}_2$"
+The tree explanations are contrastive, since you can always compare the prediction of an instance with relevant  "what-if"-scenarios (as defined by the tree) that are simply the other leaf nodes of the tree.
 If the tree is short, like one to three splits deep, the resulting explanations are selective.
-A tree with a depth of three needs a maximum of three features and split points to create the explanation for the prediction of an instance.
+A tree with a depth of three requires a maximum of seven features and split points to create the explanation for predicting an instance.
 The truthfulness of the prediction depends on the predictive performance of the tree.
-The explanations for short trees are very simple and general, because for each split, the instance either falls into one or the other leave., and binary decisions are easy to understand.
+The explanations for short trees are very simple and general, because for each split the instance falls into either one or the other leaf, and binary decisions are easy to understand.
+
 There is no need to transform features. 
-In linear models it is sometimes necessary to take the logarithm of a feature. 
-A decision tree can handle a feature regardless of monotonic transformations.
+In linear models, it is sometimes necessary to take the logarithm of a feature. 
+A decision tree works equally well with any monotonic transformation of a feature.
 
 
 
 ### Disadvantages
-**Handling of linear relationships**, that's what trees suck at.
-Any linear relationship between an input feature and the outcome has to be approximated by hard splits, which produces a step function.
-This is not efficient.
-This goes hand in hand with **lack of smoothness**.
-Slight changes in the input feature can have a big impact on the predicted outcome, which might not be desirable.
-Imagine a tree that predicts the value of a house and the tree splits in the square meters multiple times.
-One of the splits is at 100.5 square meters.
-Imagine a user of a house price estimator, that uses your decision tree model: She measures her house, concludes that the house has 99 square meters, types it into some nice web interface and get's a prediction of 200 000 Euro.
-The user notices that she forgot to measure a small storeroom with 2 square meters.
-The storeroom has a skewed wall, so she is not sure if she can count it fully towards the whole house area or only half of the space.
-So she decides to try both 100.0 and 101.0 square meters.
-The results: 200 000 Euro and 205 000 Euro, which is quite unintuitive, because there was no change from 99 square meters to 100, but from 100 to 101.
 
-Trees are also quite **unstable**, so a few changes in the training dataset might create a completely different tree.
-That's because each split depends on the parent split.
-And if a different feature gets selected as the first split feature, the whole tree structure will change.
-It does not generate confidence in the model if the structure flips so easily.
+**Trees fail to deal with linear relationships**.
+Any linear relationship between an input feature and the outcome has to be approximated by splits, creating a step function.
+This is not efficient.
+
+This goes hand in hand with **lack of smoothness**.
+Slight changes in the input feature can have a big impact on the predicted outcome, which is usually not desirable.
+Imagine a tree that predicts the value of a house and the tree uses the size of the house as one of the split feature.
+The split occurs at 100.5 square meters.
+Imagine a user of a house price estimator using your decision tree model:
+She measures her house, comes to the conclusion that the house has 99 square meters, enters it into the price calculator and gets a prediction of 200 000 Euro.
+The user notices that she has forgotten to measure a small storage room with 2 square meters.
+The storage room has a sloping wall, so she is not sure whether she can count all of the area or only half of it.
+So she decides to try both 100.0 and 101.0 square meters.
+The results: The price calculator outputs 200 000 Euro and 205 000 Euro, which is rather unintuitive, because there was no change from 99 square meters to 100.
+
+Trees are also quite **unstable**.
+A few changes in the training dataset can create a completely different tree.
+This is because each split depends on the parent split.
+And if a different feature is selected as the first split feature, the entire tree structure changes.
+It doesn't create confidence in the model if the structure changes so easily.
 
 Decision trees are very interpretable - as long as they are short.
-**The number of terminal nodes increases quickly with increasing depth.**
-The more terminal nodes, the more difficult it becomes to understand the decision rules of a tree.
+**The number of terminal nodes increases quickly with depth.**
+The more terminal nodes and the deeper the tree, the more difficult it becomes to understand the decision rules of a tree.
 A depth of 1 means 2 terminal nodes.
 Depth of 2 means max. 4 nodes. 
 Depth of 3 means max. 8 nodes.
-The maximum number of terminal nodes in a tree is 2 to the power of its depth.
-
+The maximum number of terminal nodes in a tree is 2 to the power of the depth.
 
 ### Software
 
@@ -161,8 +179,3 @@ For the examples in this chapter, I used the `rpart` R package that implements C
 CART is implemented in many programming languages, including [Python](https://scikit-learn.org/stable/modules/tree.html).
 Arguably, CART is a pretty old and somewhat outdated algorithm and there are some interesting new algorithms for fitting trees.
 You can find an overview of some R packages for decision trees in the [Machine Learning and Statistical Learning CRAN Task View](https://cran.r-project.org/web/views/MachineLearning.html) under the keyword "Recursive Partitioning".
-
-
-
-
-
