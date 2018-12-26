@@ -26,14 +26,14 @@ Think of the genie in a bottle, that always takes your wishes literally:
 "I want to be the richest person in the world!" -> You become the richest person, but as a side effect, the currency you hold crashes due to inflation. 
 "I want to be happy for the rest of my life!" -> The next 5 minutes you feel very, very happy, then the genie kills you. 
 "I wish for world peace!" -> The genie kills all humans. 
-We wrongly specify the goals either because we don't know all the constraints or because we can't measure them. 
-Let's look at public limited companies as an example of imperfect goal specification: A public limited company has the simple goal of earning money for its shareholders. 
+We wrongly specify the goals either because we do not know all the constraints or because we cannot measure them. 
+Let us look at public limited companies as an example of imperfect goal specification: A public limited company has the simple goal of earning money for its shareholders. 
 But this specification does not capture the true goal with all its constraints that we really strive for:
-For example, we don't appreciate a company killing people to make money, poisoning rivers or to simply printing its own money. 
+For example, we do not appreciate a company killing people to make money, poisoning rivers or to simply printing its own money. 
 We have invented laws, regulations, penalties, compliance procedures, labor unions and more to patch up the imperfect goal specification.
 Another example you can live through yourself: [Paperclips](http://www.decisionproblem.com/paperclips/index2.html), a game in which you play a machine with the goal of producing as many paperclips as possible. 
-WARNING: It's addictive.
-I don't want to spoil it too much, but let's say things get out of hand really quickly.
+WARNING: It is addictive.
+I do not want to spoil it too much, but let us say things get out of hand really quickly.
 In machine learning, the imperfections in goal specification come from imperfect data abstractions (biased population, measurement errors, ...), 
 unconstrained loss functions, lack of knowledge of the constraints, shift in distribution between training and application data and much more. 
 
@@ -41,7 +41,7 @@ Digitization is driving automation forward.
 Imperfect goal specification conflicts with automation.
 I claim that this conflict is mediated by interpretability methods.
 
-The scene for our predictions is set, the crystal ball is ready, now let's take a look where the field could be going!
+The scene for our predictions is set, the crystal ball is ready, now let us take a look where the field could be going!
 
 
 ## The Future of Machine Learning
@@ -50,9 +50,9 @@ Without machine learning, there can be no interpretable machine learning.
 Therefore we have to guess where machine learning is heading, before we talk about interpretability.
 
 Machine learning (or "AI") is associated a lot of promises and expectations.
-But let's start with a less optimistic observation:
+But let us start with a less optimistic observation:
 While science develops a lot of fancy machine learning tools, in my experience it is quite difficult to integrate them into existing processes and products.
-Not because it's not possible, but because it simply takes time for companies and institutions to catch up. 
+Not because it is not possible, but because it simply takes time for companies and institutions to catch up. 
 In the gold rush of the current AI hype, companies open up "AI labs", "Machine Learning Units" and hire "Data Scientists", "Machine Learning Experts", "AI engineers", and so on, but the reality is rather frustrating (in my experience):
 Often companies do not even have data in the required form and the data scientist waits inactive for months.
 Sometimes companies have such high expectation due to the AI hype in the media that the data scientists could never fulfill them.
@@ -99,7 +99,7 @@ The breakthrough for machine learning is not only achieved through better comput
 
 Based on the premise that the goal of a machine learning model can never be perfectly specified, it follows that interpretable machine learning is necessary to close the gap between the misspecified and the actual goal. 
 In many areas and sectors, interpretability will be the catalyst for the adoption of machine learning. 
-Some anecdotal evidence: Many people I have talked to do not use machine learning because they can't explain the model to others. 
+Some anecdotal evidence: Many people I have talked to do not use machine learning because they cannot explain the model to others. 
 I believe that interpretability will tackle this issue and make machine learning attractive to organisations and people that demand a degree of transparency.
 In addition to the misspecification of the problem, many industries require interpretability, whether for legal reasons, risk aversion or to gain insight into the underlying problem.
 Machine learning automates the modeling process and moves the human a bit further away from the data and the underlying problem: 
@@ -110,7 +110,7 @@ Interpretation tools make it easier to identify these problems.
 
 ## The Future of Interpretability
 
-Let's take a look at where machine learning interpretability might be going.
+Let us take a look at where machine learning interpretability might be going.
 
 
 **The focus will be on model-agnostic interpretability tools.**
@@ -120,7 +120,7 @@ The advantage of model-agnostic interpretability is the modularity:
 We can easily replace the underlying machine learning model. 
 We can just as easily replace the interpretability method.
 For these reasons, model-agnostic methods will scale much better. 
-That's why I believe that model-agnostic methods will become more dominant in the long term.
+That is why I believe that model-agnostic methods will become more dominant in the long term.
 But intrinsically interpretable methods will also have their place.
 
 
@@ -140,10 +140,10 @@ Today anyone can build websites without knowing HTML, CSS and Javascript but the
 Similarly, I believe anyone will be able to train machine learning models without knowing how to program and there will still be a need for machine learning experts.
 
 
-**We don't analyze data, we analyze models.**
+**We do not analyze data, we analyze models.**
 
 The raw data itself is always useless (I exaggerate on purpose). 
-I don't care about the data; 
+I do not care about the data; 
 I do care about the knowledge distilled from the data. 
 Interpretable machine learning is a great way to distill knowledge from data.
 You can probe the model extensively, the model automatically recognizes if and how features are relevant to the prediction (many models have built-in feature selection), the model can automatically recognize how the relationships are represented the best and - if trained correctly - the final model is the best possible approximation to reality.
@@ -165,17 +165,17 @@ Assumption-based models typically have worse predictive performance on untouched
 This is only true for big datasets, since interpretable models with good assumptions will perform better than black box models with many parameters.
 The black box machine learning approach needs a lot of data to work well.
 Because of the digitization of everything, we will have bigger and bigger datasets and therefore the approach of machine learning becomes more attractive: 
-We don't make assumptions, we approximate reality as closely as possible (while avoiding overfitting on the training data).
+We do not make assumptions, we approximate reality as closely as possible (while avoiding overfitting on the training data).
 I argue that we should develop all the tools that we have in statistics to answer questions (hypothesis tests, correlation measures, interaction measures, visualization tools, confidence intervals, p-values, prediction intervals, probability distributions) and rewrite them for black box models.
 In a way, this is already happening: 
 
-- Let's take a classic linear model: The standardized regression coefficient is already a feature importance measure. 
+- Let us take a classic linear model: The standardized regression coefficient is already a feature importance measure. 
 With the [permutation feature importance measure](#feature-importance), we have a tool that works with any model. 
 - In a linear model, the coefficients measures the effect of a single feature on the predicted outcome. 
 The generalized version of this is the [partial dependence plot](#pdp).
 - Test whether A or B is better: 
 For this we can also use partial dependence functions. 
-What we don't have yet (to the best of my best knowledge) are statistical tests for arbitrary black box models.
+What we do not have yet (to the best of my best knowledge) are statistical tests for arbitrary black box models.
 
 
 **The data scientists will automate themselves.**
