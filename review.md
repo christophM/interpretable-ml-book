@@ -18,6 +18,7 @@ Please check the chapter for the following points:
 - Are the main claims of the chapter backed up with good arguments, proofs, examples, references?
 - Are alle the statements correct?
 - Anything else you think might improve this chapter?
+- Is some graphic missing that could better explain some concept better ?
 
 
 With your permission, your name will appear 
