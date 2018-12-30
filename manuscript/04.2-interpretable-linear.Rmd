@@ -74,10 +74,10 @@ Fixed means that they are treated as "given constants" and not as statistical va
 This implies that they are free of measurement errors.
 This is a rather unrealistic assumption.
 Without that assumption, however, you would have to fit very complex measurement error models that account for the measurement errors of your input features.
-And usually you don't want to do that.
+And usually you do not want to do that.
 
 **Absence of multicollinearity**  
-You don't want strongly correlated features, because this messes up the estimation of the weights.
+You do not want strongly correlated features, because this messes up the estimation of the weights.
 In a situation where two features are strongly correlated, it becomes problematic to estimate the weights because the feature effects are additive and it becomes indeterminable to which of the correlated features to attribute the effects.
 
 
@@ -136,7 +136,7 @@ SST is the total variance of the target outcome.
 R-squared tells you how much of your variance can be explained by the linear model.
 R-squared ranges between 0 for models where the model does not explain the data at all and 1 for models that explain all of the variance in your data.
 
-There is a catch, because R-squared increases with the number of features in the model, even if they don't contain any information about the target value at all.
+There is a catch, because R-squared increases with the number of features in the model, even if they do not contain any information about the target value at all.
 Therefore, it is better to use the adjusted R-squared, which accounts for the number of features used in the model.
 Its calculation is:
 
@@ -189,7 +189,7 @@ Interpretation of a numerical feature (temperature):
 An increase of the temperature by 1 degree Celsius increases the predicted number of bicycles by `r sprintf('%.1f', lm_summary_print['temp', 'Estimate'])`, when all other features remain fixed.
 
 Interpretation of a categorical feature ("weathersituation"):
-The estimated number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitRAIN/SNOW/STORM', 'Estimate'])` lower when it is raining, snowing or stormy, compared to good weather -- again assuming that all other features don't change.
+The estimated number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitRAIN/SNOW/STORM', 'Estimate'])` lower when it is raining, snowing or stormy, compared to good weather -- again assuming that all other features do not change.
 When the weather is misty, the predicted number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitMISTY', 'Estimate'])` lower compared to good weather, given all other features remain the same.
 
 All the interpretations always come with the footnote that "all other features remain the same".
@@ -361,7 +361,7 @@ If all numerical features are mean centered (feature minus mean of feature) and 
 This might also be a non-existent data point, but it might at least be more likely or more meaningful.
 In this case, the weights times the feature values (feature effects) explain the contribution to the predicted outcome contrastive to the "mean-instance".
 Another aspect of a good explanation is selectivity, which can be achieved in linear models by using less features or by training sparse linear models.
-But by default, linear models don't create selective explanations.
+But by default, linear models do not create selective explanations.
 Linear models create truthful explanations, as long as the linear equation is an appropriate model for the relationship between features and outcome.
 The more non-linearities and interactions there are, the less accurate the linear model will be and the less truthful the explanations become.
 Linearity makes the explanations more general and simpler.
@@ -369,9 +369,10 @@ The linear nature of the model, I believe, is the main factor why people use lin
 
 
 ###  Sparse Linear Models {#sparse-linear}
-The examples of the linear models that I have chosen all look nice and neat, do not they?
+
+The examples of the linear models that I have chosen all look nice and neat, don't they?
 But in reality you might not have just a handful of features, but hundreds or thousands.
-And your normal linear models?
+And your linear regression models?
 Interpretability goes downhill.
 You might even find yourself in a situation where there are more features than instances, and you cannot fit a standard linear model at all.
 The good news is that there are ways to introduce sparsity (= few features) into linear models.
@@ -379,34 +380,33 @@ The good news is that there are ways to introduce sparsity (= few features) into
 #### Lasso {#lasso}
 
 Lasso is an automatic and convenient way to introduce sparsity into the linear regression model.
-Lasso stands for "least absolute shrinkage and selection operator" and, when applied for a linear model, performs feature selection and regularization of the selected feature weights.
-Let us consider the minimization problem that the $\beta$s optimize:
+Lasso stands for "least absolute shrinkage and selection operator" and, when applied in a linear regression model, performs feature selection and regularization of the selected feature weights.
+Let us consider the minimization problem that the weights optimize:
 
-$$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2\right)$$
+$$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y^{(i)}-x^{(i)}^T\boldsymbol{\beta})^2\right)$$
 
-Lasso adds a term to this optimization problem:
+Lasso adds a term to this optimization problem.
 
-$$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y_i-x_i^T\boldsymbol{\beta})^2+\lambda||\boldsymbol{\beta}||_1\right)$$
+$$min_{\boldsymbol{\beta}}\left(\frac{1}{n}\sum_{i=1}^n(y^{(i)}-xîs{(i)}^T\boldsymbol{\beta})^2+\lambda||\boldsymbol{\beta}||_1\right)$$
 
-The term $||\boldsymbol{\beta}||_1$, the L1-norm of the feature vector,  leads to a penalization of large  $\boldsymbol{\beta}$-values.
-Since the L1-norm is used, many of the weights for the features receive an estimate of 0 and the others are shrunk.
+The term $||\boldsymbol{\beta}||_1$, the L1-norm of the feature vector,  leads to a penalization of large weights.
+Since the L1-norm is used, many of the weights receive an estimate of 0 and the others are shrunk.
 The parameter lambda ($\lambda$) controls the strength of the regularizing effect and is usually tuned by cross-validation.
-Especially when lambda ($\lambda$) is large, many weights become 0.
-
+Especially when lambda is large, many weights become 0.
 The feature weights can be visualized as a function of the penalty term lambda.
 Each feature weight is represented by a curve in the following figure.
 
-```{r lasso-path, fig.cap="With increasing penalty of the weights, fewer and fewer features receive a non-zero weight estimate. These curves are also called regularization paths."}
+```{r lasso-path, fig.cap="With increasing penalty of the weights, fewer and fewer features receive a non-zero weight estimate. These curves are also called regularization paths. The number above the plot is the number of non-zero weights."}
 library("glmnet")
 X.d = model.matrix(y ~ . -1, data = X)
 l.mod = glmnet(X.d, y)
-plot(l.mod,  xvar = "lambda")
+plot(l.mod,  xvar = "lambda", ylab="Weights")
 ```
 
-What value should we choose for $\lambda$?
-If you see the regularization parameter as a tuning parameter, then you can find the optimal  $\lambda$ that minimizes the model error with cross-validation.
-You can also consider lambda ($\lambda$) as a parameter to control the interpretability of the model.
-The larger the penalization, the fewer features are present in the model (because their weight is zero) and the better the model can be interpreted.
+What value should we choose for lambda?
+If you see the penalization term as a tuning parameter, then you can find the lambda that minimizes the model error with cross-validation.
+You can also consider lambda as a parameter to control the interpretability of the model.
+The larger the penalization, the fewer features are present in the model (because their weights are zero) and the better the model can be interpreted.
 
 **Example with LASSO**
 
@@ -432,7 +432,7 @@ kable(extract.glmnet.effects(l.mod$beta, max(which(n.features == 5))), col.names
 
 
 Note that the weights for "temp" and "days_since_2011" differ from the model with two features.
-The reason for this is that by decreasing $\lambda$ even features that are already "in" the model are penalized less and may get a larger absolute weight.
+The reason for this is that by decreasing lambda even features that are already "in" the model are penalized less and may get a larger absolute weight.
 The interpretation of the LASSO weights corresponds to the interpretation of the weights in the linear regression model.
 You only need to pay attention to whether the features are standardized or not, because this affects the weights.
 In this example, the features were standardized by the software, but the weights were automatically transformed back for us to match the original feature scales.
@@ -441,25 +441,25 @@ In this example, the features were standardized by the software, but the weights
 
 A wide spectrum of methods can be used to reduce the number of features in a linear model.
 
-Methods that include a pre-processing step:
+Pre-processing methods:
 
 - Manually selected features:
 You can always use expert knowledge to select or discard some features.
-The big drawback is that it cannot be automated and you might not be an expert.
-- Use some measures to pre-select features:
+The big drawback is that it cannot be automated and need be an expert.
+- Univariate selection:
 An example is the correlation coefficient.
 You only consider features that exceed a certain threshold of correlation between the feature and the target.
 The disadvantage is that it only considers the features individually.
 Some features might not show a correlation until the linear model has accounted for some other features.
 Those ones you will miss with univariate selection methods.
 
-Step-wise procedures:
+Step-wise methods:
 
 - Forward selection:
 Fit the linear model with one feature.
 Do this with each feature.
-Select the model that works best (e.g. determined by the highest R-squared).
-Now again, for the remaining features, fit different versions of your model by adding each feature to your currently best model.
+Select the model that works best (e.g. highest R-squared).
+Now again, for the remaining features, fit different versions of your model by adding each feature to your current best model.
 Select the one that performs best.
 Continue until some criterion is reached, such as the maximum number of features in the model.
 - Backward selection:
@@ -467,16 +467,13 @@ Similar to forward selection.
 But instead of adding features, start with the model that contains all features and try out which feature you have to remove to get the highest performance increase.
 Repeat this until some stopping criterion is reached.
 
-I recommend using Lasso, because it can be automated, considers all features simultaneously, and can be controlled via $\lambda$.
+I recommend using Lasso, because it can be automated, considers all features simultaneously, and can be controlled via lambda.
 It also works for the [logistic regression model](#logistic) for classification.
-
-
-
 
 ### Advantages
 
 The modeling of the predictions as a **weighted sum** makes it transparent how predictions are produced.
-And with LASSO we can ensure that the number of summands remains small.
+And with Lasso we can ensure that the number of features used remains small.
 
 Many people use linear regression models.
 This means that in many places it is **accepted** for predictive modeling and doing inference.
@@ -485,13 +482,13 @@ Linear regression can be found in R, Python, Java, Julia, Scala, Javascript, ...
 
 Mathematically, it is straightforward to estimate the weights and you have a **guarantee to find optimal weights** (given all assumptions of the linear regression model are met by the data).
 
-Together with the weights you get confidence intervals, tests, a very solid statistical theory. 
-There are also many extensions of the linear regression model (see [chapter Linear Model 2.0 - GLMs, GAMs and more](#extend-lm)).
+Together with the weights you get confidence intervals, tests, and solid statistical theory. 
+There are also many extensions of the linear regression model (see [chapter on GLM, GAM and more](#extend-lm)).
 
 
 ### Disadvantages
 
-Linear models can only represent linear relationships, i.e. a weighted sum of the input features.
+Linear regression models can only represent linear relationships, i.e. a weighted sum of the input features.
 Each **nonlinearity or interaction has to be hand-crafted** and explicitly given to the model as an input feature.
 
 Linear models are also often **not that good regarding predictive performance**, because the relationships that can be learned are so restricted and usually oversimplifies how complex reality is.
@@ -500,6 +497,7 @@ The interpretation of a weight **can be unintuitive** because it depends on all 
 A feature with high positive correlation with the outcome y and another feature might get a negative weight in the linear model, because, given the other correlated feature, it is negatively correlated with y in the high-dimensional space.
 Completely correlated features make it even impossible to find a unique solution for the linear equation.
 An example:
-You have a model to predict the value of a house and have features like number of rooms and area of the house.
-House area and number of rooms are highly correlated: the bigger a house is, the more rooms it has. If you now take both features into a linear model, it might happen, that the area of the house is the better predictor and get's a large positive weight.
-The number of rooms might end up getting a negative weight, because either, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
+You have a model to predict the value of a house and have features like number of rooms and size of the house.
+House size and number of rooms are highly correlated: the bigger a house is, the more rooms it has.
+If you take both features into a linear model, it might happen, that the size of the house is the better predictor and get's a large positive weight.
+The number of rooms might end up getting a negative weight, because, given that a house has the same size, increasing the number of rooms could make it less valuable or the linear equation becomes less stable, when the correlation is too strong.
