@@ -20,6 +20,5 @@ coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
     geom_point(aes(x=Estimate, y=Features)) +
     geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) +
     scale_x_continuous('Weight estimate') +
-    scale_y_discrete('Feature') +
     my_theme()
 }

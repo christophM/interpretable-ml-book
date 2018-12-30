@@ -12,7 +12,6 @@ effect_plot = function(mod, dat,  feature_names=NULL){
     geom_boxplot(aes(x=key, y=value, group=key)) +
     coord_flip() +
     scale_y_continuous('Feature effect') +
-    scale_x_discrete('Feature') +
     my_theme()
 }
 
