@@ -60,7 +60,7 @@ perf2 = performance(pred2, measures = list(mae))
 ```
 
 
-*tl;dr: I don't have a definite answer.*  
+*tl;dr: I do not have a definite answer.*  
 
 Answering the question about training or test data touches the fundamental question of what feature importance means.
 The best way to understand the difference between feature importance based on training vs. based on test data is an "extreme" example.
@@ -74,9 +74,9 @@ In other words, the SVM model is garbage.
 What values for the feature importance would you expect for the 50 features of this overfitted SVM?
 Zero because none of the features contribute to improved performance on unseen test data?
 Or should the importances reflect how much the model depends on each of the features, regardless whether the learned relationships generalize to unseen data?
-Let's take a look at how the distributions of feature importances for training and test data differ.
+Let us take a look at how the distributions of feature importances for training and test data differ.
 
-```{r feature-imp-sim, fig.cap="Distributions of feature importance values by data type. A support vector machine was trained on a regression dataset with 50 features and 200 instances. The features don't contain any information about the true target. The SVM overfits the data, so the feature importance based on the training data shows many important features. Computed on unseen test data, the feature importances are close to zero."}
+```{r feature-imp-sim, fig.cap="Distributions of feature importance values by data type. A support vector machine was trained on a regression dataset with 50 features and 200 instances. The features do not contain any information about the true target. The SVM overfits the data, so the feature importance based on the training data shows many important features. Computed on unseen test data, the feature importances are close to zero."}
 pred = Predictor$new(mod, cbind(X, y), y = "y")
 imp = FeatureImp$new(pred, loss = "mae")
 
@@ -93,14 +93,14 @@ ggplot(imp.dat) + geom_boxplot(aes(x = dat.type, y = importance)) +
   scale_x_discrete("Data the importance was computed with")
 ```
 
-It's unclear to me which of the two results are more desirable.
+It is unclear to me which of the two results are more desirable.
 So I will try to make a case for both versions and let you decide for yourself.
 
 **The Case for Test Data**
 
 This is a simple case: 
 Model error estimates based on training data are garbage -> feature importance relies on model error estimates -> feature importance based on training data is garbage.  
-Really, it's one of the first things you learn in machine learning:
+Really, it is one of the first things you learn in machine learning:
 If you measure the model error (or performance) on the same data on which the model was trained, the measurement is usually too optimistic, which means that the model seems to work much better than it does in reality.
 And since the permutation feature importance relies on measurements of the model error, we should use unseen test data.
 The feature importance based on training data makes us mistakenly believe that feature are important for the predictions, when in reality the model was just overfitting and the features weren't important at all.
@@ -114,16 +114,16 @@ max.imp = imp$results[imp$results$importance == max(imp$results$importance),]
 The arguments for using training data are somewhat more difficult to formulate, but are IMHO just as compelling as the arguments for using test data.
 We take another look at our garbage SVM.
 Based on the training data, the most important feature was `r max.imp$feature`.
-Let's look at a partial dependence plot of feature `r max.imp$feature`.
-The partial dependence plot shows how the model output changes based on changes of the feature inputs and doesn't rely on the generalization error.
-It doesn't matter whether the PDP is computed with training or test data.
+Let us look at a partial dependence plot of feature `r max.imp$feature`.
+The partial dependence plot shows how the model output changes based on changes of the feature inputs and does not rely on the generalization error.
+It does not matter whether the PDP is computed with training or test data.
 
 ```{r garbage-svm-pdp, fig.cap=sprintf("The partial dependence of feature %s, which is the most important feature according to the feature importance based on the training data. The plot shows that the SVM depends on this feature to make predictions", max.imp$feature)}
 pdp = FeatureEffect$new(pred2, max.imp$feature, method = "pdp")
 pdp$plot()
 ```
 
-The plot clearly shows that the SVM has learned to rely on feature `r max.imp$feature` for its predictions, but according to the feature importance based on the test data (`r round(imp2$results[imp2$results$feature == max.imp$feature, "importance"], 2)`), it's not important.
+The plot clearly shows that the SVM has learned to rely on feature `r max.imp$feature` for its predictions, but according to the feature importance based on the test data (`r round(imp2$results[imp2$results$feature == max.imp$feature, "importance"], 2)`), it is not important.
 Based on the training data, the importance is `r round(max.imp$importance, 2)`, reflecting that the model has learned to use this feature.
 Feature importance based on the training data tells us which features are important for the model in the sense that it depends on them for making predictions.
 
@@ -195,15 +195,15 @@ plot(importance)
 By permuting the feature you also destroy the interaction effects with other features. 
 This means that the permutation feature importance measure regards both the feature main effect and the interaction effects on the model performance.
 This is also a disadvantage because the importance of the interaction between two features will be included in the importance measures of both features.
-This means that the feature importances don't add up to the total drop in performance, would we shuffle all the features, but they are greater than that. 
+This means that the feature importances do not add up to the total drop in performance, would we shuffle all the features, but they are greater than that. 
 Only when there is no interaction between the features, like in a linear model, the importances would roughly add up.
-- Permutation feature importance doesn't require retraining the model like.
+- Permutation feature importance does not require retraining the model like.
 Some other methods suggest to delete a feature, retrain the model and then compare the model error.
 Since retraining a machine learning model can take a long time, 'only' permuting a feature can safe lots of time.
 - Importance methods that retrain the model with a subset of the features seem intuitive at first glance, but the model with the reduced data is meaningless for the feature importance.
 We are interested in the feature importance of a fixed model, and when I say fixed, I also mean that the features have to be used.
 Retraining with a reduced dataset creates a different model from the one we are interested in.
-Let's say you train a sparse linear model (with LASSO) with a fixed amount of features with a non-zero weight.
+Let us say you train a sparse linear model (with LASSO) with a fixed amount of features with a non-zero weight.
 The dataset has 100 features, you set the number of non-zero weights to 5.
 You analyze the importance of one of the features that got a non-zero weight.
 You remove the feature and retrain the model.
@@ -213,15 +213,15 @@ We remove the feature and retrain the model.
 Since another feature will be chosen as the first split, the whole tree can be very different, meaning that we compare the error rates of (potentially) completely different trees to decide how important that feature is.
 
 ### Disadvantages
-- It's very unclear whether you should use training or test data for computing the feature importance.
+- It is very unclear whether you should use training or test data for computing the feature importance.
 - The feature importance measure is tied to the error of the model.
 This is not inherently bad, but in some cases not what you need.
 In some cases you would prefer to know how much the model's output varies for one feature, ignoring what it means for the performance.
 For example: You want to find out how robust your model's output is, given someone manipulates the features. 
-In this case, you wouldn't be interested in how much the model performance drops given the permutation of a feature, but rather how much of the model's output variance is explained by each feature. 
-Model variance (explained by the features) and feature importance correlate strongly when the model generalizes well (i.e. it doesn't overfit).
+In this case, you would not be interested in how much the model performance drops given the permutation of a feature, but rather how much of the model's output variance is explained by each feature. 
+Model variance (explained by the features) and feature importance correlate strongly when the model generalizes well (i.e. it does not overfit).
 - You need access to the actual outcome target. 
-If someone only gives you the model and unlabeled data - but not the actual target - you can't compute the permutation feature importance.
+If someone only gives you the model and unlabeled data - but not the actual target - you cannot compute the permutation feature importance.
 - The permutation feature importance measure depends on shuffling the feature, which adds randomness to the importance measure.
 When the permutation is repeated, the results might differ.
 Repeating the permutation and averaging the importance measures over repetitions stabilizes the measure, but increases the time of computation.
@@ -236,7 +236,7 @@ Let me explain with an example what I mean by "splitting up" the feature importa
 We want to predict the probability of rain and use the temperature at 8:00 AM of the day before as a feature together with other uncorrelated features.
 I fit a random forest and it turns out the temperature is the most important feature and all is good and I sleep well the next night.
 Now imagine another scenario in which I additionally include the temperature at 9:00 AM as a feature, which is highly correlated with the temperature at 8:00 AM.
-The temperature at 9:00 AM doesn't give me much additional information, when I already know the temperature at 8:00 AM.
+The temperature at 9:00 AM does not give me much additional information, when I already know the temperature at 8:00 AM.
 But having more features is always good, right?
 I fit a random forest with the two temperature features and the uncorrelated features.
 Some of the trees in the random forest pick up the 8:00 AM temperature, some the 9:00 AM temperature, some both and some none. 
@@ -248,7 +248,7 @@ On the other hand, it makes the interpretation of the feature importances way mo
 Imagine that you want to check the features for measurement errors.
 The check is expensive and you decide to only check the top 3 most important features.
 In the first case you would check the temperature, in the second case you would not include any temperature feature, simply because they now share the importance.
-Even though the importance measure might make sense on the model behavior level, it's damn confusing if you have correlated features.
+Even though the importance measure might make sense on the model behavior level, it is damn confusing if you have correlated features.
 
 
 ### Software and Alternatives

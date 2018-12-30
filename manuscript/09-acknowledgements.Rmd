@@ -1,7 +1,7 @@
 # Acknowledgements
 
 Writing this book was (and still is) a lot of fun.
-But it's also a lot of work and I am very happy about the support I received:
+But it is also a lot of work and I am very happy about the support I received:
 
 A special thanks goes to Verena Haunschmid for contributing the section about [LIME explanations for images](#images-lime).
 She works in data science and I recommend following her on Twitter: [\@ExpectAPatronum](https://twitter.com/ExpectAPatronum).
@@ -17,7 +17,7 @@ I would like to thank all researchers who allowed me to use images from their pu
 
 
 In at least three aspects, the way I publish the book is unconventional.
-First, it's available both as a website and as an ebook/pdf.
+First, it is available both as a website and as an ebook/pdf.
 The software I used to build this book is called `bookdown`, written by [Yihui Xie](https://yihui.name/), who created many R packages that make it so easy to combine R code and text. Thanks a lot!
 Secondly, I self-publish the book on the platform [Leanpub](https://leanpub.com/), instead of working with a traditional publisher.
 And third, I have published the book as in-progress book, which has helped me enormously to get feedback and to monetize it along the way.
