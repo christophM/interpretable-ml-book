@@ -33,12 +33,12 @@ The higher the value of a feature with a positive weight, the more it contribute
 
 ```{r linear-class-threshold, fig.cap="A linear model classifies tumors as malignant (1) or benign (0) given their size. The lines show the prediction of the linear model. For the data on the left, we can use 0.5 as classification threshold. After introducing a few more malignant tumor cases, the regression line shifts and a threshold of 0.5 no longer separates the classes. Points are slightly jittered to reduce over-plotting. "}
 library("ggplot2")
-df = data.frame(x = c(1,2,3,6,7,8,9),
-  y = c(0,0,0,1,1,1,1),
+df = data.frame(x = c(1,2,3,8,9,10,11,9),
+  y = c(0,0,0,1,1,1,1, 0),
   case = '0.5 threshold ok')
 
-df_extra  = data.frame(x=c(df$x, 7, 7, 7, 4, 20, 19),
-  y=c(df$y, 1,1,1,1, 1,1),
+df_extra  = data.frame(x=c(df$x, 7, 7, 7, 20, 19, 5, 5, 4, 4.5),
+  y=c(df$y, 1,1,1,1, 1, 1, 1, 1, 1),
   case = '0.5 threshold not ok')
 
 df.lin.log = rbind(df, df_extra)
@@ -94,10 +94,18 @@ logistic2 = glm(y ~ x, family = binomial, data = df.lin.log)
 lgrid = data.frame(x = seq(from=0, to=20, length.out=100))
 lgrid$y1_pred = predict(logistic1, newdata = lgrid, type='response')
 lgrid$y2_pred = predict(logistic2 , newdata = lgrid, type='response')
+lgrid.m = data.frame(data.table::melt(lgrid, measure.vars = c("y1_pred", "y2_pred")))
+colnames(lgrid.m) = c("x", "case", "value")
+lgrid.m$case = as.character(lgrid.m$case)
+lgrid.m$case[lgrid.m$case == "y1_pred"] = '0.5 threshold ok'
+lgrid.m$case[lgrid.m$case == "y2_pred"] = '0.5 threshold ok as well'
+df.lin.log$case = as.character(df.lin.log$case)
+df.lin.log$case[df.lin.log$case == "0.5 threshold not ok"] = '0.5 threshold ok as well'
+
 
 
 p1 = ggplot(df.lin.log, aes(x=x,y=y)) +
-  geom_line(aes(x=x, y=y1_pred), data = lgrid, color='blue', size=1) +
+  geom_line(aes(x=x, y=value), data = lgrid.m, color='blue', size=1) +
   geom_point(position = position_jitter(width=0, height=0.02)) +
   my_theme() +
   scale_y_continuous('Tumor class', breaks = c(0, 0.5, 1), labels = c('benign tumor', '0.5',  'malignant tumor'), limits = c(-0.1,1.3)) +
