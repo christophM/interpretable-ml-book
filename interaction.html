@@ -312,18 +312,18 @@ window.cookieconsent.initialise({
             <section class="normal" id="section-">
 <div id="interaction" class="section level2">
 <h2><span class="header-section-number">5.4</span> Feature Interaction</h2>
-<p>When features in a prediction model interact with each other, then the influence of the features on the prediction is not additive but more complex. It follows that Aristotle’s predicate “the whole is greater than the sum of its parts.” only applies in the presence of feature interactions.</p>
+<p>When features interact with each other in a prediction model, the prediction cannot be expressed as the sum of the feature effects, because the effect of one feature depends on the value of the other feature. Aristotle’s predicate “The whole is greater than the sum of its parts” applies in the presence of interactions.</p>
 <div id="feature-interaction" class="section level3">
 <h3><span class="header-section-number">5.4.1</span> Feature Interaction?</h3>
-<p>When a machine learning model makes a prediction based on two features, we can decompose the prediction into four terms: a constant term, one term for the first feature, one for the second feature and one for the interaction effect between the two features.<br />
-The interaction between two features is the change in the prediction that occurs by varying the features, after having accounted for the individual feature effects. It is the effect that comes on top of the sum of the individual feature effects.</p>
-<p>For example: a model predicts the value of a house, using house size (big or small) and location (good or bad) as features, amounting to four possible predictions:</p>
+<p>If a machine learning model makes a prediction based on two features, we can decompose the prediction into four terms: a constant term, a term for the first feature, a term for the second feature and a term for the interaction effect between the two features.<br />
+The interaction between two features is the change in the prediction that occurs by varying the features after considering the individual feature effects.</p>
+<p>For example, a model predicts the value of a house, using house size (big or small) and location (good or bad) as features, which yields four possible predictions:</p>
 <table>
 <thead>
 <tr class="header">
 <th align="right">Location</th>
 <th align="right">Size</th>
-<th align="right">Predicted value</th>
+<th align="right">Prediction</th>
 </tr>
 </thead>
 <tbody>
@@ -349,14 +349,14 @@ The interaction between two features is the change in the prediction that occurs
 </tr>
 </tbody>
 </table>
-<p>We decompose the model prediction into the following parts: A constant term (150,000), an effect for the size feature (+100,000 if big, +0 if small) and an effect for the location (+50,000 if good, +0 if bad). This decomposition fully explains the model predictions. There is no interaction effect, because the model prediction is a sum of the single feature effects for size and location. Making a small house big always adds 100,000 to the predicted value, no matter the location. Also the difference in predicted value between a good and a bad location is 50,000, independent of the size.</p>
-<p>Now let us consider an example with interaction:</p>
+<p>We decompose the model prediction into the following parts: A constant term (150,000), an effect for the size feature (+100,000 if big, +0 if small) and an effect for the location (+50,000 if good, +0 if bad). This decomposition fully explains the model predictions. There is no interaction effect, because the model prediction is a sum of the single feature effects for size and location. When you make a small house big, the prediction always increases by 100,000, regardless of location. Also, the difference in prediction between a good and a bad location is 50,000, regardless of size.</p>
+<p>Let’s now look at an example with an interaction:</p>
 <table>
 <thead>
 <tr class="header">
 <th align="right">Location</th>
 <th align="right">Size</th>
-<th align="right">Predicted value</th>
+<th align="right">Prediction</th>
 </tr>
 </thead>
 <tbody>
@@ -382,91 +382,78 @@ The interaction between two features is the change in the prediction that occurs
 </tr>
 </tbody>
 </table>
-<p>We decompose the prediction table into the following parts: A constant term (150,000), an effect for the size feature (+100,000 if big, +0 if small) and an effect for the location (+50,000 if good, +0 if bad). For this table, we need an extra term for the interaction: +100,000 if the house is big and in a good location. This is an interaction between the size and the location, because in this case, the difference in predicted value between a big and a small house depends on the location.</p>
-<p>One way to estimate the interaction strength is to measure how much of the variation of the predicted outcome depends on the interaction of the features. This measurement is called H-statistic, introduced by Friedman and Popescu (2008)<a href="#fn30" class="footnoteRef" id="fnref30"><sup>30</sup></a></p>
+<p>We decompose the prediction table into the following parts: A constant term (150,000), an effect for the size feature (+100,000 if big, +0 if small) and an effect for the location (+50,000 if good, +0 if bad). For this table we need an additional term for the interaction: +100,000 if the house is big and in a good location. This is an interaction between size and location, because in this case the difference in predicted value between a big and a small house depends on the location.</p>
+<p>One way to estimate the interaction strength is to measure how much of the variation of the prediction depends on the interaction of the features. This measurement is called H-statistic, introduced by Friedman and Popescu (2008)<a href="#fn30" class="footnoteRef" id="fnref30"><sup>30</sup></a>.</p>
 </div>
 <div id="theory-friedmans-h-statistic" class="section level3">
 <h3><span class="header-section-number">5.4.2</span> Theory: Friedman’s H-statistic</h3>
-<p>We will look into two cases: The interaction between two features, which tells us if and how strongly two specific features interact with each other in the model; The interaction between a feature and all other features, which tells us if and how strongly (in total) the specific feature interacts in the model with all the other features. In theory, arbitrary interactions between any number of features can be measured, but those two cases represent the most interesting interaction cases.</p>
-<p>If two features <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> do not interact, we can decompose the <a href="pdp.html#pdp">partial dependence function</a> in the following way (assuming that the partial dependence functions are centered at zero):</p>
+<p>We are going to deal with two cases: First, a two-way interaction measure that tells us whether and to what extend two features in the model interact with each other; Second, a total interaction measure that tells us whether and to what extend a feature interacts in the model with all the other features. In theory, arbitrary interactions between any number of features can be measured, but these two cases are the most interesting interaction cases.</p>
+<p>If two features <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> do not interact, we can decompose the <a href="pdp.html#pdp">partial dependence function</a> as follows (assuming the partial dependence functions are centered at zero):</p>
 <p><span class="math display">\[PD_{jk}(x_j,x_k)=PD_j(x_j)+PD_k(x_k)\]</span></p>
 <p>where <span class="math inline">\(PD_{jk}(x_j,x_k)\)</span> is the 2-way partial dependence function of both features and <span class="math inline">\(PD_j(x_j)\)</span> and <span class="math inline">\(PD_k(x_k)\)</span> the partial dependence functions of the single features.</p>
-<p>Similarly, if a feature <span class="math inline">\(x_j\)</span> has no interaction with any of the other features, we can express the prediction function <span class="math inline">\(\hat{f}(x)\)</span> as a sum of partial dependence functions, where the first summand only depends on <span class="math inline">\(x_j\)</span> and the second depends on all other features excluding <span class="math inline">\(x_j\)</span>:</p>
-<p><span class="math display">\[\hat{f}(x)=PD_j(x_j)+PD_{-j}(x_{-j})\]</span> where <span class="math inline">\(PD_{-j}(x_{-j})\)</span> is the partial dependence function that depends on all features excluding <span class="math inline">\(x_j\)</span>.</p>
-<p>This decomposition expresses the partial dependence (or full prediction) function without interactions (between features <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> or, respectively, <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_{-j}\)</span>). In a next step we measure the difference between the observed partial dependence function and the decomposed one without interactions. We calculate the variance of the output of the partial dependence (for measuring the interaction between two features) or of the complete function (for measuring the interaction between a feature and all other features). The amount of the variance that is explained by the interaction (difference between observed and no-interaction PD) is used as the interaction strength statistic. The statistic is 0 when there is no interaction at all and 1 if all of the variance of the <span class="math inline">\(PD_{jk}\)</span> or <span class="math inline">\(\hat{f}\)</span> is explained by the sum of the partial dependence functions. An interaction statistic of 1 between two features means that each single PD function is constant and the effect on the prediction only comes through the interaction.</p>
-<p>In mathematical terms, the H-statistic for the interaction between feature <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> proposed by Friedman and Popescu is:</p>
+<p>Likewise, if a feature has no interaction with any of the other features, we can express the prediction function <span class="math inline">\(\hat{f}(x)\)</span> as a sum of partial dependence functions, where the first summand depends only on j and the second on all other features except j:</p>
+<p><span class="math display">\[\hat{f}(x)=PD_j(x_j)+PD_{-j}(x_{-j})\]</span> where <span class="math inline">\(PD_{-j}(x_{-j})\)</span> is the partial dependence function that depends on all features except <span class="math inline">\(x_j\)</span>.</p>
+<p>This decomposition expresses the partial dependence (or full prediction) function without interactions (between features j and k, respectively j and all other features). In a next step, we measure the difference between the observed partial dependence function and the decomposed one without interactions. We calculate the variance of the output of the partial dependence (to measure the interaction between two features) or of the entire function (to measure the interaction between a feature and all other features). The amount of the variance explained by the interaction (difference between observed and no-interaction PD) is used as interaction strength statistic. The statistic is 0 if there is no interaction at all and 1 if all of the variance of the <span class="math inline">\(PD_{jk}\)</span> or <span class="math inline">\(\hat{f}\)</span> is explained by the sum of the partial dependence functions. An interaction statistic of 1 between two features means that each single PD function is constant and the effect on the prediction only comes through the interaction.</p>
+<p>Mathematically, the H-statistic proposed by Friedman and Popescu for the interaction between feature j and k is:</p>
 <p><span class="math display">\[H^2_{jk}=\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)})-PD_k(x_{k}^{(i)})\right]^2/\sum_{i=1}^n{PD}^2_{jk}(x_j^{(i)},x_k^{(i)})\]</span></p>
-<p>Similarly for measuring if a feature <span class="math inline">\(x_j\)</span> interacts with any other feature:</p>
+<p>The same applies to measuring whether a feature j interacts with any other feature:</p>
 <p><span class="math display">\[H^2_{j}=\sum_{i=1}^n\left[\hat{f}(x^{(i)})-PD_j(x_j^{(i)})-PD_{-j}(x_{-j}^{(i)})\right]^2/\sum_{i=1}^n\hat{f}^2(x^{(i)})\]</span></p>
-<p>The H-statistic is expensive to evaluate, because it iterates over all data points and at each point the partial dependence has to be evaluated which is done using - again - all n data points. In the worst case, we need <span class="math inline">\(2n^2\)</span> calls to the machine learning models predict function to compute the <span class="math inline">\(H^2_j\)</span>-statistic and <span class="math inline">\(3n^2\)</span> for the <span class="math inline">\(H^2_{jk}\)</span>-statistic. To speed up the computation, we can sample from the n data points . This has the drawback that it adds variance to the partial dependence estimates, which makes the statistic unstable. So when you are using sampling to reduce the computational burden, make sure to sample enough data points.</p>
-<p>In their paper, Friedman and Popescu also propose a test for the H-statistic being significantly different from zero: The Null hypothesis is the absence of interaction. To generate the interaction statistic under the Null hypothesis, you have to be able to adjust the model so that it has no interaction between feature <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> or all others. This is not possible for all types of models, so running this test is model-specific and not model-agnostic and as such not covered here.</p>
-<p>The interaction strength statistic can also be applied in a classification setting, when the predicted outcome is the probability for a class.</p>
+<p>The H-statistic is expensive to evaluate, because it iterates over all data points and at each point the partial dependence has to be evaluated which in turn is done with all n data points. In the worst case, we need <span class="math inline">\(2n^2\)</span> calls to the machine learning models predict function to compute the two-way H-statistic (j vs. k) and <span class="math inline">\(3n^2\)</span> for the total H-statistic (j vs. all). To speed up the computation, we can sample from the n data points . This has the disadvantage of increasing the variance of the partial dependence estimates, which makes the H-statistic unstable. So if you are using sampling to reduce the computational burden, make sure to sample enough data points.</p>
+<p>Friedman and Popescu also propose a test statistic to evaluate whether the H-statistic differs significantly from zero. The null hypothesis is the absence of interaction. To generate the interaction statistic under the null hypothesis, you must be able to adjust the model so that it has no interaction between feature <span class="math inline">\(x_j\)</span> and <span class="math inline">\(x_k\)</span> or all others. This is not possible for all types of models. Therefore this test is model-specific and not model-agnostic and as such is not covered here.</p>
+<p>The interaction strength statistic can also be applied in a classification setting if the prediction is the probability for a class.</p>
 </div>
 <div id="examples-3" class="section level3">
 <h3><span class="header-section-number">5.4.3</span> Examples</h3>
-<p>Let us see how feature interactions look like in practice! We measure the interaction strength of features in a support vector machine that predicts the number of <a href="bike-data.html#bike-data">rented bikes</a>, given weather and calendrical features. The following plot shows the results of the feature interaction analysis:</p>
+<p>Let us see what feature interactions look like in practice! We measure the interaction strength of features in a support vector machine that predicts the number of <a href="bike-data.html#bike-data">rented bikes</a> based on weather and calendrical features. The following plot shows the feature interaction H-statistic:</p>
 <div class="figure"><span id="fig:interaction-bike"></span>
-<img src="images/interaction-bike-1.png" alt="The interaction strength for each feature with all other features for a support vector machine predicting the number of rented bikes. Overall the interaction effects between the features are very weak (below 1 percent of variance explained by each feature)." width="1050" />
+<img src="images/interaction-bike-1.png" alt="The interaction strength for each feature with all other features for a support vector machine predicting bicycle rentals. Overall, the interaction effects between the features are very weak (below 1 percent of variance explained by each feature)." width="1050" />
 <p class="caption">
-FIGURE 5.24: The interaction strength for each feature with all other features for a support vector machine predicting the number of rented bikes. Overall the interaction effects between the features are very weak (below 1 percent of variance explained by each feature).
+FIGURE 5.24: The interaction strength for each feature with all other features for a support vector machine predicting bicycle rentals. Overall, the interaction effects between the features are very weak (below 1 percent of variance explained by each feature).
 </p>
 </div>
-<p>In this next example we calculate the interaction statistic for a classification problem, where we deal with the partial dependence of the predicted probability. We analyze the interactions between features in a random forest that is trained to predict <a href="cervical.html#cervical">cervical cancer</a>, given some risk factors.</p>
+<p>In this next example, we calculate the interaction statistic for a classification problem, dealing with the partial dependence of the predicted probability. We analyze the interactions between features in a random forest trained to predict <a href="cervical.html#cervical">cervical cancer</a>, given some risk factors.</p>
 <div class="figure"><span id="fig:interaction-cervical-include"></span>
-<img src="images/interaction-cervical-1.png" alt="The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features, followed by the number of pregnancies."  />
+<img src="images/interaction-cervical-1.png" alt="The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of sexually transmitted diseases diagnosed has the highest interaction effect with all other features, followed by the number of pregnancies."  />
 <p class="caption">
-FIGURE 5.25: The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of diagnosed sexually transmitted diseases has the highest interaction effect with all other features, followed by the number of pregnancies.
+FIGURE 5.25: The interaction strength for each feature with all other features for a random forest predicting the probability of cervical cancer. The number of sexually transmitted diseases diagnosed has the highest interaction effect with all other features, followed by the number of pregnancies.
 </p>
 </div>
-<p>After looking into the feature interactions of each feature with all other features, we can pick one of the features and specifically dive deeper into all the 2-way interactions between the chosen feature with the other features:</p>
+<p>After looking at the feature interactions of each feature with all other features, we can select one of the features and dive deeper into all the 2-way interactions between the selected feature and the other features.</p>
 <div class="figure"><span id="fig:interaction2-cervical-age-include"></span>
-<img src="images/interaction2-cervical-age-1.png" alt="The 2-way interactions between number of pregnancies with each other feature. There is a strong interaction between the number of pregnancies and the age."  />
+<img src="images/interaction2-cervical-age-1.png" alt="The 2-way interactions between number of pregnancies and each other feature. There is a strong interaction between the number of pregnancies and the age."  />
 <p class="caption">
-FIGURE 5.26: The 2-way interactions between number of pregnancies with each other feature. There is a strong interaction between the number of pregnancies and the age.
+FIGURE 5.26: The 2-way interactions between number of pregnancies and each other feature. There is a strong interaction between the number of pregnancies and the age.
 </p>
 </div>
 </div>
 <div id="advantages-8" class="section level3">
 <h3><span class="header-section-number">5.4.4</span> Advantages</h3>
-<ul>
-<li>The interaction statistic has an <strong>underlying theory</strong> through the partial dependence decomposition.</li>
-<li>The H-statistic has a <strong>meaningful interpretation</strong>: The interaction is defined as the portion of variance explained by the interaction.</li>
-<li>Since the statistic is <strong>dimensionless and always between 0 and 1</strong>, it is comparable across features and even across models.</li>
-<li>The statistic <strong>detects all kinds of interactions</strong>, regardless of a specific form.</li>
-<li>With the H-statistic it is also possible to analyze arbitrary <strong>higher interactions</strong>: For example the interaction strength between 3 or more features.</li>
-</ul>
+<p>The interaction H-statistic has an <strong>underlying theory</strong> through the partial dependence decomposition.</p>
+<p>The H-statistic has a <strong>meaningful interpretation</strong>: The interaction is defined as the share of variance that is explained by the interaction.</p>
+<p>Since the statistic is <strong>dimensionless and always between 0 and 1</strong>, it is comparable across features and even across models.</p>
+<p>The statistic <strong>detects all kinds of interactions</strong>, regardless of their particular form.</p>
+<p>With the H-statistic it is also possible to analyze arbitrary <strong>higher interactions</strong> such as the interaction strength between 3 or more features.</p>
 </div>
 <div id="disadvantages-8" class="section level3">
 <h3><span class="header-section-number">5.4.5</span> Disadvantages</h3>
-<ul>
-<li>The first thing you will notice: The interaction H-statistic takes a long time to compute, because it is <strong>computationally expensive</strong>.</li>
-<li>Sometimes the results are weird and for small simulations <strong>do not yield the expected results</strong>. But this is more anecdotal evidence.</li>
-<li>The computation involves estimating marginal distributions. These <strong>estimates also have some variance</strong>, when we do not use all of the data points. This means when we sample points, the estimates will also vary from run to run and the results might <strong>become unstable</strong>. I recommend repeating it a few times to see if you have enough data included for a stable result.</li>
-<li>It is unclear whether an interaction is significantly bigger than 0. We would need to conduct a statistical test, but this <strong>test is not (yet) available in a model-agnostic version</strong>.</li>
-<li>Connected to the testing problem: It is hard to tell when the H-statistic is large enough that we would consider it a strong interaction.</li>
-<li>The H-statistic tells us how strong the interactions are, but it does not tell us how the interaction is shaped. That is what <a href="pdp.html#pdp">partial dependence plots</a> are for. A meaningful workflow is to measure the interaction strengths and then create 2D-partial dependence plots for the interactions in which you are interested.</li>
-<li>The H-statistic cannot be meaningfully applied if the inputs are pixels.</li>
-<li>The interaction statistic works under the assumption that we can independently shuffle features (the same problem that partial dependence plots have). When the features strongly correlate, the assumption is violated and <strong>we integrate over feature combinations that are very unlikely in reality</strong>.</li>
-</ul>
+<p>The first thing you will notice: The interaction H-statistic takes a long time to compute, because it is <strong>computationally expensive</strong>.</p>
+<p>The computation involves estimating marginal distributions. These <strong>estimates also have a certain variance</strong> if we do not use all of the data points. This means that as we sample points, the estimates also vary from run to run and the <strong>results can be unstable</strong>. I recommend repeating the H-statistic computation a few times to see if you have enough data to get a stable result.</p>
+<p>It is unclear whether an interaction is significantly greater than 0. We would need to conduct a statistical test, but this <strong>test is not (yet) available in a model-agnostic version</strong>.</p>
+<p>Concerning the test problem, it is difficult to say when the H-statistic is large enough for us to consider an interaction as strong.</p>
+<p>The H-statistic tells us how strong the interactions are, but it does not tell us how the interaction looks like. That is what <a href="pdp.html#pdp">partial dependence plots</a> are for. A meaningful workflow is to measure the interaction strengths and then create 2D-partial dependence plots for the interactions you are interested in.</p>
+<p>The H-statistic cannot be used meaningfully if the inputs are pixels. So the technique is not useful for image classifier.</p>
+<p>The interaction statistic works under the assumption that we can shuffle features independently. If the features correlate strongly, the assumption is violated and <strong>we integrate over feature combinations that are very unlikely in reality</strong>. That’s the same problem that partial dependence plots have. You can’t say in general if it leads to overestimation or underestimation.</p>
+<p>Sometimes the results are strange and for small simulations <strong>do not yield the expected results</strong>. But this is more of an anecdotal observation.</p>
 </div>
 <div id="implementations" class="section level3">
 <h3><span class="header-section-number">5.4.6</span> Implementations</h3>
-<ul>
-<li>For the examples in this book, I used the R package <code>iml</code>, which is available on <a href="https://cran.r-project.org/web/packages/iml">CRAN</a> and the development version on <a href="https://github.com/christophM/iml">Github</a>.</li>
-<li>There are other implementations, which focus on a specific model:
-<ul>
-<li>The R package <a href="https://cran.r-project.org/web/packages/pre/index.html">pre</a> implements the <a href="rulefit.html#rulefit">RuleFit algorithm</a> plus the H-statistic.</li>
-<li>The R package <a href="https://github.com/gbm-developers/gbm3">gbm</a> implements gradient boosted models plus the H-statistic.</li>
-</ul></li>
-</ul>
+<p>For the examples in this book, I used the R package <code>iml</code>, which is available on <a href="https://cran.r-project.org/web/packages/iml">CRAN</a> and the development version on <a href="https://github.com/christophM/iml">Github</a>. There are other implementations, which focus on specific models: The R package <a href="https://cran.r-project.org/web/packages/pre/index.html">pre</a> implements the <a href="rulefit.html#rulefit">RuleFit algorithm</a> and includes the H-statistic. The R package <a href="https://github.com/gbm-developers/gbm3">gbm</a> implements gradient boosted models and the H-statistic.</p>
 </div>
 <div id="alternatives" class="section level3">
 <h3><span class="header-section-number">5.4.7</span> Alternatives</h3>
-<p>The H-statistic is not the only way to measure interactions, there is also:</p>
-<ul>
-<li><p>Variable Interaction Networks (VIN) by Hooker (2004)<a href="#fn31" class="footnoteRef" id="fnref31"><sup>31</sup></a>: An approach that decomposes the prediction function into main effects and feature interactions. The interactions between features are then visualized as a network. Unfortunately, there is no software available yet.</p></li>
-<li><p>Partial dependence based feature interaction by Greenwell et. al (2018)<a href="#fn32" class="footnoteRef" id="fnref32"><sup>32</sup></a>: For measuring the interaction between two features, this approach measures the feature importance (defined as the variance of the 1D partial dependence function) of one feature conditional on different, fixed points of the other feature. When the variance is high, then the features interact with each other, if it is zero, they do not interact. The R package <code>vip</code> is available on <a href="https://github.com/koalaverse/vip">Github</a>. They also cover partial dependence plots and feature importance.</p></li>
-</ul>
+<p>The H-statistic is not the only way to measure interactions:</p>
+<p>Variable Interaction Networks (VIN) by Hooker (2004)<a href="#fn31" class="footnoteRef" id="fnref31"><sup>31</sup></a> is an approach that decomposes the prediction function into main effects and feature interactions. The interactions between features are then visualized as a network. Unfortunately no software is available yet.</p>
+<p>Partial dependence based feature interaction by Greenwell et. al (2018)<a href="#fn32" class="footnoteRef" id="fnref32"><sup>32</sup></a> measures the interaction between two features. This approach measures the feature importance (defined as the variance of the 1D partial dependence function) of one feature conditional on different, fixed points of the other feature. If the variance is high, then the features interact with each other, if it is zero, they do not interact. The corresponding R package <code>vip</code> is available on <a href="https://github.com/koalaverse/vip">Github</a>. The package also covers partial dependence plots and feature importance.</p>
 
 </div>
 </div>
@@ -474,8 +461,8 @@ FIGURE 5.26: The 2-way interactions between number of pregnancies with each othe
 <hr />
 <ol start="30">
 <li id="fn30"><p>Friedman, Jerome H, and Bogdan E Popescu. 2008. “Predictive Learning via Rule Ensembles.” The Annals of Applied Statistics. JSTOR, 916–54.<a href="interaction.html#fnref30">↩</a></p></li>
-<li id="fn31"><p>Hooker, G. (2004). Discovering Additive Structure in Black Box Functions. Knowledge Discovery and Data Mining, 575–580. <a href="http://doi.org/10.1145/1014052.1014122" class="uri">http://doi.org/10.1145/1014052.1014122</a><a href="interaction.html#fnref31">↩</a></p></li>
-<li id="fn32"><p>Greenwell, B. M., Boehmke, B. C., &amp; McCarthy, A. J. (2018). A Simple and Effective Model-Based Variable Importance Measure, 1–27. Retrieved from <a href="http://arxiv.org/abs/1805.04755" class="uri">http://arxiv.org/abs/1805.04755</a><a href="interaction.html#fnref32">↩</a></p></li>
+<li id="fn31"><p>Hooker, Giles (2004). Discovering Additive Structure in Black Box Functions. Knowledge Discovery and Data Mining, 575–580. <a href="http://doi.org/10.1145/1014052.1014122" class="uri">http://doi.org/10.1145/1014052.1014122</a><a href="interaction.html#fnref31">↩</a></p></li>
+<li id="fn32"><p>Greenwell, Brandon. M., Boehmke, B. C., &amp; McCarthy, A. J. (2018). A Simple and Effective Model-Based Variable Importance Measure, 1–27. Retrieved from <a href="http://arxiv.org/abs/1805.04755" class="uri">http://arxiv.org/abs/1805.04755</a><a href="interaction.html#fnref32">↩</a></p></li>
 </ol>
 </div>
             </section>
