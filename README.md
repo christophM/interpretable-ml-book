@@ -31,6 +31,8 @@ devtools::install_deps()
 For rendering the book, start an R session and type:
 ```{r}
 setwd("manuscript")
+# first, generate the references
+source("../scripts/references.R")
 bookdown::render_book('', 'bookdown::gitbook')
 ```
 
