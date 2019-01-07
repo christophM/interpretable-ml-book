@@ -7,33 +7,33 @@ set.seed(42)
 
 ## Individual Conditional Expectation (ICE) {#ice}
 
-Individual Conditional Expectation (ICE) plots draw a line per instance that shows how the instance's prediction changes when a feature changes. 
+Individual Conditional Expectation (ICE) plots display one line per instance that shows how the instance's prediction changes when a feature changes. 
 
 The partial dependence plot for the average effect of a feature is a global method because it does not focus on specific instances, but on an overall average.
 The equivalent to a PDP for individual data instances is called individual conditional expectation (ICE) plot (Goldstein et al. 2015[^Goldstein2015]).
-An ICE plot visualizes the dependence of the prediction on a feature for *each* instance separately, resulting in multiple lines, one for each instance, compared to one line in partial dependence plots.
+An ICE plot visualizes the dependence of the prediction on a feature for *each* instance separately, resulting in one line per instance, compared to one line overall in partial dependence plots.
 A PDP is the average of the lines of an ICE plot.
 The values for a line (and one instance) can be computed by keeping all other features the same, creating variants of this instance by replacing the feature's value with values from a grid and making predictions with the black box model for these newly created instances.
 The result is a set of points for an instance with the feature value from the grid and the respective predictions.
 
-So, what's the point of looking at individual expectations instead of partial dependencies?
+What's the point of looking at individual expectations instead of partial dependencies?
 Partial dependence plots can obscure a heterogeneous relationship created by interactions.
 PDPs can show you what the average relationship between a feature and the prediction looks like.
 This only works well if the interactions between the features for which the PDP is calculated and the other features are weak.
 In case of interactions, the ICE plot will provide much more insight.
 
 A more formal definition:
-In ICE plots, for each instance in $\{(x_{S_i},x_{C_i})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x^{(i)}_{S}$, while $x^{(i)}_{C}$ remains  fixed.
+In ICE plots, for each instance in $\{(x_{S}^{(i)},x_{C}^{(i)})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x^{(i)}_{S}$, while $x^{(i)}_{C}$ remains  fixed.
 
 ### Examples
 
-Let us go back to the [cervical cancer dataset](#cervical) and see how the prediction of each instance is associated with the feature 'Age'.
-The model we will analyze is a random forest that predicts the probability of cancer for a woman given risk factors.
+Let's go back to the [cervical cancer dataset](#cervical) and see how the prediction of each instance is associated with the feature "Age".
+We will analyze a random forest that predicts the probability of cancer for a woman given risk factors.
 In the [partial dependence plot](#pdp) we have seen that the cancer probability increases around the age of 50, but is this true for every woman in the dataset?
 The ICE plot reveals that for most women the age effect follows the average pattern of an increase at age 50, but there are some exceptions:
 For the few women that have a high predicted probability at a young age, the predicted cancer probability does not change much with age.
 
-```{r ice-cervical, fig.cap="Individual conditional expectation plot of cervical cancer probability by age. Each line represents one woman. Most women with a low cancer probability in younger years see an increase in predicted cancer probability. Interestingly for some women with an estimated cancer probability greater than 0.4, the estimated probability does not change much with higher age."}
+```{r ice-cervical, fig.cap="ICE plot of cervical cancer probability by age. Each line represents one woman. For most women there is an increase in predicted cancer probability with increasing age. For some women with a predicted cancer probability above 0.4, the prediction does not change much at higher age."}
 library("mlr")
 library("ggplot2")
 data(cervical)
@@ -42,26 +42,27 @@ cervical_subset_index = sample(1:nrow(cervical), size = 300)
 cervical_subset = cervical[cervical_subset_index, ]
 cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
-pred.cervical = Predictor$new(mod, cervical)
+pred.cervical = Predictor$new(mod, cervical_subset, class = "Cancer")
 ice = FeatureEffect$new(pred.cervical, "Age", method = "ice")$plot() + 
   scale_color_discrete(guide='none') + 
   scale_y_continuous('Predicted cancer probability')
 ice
 ```
 
-The next figures shows an ICE plot for the [bike rental prediction](#bike-data).
+The next figures shows ICE plots for the [bike rental prediction](#bike-data).
 The underlying prediction model is a random forest.
 
-```{r ice-bike, fig.cap='Individual conditional expectation plot of predicted bike count and weather conditions. The same effects can be observed as in the partial dependence plots.'}
+```{r ice-bike, fig.cap='ICE plots of predicted bicycle rentals by weather conditions. The same effects can be observed as in the partial dependence plots.'}
 set.seed(42)
 data("bike")
 bike.subset.index = sample(1:nrow(bike), size = 300)
 bike.subset = bike[bike.subset.index,]
 bike.task = makeRegrTask(data = bike, target = "cnt")
 mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
-pred.bike = Predictor$new(mod.bike, bike)
+pred.bike = Predictor$new(mod.bike, bike.subset)
 
-p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() + scale_x_continuous("Temperature")
+p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() + scale_x_continuous("Temperature") + 
+  scale_y_continuous("Predicted bicycle rentals")
 p2 = FeatureEffect$new(pred.bike, "hum", method = "ice")$plot() + scale_x_continuous("Humidity") + scale_y_continuous("")
 p3 = FeatureEffect$new(pred.bike, "windspeed", method = "ice")$plot() + scale_x_continuous("Windspeed")+ scale_y_continuous("")
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
@@ -70,40 +71,37 @@ gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 All curves seem to follow the same course, so there are no obvious interactions.
 That means that the PDP is already a good summary of the relationships between the displayed features and the predicted number of bicycles
 
-
-
-
 #### Centered ICE Plot
 
 There is a problem with ICE plots:
-It can be hard to tell if the individual conditional expectation curves differ between individuals because they start at different predictions.
-A simple solution is to center the curves at a certain point in the feature and  display only the difference in the prediction.
-The resulting plot is called the centered ICE plot (c-ICE).
+Sometimes it can be hard to tell whether the ICE curves differ between individuals because they start at different predictions.
+A simple solution is to center the curves at a certain point in the feature and  display only the difference in the prediction to this point.
+The resulting plot is called centered ICE plot (c-ICE).
 Anchoring the curves at the lower end of the feature is a good choice.
 The new curves are defined as:
 
-$$\hat{f}_{cent}^{(i)}=\hat{f}^{(i)}-\mathbf{1}\hat{f}(x^{\text{*}},x^{(i)}_{C})$$
+$$\hat{f}_{cent}^{(i)}=\hat{f}^{(i)}-\mathbf{1}\hat{f}(x^{a},x^{(i)}_{C})$$
 
-where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions (usually one or two), $\hat{f}$ is the fitted model and $x^{\text{*}}$ is the anchor point.
+where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions (usually one or two), $\hat{f}$ is the fitted model and x^a^ is the anchor point.
 
 #### Example
 
 For example, take the cervical cancer ICE plot for age and center the lines on the youngest observed age:
 
-```{r ice-cervical-centered, fig.cap=sprintf("Centered ICE plot for predicted  cancer probability by age. Lines are fixed to 0 at age %i and each point shows the difference to the prediction at age %i. Compared to age 18, the predictions for most instances remain unchanged and see an increase of up to 20 %s. A few cases show the opposite behavior: The predicted probability decreases with increasing age.", min(cervical_subset$Age), min(cervical_subset$Age), "%")}
+```{r ice-cervical-centered, fig.cap=sprintf("Centered ICE plot for predicted  cancer probability by age. Lines are fixed to 0 at age %i. Compared to age %i%, the predictions for most women remain unchanged until the age of 45 where the predicted probability increases.", min(cervical_subset$Age), min(cervical_subset$Age), "%")}
 library("iml")
-predictor = Predictor$new(mod, data = cervical_subset)
+predictor = Predictor$new(mod, data = cervical_subset, class = "Cancer")
 ice = FeatureEffect$new(predictor, feature = "Age", center.at = min(cervical_subset$Age), method = "pdp+ice")
 ice$plot()  + scale_color_discrete(guide='none') +
     scale_y_continuous('Cancer probability difference to age 18')
 ```
 
 The centered ICE plots make it easier to compare the curves of individual instances.
-This can be useful if we don't want to see the absolute change of a predicted value, but the difference in prediction compared to a fixed point of the feature range.
+This can be useful if we don't want to see the absolute change of a predicted value, but the difference in the prediction compared to a fixed point of the feature range.
 
-The same for the bicycle dataset and the count prediction model:
+Let's have a look at centered ICE plots for the bicycle rental prediction:
 
-```{r ice-bike-centered, fig.cap='Centred individual conditional expectation plots of expected bike count by weather condition. The lines were fixed at value 0 for each feature and instance. The lines show the difference in prediction compared to the prediction with the respective feature value at its minimum feature value in the data.'}
+```{r ice-bike-centered, fig.cap='Centered ICE plots of predicted number of bikes by weather condition. The lines show the difference in prediction compared to the prediction with the respective feature value at its observed minimum.'}
 data(bike)
 set.seed(43)
 bike.subset.index = sample(1:nrow(bike), size = 100)
@@ -120,15 +118,15 @@ gridExtra::grid.arrange(ice1, ice2, ice3, nrow = 1)
 
 Another way to make it visually easier to spot heterogeneity is to look at the individual derivatives of the prediction function with respect to a feature.
 The resulting plot is called the derivative ICE plot (d-ICE).
-The derivatives of a function (or curve) tell you in which direction changes occur and whether they occur at all.
+The derivatives of a function (or curve) tell you whether changes occur and in which direction they occur.
 With the derivative ICE plot, it is easy to spot ranges of feature values where the black box predictions change for (at least some) instances.
-If there is no interaction between the analyzed feature (S) and the other features (C), then the prediction function can be expressed as:
+If there is no interaction between the analyzed feature x~S~ and the other features x~C~, then the prediction function can be expressed as:
 
 $$\hat{f}(x)=\hat{f}(x_S,x_C)=g(x_S)+h(x_C),\quad\text{with}\quad\frac{\delta\hat{f}(x)}{\delta{}x_S}$$
 
 Without interactions, the individual partial derivatives should be the same for all instances.
 If they differ, it is due to interactions and it becomes visible in the d-ICE plot.
-In addition to displaying the individual curves for the derivative of the prediction function with respect to the feature S, showing the standard deviation of the derivative helps to highlight regions in feature S with heterogeneity in the estimated derivatives.
+In addition to displaying the individual curves for the derivative of the prediction function with respect to the feature x~S~, showing the standard deviation of the derivative helps to highlight regions in feature x~S~ with heterogeneity in the estimated derivatives.
 The derivative ICE plot takes a long time to compute and is rather impractical.
 
 
@@ -137,7 +135,7 @@ The derivative ICE plot takes a long time to compute and is rather impractical.
 Individual conditional expectation curves are **even more intuitive to understand** than partial dependence plots.
 One line represents the predictions for one instance if we vary the feature of interest. 
 
-Unlike partial dependence plots ICE curves can **uncover heterogeneous relationships**.
+Unlike partial dependence plots, ICE curves can **uncover heterogeneous relationships**.
 
 ### Disadvantages 
 
@@ -151,7 +149,7 @@ The solution: Either add some transparency to the lines or draw only a sample of
 
 In ICE plots it might not be easy to **see the average**. 
 This has a simple solution:
-Simply combine individual conditional expectation curves with the partial dependence plot.
+Combine individual conditional expectation curves with the partial dependence plot.
 
 ### Software and Alternatives
 
@@ -160,3 +158,4 @@ Another R package that does something very similar to ICE is `condvis`.
 
 
 
+[^Goldstein2015]: Goldstein, Alex, et al. "Package ‘ICEbox’." (2017).

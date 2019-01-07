@@ -17,7 +17,7 @@ grep_references = function(file){
   # read in file as string
   lines = readr::read_lines(file)
   # grep lines starting with[^XXX]:
-  lines = lines[grep("\\[\\^[a-z;A-Z]*\\]\\:", lines)]
+  lines = lines[grep("\\[\\^[a-z;A-Z;0-9]*\\]\\:", lines)]
   # split by first :
   splitted = strsplit(lines, "]: ")
   # store in data.frame with key and ref
