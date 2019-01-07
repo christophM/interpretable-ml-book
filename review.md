@@ -20,5 +20,9 @@ Please check the chapter for the following points:
 - Anything else you think might improve this chapter?
 - Is some graphic missing that could better explain some concept better ?
 
+For methods chapters:
+- Any Disadvantages of Advantages missing?
+- 
+
 
 With your permission, your name will appear 
