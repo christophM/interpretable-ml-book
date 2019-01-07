@@ -16,10 +16,16 @@ fix_chapter_enum = function(doc0) {
   gsub("{-}", "", doc0, fixed = TRUE)
 }
 
+remove_pagebreak = function(doc) {
+  gsub("{pagebreak}", "", doc, fixed = TRUE)
+  
+}
+
 process_file  = function(infile) {
   doc0 = readLines(infile)
   doc = fixmath(doc0)
   doc = fix_chapter_enum(doc)
+  doc = remove_pagebreak(doc)
   writeLines(doc, infile)
 }
 
