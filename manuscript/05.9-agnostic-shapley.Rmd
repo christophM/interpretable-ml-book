@@ -43,11 +43,11 @@ What is the connection to machine learning predictions and interpretability?
 The "game" is the prediction task for a single instance of the dataset.
 The "gain" is the actual prediction for this instance minus the average prediction for all instances.
 The "players" are the feature values of the instance that collaborate to receive the gain (= predict a certain value).
-In our apartment example, the feature values `park-nearby`, `cat-banned`, `area-50m^2^` and `floor-2nd` worked together to achieve the prediction of 300,000€.
+In our apartment example, the feature values `park-nearby`, `cat-banned`, `area-50` and `floor-2nd` worked together to achieve the prediction of 300,000€.
 Our goal is to explain the difference between the actual prediction (300,000€) and the average prediction (310,000€): a difference of -10,000€.
 
 The answer could be:
-The `park-nearby` contributed 30,000€; `size-50m^2^` contributed 10,000€; `floor-2nd` contributed 0€; `cat-banned` contributed -50,000€.
+The `park-nearby` contributed 30,000€; `size-50` contributed 10,000€; `floor-2nd` contributed 0€; `cat-banned` contributed -50,000€.
 The contributions add up to -10,000€, the final prediction minus the average predicted apartment price.
 
 **How do we calculate the Shapley value for one feature?**
@@ -55,19 +55,19 @@ The contributions add up to -10,000€, the final prediction minus the average p
 The Shapley value is the average marginal contribution of a feature value across all possible coalitions.
 All clear now?
 
-In the following figure we evaluate the contribution of the `cat-banned` feature value when it is added to a coalition of `park-nearby` and `size-50m^2^`.
-We simulate that only `park-nearby`, `cat-banned` and `size-50m^2^` are in a coalition by randomly drawing another apartment from the data and using its value for the floor feature.
+In the following figure we evaluate the contribution of the `cat-banned` feature value when it is added to a coalition of `park-nearby` and `size-50`.
+We simulate that only `park-nearby`, `cat-banned` and `size-50` are in a coalition by randomly drawing another apartment from the data and using its value for the floor feature.
 The value `floor-2nd` was replaced by the randomly drawn `floor-1st`.
 Then we predict the price of the apartment with this combination (310,000€).
 In a second step, we remove `cat-banned` from the coalition by replacing it with a random value of the cat allowed/banned feature from the randomly drawn apartment.
 In the example it was `cat-allowed`, but it could have been `cat-banned` again.
-We predict the apartment price for the coalition of `park-nearby` and `size-50m^2^` (320,000€).
+We predict the apartment price for the coalition of `park-nearby` and `size-50` (320,000€).
 The contribution of `cat-banned` was 310,000€ - 320,000€ = -10.000€.
 This estimate depends on the values of the randomly drawn apartment that served as a "donor" for the cat and floor feature values.
 We will get better estimates if we repeat this sampling step and average the contributions.
 
 
-```{r shapley-instance-intervened, fig.cap = "One sample repetition to estimate the contribution of `cat-banned` to the prediction.", out.width=500}
+```{r shapley-instance-intervened, fig.cap = "One sample repetition to estimate the contribution of `cat-banned` to the prediction when added to the coalition of `park-nearby` and `area-50`.", out.width=500}
 knitr::include_graphics("images/shapley-instance-intervention.png")
 ```
 
@@ -78,9 +78,18 @@ One solution to keep the computation time manageable is to compute contributions
 
 The following figure shows all coalitions of feature values that are needed to determine the Shapley value for `cat-banned`.
 The first row shows the coalition without any feature values.
-The second, third and fourth rows show different coalitions with increasing coalition size, separated by '|'.
+The second, third and fourth rows show different coalitions with increasing coalition size, separated by "|".
 All in all, the following coalitions are possible:
-No feature values, `park-nearby`, `size-50m^2^`, `floor-2nd`, `park-nearby`+`size-50m^2^`, `park-nearby`+`floor-2nd`,  `size-50m^2^`+`floor-2nd`, `park-nearby`+`size-50m^2^`+`floor-2nd`.
+
+- No feature values
+- `park-nearby`
+- `size-50`
+- `floor-2nd`
+- `park-nearby`+`size-50`
+- `park-nearby`+`floor-2nd`
+- `size-50`+`floor-2nd`
+- `park-nearby`+`size-50^`+`floor-2nd`.
+
 For each of these coalitions we compute the predicted apartment price with and without the feature value `cat-banned` and take the difference to get the marginal contribution.
 The Shapley value is the (weighted) average of marginal contributions.
 We replace the feature values of features that are not in a coalition with random feature values from the apartment dataset to get a prediction from the machine learning model.
@@ -127,7 +136,8 @@ diff.prediction = actual.prediction - avg.prediction
 ```{r shapley-cervical-plot, fig.cap = sprintf("Shapley values for woman %i in the cervical cancer dataset. With a prediction of %.2f, this woman's cancer probability is %.2f above the average prediction of %.2f. The number of diagnosed STDs increased the probability the most. The sum of contributions yields the difference between actual and average prediction (%.2f).", instance_indices, actual.prediction,diff.prediction, avg.prediction, diff.prediction)}
 shapley2 = Shapley$new(predictor, x.interest = x.interest, sample.size = 100)
 plot(shapley2) + scale_y_continuous("Feature value contribution") +
-  ggtitle(sprintf("Actual prediction: %.2f\nAverage prediction: %.2f\nDifference: %.2f", actual.prediction, avg.prediction, diff.prediction))
+  ggtitle(sprintf("Actual prediction: %.2f\nAverage prediction: %.2f\nDifference: %.2f", actual.prediction, avg.prediction, diff.prediction)) +
+ scale_x_discrete("")
 ```
 
 
@@ -153,10 +163,11 @@ x.interest = bike.train.x[instance_indices[2],]
 ```
 
 
-```{r shapley-bike-plot, fig.cap = sprintf("Shapley values for day %i. With a predicted %.0f rental bikes, this day is %.0f below the average prediction of %.0f. The weather situation and humidity and were the largest negative contributions. The temperature on this day had a positive contribution. The sum of Shapley values yields the difference of actual and average prediction (%.0f).", instance_indices[2], actual.prediction, diff.prediction, avg.prediction, diff.prediction)}
+```{r shapley-bike-plot, fig.cap = sprintf("Shapley values for day %i. With a predicted %.0f rental bikes, this day is %.0f below the average prediction of %.0f. The weather situation and humidity and had the largest negative contributions. The temperature on this day had a positive contribution. The sum of Shapley values yields the difference of actual and average prediction (%.0f).", instance_indices[2], actual.prediction, diff.prediction, avg.prediction, diff.prediction)}
 shapley2 = Shapley$new(predictor, x.interest = x.interest)
 plot(shapley2) +  scale_y_continuous("Feature value contribution") +
-  ggtitle(sprintf("Actual prediction: %.0f\nAverage prediction: %.0f\nDifference: %.0f", actual.prediction, avg.prediction, diff.prediction))
+  ggtitle(sprintf("Actual prediction: %.0f\nAverage prediction: %.0f\nDifference: %.0f", actual.prediction, avg.prediction, diff.prediction))  +
+ scale_x_discrete("")
 ```
 
 
@@ -175,17 +186,17 @@ We are interested in how each feature affects the prediction of a data point.
 In a linear model it is easy to calculate the individual effects.
 Here is what a linear model prediction looks like for one data instance:
 
-$$\hat{f}(x)=\hat{f}(x_{1},\ldots,x_{p})=\beta_0+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}$$
+$$\hat{f}(x)=\beta_0+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}$$
 
 where x is the instance for which we want to compute the contributions.
-Each $x_j$ is a feature value, with j = 1,...,p.
-The $\beta_j$ are the weights corresponding to the feature values $x_j$.
+Each x~j~ is a feature value, with j = 1,...,p.
+The $\beta_j$ are the weights corresponding to the feature values x~j~.
 
 The contribution $\phi_j$ of x~j~ on the prediction $\hat{f}(x)$ is:
 
 $$\phi_j(\hat{f})=\beta_{j}x_j-E(\beta_{j}X_{j})=\beta_{j}x_j-\beta_{j}E(X_{j})$$
 
-where $E(\beta_jX_{j})$ is the mean effect estimate for feature j.
+where $E(\beta_jX_{j})$ is the mean effect estimate for feature x~j~.
 The contribution is the difference between the feature effect minus the average effect.
 Nice!
 Now we know how much each feature contributed to the prediction.
@@ -226,7 +237,7 @@ $$val_{x}(S)=val_{x}(\{x_{1},x_{3}\})=\int_{\mathbb{R}}\int_{\mathbb{R}}\hat{f}(
 This looks similar to the feature contributions in the linear model!
 
 Don't get confused by the many uses of the word "value":
-The feature value is the numerical value of a feature and instance;
+The feature value is the numerical or categorical value of a feature and instance;
 The Shapley value is the feature contribution to the prediction;
 The value function is the payout function for coalitions of players (feature values).
 
@@ -238,7 +249,7 @@ The feature contributions must add up to the difference of prediction for x and 
 $$\sum\nolimits_{j=1}^p\phi_j=\hat{f}(x)-E_X(\hat{f}(X))$$
 
 **Symmetry**  
-The contribution for two features x~j~ and x~k~ should be the same if they contribute equally to all possible coalitions.
+The contributions of two features x~j~ and x~k~ should be the same if they contribute equally to all possible coalitions.
 If 
 
 $$val(S\cup\{x_j\})=val(S\cup\{x_k\})$$ 
@@ -246,6 +257,7 @@ $$val(S\cup\{x_j\})=val(S\cup\{x_k\})$$
 for all 
 
 $$S\subseteq\{x_{1},\ldots,x_{p}\}\setminus\{x_j,x_k\}$$
+
 then 
 
 $$\phi_j=\phi_{k}$$
@@ -293,6 +305,7 @@ The x-vector $x^{m}_{-j}$ is almost identical to $x^{m}_{+j}$, but the value $x_
 Each of these M new instances is a kind of "Frankenstein Monster" assembled from two instances.
 
 **Approximate Shapley Estimation for Single Feature Value**:
+
 - Output: Shapley value of feature value x~j~ 
 - Required: Number of iterations M, instance of interest x, feature value x~j~, data matrix X, and machine learning model f
   - For all m = 1,...,M:
