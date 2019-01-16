@@ -103,8 +103,8 @@ If we estimate the Shapley values for all feature values, we get the complete di
 
 ### Examples and Interpretation
 
-The interpretation of the Shapley value for feature value x~j~ is:
-Feature value x~j~ contributed $\phi_j$ to the prediction of this particular instance compared to the average prediction for the dataset.
+The interpretation of the Shapley value for feature value j is:
+The value of the j-th feature contributed $\phi_j$ to the prediction of this particular instance compared to the average prediction for the dataset.
 
 The Shapley value works for both classification (if we are dealing with probabilities) and regression.
 
@@ -189,14 +189,14 @@ Here is what a linear model prediction looks like for one data instance:
 $$\hat{f}(x)=\beta_0+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}$$
 
 where x is the instance for which we want to compute the contributions.
-Each x~j~ is a feature value, with j = 1,...,p.
-The $\beta_j$ are the weights corresponding to the feature values x~j~.
+Each $x_j$ is a feature value, with j = 1,...,p.
+The $\beta_j$ is the weight corresponding to feature j.
 
-The contribution $\phi_j$ of x~j~ on the prediction $\hat{f}(x)$ is:
+The contribution $\phi_j$ of the j-th feature on the prediction $\hat{f}(x)$ is:
 
 $$\phi_j(\hat{f})=\beta_{j}x_j-E(\beta_{j}X_{j})=\beta_{j}x_j-\beta_{j}E(X_{j})$$
 
-where $E(\beta_jX_{j})$ is the mean effect estimate for feature x~j~.
+where $E(\beta_jX_{j})$ is the mean effect estimate for feature j.
 The contribution is the difference between the feature effect minus the average effect.
 Nice!
 Now we know how much each feature contributed to the prediction.
@@ -219,18 +219,18 @@ The Shapley value is a solution for computing feature contributions for single p
 
 The Shapley value is defined via a value function val of players in S.
 
-The Shapley value of a feature value x~j~ is its contribution to the payout, weighted and summed over all possible feature value combinations:
+The Shapley value of a feature value is its contribution to the payout, weighted and summed over all possible feature value combinations:
 
 $$\phi_j(val)=\sum_{S\subseteq\{x_{1},\ldots,x_{p}\}\setminus\{x_j\}}\frac{|S|!\left(p-|S|-1\right)!}{p!}\left(val\left(S\cup\{x_j\right)-val(S)\right)$$
 
 where S is a subset of the features used in the model, x is the vector of feature values of the instance to be explained and p the number of features.
-val~x~(S) is the prediction for feature values in set S that are marginalized over features that are not included in set S:
+$val_x(S)$ is the prediction for feature values in set S that are marginalized over features that are not included in set S:
 
 $$val_{x}(S)=\int\hat{f}(x_{1},\ldots,x_{p})d\mathbb{P}_{x\notin{}S}-E_X(\hat{f}(X))$$
 
 You actually perform multiple integrations for each feature that is not contained S.
 A concrete example:
-The machine learning model works with 4 features x~1~,x~2~,x~3~ and x~4~ and we evaluate the prediction for the coalition S consisting of feature values x~1~ and x~3~:
+The machine learning model works with 4 features x1, x2, x3 and x4 and we evaluate the prediction for the coalition S consisting of feature values x1 and x3:
 
 $$val_{x}(S)=val_{x}(\{x_{1},x_{3}\})=\int_{\mathbb{R}}\int_{\mathbb{R}}\hat{f}(x_{1},X_{2},x_{3},X_{4})d\mathbb{P}_{X_2X_4}-E_X(\hat{f}(X))$$
 
@@ -249,7 +249,7 @@ The feature contributions must add up to the difference of prediction for x and 
 $$\sum\nolimits_{j=1}^p\phi_j=\hat{f}(x)-E_X(\hat{f}(X))$$
 
 **Symmetry**  
-The contributions of two features x~j~ and x~k~ should be the same if they contribute equally to all possible coalitions.
+The contributions of two features values j and k should be the same if they contribute equally to all possible coalitions.
 If 
 
 $$val(S\cup\{x_j\})=val(S\cup\{x_k\})$$ 
@@ -263,7 +263,7 @@ then
 $$\phi_j=\phi_{k}$$
 
 **Dummy**  
-A feature x~j~ that does not change the predicted value -- regardless of which coalition of feature values it is added to -- should have a Shapley value of 0.
+A feature j that does not change the predicted value -- regardless of which coalition of feature values it is added to -- should have a Shapley value of 0.
 If 
 
 $$val(S\cup\{x_j\})=val(S)$$ 
@@ -282,48 +282,48 @@ For a game with combined payouts val+val^+^ the respective Shapley values are as
 $$\phi_j+\phi_j^{+}$$
 
 Suppose you trained a random forest, which means that the prediction is an average of many decision trees.
-The Additivity property guarantees that for a feature value x~j~, you can calculate the Shapley value for each tree indvidually, average them, and get the Shapley value for feature value x~j~ for the random forest.
+The Additivity property guarantees that for a feature value, you can calculate the Shapley value for each tree indvidually, average them, and get the Shapley value for the feature value for the random forest.
 
 #### Intuition
 
 An intuitive way to understand the Shapley value is the following illustration:
 The feature values enter a room in random order.
 All feature values in the room participate in the game (= contribute to the prediction).
-The Shapley value of x~j~ is the average change in the prediction that the coalition already in the room receives when the feature value x~j~ joins them.
+The Shapley value of a feature value is the average change in the prediction that the coalition already in the room receives when the feature value joins them.
 
 
 #### Estimating the Shapley Value
 
-All possible coalitions (sets) of feature values have to be evaluated with and without the feature x~j~ to calculate the exact Shapley value x~j~.
+All possible coalitions (sets) of feature values have to be evaluated with and without the j-th feature to calculate the exact Shapley value.
 For more than a few features, the exact solution to this problem becomes problematic as the number of possible coalitions exponentially increases as more features are added.
 Strumbelj et al. (2014)[^strumbelj2014] propose an approximation with Monte-Carlo sampling:
 
 $$\hat{\phi}_{j}=\frac{1}{M}\sum_{m=1}^M\left(\hat{f}(x^{m}_{+j})-\hat{f}(x^{m}_{-j})\right)$$
 
-where $\hat{f}(x^{m}_{+j})$ is the prediction for x, but with a random number of features values replaced by feature values from a random data point z, except for the feature value x~j~.
+where $\hat{f}(x^{m}_{+j})$ is the prediction for x, but with a random number of features values replaced by feature values from a random data point z, except for the respective value of feature j.
 The x-vector $x^{m}_{-j}$ is almost identical to $x^{m}_{+j}$, but the value $x_j^{m}$ is also taken from the sampled x.
 Each of these M new instances is a kind of "Frankenstein Monster" assembled from two instances.
 
 **Approximate Shapley Estimation for Single Feature Value**:
 
-- Output: Shapley value of feature value x~j~ 
-- Required: Number of iterations M, instance of interest x, feature value x~j~, data matrix X, and machine learning model f
+- Output: Shapley value for the value of the j-th feature
+- Required: Number of iterations M, instance of interest x, feature index j, data matrix X, and machine learning model f
   - For all m = 1,...,M:
     - Draw random instance z from the data matrix X
     - Choose a random permutation o of the feature values
-    - Order instance x: x~o~ = (x~(1)~,...,x~(j)~,...,x~(p)~)
-    - Order instance z: z~o~ = (z~(1)~,...,z~(j)~,...,z~(p)~)
+    - Order instance x: $x_o=(x_{(1)},\ldots,x_{(j)},\ldots,x_{(p)})$
+    - Order instance z: $z_o=(z_{(1)},\ldots,z_{(j)},\ldots,z_{(p)})$
     - Construct two new instances
-      - x~+j~ = (x~(1)~,..., x~(j-1)~, x~(j)~, z~(j+1)~, ...,z~(p)~)
-      - x~-j~ = (x~(1)~,..., x~(j-1)~, z~(j)~, z~(j+1)~, ...,z~(p)~)
+      - $x_{+j}=(x_{(1)},\ldots,x_{(j-1)},x_{(j)},z_{(j+1)},\ldots,z_{(p)})$
+      - $x_{-j}=(x_{(1)},\ldots,x_{(j-1)},z_{(j)},z_{(j+1)},\ldots,z_{(p)})$
     - $\phi_j^{m}=\hat{f}(x_{+j})-\hat{f}(x_{-j})$
 - Compute Shapley value as the average: $\phi_j(x)=\frac{1}{M}\sum_{m=1}^M\phi_j^{m}$
 
 First, select an instance of interest x, a feature j and the number of iterations M.
 For each iteration, a random instance z is selected from the data and a random order of the features is generated.
 Two new instances are created by combining values from the instance of interest x and the sample z.
-The first instance x~+j~ is the instance of interest, but all values in the order before and including feature value x~j~ are replaced by feature values from the sample z.
-The second instance x~-j~ is similar, but has all the values in the order before, but excluding feature x~j~ replaced by features from the sample z.
+The first instance $x_{+j}$ is the instance of interest, but all values in the order before and including value of feature j are replaced by feature values from the sample z.
+The second instance $x_{-j}$ is similar, but has all the values in the order before, but excluding feature j replaced by  values of feature j from the sample z.
 The difference in the prediction from the black box is computed: 
 
 $$\phi_j^{m}=\hat{f}(x^m_{+j})-\hat{f}(x^m_{-j})$$
@@ -367,9 +367,9 @@ It is unclear how to choose a sensitive M.
 It should be possible to choose M based on Chernoff bounds, but I have not seen any paper on doing this for Shapley values for machine learning predictions.
 
 The Shapley value **can be misinterpreted**.
-The Shapley value of a feature value x~j~ is not the difference of the predicted value after removing feature j.
+The Shapley value of a feature value is not the difference of the predicted value after removing the feature from the model training.
 The interpretation of the Shapley value is:
-Given the current set of feature values, the contribution of feature value x~j~ to the difference between the actual prediction and the mean prediction is the estimated Shapley value.
+Given the current set of feature values, the contribution of a feature value to the difference between the actual prediction and the mean prediction is the estimated Shapley value.
 
 The Shapley value is the wrong explanation method if you seek sparse explanations (explanations that contain few features).
 Explanations created with the Shapley value method **always use all the features**.

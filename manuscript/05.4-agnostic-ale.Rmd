@@ -145,12 +145,12 @@ p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) +
 ```
 
 
-To summarize how each type of plot (PDP, M, ALE) calculates the effect of a feature x~j~ at a certain grid value v:  
-**Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value v for feature x~j~. 
+To summarize how each type of plot (PDP, M, ALE) calculates the effect of a feature at a certain grid value v:  
+**Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value v for that feature. 
 I ignore whether the value v makes sense for all data instances."  
-**M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to v for feature x~j~. 
-The effect could be due to feature x~j~, but also due to correlated features."  
-**ALE plots**: "Let me show you how the model predictions change in a small "window" of x~j~ around v for data instances in that window."
+**M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to v for that feature. 
+The effect could be due to that feature, but also due to correlated features."  
+**ALE plots**: "Let me show you how the model predictions change in a small "window" of the feature around v for data instances in that window."
 
 ### Theory
 
@@ -162,9 +162,9 @@ Partial dependence plots average the predictions over the marginal distribution.
 
 $$\begin{align*}\hat{f}_{x_S,PDP}(x_S)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C)d{}x_C\end{align*}$$
 
-This is the value of the prediction function f, at feature value(s) x~S~, averaged over all features in x~C~.
-Averaging means calculating the marginal expectation E over the features in x~C~, which is the integral over the predictions weighted by the probability distribution.
-Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in x~S~, and average the predictions for this manipulated dataset.
+This is the value of the prediction function f, at feature value(s) $x_S$, averaged over all features in $x_C$.
+Averaging means calculating the marginal expectation E over the features in set C, which is the integral over the predictions weighted by the probability distribution.
+Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in set S, and average the predictions for this manipulated dataset.
 This procedure ensures that we average over the marginal distribution of the features.
 
 M-plots average the predictions over the conditional distribution.
@@ -186,9 +186,9 @@ The change is defined as the gradient (but later, for the actual computation, re
 $$\hat{f}^S(x_s,x_c)=\frac{\delta\hat{f}(x_S,x_C)}{\delta{}x_S}$$
 
 The second difference is the additional integral over z.
-We accumulate the local gradients over the range of x~S~, which gives us the effect of the feature on the prediction.
+We accumulate the local gradients over the range of features in set S, which gives us the effect of the feature on the prediction.
 For the actual computation, the z's are replaced by a grid of intervals over which we compute the changes in the prediction.
-Instead of directly averaging the predictions, the ALE method calculates the prediction differences conditional on x~S~ and integrates the derivative over x~S~ to estimate the effect.
+Instead of directly averaging the predictions, the ALE method calculates the prediction differences conditional on features S and integrates the derivative over features S to estimate the effect.
 Well, that sounds stupid. 
 Derivation and integration usually cancel each other out, like first subtracting, then adding the same number. 
 Why does it make sense here?
@@ -217,7 +217,7 @@ Let us break this formula down, starting from the right side.
 The name **Accumulated Local Effects** nicely reflects all the individual components of this formula.
 At its core, the ALE method calculates the differences in predictions, whereby we replace the feature of interest with grid values z.
 The difference in prediction is the **Effect** the feature has for an individual instance in a certain interval.
-The sum on the right adds up the effects of all instances within an interval which appears in the formula as neighborhood N~j~(k).
+The sum on the right adds up the effects of all instances within an interval which appears in the formula as neighborhood $N_j(k)$.
 We divide this sum by the number of instances in this interval to obtain the average difference of the predictions for this interval.
 This average in the interval is covered by the term **Local** in the name ALE.
 The left sum symbol means that we accumulate the average effects across all intervals.
@@ -230,7 +230,7 @@ This effect is centered so that the mean effect is zero.
 $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x^{(i)}_{j})$$
 
 The value of the ALE can be interpreted as the main effect of the feature at a certain  value compared to the average prediction of the data. 
-For example, an ALE estimate of -2 at x~j~=3 means that when x~j~ has value 2, then the prediction is lower by 2 compared to the average prediction.
+For example, an ALE estimate of -2 at $x_j=3$ means that when the j-th feature has value 2, then the prediction is lower by 2 compared to the average prediction.
 
 The quantiles of the distribution of the feature are used as the grid that defines the intervals.
 Using the quantiles ensures that there is the same number of data instances in each of the intervals. 
