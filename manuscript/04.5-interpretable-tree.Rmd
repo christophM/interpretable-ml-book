@@ -29,7 +29,8 @@ dat_sim = data.frame(feature_x1 = rep(c(3,3,4,4), times = n), feature_x2 = rep(c
 dat_sim = dat_sim[sample(1:nrow(dat_sim), size = 0.9 * nrow(dat_sim)), ]
 dat_sim$y = dat_sim$y + rnorm(nrow(dat_sim), sd = 0.2)
 ct = ctree(y ~ feature_x1 + feature_x2, dat_sim)
-plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
+plot(ct, inner_panel = node_inner(ct, pval = FALSE, id = FALSE), 
+  terminal_panel = node_boxplot(ct, id = FALSE))
 ```
 
 The following formula describes the relationship between the outcome y and features x.
@@ -62,14 +63,14 @@ All the edges are connected by 'AND'.
 
 Template: If feature x is [smaller/bigger] than threshold c AND ... then the predicted outcome is the mean value of y of the instances in that node.
 
-**Feature Importance**
+**Feature importance**
 
 The overall importance of a feature in a decision tree can be computed in the following way:
 Go through all the splits for which the feature was used and measure how much it has reduced the variance or Gini index compared to the parent node.
 The sum of all importances is scaled to 100.
 This means that each importance can be interpreted as share of the overall model importance.
 
-**Tree Decomposition**
+**Tree decomposition**
 
 Individual predictions of a decision tree can be explained by decomposing the decision path into one component per feature.
 We can track a decision through the tree and explain a prediction by the contributions  added at each decision node.
@@ -98,11 +99,10 @@ y = bike[,'cnt']
 dat = cbind(X, y)
 # increases readability of tree
 x = rpart(y ~ ., data = na.omit(dat), method = 'anova', control = rpart.control(cp = 0, maxdepth = 2))
-my_node = function(obj) {
-  node_terminal(obj, digits = 1)
-}
 xp = as.party(x)
-plot(xp, digits = 0, id = FALSE, terminal_node = node_boxplot)
+plot(xp, digits = 0, id = FALSE, terminal_panel = node_boxplot(xp, id = FALSE),
+  inner_panel = node_inner(xp, id = FALSE, pval = FALSE)
+  )
 ```
 The first split and one of the second splits were performed with the trend feature, which counts the days since  data collection began and covers the trend that the bike rental service has become more popular over time.
 For days prior to the 105th day, the predicted number of bicycles is around 1800, between the 106th and 430th day it is around 3900.
@@ -131,10 +131,10 @@ The interpretation is arguably pretty simple.
 
 The tree structure also has a **natural visualization**, with its nodes and edges.
 
-Trees **create good explanations** as defined in the [chapter on "Human-friendly Explanations"](#good-explanation).
+Trees **create good explanations** as defined in the [chapter on "Human-Friendly Explanations"](#good-explanation).
 The tree structure automatically invites to think about predicted values for individual instances as counterfactuals:
 "If a feature had been greater / smaller than the split point, the prediction would have been y1 instead of y2.
-The tree explanations are contrastive, since you can always compare the prediction of an instance with relevant  "what-if"-scenarios (as defined by the tree) that are simply the other leaf nodes of the tree.
+The tree explanations are contrastive, since you can always compare the prediction of an instance with relevant "what if"-scenarios (as defined by the tree) that are simply the other leaf nodes of the tree.
 If the tree is short, like one to three splits deep, the resulting explanations are selective.
 A tree with a depth of three requires a maximum of three features and split points to create the explanation for the prediction of an individual instance.
 The truthfulness of the prediction depends on the predictive performance of the tree.
