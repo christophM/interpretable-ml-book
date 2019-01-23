@@ -8,19 +8,17 @@ set.seed(42)
 ## Prototypes and Criticisms {#proto}
 
 A **prototype** is a data instance that is representative of all the data.
-Prototypes can improve the interpretability of complex data distributions, but they may not be sufficient to explain the data.
-They are only sufficient if the data distribution within the classes is very homogeneous.
 A **criticism** is a data instance that is not well represented by the set of prototypes.
 The purpose of criticisms is to provide insights together with prototypes, especially for data points which the prototypes do not represent well.
 Prototypes and criticisms can be used independently from a machine learning model to describe the data, but they can also be used to create an interpretable model or to make a black box model interpretable.
 
-In this chapter I use the word '(data) point' to refer to a single instance, to emphasize the interpretation that an instance is also a point in a coordinate system where each feature is a dimension.
-The following figure shows an artificial data distribution, with some of the instances chosen as prototypes and some as criticisms.
-The small points are the data, the large points the prototypes and the large triangles are the criticisms.
+In this chapter I use the expression "data point" to refer to a single instance, to emphasize the interpretation that an instance is also a point in a coordinate system where each feature is a dimension.
+The following figure shows a simulated data distribution, with some of the instances chosen as prototypes and some as criticisms.
+The small points are the data, the large points the prototypes and the large triangles the criticisms.
 The prototypes are selected (manually) to cover the centers of the data distribution and the criticisms are points in a cluster without a prototype.
 Prototypes and criticisms are always actual instances from the data.
 
-```{r, fig.cap = "Prototypes and criticisms."}
+```{r, fig.cap = "Prototypes and criticisms for a data distribution with two features x1 and x2."}
 set.seed(1)
 dat1 = data.frame(x1 = rnorm(20, mean = 4, sd = 0.3), x2 = rnorm(20, mean = 1, sd = 0.3))
 dat2 = data.frame(x1 = rnorm(30, mean = 2, sd = 0.2), x2 = rnorm(30, mean = 2, sd = 0.2))
@@ -43,12 +41,12 @@ There are many approaches to find prototypes in the data.
 One of these is k-medoids, a clustering algorithm related to the k-means algorithm.
 Any clustering algorithm that returns actual data points as cluster centers would qualify for selecting prototypes.
 But most of these methods find only prototypes, but no criticisms.
-This chapter presents MMD-critic by Kim et. al (2016)[^critique], an approach that combines finding prototypes and criticisms in a single framework.
+This chapter presents MMD-critic by Kim et. al (2016)[^critique], an approach that combines prototypes and criticisms in a single framework.
 
 MMD-critic compares the distribution of the data and the distribution of the selected prototypes.
 This is the central concept for understanding the MMD-critic method.
 MMD-critic selects prototypes that minimize the discrepancy between the two distributions.
-Data points in areas with high data density are good prototypes, especially when points  are selected from different 'data clusters'.
+Data points in areas with high density are good prototypes, especially when points are selected from different "data clusters".
 Data points from regions that are not well explained  by the prototypes are selected as criticisms.
 
 Let us delve deeper into the theory.
@@ -57,10 +55,10 @@ Let us delve deeper into the theory.
 
 The MMD-critic procedure on a high-level can be summarized briefly:
 
-1. Set the number of prototypes and criticisms you want to find.
-1. Select prototypes with greedy search. 
+1. Select the number of prototypes and criticisms you want to find.
+1. Find prototypes with greedy search. 
 Prototypes are selected so that the distribution of the prototypes is close to the data distribution.
-1. Select criticisms with greedy search. 
+1. Find criticisms with greedy search. 
 Points are selected as criticisms where the distribution of prototypes differs from the distribution of the data.
 
 We need a couple of ingredients to find prototypes and criticisms for a dataset with MMD-critic.
@@ -75,8 +73,8 @@ The last ingredient is a search strategy for good prototypes and criticisms, whi
 
 Let us start with the **maximum mean discrepancy (MMD)**, which measures the discrepancy between two distributions.
 The selection of prototypes creates a density distribution of prototypes.
-The aim of MMD-critic is to minimize the discrepancy between the distribution of the selected prototypes and the data distribution. 
-We want to evaluate whether the distributions are different, based on their empirical distributions which are estimated with the help of the kernel densities.
+We want to evaluate whether the prototypes distribution differs from the data distribution.
+We estimate both with kernel density functions.
 The maximum mean discrepancy measures the difference between two distributions, which is the supremum over a function space of differences between the expectations according to the two distributions.
 All clear?
 Personally, I understand these concepts much better when I see how something is calculated with data.
@@ -98,7 +96,7 @@ The following graphic illustrates the MMD2 measure.
 The first plot shows the data points with two features, whereby the estimation of the data density is displayed with a shaded background.
 Each of the other plots shows different selections of prototypes, along with the MMD2 measure in the plot titles.
 The prototypes are the large red dots and their distribution is shown as contour lines.
-The selection of the prototypes that best cover the data in these scenarios (bottom left) has the lowest discrepancy value.
+The selection of the prototypes that best covers the data in these scenarios (bottom left) has the lowest discrepancy value.
 
 ```{r mmd, fig.cap = "The squared maximum mean discrepancy measure (MMD2) for a dataset with two features and different selections of prototypes."}
 set.seed(42)
@@ -165,7 +163,8 @@ gridExtra::grid.arrange(p, p1, p2, p3, ncol = 2)
 A choice for the kernel is the radial basis function kernel:
 
 $$k(x,x^\prime)=exp\left(\gamma||x-x^\prime||^2\right)$$
-where ||x-x'|| is the Euclidean distance between two points and $\gamma$ is a scaling parameter. 
+
+where ||x-x'||^2^ is the Euclidean distance between two points and $\gamma$ is a scaling parameter. 
 The value of the kernel decreases with the distance between the two points and ranges between zero and one:
 Zero when the two points are infinitely far apart;
 One when the two points are equal.
@@ -181,7 +180,8 @@ The remaining ingredient for finding criticisms is the witness function, which t
 It can be estimated using:
 
 $$witness(x)=\frac{1}{n}\sum_{i=1}^nk(x,x_i)-\frac{1}{m}\sum_{j=1}^mk(x,z_j)$$
-For two datasets (with the same features), the witness function gives you the means of evaluating in which empirical distribution the point x fits more.
+
+For two datasets (with the same features), the witness function gives you the means of evaluating in which empirical distribution the point x fits better.
 To find criticisms, we look for extreme values of the witness function in both negative and positive directions.
 The first term in the witness function is the average proximity between point x and the prototypes, and, respectively, the second term is the average proximity between point x and the data.
 If the witness function for a point x is close to zero, the density function of the data and the prototypes are close together, which means that the distribution of prototypes resembles the distribution of the data at point x.
@@ -206,7 +206,7 @@ wit.points$witness = apply(wit.points, 1, function(x) round(witness(x[c("x1", "x
 
 p + geom_point(data = pt2, color = "red") + 
   geom_density_2d(data = pt2, color = "red") + 
-  ggtitle(sprintf("%.3f MMD^2", mmd2(dt, pt2))) + 
+  ggtitle(sprintf("%.3f MMD2", mmd2(dt, pt2))) + 
   geom_label(data = wit.points, aes(label = witness), alpha = 0.9, vjust = "top") + 
     geom_point(data = wit.points, color = "black", shape = 17, size = 4) 
 ```
@@ -231,7 +231,7 @@ By helping to better understand the data distribution; By building an interpreta
 If you apply MMD-critic to your data to find prototypes and criticisms, it will improve your understanding of the data, especially if you have a complex data distribution with edge cases.
 But with MMD-critic you can achieve more!
 
-For example, you can create an interpretable prediction model: a so-called 'nearest prototype model'.
+For example, you can create an interpretable prediction model: a so-called "nearest prototype model".
 The prediction function is defined as:
 
 $$\hat{f}(x)=argmax_{i\in{}S}k(x,x_i)$$
@@ -254,13 +254,13 @@ Now you have a number of examples that represent the data well and help you to f
 
 How does that help?
 Remember when Google's image classifier identified black people as gorillas?
-Perhaps they should have used the procedure described here before deploying their image recognition model
+Perhaps they should have used the procedure described here before deploying their image recognition model.
 It is not enough just to check the performance of the model, because if it were 99% correct, this issue could still be in the 1%.
 And labels can also be wrong!
 Going through all the training data and performing a sanity check if the prediction is problematic might have revealed the problem, but would be infeasible.
-But the selection of - say a few thousand - prototypes and criticisms is feasible and could have revealed a problem with the data:
-It might have shown that there is a lack of people with dark skin in the human class, which indicates a problem with the diversity in the dataset.
-Or it could have shown one or more images of a person with dark skin as a prototype or (probably) as a criticism with the notorious 'gorilla' model prediction.
+But the selection of -- say a few thousand -- prototypes and criticisms is feasible and could have revealed a problem with the data:
+It might have shown that there is a lack of images of people with dark skin, which indicates a problem with the diversity in the dataset.
+Or it could have shown one or more images of a person with dark skin as a prototype or (probably) as a criticism with the notorious "gorilla" classification.
 I do not promise that MMD-critic would certainly intercept these kind of mistakes, but it is a good sanity check.
 
 ### Examples
@@ -282,8 +282,7 @@ The criticisms contain dogs in costumes and other unusual cases.
 knitr::include_graphics("images/proto-critique.png")
 ```
 
-Another application of MMD-critic features a handwritten digit dataset.
-Each image shows a handwritten digit.
+Another illustration of MMD-critic uses a handwritten digit dataset.
 
 Looking at the actual prototypes and criticisms, you might notice that the number of images per digit is different. 
 This is because a fixed number of prototypes and criticisms were searched across the entire dataset and not with a fixed number per class.
@@ -297,52 +296,57 @@ knitr::include_graphics("images/proto-critique2.png")
 
 ### Advantages
 
-- In a user study the authors of MMD-critic gave the test persons images, which they had to visually match to one of two sets of images, each representing one of two classes (e.g. two dog breed).
+In a user study the authors of MMD-critic gave images to the participants, which they had to visually match to one of two sets of images, each representing one of two classes (e.g. two dog breeds).
 The **participants performed best when the sets showed prototypes and criticisms** instead of random images of a class.
-- You are free to **choose the number of prototypes and criticisms**.
-- MMD-critic works with density estimates of the data. 
+
+You are free to **choose the number of prototypes and criticisms**.
+
+MMD-critic works with density estimates of the data. 
 This **works with any type of data and any type of machine learning model**.
-- The algorithm is **easy to implement**.
-- MMD-critic is very flexible in the way it is used to increase interpretability: 
-It can be used to understand complex data distributions; 
-It can be used to build an interpretable machine learning model; 
+
+The algorithm is **easy to implement**.
+
+MMD-critic is very flexible in the way it is used to increase interpretability.
+It can be used to understand complex data distributions.
+It can be used to build an interpretable machine learning model.
 Or it can shed light on the decision making of a black box machine learning model.
-- **Finding criticisms is independent of the selection process of the prototypes**.
+
+**Finding criticisms is independent of the selection process of the prototypes**.
 But it makes sense to select prototypes according to MMD-critic, because then both prototypes and criticisms are created using the same method of comparing prototypes and data densities.
 
 
 ### Disadvantages
 
-- You have to **choose the number of prototypes and criticisms**.
+You have to **choose the number of prototypes and criticisms**.
 As much as this can be nice-to-have, it is also a disadvantage. 
 How many prototypes and criticisms do we actually need?
 The more the better? The less the better?
-The number of prototypes and criticisms has to be determined by the user.
-One solution is to choose the number of protototypes and criticisms by seeing how much time humans have to look at them, which depends on the particular application.
+One solution is to select the number of protototypes and criticisms by measuring how much time humans have for the task of looking at the images, which depends on the particular application.
 Only when using MMD-critic to build a classifier do we have a way to optimize it directly.
 One solution could be a screeplot showing the number of prototypes on the x-axis and the MMD2 measure on the y-axis. 
 We would choose the number of prototypes where the MMD2 curve flattens.
-- The other parameters are the choice of the kernel and the kernel scaling parameter.
+
+The other parameters are the choice of the kernel and the kernel scaling parameter.
 We have the same problem as with the number of prototypes and criticisms:
 **How do we select a kernel and its scaling parameter?**
 Again, when we use MMD-critic as a nearest prototype classifier, we can tune the kernel parameters.
 For the unsupervised use cases of MMD-critic, however, it is unclear.
 (Maybe I am a bit harsh here, since all unsupervised methods have this problem.)
-- It takes all the features as input, **disregarding the fact that some features might not be relevant** for predicting the outcome of interest.
+
+It takes all the features as input, **disregarding the fact that some features might not be relevant** for predicting the outcome of interest.
 One solution is to use only relevant features, for example image embeddings instead of raw pixels.
 This works as long as we have a way to project the original instance onto a representation that contains only relevant information.
-- There is some code available, but it is **not yet implemented as nicely packaged and documented software**.
+
+There is some code available, but it is **not yet implemented as nicely packaged and documented software**.
 
 
 ### Code and Alternatives
 
-- An implementation of MMD-critic can be found here: [https://github.com/BeenKim/MMD-critic](https://github.com/BeenKim/MMD-critic).
-- The simplest alternative to finding prototypes is [k-medoids](https://en.wikipedia.org/wiki/K-medoids) by Kaufman et. al (1987).[^medoids]
+An implementation of MMD-critic can be found here: [https://github.com/BeenKim/MMD-critic](https://github.com/BeenKim/MMD-critic).
+
+The simplest alternative to finding prototypes is [k-medoids](https://en.wikipedia.org/wiki/K-medoids) by Kaufman et. al (1987).[^medoids]
 
 
 [^medoids]: Kaufman, Leonard, and Peter Rousseeuw. Clustering by means of medoids. North-Holland, 1987.
 
 [^critique]: Kim, Been, Rajiv Khanna, and Oluwasanmi O. Koyejo. "Examples are not enough, learn to criticize! criticism for interpretability." Advances in Neural Information Processing Systems. 2016.
-
-[^cbr]: Aamodt, A., & Plaza, E. (1994). Case-based reasoning : Foundational issues, methodological variations, and system approaches. AI Communications, 7(1), 39–59.
-
