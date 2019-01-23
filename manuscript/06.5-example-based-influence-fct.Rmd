@@ -12,10 +12,9 @@ data("cervical")
 ```
 
 <!-- Intro text -->
-Machine learning models are ultimately a product of training data.
-Deleting one of the training instances can affect the resulting model.
-We call a training instance 'influential' when its deletion from the training data considerably changes the parameters or predictions of the model.
-By identifying influential training instances, we can 'debug' machine learning models and better explain their behaviors and predictions.
+Machine learning models are ultimately a product of training data and deleting one of the training instances can affect the resulting model.
+We call a training instance "influential" when its deletion from the training data considerably changes the parameters or predictions of the model.
+By identifying influential training instances, we can "debug" machine learning models and better explain their behaviors and predictions.
 
 
 <!-- *Keywords: Influential instances, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics, robust statistics* -->
@@ -27,11 +26,11 @@ Robust statistics also provides methods to measure how robust estimates from dat
 
 Imagine you want to estimate the average income of the people in your city and ask ten random people on the street how much they earn.
 Apart from the fact that your sample is probably really bad, how much can your average income estimate be influenced by a single person?
-To answer this question, you can recalculate the mean value by omitting single persons or derive mathematically via "influence functions" how the mean value can be influenced. 
+To answer this question, you can recalculate the mean value by omitting individual answers or derive mathematically via "influence functions" how the mean value can be influenced. 
 With the deletion approach, we recalculate the mean value ten times, omitting one of the income statements each time, and measure how much the mean estimate changes. 
 A big change means that an instance was very influential.
 The second approach upweights one of the persons by an infinitesimally small weight, which corresponds to the calculation of the first derivative of a statistic or model.
-This approach is also known as 'infinitesimal approach' or 'influence function'.
+This approach is also known as "infinitesimal approach" or "influence function".
 The answer is, by the way, that your mean estimate can be very strongly influenced by a single answer, since the mean scales linearly with single values.
 A more robust choice is the median (the value at which one half of people earn more and the other half less), because even if the person with the highest income in your sample would earn ten times more, the resulting median would not change.
 
@@ -41,12 +40,12 @@ Before we look at these two approaches for finding influential instances, we wil
 **Outlier**
 
 An outlier is an instance that is far away from the other instances in the dataset.
-'Far away' means that the distance, for example the Euclidean distance, to all the other instances is very large.
+"Far away" means that the distance, for example the Euclidean distance, to all the other instances is very large.
 In a dataset of newborns, a newborn weighting 6 kg would be considered an outlier.
 In a dataset of bank accounts with mostly checking accounts, a dedicated loan account (large negative balance, few transactions) would be considered an outlier.
 The following figure shows an outlier for a 1-dimensional distribution.
 
-```{r outlier, fig.cap = "Feature x follows a Gaussian distribution with the exception of outlier x=8."}
+```{r outlier, fig.cap = "Feature x follows a Gaussian distribution with an outlier at x=8."}
 set.seed(42)
 n = 50
 x = rnorm(mean = 1, n = n)
@@ -55,7 +54,7 @@ y = rnorm(mean = x, n = n)
 y = c(y, 7.2)
 df = data.frame(x, y)
 ggplot(df) + geom_histogram(aes(x = x)) + my_theme() + 
-  scale_x_continuous("feature x") + 
+  scale_x_continuous("Feature x") + 
   scale_y_continuous("count")
 ```
 
@@ -113,10 +112,10 @@ Influential instances help us answer questions about global model behavior and a
 Which were the most influential instances for the model parameters or the predictions overall?
 Which were the most influential instances for a particular prediction?
 Influential instances tell us for which instances the model could have problems, which training instances should be checked for errors and give an impression of the robustness of the model.
-We might not trust a model if a single instance has a strong influence on the model prediction and parameters.
+We might not trust a model if a single instance has a strong influence on the model predictions and parameters.
 At least that would make us investigate further.
 
-But how exactly can we find those influential instances?
+How can we find influential instances?
 We have two ways of measuring influence:
 Our first option is to delete the instance from the training data, retrain the model on the reduced training dataset and observe the difference in the model parameters or predictions (either individually or over the complete dataset).
 The second option is to upweight a data instance by approximating the parameter changes based on the gradients of the model parameters.
@@ -135,7 +134,7 @@ DFBETA is defined as:
 
 $$DFBETA_{i}=\beta-\beta^{(-i)}$$
 
-where $\beta$ is the vector with the model parameters when the model is trained on all data instances, and $\beta^{(-i)}$ the model parameters when the model is trained without instance i.
+where $\beta$ is the weight vector when the model is trained on all data instances, and $\beta^{(-i)}$ the weight vector when the model is trained without instance i.
 Quite intuitive I would say.
 DFBETA works only for models with weight parameters, such as logistic regression or neural networks, but not for models such as decision trees, tree ensembles, some support vector machines and so on.
 
@@ -219,27 +218,27 @@ Now we know which of the data instances were most influential for the model.
 This is already useful to know for debugging the data.
 Is there a problematic instance?
 Are there measurement errors?
-The influential instances are the first to check for errors, because each error in them strongly influences the model predictions.
+The influential instances are the first ones that should be checked for errors, because each error in them strongly influences the model predictions.
 
 Apart from model debugging, can we learn something to better understand the model?
 Just printing out the top 10 most influential instances is not very useful, because it is just a table of instances with many features.
 All methods that return instances as output only make sense if we have a good way of representing them.
-But we can better understand what kinds of instances are influential when we ask:
+But we can better understand what kind of instances are influential when we ask:
 What distinguishes an influential instance from a non-influential instance?
 We can turn this question into a regression problem and model the influence of an instance as a function of its feature values. 
-We are free to choose any model from the chapter on [interpretable machine learning models](#simple).
+We are free to choose any model from the chapter on [Interpretable Machine Learning Models](#simple).
 For this example I chose a decision tree (following figure) that shows that data from women of age 35 and older were the most influential for the support vector machine.
 Of all the women in the dataset  `r sum(cervical$Age >= 35)` out of `r nrow(cervical)` were older than 35.
-In the chapter on [partial dependence plots](#pdp) we have seen that after 40 there is a sharp increase in the predicted probability of cancer and the [feature importance](#feature-importance) has also detected age as one of the most important features.
+In the chapter on [Partial Dependence Plots](#pdp) we have seen that after 40 there is a sharp increase in the predicted probability of cancer and the [Feature Importance](#feature-importance) has also detected age as one of the most important features.
 The influence analysis tells us that the model becomes increasingly unstable when predicting cancer for a higher ages.
 This in itself is valuable information. 
 This means that errors in these instances can have a strong effect on the model.
 
-```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree that models the relationship between the influence of an instance and its features. The maximum depth of the tree is set to 2."}
+```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2."}
 df.cervical  = cbind(df, cervical)
 ct = rpart(abs(influence) ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
 ct = as.party(ct)
-plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
+plot(ct, inner_panel = node_inner(ct, pval = FALSE, id=FALSE), terminal_panel=node_boxplot(ct,id=FALSE))
 ```
 
 ```{r influence-single-prepare}
@@ -247,7 +246,7 @@ i = which(predicted.orig == max(predicted.orig))
 ```
 
 
-This first influence analysis asked which was the *overall* most influential instance.
+This first influence analysis revealed the *overall* most influential instance.
 Now we select one of the instances, namely the `r i`-th instance, for which we want to explain the prediction by finding the most influential training data instances.
 It is like a counterfactual question:
 How would the prediction for instance `r i` change if we omit instance i from the training process?
@@ -261,7 +260,7 @@ We use a decision tree trained to predict the influence given the features, but 
 The following decision tree shows which kind of training instances where most influential for predicting the `r i`-th instance. 
 
 
-```{r influence-single, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from women who smoked for 19 years or longer had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability. Maximal depth of the tree is set to 2.", i, i)}
+```{r influence-single, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from women who smoked for 18.5 years or longer had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability.", i, i)}
 obs = influence.df[i,]
 cervical.200 = cervical
 cervical.200$influence = unlist(obs)
@@ -269,12 +268,12 @@ cervical.200$influence = unlist(obs)
 worst.case.index = which(abs(cervical.200$influence) == max(abs(cervical.200$influence), na.rm = TRUE))
 ct = rpart(abs(influence) ~ ., data = cervical.200, control = rpart.control(maxdepth = 2))
 ct = as.party(ct)
-plot(ct, inner_panel = node_inner(ct, pval = FALSE), type='simple')
+plot(ct, inner_panel = node_inner(ct, pval = FALSE, id=FALSE), terminal_panel=node_boxplot(ct,id=FALSE))
 ```
 
-Data instances of women smoked or have been smoking for 19 years or longer have a high influence on the prediction of the `r i`-th instance.
+Data instances of women smoked or have been smoking for 18.5 years or longer have a high influence on the prediction of the `r i`-th instance.
 The woman behind the `r i`-th instance smoked for `r cervical$Smokes..years.[i]` years.
-In the data, `r sum(cervical$Smokes..years >= 19)` women (`r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 19))`%) smoked 19 years or longer.
+In the data, `r sum(cervical$Smokes..years >= 18.5)` women (`r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 18.5))`%) smoked 18.5 years or longer.
 Any mistake made in collecting the number of years of smoking of one of these women will have a huge impact on the predicted outcome for the `r i`-th instance.
 
 The most extreme change in the prediction happens when we remove instance number `r worst.case.index`.
@@ -291,7 +290,7 @@ This is certainly a situation in which we must question the accuracy of the data
 These examples showed how useful it is to identify influential instances to debug models.
 One problem with the proposed approach is that the model needs to be retrained for each training instance.
 The whole retraining can be quite slow, because if you have thousands of training instances, you will have to retrain your model thousands of times.
-Assuming the model takes one day to train and you have 1000 training instances, then the computation of influential instances - without parallelization - will take almost 3 years.
+Assuming the model takes one day to train and you have 1000 training instances, then the computation of influential instances -- without parallelization -- will take almost 3 years.
 Nobody has time for this.
 In the rest of this chapter, I will show you a method that does not require retraining the model.
 
@@ -326,12 +325,12 @@ The key idea behind influence functions is to upweight the loss of a training in
 
 $$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
 
-where $\theta$ is the model parameters vector and $\hat{\theta}_{\epsilon,z}$ is the parameter vector after upweighting z by a very small number $\epsilon$.
-L is the loss function with which the model was trained, $z_i$ are the training data and z is the training instance which we want to upweight to simulate its removal.
+where $\theta$ is the model parameter vector and $\hat{\theta}_{\epsilon,z}$ is the parameter vector after upweighting z by a very small number $\epsilon$.
+L is the loss function with which the model was trained, $z_i$ is the training data and z is the training instance which we want to upweight to simulate its removal.
 The intuition behind this formula is:
 How much will the loss change if we upweight a particular instance $z_i$ from the training data by a little ($\epsilon$) and downweight the other data instances accordingly?
 What would the parameter vector look like to optimize this new combined loss?
-The influence function of the parameters, that is the influence of upweighting training instance z on the parameters, can be calculated as follows.
+The influence function of the parameters, i.e. the influence of upweighting training instance z on the parameters, can be calculated as follows.
 
 $$I_{\text{up,params}}(z)=\left.\frac{d{}\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}=-H_{\hat{\theta}}^{-1}\nabla_{\theta}L(z,\hat{\theta})$$
 
@@ -422,7 +421,7 @@ Having a formula is great and the scientific and accurate way of showing things.
 But I think it is very important to get some intuition about what the formula means.
 The formula for $I_{\text{up,loss}}$ states that the influence function of the training instance z on the prediction of an instance $z_{test}$ is "how strongly the instance reacts to a change of the model parameters" multiplied by "how much the parameters change when we upweight the instance z".
 Another way to read the formula:
-The influence is proportionate to how large the gradients for the training and test loss are.
+The influence is proportional to how large the gradients for the training and test loss are.
 The higher the gradient of the training loss, the higher its influence on the parameters and the higher the influence on the test prediction.
 The higher the gradient of the test prediction, the more influenceable the test instance.
 The entire construct can also be seen as a measure of the similarity (as learned by the model) between the training and the test instance.
@@ -445,7 +444,7 @@ For the SVM, instances were influential if they were similar in color.
 For the neural network, instances were influential if they were conceptually similar.
 For the neural network, even one image of a dog was among the most influential images, showing that it learned the concepts and not the Euclidean distance in color space.
 
-```{r example-influence-function-svm-inception, eval = TRUE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that had similar colors as the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017)", out.width=600}
+```{r example-influence-function-svm-inception, eval = TRUE, fig.cap = "Dog or fish? For the SVM prediction (middle row) images that had similar colors as the test image were the most influential. For the neural network prediction (bottom row) fish in different setting were most influential, but also a dog image (top right). Work by Koh and Liang (2017).", out.width=600}
 knitr::include_graphics("images/influence-functions-svm-inception.png")
 ```
 
@@ -459,7 +458,7 @@ Suppose you have trained a prediction model for the outcome of patients who have
 All these patients come from the same hospital. 
 Now you use the model in another hospital and see that it does not work well for many patients.
 Of course, you assume that the two hospitals have different patients, and if you look at their data, you can see that they differ in many features. 
-But what are the features or instances that have 'broken' the model?
+But what are the features or instances that have "broken" the model?
 Here too, influential instances are a good way to answer this question.
 You take one of the new patients, for whom the model has made a false prediction, find and analyze the most influential instances.
 For example, this could show that the second hospital has older patients on average and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict this subgroup well.
@@ -468,7 +467,7 @@ The conclusion would be that the model needs to be trained on more patients who 
 **Fixing training data**
 
 If you have a limit on how many training instances you can check for correctness, how do you make an efficient selection?
-The best way is to select the most influential instances, because - by definition - they have the most influence on the model.
+The best way is to select the most influential instances, because -- by definition -- they have the most influence on the model.
 Even if you would have an instance with obviously incorrect values, if the instance is not influential and you only need the data for the prediction model, it is a better choice to check the influential instances.
 For example, you train a model for predicting whether a patient should remain in the hospital or be discharged early.
 You really want to make sure that the model is robust and makes correct predictions, because a wrong release of a patient can have bad consequences.
@@ -482,168 +481,75 @@ Koh et. al (2018) showed that this type of selection works much better than rand
 
 ### Advantages of Identifying Influential Instances
 
-- The approaches of deletion diagnostics and influence functions are very different from the mostly feature-perturbation based approaches presented in the [model-agnostic chapter](#agnostic). 
+The approaches of deletion diagnostics and influence functions are very different from the mostly feature-perturbation based approaches presented in the [Model-Agnostic chapter](#agnostic). 
 A look at influential instances emphasizes the role of training data in the learning process.
 This makes influence functions and deletion diagnostics **one of the best debugging tools for machine learning models**.
 Of the techniques presented in this book, they are the only ones that directly help to identify the instances which should be checked for errors.
-- **Deletion diagnostics are model-agnostic**, meaning the approach can be applied to any model. 
+
+**Deletion diagnostics are model-agnostic**, meaning the approach can be applied to any model. 
 Also influence functions based on the derivatives can be applied to a broad class of models. 
-- We can use these methods to **compare different machine learning models** and better understand their different behaviors, going beyond comparing only the predictive performance.
-- We have not talked about this topic in this chapter, but **influence functions via derivatives can also be used to create adversarial training data**. 
+
+We can use these methods to **compare different machine learning models** and better understand their different behaviors, going beyond comparing only the predictive performance.
+
+We have not talked about this topic in this chapter, but **influence functions via derivatives can also be used to create adversarial training data**. 
 These are instances that are manipulated in such a way that the model cannot predict certain test instances correctly when the model is trained on those manipulated instances.
-The difference to the methods in the [adversarial examples chapter](#adversarial) is that the attack takes place during the training time, also known as poisoning attacks.
+The difference to the methods in the [Adversarial Examples chapter](#adversarial) is that the attack takes place during training time, also known as poisoning attacks.
 If you are interested, read the paper by Koh and Liang (2017).
-- For the deletion diagnostics and influence function, we considered the difference in the prediction and for the influence function the increase of the loss. 
-But, really, **the approach is generalizable** to any question of the form: 'what happens to ... when we delete or upweight instance z?', where you can fill '...' with any function of your model of your desire. 
+
+For deletion diagnostics and influence functions, we considered the difference in the prediction and for the influence function the increase of the loss. 
+But, really, **the approach is generalizable** to any question of the form: "what happens to ... when we delete or upweight instance z?", where you can fill "..." with any function of your model of your desire. 
 You can analyze how much a training instance influences the overall loss of the model.
 You can analyze how much a training instance influences the feature importance.
 You can analyze how much a training instance influences which feature is selected for the first split when training a [decision tree](#tree).
 
 ### Disadvantages of Identifying Influential Instances
 
-- Deletion diagnostics are very **expensive to calculate** because they require retraining.
-If your model needs an hour to train and you have 10,000 instances, it takes longer than a year to sequentially calculate the influence of all instances by omitting them one after the other from the training data.
-But also history has shown that computer resources are constantly increasing.
+Deletion diagnostics are very **expensive to calculate** because they require retraining.
+But history has shown that computer resources are constantly increasing.
 A calculation that 20 years ago was unthinkable in terms of resources can easily be performed with your smartphone.
 You can train models with thousands of training instances and hundreds of parameters on a laptop in seconds/minutes. 
 It is therefore not a big leap to assume that deletion diagnostics will work without problems even with large neural networks in 10 years.
-- **Influence functions are a good alternative to deletion diagnostics, but only for models with differentiable parameters**, such as neural networks.
-They do not work for tree-based methods like random forest, boosted trees or decision trees.
+
+**Influence functions are a good alternative to deletion diagnostics, but only for models with differentiable parameters**, such as neural networks.
+They do not work for tree-based methods like random forests, boosted trees or decision trees.
 Even if you have models with parameters and a loss function, the loss may not be differentiable.
 But for the last problem, there is a trick:
-Use a differentiable loss as substitute for calculating the influence, for example, if the underlying model uses the Hinge loss instead of some differentiable loss.
+Use a differentiable loss as substitute for calculating the influence when, for example, the underlying model uses the Hinge loss instead of some differentiable loss.
 The loss is replaced by a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
-- **Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
+
+**Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
 The approximation can be wrong and the influence of an instance is actually higher or lower when removed.
 Koh and Liang (2017) showed for some examples that the influence calculated by the influence function was close to the influence measure obtained when the model was actually retrained after the instance was deleted.
 But there is no guarantee that the approximation will always be so close.
-- There is **no clear cutoff of the influence measure at which we call an instance influential or non-influential**.
+
+There is **no clear cutoff of the influence measure at which we call an instance influential or non-influential**.
 It is useful to sort the instances by influence, but it would be great to have the means not only to sort the instances, but actually to distinguish between influential and non-influential.
 For example, if you identify the top 10 most influential training instance for a test instance, some of them may not be influential because, for example, only the top 3 were really influential.
-- The influence measures **only take into account the deletion of individual instances** and not the deletion of several instances at once.
+
+The influence measures **only take into account the deletion of individual instances** and not the deletion of several instances at once.
 Larger groups of data instances may have some interactions  that strongly influence model training and prediction.
 But the problem lies in combinatorics:
 There are n possibilities to delete an individual instance from the data. 
 There are n times (n-1) possibilities to delete two instances from the training data. 
 There are n times (n-1) times (n-2) possibilities to delete three ...
-I guess you can guess where this is going, there are just too many combinations.
+I guess you can see where this is going, there are just too many combinations.
 
 ### Software and Alternatives
 
-- Deletion diagnostics are very simple to implement. 
+Deletion diagnostics are very simple to implement. 
 Take a look at [the code](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) I wrote for the examples in this chapter.
-- For linear models and generalized linear models many influence measures like Cook's distance are implemented in R in the `stats` package.
-- Koh and Liang published the Python code for influence functions from their paper [in a repository](https://github.com/kohpangwei/influence-release).
+
+For linear models and generalized linear models many influence measures like Cook's distance are implemented in R in the `stats` package.
+
+Koh and Liang published the Python code for influence functions from their paper [in a repository](https://github.com/kohpangwei/influence-release).
 That is great!
-Unfortunately it is 'only' the code of the paper and not a maintained and documented Python module.
+Unfortunately it is "only" the code of the paper and not a maintained and documented Python module.
 The code is focused on the Tensorflow library, so you cannot use it directly for black box models using other frameworks, like sci-kit learn.
-- Here is a [great blog post for influence functions](http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641) that helped me understand Koh and Liang's paper better. 
+
+Here is a [great blog post for influence functions](http://mlexplained.com/2018/06/01/paper-dissected-understanding-black-box-predictions-via-influence-functions/#more-641) that helped me understand Koh and Liang's paper better. 
 The blog post goes a little deeper into the mathematics behind influence functions for black box models and also talks about some of the mathematical 'tricks' with which the method is efficiently implemented.
 
 
 [^cook]: Cook, R. Dennis. "Detection of influential observation in linear regression." Technometrics 19.1 (1977): 15-18.
 
-[^koh]: Koh, P. W., & Liang, P. (2017). Understanding Black-box Predictions via Influence Functions. Retrieved from http://arxiv.org/abs/1703.04730
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- **Excursion: Intuition behind the gradient and the Hessian matrix** -->
-
-<!-- Intuition behind the gradient: The gradient is the rate of change of the loss of the training (or test example) in various directions. -->
-<!-- It tells us how much the loss changes, when we change the model parameters $\theta$ by a little bit. -->
-<!-- Since the model usually has many parameters, the gradient also is a vector with many numbers, one for each parameter, telling for each parameter the rate and direction of change of the loss if we were to change the parameter. -->
-<!-- A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative gradient means that the increase of the parameter decreases the loss. -->
-<!-- The Hessian is the second-order derivative. -->
-<!-- What the gradient is to the loss, is the hessian to the gradient.  -->
-<!-- The Hessian is the rate of change of the gradient, or expressed in terms of the loss, it is the rate of change of the rate of change of the loss. -->
-<!-- A more informal explanation is that the Hessian informs us how curved the rate of change is.  -->
-<!-- The Hessian is a matrix because to describe the curvature of the loss and that slope depends on the direction we are looking.  -->
-<!-- A real world example: A potato chip. -->
-<!-- Not the irregular ones, but the ones where each chip has the same shape, which you can stack.  -->
-<!-- If you lay such a chip on a surface, such that the ends on off the ends of the longer side touch the ground, we will see how it relates to gradients and the Hessian. -->
-<!-- The long end points away from you, so that you could now put your fingers on the left and right elevated parts of the chip and wiggle it, but be careful not to break it. -->
-<!-- Have a look at the next picture to see what I mean. -->
-
-<!-- The chip is 3-dimensional and will be a good example. -->
-<!-- Assume that each point on the chip describes the combiniation of two model parameters, represented as the coordinate in the direction of the long side and the coordinate in the direction of the short side. -->
-<!-- The height of a point on the chip represents the value of the loss function. -->
-<!-- Now, if we start on the left of the elevated short sides of the chip, the gradient of the loss (height of the chip) would be negative, since going from left to right by a small step would decrease the height/loss.  -->
-<!-- In the middle of the chip, there is a gradient of zero and on the right a positive gradient for the direction. -->
-<!-- But this was only one component of the gradient.  -->
-<!-- The other component is in the longer direction of the chip.  -->
-<!-- Coming from your body, the gradient is first positive, then zero, then negative. -->
-<!-- Now for the Hessian: It describes how curvy the chip is or also the rate of change of the gradient.  -->
-<!-- Since we have two parameters (two directions), we have to describe the curviness regarding the direction we are looking. -->
-<!-- Let us again start at the left of the short sides of the chips, with the high negative gradient.  -->
-<!-- How curvy is the chip? -->
-<!-- Well, that depends whether you look into the direction towards the other short end or into the direction of the long ends. -->
-<!-- The Hessian or curviness is very high for going from short edge to short edge, because there is much curviness between the short edges.  -->
-<!-- The curviness  -->
-<!-- But being on a short edge and going into one  -->
-
-
-<!-- Let us say the height of the chip is the loss, the coordinate along the back of the from back to neck is one parameter, and the coordinate of the saddle from left flank to right flank is the second parameter. -->
-<!-- Going from left to right, the saddle first increases in height and than decreases. -->
-<!-- A high rate of change of the gradient (rate of rate of increase of height), so there is a positive Hessian for short direction, when looking into the short direction.  -->
-<!-- But how much does the gradient change for the short direction, when we look into the long direction? -->
-<!-- That is, when we go to a certain coordinate on the chip, fix the position of the short side, but check how much the gradient changes, when we change the coordinate in the long direction.  -->
-<!-- The answer is 0. -->
-
-<!-- We assume the chip's height follows the following function of the position on the short side and the position on the long side. -->
-<!-- Let us call the position on the short side s and the position on the long side l: -->
-
-<!-- $$\text{Height}=s^2-l^2+2$$ -->
-<!-- The 2 is just used so that the chip starts at zero and not a negative value. -->
-
-<!-- The gradient of the chip looks like this: -->
-
-<!-- $$\nabla\text{Height}=\begin{pmatrix}\frac{d\text{Height}}{ds}\\\frac{d\text{Height}}{dl}\end{pmatrix}=\begin{pmatrix}2s\\-2l\end{pmatrix}$$ -->
-
-<!-- This means that going from left to write short end, we increase the gradient and going from body pointing long end to the one long end further away, we decrease the rate at which the height increases. -->
-<!-- This gradient depends on the position on the chip, which shows that for the chip the gradient is dependent on where we are on the chip, which means that the Hessian matrix will not only contain zeros, but there is a changing rate of change of the height. -->
-
-
-<!-- The Hessian for our chip looks like this:  -->
-
-<!-- $$H=\begin{pmatrix}\frac{d^2\text{Height}}{dsds}&\frac{d^2\text{Height}}{dsdl}\\\frac{d^2\text{Height}}{dsdl}&\frac{d^2\text{Height}}{dldl}\end{pmatrix}=\begin{pmatrix}2&0\\0&-2\end{pmatrix}$$ -->
-
-
-
-<!-- ```{r potato-chip, fig.cap = "Created by Topntp26 - Freepik.com"} -->
-<!-- img <- jpeg::readJPEG("images/potato-chips.jpg") -->
-<!-- p1 <- grid::rasterGrob(img, interpolate=TRUE) -->
-
-<!-- df = expand.grid(long = seq(from = -1.5, to = 1.5, length.out = 10), -->
-<!--   short = seq(from = -1, to = 1, length.out = 10)) -->
-
-<!-- ## Adding to for elevation -->
-<!-- df$height = 2 + df$short^2  - df$long^2   -->
-
-<!-- p2 = ggplot(df) +  -->
-<!--   geom_tile(aes(x = short, y = long, fill = height)) +  -->
-<!--   scale_x_continuous("Short side of chip") +  -->
-<!--   scale_y_continuous("Long side of chip") +  -->
-<!--   scale_fill_continuous("Height of chip") +  -->
-<!--   coord_fixed() -->
-<!-- gridExtra::grid.arrange(p1, p2, ncol = 2) -->
-<!-- ``` -->
-
-
-<!-- **End of excursion** -->
-
-
-
-
+[^koh]: Koh, Pang Wei, and Percy Liang. "Understanding black-box predictions via influence functions." arXiv preprint arXiv:1703.04730 (2017).
