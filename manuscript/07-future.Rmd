@@ -14,7 +14,7 @@ Think of e-books, music and videos.
 Think of all the sensory data about our environment, our human behavior, industrial production processes and so on.
 The drivers of the digitization of everything are: Cheap computers/sensors/storage, scaling effects (winner takes it all), new business models, modular value chains, cost pressure and much more.
 1. **Automation: When a task can be automated and the cost of automation is lower than the cost of performing the task over time, the task will be automated.**
-Even before the introduction of the computer we had a certain degree of automation:
+Even before the introduction of the computer we had a certain degree of automation.
 For example, the weaving machine automated weaving or the steam machine automated horsepower.
 But computers and digitization take automation to the next level. 
 Simply the fact that you can program for-loops, write Excel macros, automate e-mail responses, and so on, show how much an individual can automate. 
@@ -32,8 +32,8 @@ A corporation has the simple goal of earning money for its shareholders.
 But this specification does not capture the true goal with all its constraints that we really strive for:
 For example, we do not appreciate a company killing people to make money, poisoning rivers, or simply printing its own money. 
 We have invented laws, regulations, sanctions, compliance procedures, labor unions and more to patch up the imperfect goal specification.
-Another example that you can experience for yourself:
-[Paperclips](http://www.decisionproblem.com/paperclips/index2.html)is a game in which you play a machine with the goal of producing as many paperclips as possible.
+Another example that you can experience for yourself is
+[Paperclips](http://www.decisionproblem.com/paperclips/index2.html), a game in which you play a machine with the goal of producing as many paperclips as possible.
 WARNING: It is addictive.
 I do not want to spoil it too much, but let's say things get out of control really fast.
 In machine learning, the imperfections in the goal specification come from imperfect data abstractions (biased populations, measurement errors, ...), unconstrained loss functions, lack of knowledge of the constraints, shifting of the distribution between training and application data and much more. 
@@ -50,14 +50,14 @@ The stage for our predictions is set, the crystal ball is ready, now we look at 
 Without machine learning there can be no interpretable machine learning.
 Therefore we have to guess where machine learning is heading before we can talk about interpretability.
 
-Machine learning (or "AI") is associated a lot of promises and expectations.
+Machine learning (or "AI") is associated with a lot of promises and expectations.
 But let's start with a less optimistic observation:
 While science develops a lot of fancy machine learning tools, in my experience it is quite difficult to integrate them into existing processes and products.
 Not because it is not possible, but simply because it takes time for companies and institutions to catch up. 
-In the gold rush of the current AI hype, companies open up "AI labs", "Machine Learning Units" and hire "Data Scientists", "Machine Learning Experts", "AI engineers", and so on, but the reality is in my experience rather frustrating.
+In the gold rush of the current AI hype, companies open up "AI labs", "Machine Learning Units" and hire "Data Scientists", "Machine Learning Experts", "AI engineers", and so on, but the reality is, in my experience, rather frustrating.
 Often companies do not even have data in the required form and the data scientists wait idle for months.
 Sometimes companies have such high expectation of AI and Data Science due to the media that data scientists could never fulfill them.
-And often nobody knows how to integrate this new kind of people into existing structures and many other problems.
+And often nobody knows how to integrate data scientists into existing structures and many other problems.
 This leads to my first prediction.
 
 **Machine learning will grow up slowly but steadily**.
@@ -70,7 +70,7 @@ I know many highly paid data scientists who perform Excel calculations or classi
 But a few companies are already successfully using machine learning, with the big Internet companies at the forefront. 
 We need to find better ways to integrate machine learning into processes and products, train people and develop machine learning tools that are easy to use.
 I believe that  machine learning will become much easier to use: 
-We can already see that machine learning is becoming more accessible, for example through cloud services ("Machine Learning as a service" - just to throw a few buzzwords around).
+We can already see that machine learning is becoming more accessible, for example through cloud services ("Machine Learning as a service" -- just to throw a few buzzwords around).
 Once machine learning has matured -- and this toddler has already taken its first steps -- my next prediction is:
 
 **Machine learning will fuel a lot of things.**
@@ -87,9 +87,7 @@ Here are some examples of tasks where machine learning is used to automate parts
 - Quality controls in assembly lines
 - Self-driving cars
 - Diagnosis of diseases
-- Translation.
-I am using this right now:
-I use a translation service called ([DeepL](deepl.com)) powered by deep neural networks to improve my sentences by translating them from English into German and back into English. 
+- Translation. For this book, I used a translation service called ([DeepL](deepl.com)) powered by deep neural networks to improve my sentences by translating them from English into German and back into English. 
 - ...
 
 The breakthrough for machine learning is not only achieved through better computers / more data / better software, but also:
@@ -112,7 +110,7 @@ Interpretation tools make it easier to identify these problems.
 
 ## The Future of Interpretability
 
-Let's take a look at the possible future of machine learning interpretability.
+Let us take a look at the possible future of machine learning interpretability.
 
 
 **The focus will be on model-agnostic interpretability tools.**
@@ -123,10 +121,10 @@ We can easily replace the underlying machine learning model.
 We can just as easily replace the interpretation method.
 For these reasons, model-agnostic methods will scale much better. 
 That is why I believe that model-agnostic methods will become more dominant in the long term.
-But intrinsically interpretable methods will also have their place.
+But intrinsically interpretable methods will also have a place.
 
 
-**Machine learning will be automated and with it interpretability.**
+**Machine learning will be automated and, with it, interpretability.**
 
 An already visible trend is the automation of model training. 
 That includes automated engineering and selection of features, automated hyperparameter optimization, comparison of different models, and ensembling or stacking of the models. 
@@ -137,7 +135,7 @@ Automatically compute the feature importance, plot the partial dependence, train
 Nobody stops you from automatically computing all these model interpretations.
 The actual interpretation still requires people.
 Imagine: You upload a dataset, specify the prediction goal and at the push of a button the best prediction model is trained and the program spits out all interpretations of the model. 
-There are already first products and I argue that for many applications will be sufficient to use these automated machine learning services. 
+There are already first products and I argue that for many applications it will be sufficient to use these automated machine learning services. 
 Today anyone can build websites without knowing HTML, CSS and Javascript, but there are still many web developers around.
 Similarly, I believe that everyone will be able to train machine learning models without knowing how to program, and there will still be a need for machine learning experts.
 
@@ -146,9 +144,9 @@ Similarly, I believe that everyone will be able to train machine learning models
 
 The raw data itself is always useless (I exaggerate on purpose). 
 I don't care about the data; 
-I care about the knowledge distilled from the data. 
+I care about the knowledge contained in the data. 
 Interpretable machine learning is a great way to distill knowledge from data.
-You can probe the model extensively, the model automatically recognizes if and how features are relevant for the prediction (many models have built-in feature selection), the model can automatically detect how relationships are represented, and -- if trained correctly -- the final model is the best possible approximation to reality.
+You can probe the model extensively, the model automatically recognizes if and how features are relevant for the prediction (many models have built-in feature selection), the model can automatically detect how relationships are represented, and -- if trained correctly -- the final model is a very good approximation of reality.
 
 
 Many analytical tools are already based on data models (because they are based on distribution assumptions): 
