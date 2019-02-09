@@ -77,7 +77,7 @@ write_string = c("# References {-}",
 for(i in 1:nrow(reference_list)) {
   write_string = c(write_string, "", reference_list$reference[i])
 }
-write_string = c(write_string, "",  "**## R Packages Used for Examples**")
+write_string = c(write_string, "",  "## R Packages Used for Examples {-}", "")
 for(i in 1:length(r_reference_list)) {
   r_package_citation = paste0("**", names(r_reference_list[i]), "**. ",
     format(r_reference_list[[i]], "textVersion", collapse = TRUE)[[1]])
