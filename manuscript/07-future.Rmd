@@ -87,7 +87,7 @@ Here are some examples of tasks where machine learning is used to automate parts
 - Quality controls in assembly lines
 - Self-driving cars
 - Diagnosis of diseases
-- Translation. For this book, I used a translation service called ([DeepL](deepl.com)) powered by deep neural networks to improve my sentences by translating them from English into German and back into English. 
+- Translation. For this book, I used a translation service called ([DeepL](https://deepl.com)) powered by deep neural networks to improve my sentences by translating them from English into German and back into English. 
 - ...
 
 The breakthrough for machine learning is not only achieved through better computers / more data / better software, but also:
