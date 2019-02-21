@@ -142,7 +142,9 @@ Similarly, I believe that everyone will be able to train machine learning models
 
 **We do not analyze data, we analyze models.**
 
-The raw data itself is always useless (I exaggerate on purpose). 
+The raw data itself is always useless.
+(I exaggerate on purpose.
+The reality is that you need a deep understanding of the data to conduct a meaningful analysis.) 
 I don't care about the data; 
 I care about the knowledge contained in the data. 
 Interpretable machine learning is a great way to distill knowledge from data.
