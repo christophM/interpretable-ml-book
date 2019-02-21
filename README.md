@@ -59,6 +59,8 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 ## Changelog
 All notable changes to the book will be documented here.
 
+### v1.0 (2018-02-21)
+- Extensive proofreading and polishing
 
 ### v0.7 (2018-11-21)
 - Renamed Definitions chapter to Terminology
