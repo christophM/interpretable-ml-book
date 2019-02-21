@@ -9,7 +9,7 @@ All text and code for the book is open source and [available at github.com](http
 On the Github page you can suggest fixes and [open issues](https://github.com/christophM/interpretable-ml-book/issues) if you find a mistake or if something is missing.
 
 If you want to help out even more, the issues page is also the best place to find problems to fix and a good way to contribute to the book.
-If you are interested in a larger contributions, please send me a message with your concrete idea: [christoph.molnar.ai@gmail.com](mailto:christoph.molnar.ai@gmail.com).
+If you are interested in a larger contribution, please send me a message with your concrete idea: [christoph.molnar.ai@gmail.com](mailto:christoph.molnar.ai@gmail.com).
 
 
 
