@@ -59,6 +59,9 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 ## Changelog
 All notable changes to the book will be documented here.
 
+### v1.1 (In Progress) 
+- fixed boxplot formula (1.5 instead of 1.58)
+
 ### v1.0 (2018-02-21)
 - Extensive proofreading and polishing
 
