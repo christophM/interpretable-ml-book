@@ -7,3 +7,6 @@ my_theme = function(legend.position='right'){
 }
 
 theme_set(my_theme())
+
+
+default_color = "azure4"
