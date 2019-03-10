@@ -61,6 +61,7 @@ All notable changes to the book will be documented here.
 
 ### v1.0.1 (IN PROGRESS)
 - Fixes wrong index in Cooks Distance summation (i -> j)
+- fixed boxplot formula (1.5 instead of 1.58)
 
 ### v1.0 (2018-02-21)
 - Extensive proofreading and polishing
