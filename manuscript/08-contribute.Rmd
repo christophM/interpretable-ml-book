@@ -24,10 +24,9 @@ You can cite the book like this:
 Or use the following bibtex entry:
 
 
-    @book{molnar,
+    @book{molnar2019,
       title      = {Interpretable Machine Learning},
       author     = {Christoph Molnar},
-      publisher  = {https://christophm.github.io/interpretable-ml-book/},
       note       = {\url{https://christophm.github.io/interpretable-ml-book/}},
       year       = {2019},
       subtitle   = {A Guide for Making Black Box Models Explainable}
