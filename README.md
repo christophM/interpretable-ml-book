@@ -40,7 +40,11 @@ After rendering, the HTML files of the  book will be in the "_book" folder. You 
 ```{r}
 browseURL('_book/index.html')
 ```
+## Notes on Printing with lulu.com
 
+- Export from Leanpub in 7.44" x 9.68" 	18.9cm x 24.6cm
+- For cover: 7.565 x 9.925", 19.226 x 25.224cm, see [recommended sizes](https://connect.lulu.com/en/discussion/33279/recommended-book-cover-image-dimensions)
+- Font for front cover: Francois One
 
 ## Writing
 
