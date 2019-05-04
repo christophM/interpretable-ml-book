@@ -11,6 +11,9 @@ Also gradient based methods, which many interpretation methods make use of and a
 
 See also Visual Interpretability for Deep Learning: a Survey
 
+There is a lot going on.
+A good portion of it is for understanding neural networks better, but are not day-to-day tools that will help build more interpretable models.
+
 
 ### Feature Visualization / Neural Activation
 
@@ -109,6 +112,12 @@ This also restricts the usefulness for day to day ML.
 But helps to build a general understanding.
 
 Deep connection with adversarial examples, because there you try also to find an image that maximizes something (e.g. class probability of an adversarial class).
+TODO: Link chapter
+Adversarial examples also maximally activate units, in this case the a class probability.
+Also it starts with some given image, for which the adversarial example should be produced, instead of some random noise image.
+Also the optimization has an additional constraint: Don't change too much from the initial image.
+
+
 
 #### Advantages
 - Really great to learn this. makes clearer how nns work. For example it showed that CNNs look more on the texture, less on the shapes: I MAGE N ET - TRAINED CNN S ARE BIASED TOWARDS TEXTURE; INCREASING SHAPE BIAS IMPROVES  ACCURACY AND ROBUSTNESS
@@ -124,7 +133,7 @@ Feature attributions are explained here: TODO: LINK CHAPTER
   We would have to describe the whole spectrum to describe that neuron.
 - too many neurons
 - what does it tell you in the end? only sense of understanding, but final prediction is still a difficult interaction between all those neurons, and these images only show the maximal activation, but neurons might only be have activated for some specific prediction, and it is unclear if that image really helps you then
-
+- like understanding modern art, always trying to interpret what artist intended
 
 More a tool for getting a general, better understanding of cnns, but not for daily job.
 
@@ -137,17 +146,120 @@ More a tool for getting a general, better understanding of cnns, but not for dai
 - DeepViz Toolbox - https://github.com/yosinski/deep-visualization-toolbox
 TODO: How does DeepDream fit in here?
 - CAffee and with GANS https://github.com/Evolving-AI-Lab/synthesizing
+
+
+
 ### Feature Attribution
 
+Feature attribution explains individual predictions by attributing each input feature by how much it changed the prediction (negative or positive).
+Be it input pixels, tabular data or words.
 
+Attribution is also sometimes called "relevance" or "contribution".
+
+There are lots and lots of approaches to to this, all very similar.
+We will only look at the general idea, and point out to some of the approaches.
+
+Good overview: TOWARDS BETTER UNDERSTANDING OF GRADIENT - BASED ATTRIBUTION METHODS FOR DEEP NEURAL NETWORKS.
+This paper also served to structure this article. 
+
+Here we consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
+Output of DNN is called $S(x)=[S_1(x),\ldots,S_p(x)]$.
+Formally all those methods take in input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) and outputs an explanation $R^c=[R_1^c,\ldots,R_p^c]$, one relevance value for each of the p input features.
+The c indicicates the relevance for the c-th output.
+
+In multi-class classification you have to decide for which classification to look at the relevance of the inputs.
+This can be the correct class of that example, at least that's an interesting case to look at.
+But also if DNN was wrong, it might be interesting to look at the input relevance for the wrong class and also for the relevance for the correct class for debugging.
+
+The word attribution maps means that, for images, we visualize the pixels with red if they positively contributed, blue if negatively.
+Of course, you are free to choose any color you like.
+There are not rules.
+
+
+
+
+All of the approaches return, as an explanation of an individual prediction a weighted sum:
 TODO: Formula for attribution (linear sum). 
 
-DeepLIFT, SHAP, Layer-Wise Relevance Propagation, DeepLift
-VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS
+
+Main classification: 
+- perturbation based methods: compute attribution of features by removing/masking/altering these features, and doing the prediction again. marginal effect of feature is estimated. depends on the  number of features that is perturbed together (for images you would perturb the nearby pixels together).
+- gradient based methods
+- 
 
 
+Shapley Value only approximated usually, read more in LINK CHAPTER.
+
+Some of those methods have the property of Completeness, meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image/data point minus the prediction of a reference point (e.g. all grey image).
+Integrated Gradient and SHAP have this property.
+
+*List of approaches*
+
+VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
+- Based on Shapley Value for explaining individual predictions
+- Relevance of feature is estimated by measuring how the prediction changes if feature is unknown, by simulating that the feature is unknown.
+- what this paper does differently: instead of simulating 
+- Implementation: https://github.com/lmzintgraf/DeepVis-PredDiff
+
+
+
+- DeepSHAP (gradient-based)
+  - version called DeepExplainer. There is a connection between SHAP and DeepLift
+  - version called GradientExplainer. Connection between SHAP and Gradient Input algorithm.
+- (epsilon) Layer-Wise Relevance Propagation (gradient-based)
+- DeepLift (gradient-based)
+- Deep Taylor Decomposition (gradient-based)
+- Saliency Map (gradient-based) https://arxiv.org/abs/1312.6034. Saliency maps are a local method, because only gradient aroudn local is considered, but not the absolut global contributions. Most other methods are global. Probably Taylor decomp is also local.
+- Gradient * Input (gradient-based, surprise!) https://arxiv.org/abs/1605.01713
+- Occlusion (perturbation based) https://arxiv.org/abs/1311.2901
+- Integrated Gradients (gradient based) https://arxiv.org/abs/1703.01365
+- Shapley Value Sampling (perturbation based)
+- LIME (perturbation based)
+- Grad-CAM (gradient-based)
+- Deconvolutional Network
+- Guided Backpropagagion
+
+Deep Lift and $\epsilon$-LRP can both be re-formulated as computing backpropagation for modified gradient function
+Ancona et. al 2018.
+
+These gradient based methods are all different for different activation functions, since when the chain rule for derivation is applied, they replace the non-linear activations with a function $g(x)$ is different in different methods.
+
+
+TODO: Create example with different relevance methods.
+
+
+#### Advantages 
+- better than model-agnostic variants (e.g. shapley) since they rely on the gradient and can be computed faster.
+
+#### Disadvantages
+
+
+
+A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
 
 ### TCAV
 
 Useful to analyze a neural network with regard to specfic concepts, e.g. to check for gender bias.
+
+
+
+
+
+
+
+
+### Stuffs that's good to know about neural networks
+
+Stuff that came out of interpretability research. 
+Not really tools but a few things for better understanding models.
+Better understand when and why they might fail.
+
+- CNNs
+ - learn mostly textures, shapes not so much
+ - concepts can transform when learning, e.g. dog into waterfall
+ - The thing that maximally activates a neuron or channel can be completely unrelated from the patterns that minimize it
+ - Nets learn similar things. 
+ - 
+
+
 
