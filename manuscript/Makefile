@@ -40,5 +40,5 @@ mobi : _book/interpretable-ml.epub
 	Rscript  -e "bookdown::kindlegen('./_book/interpretable-ml.epub', exec = '../kindlegen')"
 
 
-10-references.Rmd : *.Rmd
+11-references.Rmd : *.Rmd
 	Rscript ../scripts/references.R
