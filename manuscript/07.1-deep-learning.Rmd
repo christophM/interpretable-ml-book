@@ -304,23 +304,54 @@ Feature attribution explains individual predictions by attributing each input fe
 Be it input pixels, tabular data or words.
 
 Attribution is also sometimes called "relevance" or "contribution".
-
+We only look at attribution methods that do not require to modify the network.
+This means only methods that work for a trained network.
 
 <!--Idea for chapter:
 - Start with general goal
 - Roughly explain different approaches
 - More deeply explain one of the approaches (LRP?)
 - Show paper comparisons of approaches
+- Example with VGG15, innvestigate https://github.com/albermax/innvestigate and funny image.
 - Advantages / Disadvantages
-
-
+- Software
 -->
+
+Formal definition:
+A feature attribution method of the prediction for p-dimensional input x, relative to some base input (or prediction?) can be expressed as a vector of relevances: $(r_1,\ldots,r_p)$.
+The j-th element r~j~ is the contribution of the j-th feature input to the prediction.
+
 There are kind of three ways to do it:
 - Sensitivity Analysis: Wiggle around the inputs, visualize in which the direction the output changes (not recommended)
 - Deconvolution: Going the other way in 
 - Relvance Attribution: Distribute relevance among inputs, usually by backpropagation.
 - Occlusion: Remove parts of the input, see how the output changes.
 
+Desiderata, as defined in [^integrated-gradients]:
+- Sensitivity: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero. 
+I think that is a fair requirement.
+Gradient alone does not fulfill this axiom, because gradient can be zero, but feature different.
+Also deconvnet and guided backpropagation break sensitivity.
+- Implementation Invariance: For two networks that have exactly the same predictions, no matter how the input looks like, the attribution should be the same.
+Even if the networks work differently inside.
+I think this is also a fair assumption.
+LRP and DeepLift don't satisfy implementation invariance.
+If methods don't have implementation invariance, they are senstive to unimportant workings of the network.
+- Completeness: The attributions / relevance score add up to the difference between input x and the chosen baseline.
+Integrated Gradients, DeepList and LRRP do so.
+- Dummy: if  a network does not depend on a feature at all, its relevance should be zero.
+- Linearity: If we linearly combine two networks (e.g. weighted sum of the prediction of both), then the attribution for a feature should also be a weighted sum (with same weights as in linear combination).
+- Symmetry: swapping two features should yield same attribution (see shapley value)
+
+(most axioms are like their shapley equivalents)
+
+
+
+What is the baseline that is chosen?
+often the all black image, which has a prediction near zero.
+
+TODO: Add axioms from shapley here?
+Maybe also aximos from other papers as well.
 
 
 
@@ -343,6 +374,7 @@ But also if DNN was wrong, it might be interesting to look at the input relevanc
 The word attribution maps means that, for images, we visualize the pixels with red if they positively contributed, blue if negatively.
 Of course, you are free to choose any color you like.
 There are not rules.
+
 
 
 
@@ -500,6 +532,9 @@ Feature attributions are explained here: TODO: LINK CHAPTER
 - too many neurons to look at for feature visualization
 - what does it tell you in the end? only sense of understanding, but final prediction is still a difficult interaction between all those neurons, and these images only show the maximal activation, but neurons might only be have activated for some specific prediction, and it is unclear if that image really helps you then
 - feature visualizations are like understanding modern art, always trying to interpret what artist intended
+
+
+[^integrated-gradients]: Sundararajan, Mukund, Ankur Taly, and Qiqi Yan. "Axiomatic attribution for deep networks." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
 [^visual-survey-frontier]: Hohman, Fred Matthew, et al. "Visual analytics in deep learning: An interrogative survey for the next frontiers." IEEE transactions on visualization and computer graphics (2018).
  
