@@ -34,4 +34,4 @@ def heatmap(X):
 
 
 def graymap(X):
-    return ivis.graymap(np.abs(X), input_is_postive_only=True)
+    return ivis.graymap(np.abs(X), input_is_positive_only=True)
