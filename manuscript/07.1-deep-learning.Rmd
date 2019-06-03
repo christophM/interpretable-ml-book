@@ -1,5 +1,3 @@
-
-
 <!--
 Some literature
 - For feature attribution: http://blog.qure.ai/notes/deep-learning-visualization-gradient-based-methods
@@ -47,7 +45,7 @@ Rather, an overview so you know where to look.
 This chapter is based on a few great overview papers:
 Visual Interpretability for Deep Learning: a Survey by Zhang et. al (2018) [^visual-survey]
 
-## Feature Activation Visualization
+## Feature Activation Maximization Visualization
 
 Deep learning feature visualization tries to uncover the data input patterns that different units of the neural networks recognize.
 
@@ -94,13 +92,8 @@ For the mean activation of a whole channel, we would maximize:
 $$x^*=\arg\max_{x}\sum{z,y}{z,y,z3}(x)$$
 
 Alternatively, it would also work to maiximize random directions, which means that not all neurons are weighted equally.
-
 These optimizations usually have additional constraints for the image x, so that x becomes an interpretable visualization.
-
 For neural networks other than convolutional ones, this would work equally.
-
-
-Other technique that can be used, but is not explained here: Deconvnet.
 
 
 <!--Why not visualize the weights?-->
@@ -189,8 +182,38 @@ Adversarial examples also maximally activate units, in this case the a class pro
 Also it starts with some given image, for which the adversarial example should be produced, instead of some random noise image.
 Also the optimization has an additional constraint: Don't change too much from the initial image.
 
+**Feature Visualization for Test and Tabular Data**
 
-### Detecting Concepts 
+The literature focuses mainly on images.
+The concept of activation maximization works for text and tabular data as well, but is less visually interesting.
+For text, you would get a text that maximially activates an RNN.
+
+For tabular data, you would get a data point that maximally activates a (usually) fully connected neural network.
+This data point then has some features, is probably going to be out of range of the data distribution.
+
+### Advantages
+- Tool for communication: Someone who does not understand neural networks can look at those and at least get an intuition about the neural network learning more and more complex features.
+- Gives unique insight into neural networks, especially for image recognition
+- Make a T-Shirt from it or a dreamy background image.
+
+### Disadvantages
+- Restricted usefunless in day-to-day job
+- Many units to look at
+- For whole channels: Multiple directions in which to look (either all weighted the same, or different random directions)
+- Also, you can negatively activate it.
+- There is no local maxima, so running this multiple times, from different inputs can yield different results (TODO: Check)
+- A bit like a horoscope, because there are multiple possible interpretation.
+  Reminds me of school: Interpret the shit out of a snippet of text, trying to figure out what the author meant.
+  And usually this explanation becomes its own thing, independent of the actual author intention.
+  Same here, because the unit interacts with other unit, not only maximal activation is interesting.
+
+
+Quite many disadvantages.
+Which speaks for the difficulties with this technique.
+But invaluable element for furthering our understanding how deep learning works.
+Just don't interpret too much the individual images.
+
+## Detecting Concepts 
 
 Let's go deeper.
 Visualizing features is nice and all, but can we maybe more concretely attach concepts to individual units of the neural network and individual predictions (?).
@@ -297,7 +320,7 @@ Maybe also part of concepts chapter?
 Word embeddings
 t-SNE
 
-### Feature Attribution
+## Feature Attribution
 
 Feature attribution explains individual predictions by attributing each input feature by how much it changed the prediction (negative or positive).
 Be it input pixels, tabular data or words.
@@ -320,11 +343,17 @@ Formal definition:
 A feature attribution method of the prediction for p-dimensional input x, relative to some base input (or prediction?) can be expressed as a vector of relevances: $(r_1,\ldots,r_p)$.
 The j-th element r~j~ is the contribution of the j-th feature input to the prediction.
 
-There are kind of three ways to do it:
-- Sensitivity Analysis: Wiggle around the inputs, visualize in which the direction the output changes (not recommended)
-- Deconvolution: Going the other way in 
-- Relvance Attribution: Distribute relevance among inputs, usually by backpropagation.
-- Occlusion: Remove parts of the input, see how the output changes.
+There are kind of two ways to do it:
+- Manipulate the input and see how the output changes:
+  Occlusion, Shapley Value, LIME, wiggle around the inputs, visualize the directions in which the output changes
+- Gradient Based Relvance Attribution: Distribute relevance among inputs, usually by backpropagation (also deconvolution here and some backpropagation based methods).
+
+Problems with perturbation or occlustion: Network was never trained on those images, you are leaving the space of realistic images.
+Might not be relevant how the neural network behaves here.
+
+Big problem with backpropagation / attribution methods:
+Neural network have non-linear transformation units, and that's also how most methods differ in how they deal with those.
+So it's not clear how to backpropagate through those units.
 
 Desiderata, as defined in [^integrated-gradients]:
 - Sensitivity: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero. 
@@ -381,9 +410,6 @@ But also if DNN was wrong, it might be interesting to look at the input relevanc
 The word attribution maps means that, for images, we visualize the pixels with red if they positively contributed, blue if negatively.
 Of course, you are free to choose any color you like.
 There are not rules.
-
-
-
 
 
 All of the approaches return, as an explanation of an individual prediction a weighted sum:
@@ -453,7 +479,15 @@ TODO: Find some more advice from this paper and mention here.
 Advantages of LRP over Deconvolution and Sensitivity Analysis.
 https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwj_5vL0m6DiAhUz8uAKHU6ED0oQFjAAegQIAhAC&url=https%3A%2F%2Fwww3.math.tu-berlin.de%2Fnumerik%2FCoSIPICDL2017%2FTalks%2Fmueller.pdf&usg=AOvVaw1yR_5ZwKPvKLxHvwsAfQgA
 
-#### Advantages 
+
+TODO: Insert image with edge detectors
+
+### For RNNs
+
+Paper: Visual Reasoning of Feature Attribution with Deep Recurrent Neural Networks
+
+
+### Advantages 
 - give a way to understand a predictions
 - 
 - better than model-agnostic variants (e.g. shapley) since they rely on the gradient and can be computed faster.
@@ -461,9 +495,10 @@ https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwj_5vL
 
 
 
-#### Disadvantages
+### Disadvantages
 - You have to see which methods works best for which network. It seems like LRP works better when there are not too many fully connected layers, because if there are too many, the relevance will be non-selective but distributed to many layers.
-
+- Some methods have similarities to edge detectors, which are independent of training data and model. 
+  Explanation becomes misleading.
 
 A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
 
@@ -517,6 +552,23 @@ Better understand when and why they might fail.
  - Nets learn similar things. 
  - 
 
+
+## Example
+
+I want to predict the following:
+TODO: INCLUDE IMAGE OF DOGO
+
+Neural Network VGG16 TODO: CITE
+
+Most likely class Italian_greyhound (35.21%)
+
+And my ouptut looks like this:
+
+TODO: All the images here 
+
+TODO: Check wheter to cover pattern.net and pattern
+
+All examples are done with innVestigate
 
 
 
