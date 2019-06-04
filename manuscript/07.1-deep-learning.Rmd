@@ -33,6 +33,7 @@ An additional reason is that most other methods in this book are for interpretin
 
 We next chapters cover the following topics:
 - [Feature Visualization](#feature-visualisation): What features did the neural network learn?
+- [Adversarial Examples](#adversarial): How can we manipulate the inputs to get a wrong classification?
 - [Concepts](#neural-concepts) (IN PROGRESS): Which more abstract concepts did the neural network learn?
 - [Feature Attribution](#feature-attribution) (IN PROGRESS): How did each input contribute to a certain prediction?
 - [Modell Distillation](#neural-distillation) (IN PROGRESS): How can we explain a neural network with a simpler model?
@@ -42,53 +43,69 @@ We next chapters cover the following topics:
 Neural feature visualization creates data inputs that maximally active different different units of the neural network.
 By that, feature visualization tries to show which (abstract) features the model learned.
 
-CONTINUE HERE
-
 <!-- Background: Why feature visualization -->
-One of the biggest strengths of deep neural networks is that they learn transformations of the input features, i.e. they do feature engineering internally.
-This is especially remarkable for images and text.
-In computer vision before deep learning, you would have extracted features like edges or shapes with specifically designed extractor functions.
-With (convolutional) neural networks, the image is passed into the network in its raw form, transformed multiple times through the convolution layers and fully connected layers and the network spits out the predictions.
-While the CNN is trained, it learns new features in its layers.
-In the first layers, it learns edge detectors.
-In the later layers it distinguishes between different textures.
-In the higher layers it learns more complex concepts like detecting dog snouts or tennis balls.
+One of the biggest strengths of deep neural networks is that they automatically learn more abstract features from the input features in the hidden layers.
+This partially reduces the need for feature engineering.
+The feature learning part is especially remarkable for image and text data.
+Let's say you want to build an image classifier without relying on deep learning, but using a support vector machine.
+The raw pixels are not the best input to your e.g. SVM, so you create new features based on color features, frequency domain features, edge detectors and so on and feed this to your machine learning training.
+Before deep learning, you would have extracted features like edges or shapes with specifically designed extractor functions.
+With convolutional neural networks, the image is passed into the network in its raw formi (pixels), transformed multiple times through the convolutional layers and the fully connected layers and the network spits out the predictions.
+During training, the convolutional neural network learns new features in its layers.
+What happens in the hidden layers, when we train a neural network to e.g. classify images?
 
-Naturally, one way of interpreting deep neural networks is by making explicit what features the neural network learned at each step.
-For images this means visualizing what activates each unit in a neural network the most.
-For tabular data or text data you can also describe which input would excite the network the most.
-TODO: Search for papers or blog post that do this for tabular or for text.
-For text analysis with recurrent neural networks, you might want to 
+```{r fig.cap = "Architecture of Inception V1 neural network. Each enumerated unit (3a to 5b) represents a layer with differently sized convolutions and pooling. Figure from Olah, et al. 2019 (CC-BY 4.0) https://distill.pub/2017/activation-atlas/.", out.width = 800}
+knitr::include_graphics("images/inceptionv1.svg")
+```
+
+
+- In the first convolutional layer(s) the CNN learns low-level features like edges and simple textures.
+- In the later convolutional layers the CNN learns mid-level features like different textures and patterns.
+- In the higher up convolutional layers the CNN learns high-level features like objects or parts of objects.
+- In the fully connected layers the CNN learns to connect the activations from the high-level features to the individual classes to be predicted.
+
+This looks like the following picture that you might already have seen when learning about neural networks:
+
+```{r fig.cap = "Features learned by a convolutional neural network (Inception V1) trained on the ImageNet data. The features range from low-level in the lower convolutional layers (left) to high-level in the higher convolutional layers (right). Figure from Olah, et al. 2017 (CC-BY 4.0) https://distill.pub/2017/feature-visualization/.", out.width = 800}
+knitr::include_graphics("images/cnn-features.png")
+```
+Cool.
+But how do we actually get those trippy images?
 
 <!-- Feature Visualization explained-->
-The approach of making the learned features explicit is called "Feature Visualization".
-Feature visualization for a unit of the neural network is done by finding the input that activates the unit the most.
-A unit here refers to either individual neurons, whole feature maps in convolutional neural networks, whole layers, or it could be even the final class probability in classification.
-Chapter based on https://distill.pub/2017/feature-visualization/
-Appendix of post: https://distill.pub/2017/feature-visualization/appendix/
+The approach of making the learned features explicit is called **Feature Visualization**.
+Feature visualization for a unit of the neural network is done by finding the input that maximizes the activation of that unit.
+"Unit" refers to either individual neurons, whole feature maps, whole (convolutional) layers or the final class probability in classification.
 
+TODO: Draw image of neuron in feature map, channel in feature map, feature map, class prob.
 
-```{r trippy, fig.cap="Optimized images for GoogleNet (channels mixed3a, mixed4c, mixed4d and mixed5a). Images are maximized for a random direction of the activations. Figure from Olah, et al. 2017 (CC-BY 4.0) https://distill.pub/2017/feature-visualization/.", out.width=800}
+```{r trippy, fig.cap="Optimized images for Inception V1 (channels mixed3a, mixed4c, mixed4d and mixed5a). Images are maximized for a random direction of the activations. Figure from Olah, et al. 2017 (CC-BY 4.0) https://distill.pub/2017/feature-visualization/.", out.width=800, include = FALSE}
 knitr::include_graphics("images/trippy.png")
 ```
 
-Mathematically it's simple.
-You are looking for a new image $x^*$ that maximize the (mean) activation of some unit:
+Mathematically, feature visualization is an optimization problem.
+You are looking for a new image $img^*$ that maximize the (mean) activation of a unit, here a single neuron:
 
 
-$$x^*=\arg\max_{x}h_{z1,z2,z3}(x)$$
+$$img^*=\arg\max_{img}h_{n,x,y,z}(img)$$
 
-There are usually constraints on x, e.g. that only small changes are allowed, or that it comes from the training data distribution.
-The function $h$ is the activation of a neuron, x the input to the network, z1 and z2 describe the spatial position of the neuron, z3 describes the layer and activation map.
-We assume that the weights of the neural networks are fixed, i.e. the network is fully trained.
+The function $h$ is the activation of a neuron, x the input to the network (e.g. image), x and y describe the spatial position of the neuron, n enumerates the layers z is the channel index.
+There are usually constraints on img, e.g. that only small changes are allowed, or that it comes from the training data distribution.
+We assume that the weights of the neural networks are fixed, meaning that the network is fully trained.
 
-For the mean activation of a whole channel, we would maximize:
+For the mean activation of a whole channel Z in layer N we maximize:
 
-$$x^*=\arg\max_{x}\sum{z,y}{z,y,z3}(x)$$
+$$img^*=\arg\max_{img}\sum_{x,y}h_{N,x,y,Z}(img)$$
 
-Alternatively, it would also work to maiximize random directions, which means that not all neurons are weighted equally.
-These optimizations usually have additional constraints for the image x, so that x becomes an interpretable visualization.
-For neural networks other than convolutional ones, this would work equally.
+This weighs the activation all neurons in channel z equally.
+Alternatively, it would also work to maximize random directions, which means that the neurons would be differently weighted.
+
+What the iterative optimization 
+
+```{r activation-optim, fig.cap="Features can be visualized for different units. The most common is the vissualization for the individual channels. Here, n is the index of the layer, z the channel index, k the class index, x and y the spatial positions. Olah, et al. 2017 (CC-BY 4.0) https://distill.pub/2017/feature-visualization/.", out.width=800}
+knitr::include_graphics("images/activation-optim.png")
+```
+
 
 
 <!--Why not visualize the weights?-->
@@ -104,17 +121,7 @@ Also it is not on the same space as the feature input.
 It is more difficult what the weights really mean and more intuitive to understand what input maximizes the activation of certain neurons in the neural network.
 
 
-<!-- How to create feature visualizations? For activation map and with generated image--> 
-Convolutional Neural Networks have an architecture where first convolutional and pooling layers are connected, then fully connected layers.
-The inputs are pixels.
-While an image can be understood by a human, each single pixel does not hold much meaning.
-By passing the pixels through the layers, the trained neural networks neurons get activated, based on the content of the picture.
-The idea is to find for each neuron an image that maximizes that neurons activation.
 
-
-```{r activation-optim, fig.cap="Features can be visualized for different units. The most common is the vissualization for the individual channels. Here, n is the index of the layer, z the channel index, k the class index, x and y the spatial positions. Olah, et al. 2017 (CC-BY 4.0) https://distill.pub/2017/feature-visualization/.", out.width=800}
-knitr::include_graphics("images/activation-optim.png")
-```
 
 <!-- Choice for Visualization -->
 We have more choice than to visualize the layer or work with random images.
@@ -185,6 +192,9 @@ For text, you would get a text that maximially activates an RNN.
 
 For tabular data, you would get a data point that maximally activates a (usually) fully connected neural network.
 This data point then has some features, is probably going to be out of range of the data distribution.
+
+
+If you want to dive a lot deeper into feature visualization, check out the distil.pub blog/journal, especially the feature visualization post by Olah et al. [^distill-fv] from which I got the images, and also about the building blocks of interpretability [^distill-blocks].
 
 ### Advantages
 - Tool for communication: Someone who does not understand neural networks can look at those and at least get an intuition about the neural network learning more and more complex features.
@@ -590,6 +600,11 @@ Feature attributions are explained here: TODO: LINK CHAPTER
 
 [^imagenet]: Olga Russakovsky*, Jia Deng*, Hao Su, Jonathan Krause, Sanjeev Satheesh, Sean Ma, Zhiheng Huang, Andrej Karpathy, Aditya Khosla, Michael Bernstein, Alexander C. Berg and Li Fei-Fei. (* = equal contribution) ImageNet Large Scale Visual Recognition Challenge. IJCV, 2015
 
+
+[^distill-fv]: Olah, et al., "Feature Visualization", Distill, 2017.
+
+[^distill-blocks]: Olah, et al., "The Building Blocks of Interpretability", Distill, 2018.
+
 [^integrated-gradients]: Sundararajan, Mukund, Ankur Taly, and Qiqi Yan. "Axiomatic attribution for deep networks." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
 [^visual-survey-frontier]: Hohman, Fred Matthew, et al. "Visual analytics in deep learning: An interrogative survey for the next frontiers." IEEE transactions on visualization and computer graphics (2018).
@@ -597,4 +612,5 @@ Feature attributions are explained here: TODO: LINK CHAPTER
 [^visual-survey]: Zhang, Quan-shi, and Song-Chun Zhu. "Visual interpretability for deep learning: a survey." Frontiers of Information Technology & Electronic Engineering 19.1 (2018): 27-39.
 
 [^TCAV]: Kim, Been, et al. "Interpretability beyond feature attribution: Quantitative testing with concept activation vectors (tcav)." arXiv preprint arXiv:1711.11279 (2017).
+
 
