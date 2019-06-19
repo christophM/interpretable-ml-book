@@ -1,0 +1,212 @@
+## Feature Attribution
+<!--
+Some literature
+- For feature attribution: http://blog.qure.ai/notes/deep-learning-visualization-gradient-based-methods
+- http://blog.qure.ai/notes/visualizing_deep_learning
+-->
+
+
+Feature attribution explains individual predictions by attributing each input feature by how much it changed the prediction (negative or positive).
+Be it input pixels, tabular data or words.
+
+Attribution is also sometimes called "relevance" or "contribution".
+We only look at attribution methods that do not require to modify the network.
+This means only methods that work for a trained network.
+
+<!--Idea for chapter:
+- Start with general goal
+- Roughly explain different approaches
+- More deeply explain one of the approaches (LRP?)
+- Show paper comparisons of approaches
+- Example with VGG15, innvestigate https://github.com/albermax/innvestigate and funny image.
+- Advantages / Disadvantages
+- Software
+-->
+
+Formal definition:
+A feature attribution method of the prediction for p-dimensional input x, relative to some base input (or prediction?) can be expressed as a vector of relevances: $(r_1,\ldots,r_p)$.
+The j-th element r~j~ is the contribution of the j-th feature input to the prediction.
+
+There are kind of two ways to do it:
+- Manipulate the input and see how the output changes:
+  Occlusion, Shapley Value, LIME, wiggle around the inputs, visualize the directions in which the output changes
+- Gradient Based Relvance Attribution: Distribute relevance among inputs, usually by backpropagation (also deconvolution here and some backpropagation based methods).
+
+Problems with perturbation or occlustion: Network was never trained on those images, you are leaving the space of realistic images.
+Might not be relevant how the neural network behaves here.
+
+Big problem with backpropagation / attribution methods:
+Neural network have non-linear transformation units, and that's also how most methods differ in how they deal with those.
+So it's not clear how to backpropagate through those units.
+
+Desiderata, as defined in [^integrated-gradients]:
+- Sensitivity: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero. 
+I think that is a fair requirement.
+Gradient alone does not fulfill this axiom, because gradient can be zero, but feature different.
+Also deconvnet and guided backpropagation break sensitivity.
+- Implementation Invariance: For two networks that have exactly the same predictions, no matter how the input looks like, the attribution should be the same.
+Even if the networks work differently inside.
+I think this is also a fair assumption.
+LRP and DeepLift don't satisfy implementation invariance.
+If methods don't have implementation invariance, they are senstive to unimportant workings of the network.
+- Completeness: The attributions / relevance score add up to the difference between input x and the chosen baseline.
+Integrated Gradients, DeepList and LRRP do so.
+- Dummy: if  a network does not depend on a feature at all, its relevance should be zero.
+- Linearity: If we linearly combine two networks (e.g. weighted sum of the prediction of both), then the attribution for a feature should also be a weighted sum (with same weights as in linear combination).
+- Symmetry: swapping two features should yield same attribution (see shapley value)
+
+(most axioms are like their shapley equivalents)
+
+
+
+What is the baseline that is chosen?
+often the all black image, which has a prediction near zero.
+
+TODO: Add axioms from shapley here?
+Maybe also aximos from other papers as well.
+
+
+Problemns with guided backpropagaion and similar methods:
+Images closely resemble the output of edge detectors.
+Edge detectors are independent of the model and the data, so this is really bad for guided backpropagation.
+Gradients and GradCAM passed the sanity checks (model and data randomization).
+
+Unfortunately, many of those methods have issues.
+In an experiment, where the labels were mixed and the model was retrained, the explanations were stil very similar.
+Only GradCAM was okay.
+
+Feature attribution might also be called saliency maps.
+There are lots and lots of approaches to to this, all very similar.
+/We will only look at the general idea, and point out to some of the approaches.
+
+Good overview: TOWARDS BETTER UNDERSTANDING OF GRADIENT - BASED ATTRIBUTION METHODS FOR DEEP NEURAL NETWORKS.
+This paper also served to structure this article. 
+
+Here we consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
+Output of DNN is called $S(x)=[S_1(x),\ldots,S_p(x)]$.
+Formally all those methods take in input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) and outputs an explanation $R^c=[R_1^c,\ldots,R_p^c]$, one relevance value for each of the p input features.
+The c indicicates the relevance for the c-th output.
+
+In multi-class classification you have to decide for which classification to look at the relevance of the inputs.
+This can be the correct class of that example, at least that's an interesting case to look at.
+But also if DNN was wrong, it might be interesting to look at the input relevance for the wrong class and also for the relevance for the correct class for debugging.
+
+The word attribution maps means that, for images, we visualize the pixels with red if they positively contributed, blue if negatively.
+Of course, you are free to choose any color you like.
+There are not rules.
+
+
+All of the approaches return, as an explanation of an individual prediction a weighted sum:
+TODO: Formula for attribution (linear sum). 
+
+
+Main classification: 
+- perturbation based methods: compute attribution of features by removing/masking/altering these features, and doing the prediction again. marginal effect of feature is estimated. depends on the  number of features that is perturbed together (for images you would perturb the nearby pixels together).
+- gradient based methods
+- 
+
+
+Shapley Value only approximated usually, read more in LINK CHAPTER.
+
+Some of those methods have the property of Completeness, meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image/data point minus the prediction of a reference point (e.g. all grey image).
+Integrated Gradient and SHAP have this property.
+
+*List of approaches*
+
+VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
+- Based on Shapley Value for explaining individual predictions
+- Relevance of feature is estimated by measuring how the prediction changes if feature is unknown, by simulating that the feature is unknown.
+- what this paper does differently: instead of simulating 
+- Implementation: https://github.com/lmzintgraf/DeepVis-PredDiff
+
+
+
+- DeepSHAP (gradient-based)
+  - version called DeepExplainer. There is a connection between SHAP and DeepLift
+  - version called GradientExplainer. Connection between SHAP and Gradient Input algorithm.
+- (epsilon) Layer-Wise Relevance Propagation (gradient-based)
+- DeepLift (gradient-based)
+- Deep Taylor Decomposition (gradient-based)
+- Saliency Map (gradient-based) https://arxiv.org/abs/1312.6034. Saliency maps are a local method, because only gradient aroudn local is considered, but not the absolut global contributions. Most other methods are global. Probably Taylor decomp is also local.
+- Gradient * Input (gradient-based, surprise!) https://arxiv.org/abs/1605.01713
+- Occlusion (perturbation based) https://arxiv.org/abs/1311.2901
+- Integrated Gradients (gradient based) https://arxiv.org/abs/1703.01365
+- Shapley Value Sampling (perturbation based)
+- LIME (perturbation based)
+- Grad-CAM (gradient-based)
+- Deconvolutional Network
+- Guided Backpropagagion
+
+Deep Lift and $\epsilon$-LRP can both be re-formulated as computing backpropagation for modified gradient function
+Ancona et. al 2018.
+
+These gradient based methods are all different for different activation functions, since when the chain rule for derivation is applied, they replace the non-linear activations with a function $g(x)$ is different in different methods.
+
+
+TODO: Create example with different relevance methods.
+
+
+Implementations:
+
+https://github.com/oracle/Skater/blob/master/skater/core/local_interpretation/dnni/deep_interpreter.py
+
+DeepLift Implementation https://github.com/kundajelab/deeplift
+DeepVisualization ToolBox https://github.com/yosinski/deep-visualization-toolbox
+Integrated Gradietns https://github.com/ankurtaly/Integrated-Gradients
+SHAP https://github.com/slundberg/shap
+
+Some tips and tricks (for LRP): Methods for Interpreting and Understanding Deep Neural Networks
+LRP: Should work better on ReLU
+
+TODO: Find some more advice from this paper and mention here.
+
+Advantages of LRP over Deconvolution and Sensitivity Analysis.
+https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwj_5vL0m6DiAhUz8uAKHU6ED0oQFjAAegQIAhAC&url=https%3A%2F%2Fwww3.math.tu-berlin.de%2Fnumerik%2FCoSIPICDL2017%2FTalks%2Fmueller.pdf&usg=AOvVaw1yR_5ZwKPvKLxHvwsAfQgA
+
+
+TODO: Insert image with edge detectors
+
+### For RNNs
+
+Paper: Visual Reasoning of Feature Attribution with Deep Recurrent Neural Networks
+
+### Example
+
+I want to predict the following:
+TODO: INCLUDE IMAGE OF DOGO
+
+Neural Network VGG16 TODO: CITE
+
+Most likely class Italian_greyhound (35.21%)
+
+And my ouptut looks like this:
+
+TODO: All the images here 
+
+TODO: Check wheter to cover pattern.net and pattern
+
+All examples are done with innVestigate
+
+
+### Advantages 
+- give a way to understand a predictions
+- 
+- better than model-agnostic variants (e.g. shapley) since they rely on the gradient and can be computed faster.
+- 
+
+
+
+### Disadvantages
+- You have to see which methods works best for which network. It seems like LRP works better when there are not too many fully connected layers, because if there are too many, the relevance will be non-selective but distributed to many layers.
+- Some methods have similarities to edge detectors, which are independent of training data and model. 
+  Explanation becomes misleading.
+
+A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
+
+
+
+
+[^integrated-gradients]: Sundararajan, Mukund, Ankur Taly, and Qiqi Yan. "Axiomatic attribution for deep networks." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
+
+
+
