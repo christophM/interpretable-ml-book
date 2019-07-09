@@ -56,19 +56,63 @@ The Broden dataset is segmented to the pixel level mostly.
 All in all, there are following concept counts:
 468 scences, 585 objects, 234 parts, 32 materials, 47 textures and 11 colors.
 
-TODO: Continue at paper 2.2.
+Every convolutional unit in the CNN is cross-checked with all concepts in broden whether they are good at segmenting the concepts.
+
+Algorithm:
+
+1. For each image x  in Broden:
+  1. Collect Activation map of each convolutional unit k: $A_k(x)$
+  1. Compute distribution of of unit activations $\alpha_k$ over image
+  1. The top quantile level $T_k$ is determined so that the probability that an activation is bigger than $T_k$ is 0.005: $P(\alpha_k>T_k)=0.005)$ for every location of the activation map. So the 0.5% quantile
+  1. Scale up the possibly lower-resolution activation map $A_k(x)$ to the same resolution as the annotation mask $L_c(x)$ of the Broden dataset. We call the result $S_k(x)$.
+  1. To reduce the activation map to the high activations, we binarize it: It's either on or off, depending whether a location exceeds the threshold. New mask is $M_k(x)=S_k(x)\leq{}T_k(x)$.
+
+In the end we have a list with one max. activation masks per convolutional layer, $K$ masks to be precise.
+We also have for each concept in Broden a mask.
+For each combination of max-activation k and concept mask c, we simply compute how strongly they overlap with the intersection over union score:
+
+$$IoU_{k,c}=\frac{\sum|M_k(x)\intersect{}L_c(x)|}{\sum|M_k(x)\union{}L_c(x)|}$$
+
+where $|\cdot|$ is the cardinality of a set.
 
 
+TODO: Insert image with different intersections and how it is computed.
 
 
+A unit can detect multiple concepts.
+$IoU_{k,c}$ can be interpreted as the accuracy with which  unit k can detect the concept c.
+The threshold chosen by the authors is $IoU_{k,c}>0.04$. 
+When this treshold is exceeded, the unit was said to detect concept c.
+
+
+TODO: CONTINUE WITH PAPER 3. Experiments
+
+
+You can look at results here.
+Example with Resnet:
+http://netdissect.csail.mit.edu/dissect/resnet-152-torch-places365/
+
+Note how many units there are detecting airplanes.
 
 Source for Network Dissection
 http://netdissect.csail.mit.edu/
+
+
+TODO: Cover a bit about GAN Dissection https://gandissect.csail.mit.edu/
 
 Findings:
 
 - Units are more interpretable than linear combinations of units.
 
+
+Advantages:
+
+- Can detect concepts which are not used in your classification task. Because concepts are different data.
+ 
+Disadvantages
+
+- Concepts covered by many units
+- Still many units to look at.
 
 ### TCAV: Testing with concept activation vectors.
 
