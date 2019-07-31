@@ -122,7 +122,8 @@ Spoiler alert: Network dissection requires additional datasets that are labeled 
 
 ### Network Dissection {#network-dissection}
 
-Network Dissection by Bau & Zhou et al. (2017) [^dissect] is an approach to quantify the interpretability of a unit of a convolutional neural network by linking highly activated areas to human concepts (objects, parts, textures, colors, ...).
+Network Dissection by Bau & Zhou et al. (2017) [^dissect] is an approach to quantify the interpretability of a unit of a convolutional neural network through segmentation and linking highly activated areas to human concepts (objects, parts, textures, colors, ...).
+
 
 The [Feature Visualizations](#feature-visualization) indicated that the channels of a convolutional neural network learns to detect specific concepts.
 But these visualizations alone do not definitely prove that a unit has learned a certain concept and we also don't have a measure for how well a unit detects e.g. sky scrapers.
@@ -171,6 +172,9 @@ Since the researchers are only interested in completely disentangled, they propo
 The Broden dataset is segmented to the pixel level mostly.
 All in all, there are following concept counts:
 468 scences, 585 objects, 234 parts, 32 materials, 47 textures and 11 colors.
+In total, over 60 000 images and over 1000 visual concepts.
+
+TODO: Insert examples of Broden.
 
 Every convolutional unit in the CNN is cross-checked with all concepts in broden whether they are good at segmenting the concepts.
 
@@ -219,9 +223,15 @@ knitr::include_graphics("images/dissection-dogs.jpeg")
 
 The authors tested different network architectures (e.g. VGG, and Inception-V3).
 All models were trained from scratch on ImageNet and some other datasets (Places205, Places 365).
-Additionally they had some self-supervised training tasks, like predicting context, video frame order or tracking, detecting object-centric alignment, colorizing images, predicting corsschannel and predicting ambient sound from frames.
-For the self-supervised tasks, the AlexNet architecture was used.
+They additionally trained AlexNet on self-supervised training tasks, like predicting context, video frame order or tracking, detecting object-centric alignment, colorizing images, predicting crosschannel and predicting ambient sound from frames.
 
+
+For layers or the whole network you can now start plotting diagrams that shows how many units there are for detecting different concepts.
+You can also analyse how many of the units detect a distinct concept at all (based on the IoU cutoff).
+
+TODO: Include example from paper.
+
+<!--
 Evaluation was done by humans, through Amazon Mechanical Turk.
 For each unit, each rater was shown 15 images.
 On these images, the patches with the highest activations as masks were shown.
@@ -231,7 +241,7 @@ Interpretable units are the ones for which the raters agreed with the ground-tru
 Based on the set of interpretable units.
 First measured human consistency, i.e. how much raters agreed with the ground truth (which is also from humans).
 The it was measured how much the raters agreed with interpretability of network dissection methods.
-
+-->
 
 
 The findings through the experiments across architectures, tasks and training settings reveal very interesting insights about the interpretability of convolutional neural networks:
@@ -248,7 +258,8 @@ The findings through the experiments across architectures, tasks and training se
 - Also dependent on training of course, only after some training iterations these concepts emerge.
 - Even random initializations (training the model multiple times with different random seeds but all else equal) yields slight differences in number of interpretable units.
 - Batch normalization seems to decrease interpretability
-- 
+- IoU is usually smaller than 0.20, which I find rather low.
+  If you have an object, e.g. a dog which is labeled as dog and the network is highly activated for the dog and an area around the dog and the area, including the dog, is five times as big as the dog, the IoU is 0.2. 
 - 
 
 You can look at results here.
@@ -264,18 +275,6 @@ http://netdissect.csail.mit.edu/
 TODO: Cover a bit about GAN Dissection https://gandissect.csail.mit.edu/
 
 
-
-Advantages:
-
-- Can detect concepts which are not used in your classification task. Because concepts are different data.
- 
-Disadvantages
-
-- Concepts covered by many units
-- Still many units to look at.
-
-
-
 ### Advantages
 
 - Feature visualizations give **unique insight into the working of neural networks**, especially for image recognition.
@@ -285,6 +284,8 @@ Through feature visualization, we learned that neural networks first learn simpl
 -  Feature visualization can be **combined with feature attribution methods**, which explain which pixels were important for the classification.
 The combination of both methods allows to explain an individual classification along with local visualization of the learned features that were involved in the classification.
 See [The Building Blocks of Interpretability from distill.pub](https://distill.pub/2018/building-blocks/).
+- With network dissection, we can also detect concepts that were not in the classification task, as long as we have other datasets that contain that have labeled segments with the concepts.
+- Network dissection also gives us a way to automatically link units to concepts, which is very convenient.
 - Finally, feature visualizations make great desktop wallpapers and T-Shirts prints.
 
 ### Disadvantages
@@ -301,7 +302,11 @@ If you also want to show the negative activations plus a few images from the tra
   But do we really understand what is going on in the neural network?
   Even if we look at hundreds or thousands of feature visualizations, we cannot understand the neural network.
  The neural network remains to incomprehensible: The neurons interact in a complex way, positive and negative activations are unrelated, multiple neurons might learn very similar features and for many of the features we do not have equivalent human concept.
-  We must not fall into the trap of believing we fully understand neural networks just because we believe we saw that neuron 349 in layer 7 is activated by daisies. 
+  We must not fall into the trap of believing we fully understand neural networks just because we believe we saw that neuron 349 in layer 7 is activated by daisies.
+  Network Dissection showed that architectures like ResNet or Inception have units that react to certain concepts, but the IoU is no that great and usually multiple units respond to a given concept, so they don't learn disentangled features.
+  All the units are entangled and we can't interpret them in isolation.
+- For Network Dissection you need datasets that are labeled on the pixel level with the concepts.
+  These datasets take a lot of effort to collect, since each pixel needs to be labeled, which usually works by drawing segments around objects on the image.
 
 
 
