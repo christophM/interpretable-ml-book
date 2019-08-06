@@ -232,78 +232,92 @@ knitr::include_graphics("images/dissection-dogs.jpeg")
 
 #### Experiments
 
-The authors trained different network architectures (AlexNet, VGG, GoogleNet, ResNet) from scratch on different datasets (ImageNet, Places205, Places365).
-ImageNet contains 1.6 million images from 1000 classes.
-The dataset is focused on objects.
-Places205 and Places365 contain images of scenes, with 2.4 million and 1.6 million images and 205 amd 365 different scenes.
-They additionally trained AlexNet on self-supervised training tasks, like predicting context, video frame order or tracking, detecting object-centric alignment, colorizing images, predicting crosschannel and predicting ambient sound from frames.
+The Network Dissection authors trained different network architectures (AlexNet, VGG, GoogleNet, ResNet) from scratch on different datasets (ImageNet, Places205, Places365).
+ImageNet contains 1.6 million images from 1000 classes that focus on objects.
+Places205 and Places365 contain 2.4 million / 1.6 million images from 205 / 365 different scenes.
+They additionally trained AlexNet on self-supervised training tasks such as predicting video frame order or colorizing images.
+For many of these different settings, they counted the number of unique concept detectors as a measure of interpretability.
+Here are some of the findings:
 
-The findings through the experiments across architectures, tasks and training settings reveal very interesting insights about the interpretability of convolutional neural networks:
-
+- The networks detect lower-level concepts (colors, textures) at lower layers and higher-level concepts (parts, objects) at higher layers.
+  We have already seen this in the [Feature Visualizations](#feature-visualization).
+- Batch normalization reduces the number of unique concept detectors.
+- Many units detect the same concept.
+For example, there are 95 (!) dog channels in VGG trained on ImageNet when using $IoU \geq 0.04$ as detection cutoff (4 in conv4_3, 91 in conv5_3, see [project website](http://netdissect.csail.mit.edu/dissect/vgg16_imagenet/)).
+- Increasing the number of channels in a layer increases the number of interpretable units.
+- Random initializations (training with different random seeds) results in slightly different numbers of interpretable units.
+- ResNet is the network architecture with the largest number of unique detectors, followed by VGG, GoogleNet and AlexNet last.
+- The largest number of  unique concept detectors are learned for Places356, followed by Places205 and ImageNet last.
+- The number of unique concept detectors increases with the number of training iterations.
+```{r fig.cap = "ResNet trained on Places365 has the highest number of unique detectors. AlexNet with random weights has the lowest number of unique detectors and serves as baseline."}
+knitr::include_graphics("images/arch-compare.png")
+```
+- Networks trained on self-supervised tasks have fewer unique detectors compared to networks trained on supervised tasks.
+- In transfer learning, the concept of a channel can change. For example, a dog detector became a waterfall detector. This happened in a model that was initially trained to classify objects and then fine-tuned to classify scenes.
 - In one of the experiments, the authors projected the channels onto a new rotated basis.
-The rotation decreased interpretability, i.e., the number of channels aligned with a concept decreased.
+This was done for the VGG network trained on ImageNet.
+"Rotated" does not mean that the image was rotated.
+"Rotated" means that we take the 256 channels from the conv5 layer and compute new 256 channels as linear combinations of the original channels.
+In the process, the channels get entangled.
+Rotation reduces interpretability, i.e., the number of channels aligned with a concept decreases.
 The rotation was designed to keep the performance of the model the same.
 The first conclusion:
-Interpretability of CNNs is axis-dependent, i.e. using random directions of units (weighted averages) reduces interpretability.
+Interpretability of CNNs is axis-dependent.
+This means that random combinations of channels are less likely to detect unique concepts.
 The second conclusion:
- Interpretability is independent of discriminative power, since the units can be transformed with orthogonal transformations while the discriminative power remains the same, but interpretability decreases. A unit is a channel of a whole convolutional layer (e.g. one of 256 channels in layer conv5 from AlexNet)
-- The networks detect lower-level concepts at lower layers and higher-level concepts at higher layers.
-  We already saw this in the [Feature Visualizations](#feature-visualization).
-- Different architectures have different levels interpretability.
-  Interpretability also differs across tasks.
-- The number of unique concept detectors increases with the number of training iterations.
-- Even random initializations (training the model multiple times with different random seeds but all else equal) yields slight differences in number of interpretable units.
-- Batch normalization seems to decrease interpretability
-- A unit can detect multiple concepts.
-And multiple units can detect the same concept.
-- Increasing the number of channels in a layer increase the number of interpetable units.
+ Interpretability is independent of discriminative power.
+ The channels can be transformed with orthogonal transformations while the discriminative power remains the same, but interpretability decreases. 
+```{r fig.cap = "The number of unique concept detectors decreases when the 256 channels of AlexNet conv5 (trained on ImageNet) are gradually changed to a basis using a random orthogonal transformation"}
+knitr::include_graphics("images/rotation-dissect.png")
+```
 
-
-For more images of detected concepts, visit the [projects website](http://netdissect.csail.mit.edu/dissect/resnet-152-torch-places365/).
-Note how many units there are for detecting airplanes.
-Also other concepts are matched by many units.
-For all detections, IoU is rather low, below 0.2.
-
-Not covered here, but the authors also used Network Dissection for Generative Adversarial Networks (GANs).
-You can find Network Dissection for GANs on [this website](https://gandissect.csail.mit.edu/).
+The authors also used Network Dissection for Generative Adversarial Networks (GANs).
+You can find Network Dissection for GANs on [the projet's website](https://gandissect.csail.mit.edu/).
 
 ### Advantages
 
-- Feature visualizations give **unique insight into the working of neural networks**, especially for image recognition.
+Feature visualizations give **unique insight into the working of neural networks**, especially for image recognition.
 Given the complexity and opacity of neural networks, feature visualization is an important step in analyzing and describing neural networks.
-Through feature visualization, we learned that neural networks first learn simple edge and texture detectors and more abstract parts and objects in higher layers.
+Through feature visualization, we have learned that neural networks first learn simple edge and texture detectors and more abstract parts and objects in higher layers.
 Network dissection expands those insights and makes interpretability of network units measurable.
-- Network dissection gives us a way to **automatically link units to concepts**, which is very convenient.
-- Feature visualization is a great tool to **communicate in a non-technical way how neural networks work**.
-See [The Building Blocks of Interpretability from distill.pub](https://distill.pub/2018/building-blocks/).
-- With network dissection, we can also **detect concepts beyond the classes in the classification task**.
- But we need datasets that contain images with pixel-wise labeled concepts.
--  Feature visualization can be **combined with feature attribution methods**, which explain which pixels were important for the classification.
+
+Network dissection allows us to **automatically link units to concepts**, which is very convenient.
+
+Feature visualization is a great tool to **communicate in a non-technical way how neural networks work**.
+
+With network dissection, we can also **detect concepts beyond the classes in the classification task**.
+But we need datasets that contain images with pixel-wise labeled concepts.
+
+Feature visualization can be **combined with feature attribution methods**, which explain which pixels were important for the classification.
 The combination of both methods allows to explain an individual classification along with local visualization of the learned features that were involved in the classification.
-- Finally, feature visualizations make **great desktop wallpapers and T-Shirts prints**.
+See [The Building Blocks of Interpretability from distill.pub](https://distill.pub/2018/building-blocks/).
+
+Finally, feature visualizations make **great desktop wallpapers and T-Shirts prints**.
 
 
 ### Disadvantages
 
-- **Many feature visualization images are not interpretable** at all, but contain some abstract features for which we have no words or mental concept.
+**Many feature visualization images are not interpretable** at all, but contain some abstract features for which we have no words or mental concept.
   The display of feature visualizations along with training data can help.
  The images still might not reveal what the neural network reacted to and only show something like "maybe there has to be something yellow in the images".
-- There are **too many units to look at**, even when "only" visualizing the channel activations.
+
+There are **too many units to look at**, even when "only" visualizing the channel activations.
   For Inception V1 there are already over 5000 channels from 9 convolutional layers.
 If you also want to show the negative activations plus a few images from the training data that maximally or minimally activate the channel (let's say 4 positive, 4 negative images), then you must already display more than 50 000 images.
-  And you have not even started to investigate random directions or created a diverse set of multiple images for the channel activations.
-- **Illusion of Interpretability?**
+At least we know -- thanks to Network Dissection -- that we do not need to investigate random directions.
+
+**Illusion of Interpretability?**
   These images can convey the illusion that we understand what the neural network is doing.
   But do we really understand what is going on in the neural network?
   Even if we look at hundreds or thousands of feature visualizations, we cannot understand the neural network.
  The neural network remains to incomprehensible: The neurons interact in a complex way, positive and negative activations are unrelated, multiple neurons might learn very similar features and for many of the features we do not have equivalent human concept.
   We must not fall into the trap of believing we fully understand neural networks just because we believe we saw that neuron 349 in layer 7 is activated by daisies.
-  Network Dissection showed that architectures like ResNet or Inception have units that react to certain concepts, but the IoU is no that great and usually multiple units respond to a given concept, so they don't learn disentangled features.
-  All the units are entangled and we can't interpret them in isolation.
-- For Network Dissection, **you need datasets that are labeled on the pixel level** with the concepts.
+  Network Dissection showed that architectures like ResNet or Inception have units that react to certain concepts.
+  But the IoU is not that great and often many units respond to the same concept.
+  They channels are not completely disentangled and we cannot interpret them in isolation.
+
+For Network Dissection, **you need datasets that are labeled on the pixel level** with the concepts.
   These datasets take a lot of effort to collect, since each pixel needs to be labeled, which usually works by drawing segments around objects on the image.
-- IoU is usually smaller than 0.20, which I find rather **low unit-concept alignment**.
-  If you have an object, e.g. a dog which is labeled as dog and the network is highly activated for the dog and an area around the dog and the area, including the dog, is five times as big as the dog, the IoU is 0.2. 
 
 ### Software and Further Material
 
@@ -311,6 +325,9 @@ There is an open-source implementation of feature visualization called [Lucid](h
 You can conveniently try it in your browser by using the notebook links that are provided on the Lucid Github page.
 No additional software is required.
 Other implementations are [tf_cnnvis](https://github.com/InFoCusp/tf_cnnvis) for TensorFlow, [Keras Filters](https://github.com/jacobgil/keras-filter-visualization) for Keras and [DeepVis](https://github.com/yosinski/deep-visualization-toolbox) for Caffe.
+
+Network Dissection has a great [project website](http://netdissect.csail.mit.edu/).
+Next to the publication, the website hosts additional material such as code, data and visualizations of activation masks.
 
 [^distill-fv]: Olah, et al., "Feature Visualization", Distill, 2017.
 
