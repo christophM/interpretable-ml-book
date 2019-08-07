@@ -1,0 +1,132 @@
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+```
+
+<!--{pagebreak}-->
+
+## SHAP {#shap}
+
+SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)[^lundberg2016] is a sparse and faster version of Shapley values for explaining individual predictions.
+SHAP is also a little universe of interpretability built on top, providing its own measures for feature importance, feature dependence and feature interactions, methods for images and text and model-specific implementations.
+
+
+### Definition
+I recommend reading the [chapter on Shapley Values](#shapley) first, since SHAP builds on Shapley values.
+Quick reminder: Shapley Values are a fair distribution of the prediction among the features.
+Shapley Values are slow to compute and not sparse.
+
+Very blunt: SHAP is Shapley in a new dress.
+
+
+SHAP emphasizes the view of an explanation method as prediction model.
+Shapley Values does not have this emphasis, but can be viewed as such.
+Since Shapley Values sum up to the correct prediction (when samples are enough), the view as model is not necessary.
+
+
+**SHAP theory**
+
+New estimation method, inspired by LIME.
+It is called Kernel SHAP.
+
+Again, we can have feature x' instead of x.
+Where x' is some simplified version of x, like super-pixels instead of pixels.
+We assume that there is some function that maps x to x': $x'=h(x)$
+Also, this new x' is binary, which says whether feature is there or not (??)
+Then we have the other direction $x=h_x(x')$ which maps the 1's back to x values of the original input and the 0's to random replacements (e.g. pixel averages when superpixels were used).
+
+
+
+They define a kernel, which tells us the weights:
+
+$$\pi_{x'}(z')=\frac{(M-1)}{(M{}choose|z'|)|z'|(M-|z'|)}$$
+
+TODO: Keep property stuff short since it really is just the Shapley properties.
+Three desirable attributes for feature attribution methods:
+
+- Local accuracy (same as efficiency in Shapley)
+
+$$f(x)=g(x')=\phi_0+\sum_{i=1}^M\phi_ix_i'$$
+
+- Consistency (implie Linearity, Dummy, Symmetry)
+
+- Missingness. Which is somewhat confusing, because it is not explained in detail.
+
+
+- Monotonicity <-> Linearity + Dummy
+- Lundberg showed: Monotonicity <-> Linearity + Dummy + Symmetry.
+  Can be found in supplementary material of the paper.
+
+
+**SHAP estimation**
+
+**Unifying many methods**
+
+The original SHAP paper talks a lot about the aspect of "unifying" lots of other prediction explanation approaches, like [LIME](#lime) or Deeplift.
+
+This is a clever narrative, because instead of placing SHAP as one among many methods, the narrative places SHAP is the one explanation method to rule them all.
+All approaches are additive feature attribution methods.
+This means they explain a prediction as the weighted sum of the features (= a local linear model).
+
+$$g(x)=\phi_+\sum_{i=1}^M\phi_ix_i'$$
+
+Where g(x) is the predicted outcome of the explanation method and should be close to f(x).
+
+
+Attribution methods like LIME do not satisfy local acurracy and consistency.
+
+### Feature Importance
+
+### Feature Dependence
+
+### Feature Interactions
+
+### TreeSHAP, DeepSHAP
+
+
+### Examples
+
+```{python, engine.path = "../env/bin/python3"}
+import xgboost
+import shap
+
+# load JS visualization code to notebook
+shap.initjs()
+
+# train XGBoost model
+X,y = shap.datasets.boston()
+model = xgboost.train({"learning_rate": 0.01}, xgboost.DMatrix(X, label=y), 100)
+
+# explain the model's predictions using SHAP values
+# (same syntax works for LightGBM, CatBoost, and scikit-learn models)
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X)
+
+# visualize the first prediction's explanation (use matplotlib=True to avoid Javascript)
+#shap.summary_plot(shap_values)
+shap_values
+```
+
+### Advantages
+
+- Based on Shapley, therefore theoretical foundation
+- Similarity / Unification of other methods
+- Coherent Ecosystem
+- 
+
+### Disadvantages
+
+- As everything else, problem with correlated features
+
+
+
+### Software
+
+Python: shap
+R:  ???
+Others?
+
+
+[^lundberg2016]: Lundberg, Scott M., and Su-In Lee. "A unified approach to interpreting model predictions." Advances in Neural Information Processing Systems. 2017.
+
+
