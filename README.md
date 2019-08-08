@@ -63,10 +63,11 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 ## Changelog
 All notable changes to the book will be documented here.
 
-### v1.2 (IN PROGRESS)
+### v1.2 (IN PROGRESS) [html version]
+- Started section on neural network interpretation
+- Added chapter on feature visualization
 
-
-### v1.1 (2019-03-23) [Print Version]
+### v1.1 (2019-03-23) [Print version, ebook version]
 - Fixes wrong index in Cooks Distance summation (i -> j)
 - fixed boxplot formula (1.5 instead of 1.58)
 - Change to colorblind-friendly color palettes (viridis)
