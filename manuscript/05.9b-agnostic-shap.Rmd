@@ -32,6 +32,13 @@ Since Shapley Values sum up to the correct prediction (when samples are enough),
 
 **SHAP theory**
 
+Shap is an additive feature attribution method which fits following model:
+
+$$g(z')=\phi_0+\sum_{i=1}^M\phi_iz_i'$$
+
+where g is the explanation model, $z'\in\{0,1\}^M$ a data instance in a simplified feature space, M the number of simplified features and $\phi_i\in\mathbb{R}$ the feature attribution values.
+The $\phi$ result in the Shapley Values.
+
 New estimation method, inspired by LIME.
 It is called Kernel SHAP.
 
@@ -42,6 +49,49 @@ Also, this new x' is binary, which says whether feature is there or not (??)
 Then we have the other direction $x=h_x(x')$ which maps the 1's back to x values of the original input and the 0's to random replacements (e.g. pixel averages when superpixels were used).
 
 
+<!-- Explaining h(x) -->
+
+The function h() maps the features of instances to a simplified feature space $\mathbb{R}^p\rightarrow\{0,1\}^k$.
+Applied to the original x, h(x) is a vector of 1's.
+Applied to an instance z that is completely different from x, h(z) is a vector of 0's.
+Applied to an instance z that is partially the same as x, h(z) contains 1's for the parts where x and z are identical and 0's otherwise.
+
+How does the function h look like?
+This depends on the type of data.
+For images, h() maps the image data (raw pixels) to super pixels, i.e. patches of pixels that are similar.
+Let's say we split the image that we want to explain in 6 super pixels (there are many methods that can do this).
+The h-function then checks for each super pixel whether it has the same content as image x that we want to explain.
+So h(x) for the original image will be a vector of 1's.
+If we grey out one of the super pixels from the original image and draw a flower into another super pixel, then h will give us a vector where the two entries corresponding to the super pixels are set to 0.
+The other direction $h_x(x')$ is a bit more complicated.
+We have two cases per simplified feature: 1 and 0.
+For the 1's in the simplified space, the mapping back is easy, since we simply use for that super pixel the part from the original image.
+For the 0's, h_x has to map back to a version of the image where those super pixels are "missing". 
+We have many options there: grey out the super pixel, fill with average color of neighbouring super pixels or let a Generative Adversarial Network paint it.
+
+For text, we have many option how to map to the simplified feature space.
+Again, we start with the original text that we want to explain.
+This original text sets the h-function.
+One way to create this simplified space is to map to word present vs. not present.
+Again, the original text maps to a vector of 1's, which has the same length as the word count of the text.
+For version where we remove some of the words, the corresponding entries are set to 0.
+The inverse function h_x that maps from simplified feature space to text omits words with 0's.
+Another option would be to replace it with random words or words that could make sense in the context but are not the original word.
+
+For tabular data, the dimensionality of the simplified feature space is usually the same as the original feature space.
+If h(z) yields a vector of 1's, the instance has all entries like x.
+If h(z) yields a vector of 0's, all features are different from x.
+The inverse function h_x maps 1's back to the original feature values of x, the 0's have to map to "missing feature".
+Problem is that the model can't handle missing features, so one way is to randomly sample an instance z from the data distribution and fill all features with 0's in the simplified space with feature value from z.
+This, again, has the problem that unlikely combinations of features when features are dependent.
+
+
+
+Given the h_x() function, we can evaluate f(h_x(z')) to calculate the predictions with observed or not observed features.
+
+For SHAP computation, 
+
+<!-- Kernel -->
 Also called KernelSHAP.
 They define a kernel, which tells us the weights:
 
@@ -128,56 +178,63 @@ We can aggregate this matrix in different ways together with the data.
 
 We also have the feature matrix X, which we can link to their shapley values to understand the feature.
 
-### Examples
-
-- Explain individual predictions
-
-TODO: Explain force plot
-TODO: Two examples of prediction explanations
-
-
-
-### Feature Importance
-
-Mean of absolute shap values.
-
-$$I_j=\sum_{i=1}^n{}|\phi_j^{(i)}|$$
-
-
-TODO: Add example
-
-
-### Feature Dependence
-
-Plot with feature value on x-axis and the corresponding shap values on y-axis.
-
-Pairs of $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
-
-### Feature Interactions
-
-Currently only implemented for TreeSHAP (?)
-
-Result is per instance a matrix of size n.features x n.features.
-
-TODO: Explain how feature interaction is computed.
-
-TODO: Add example of Feature Interactions
-
-### Clustering SHAP values
-
-TODO: How are they clustered?
-TODO: Example
-
-
 ### TreeSHAP, DeepSHAP
+
+KernelSHAP is just a heuristic and very expensive to compute.
+There are version for tree-based models and ensembles of such, and also for gradient based methods like neural networks.
+Those versions of SHAP are much faster to compute.
+In the case of trees, the correlation / dependence problem can also be avoided.
 
 
 **TreeSHAP**
+
+
+Described by Lundberg et. al (2018)[^tree-shap].
+TreeSHAP is a fast and exact method to compute SHAP for tree-based models and ensembles.
+
+Reduces computation for the exact Shapley Values from $O(TL2^M)$ to $O(TLD^2)$ where T is the number of trees, L the maximum number of leaves in any tree and D the maximal depth of any tree.
 
 TreeSHAP can handle the problem with correlated features, since it can use the tree structure to use the conditional instead of marginal distribution.
 
 Goes like this: Follow the tree down the path, use instances in terminal node to estimate the conditional distribution.
 
+Goal: Estimate $E(f(x)|x_S)$.
+To estimate this, we can follow the tree.
+But since not all feature values are given -- we only have subset S -- we have two types of decision nodes.
+First possibility is that the node used a feature in S for the split.
+Then we go down the path of that node where the feature value matches the decision.
+Repeat recursively.
+If a node uses a feature that is not in set S, we follow both paths, recursively.
+Once we hit the terminal nodes, we take the prediction from that nodes, weight them by the number of instances they had.
+
+
+We have T number of terminal nodes in a tree.
+And we have the instance of interest x and the set of feature values S on which we condition.
+If we would condition on all features -- i.e. S is the set of all features -- then we would use the prediction from the node in which x would fall.
+If we would condition on no feature at all -- i.e. S is the empty set -- we would use the prediction from all terminal nodes.
+This is the same as taking the overall average prediction.
+For the inbetween case where S has some features, but not all, we ignore the predictions from the nodes that contradict the values from x_S.
+From the remaining terminal nodes, we average the predictions, weighted by the node sizes (i.e. number of training samples in that node).
+But the thing is, we need to do this procedure for every possible subset S of the feature values.
+That is $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$.
+Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
+
+
+This same thing, the authors proposed as algorithm in the paper.
+But a faster version, that computes in polynomial time instead of exponential.
+
+
+The Shapley Value is basically a sum of sum for trees:
+The inner sum is for computation of E(f(x)|X_S), which we can get by going to the terminal nodes.
+The outer sum is over all possible subsets S.
+
+But in the end, this outer sum only weights the terminal nodes.
+So we can be faster when we can compute the weights of the terminal nodes.
+So we have to keep track how many of the subset land in which nodes.
+It is a bit tricker since we need also to keep track of the combined weight of the subsets, since they have different weights.
+For example, when the first split in a tree is on feature $x_3$, then all the subsets that contain feature $x_3$ will go to one node (to the one where x goes).
+The subsets that do not contain feature value for $x_3$ go to both.
+And so on.
 
 TreeSHAP works with boosting frameworks XGBoost, LightGBM, CatBoost, and most tree-based scikit-learn models.
 
@@ -188,6 +245,116 @@ Approximates shap values for deep neural networks.
 
 
 
+
+### Examples
+
+- Explain individual predictions
+
+TODO: Explain force plot
+TODO: Two examples of prediction explanations
+
+
+
+### SHAP Feature Importance
+
+Mean of absolute shap values.
+
+$$I_j=\sum_{i=1}^n{}|\phi_j^{(i)}|$$
+
+The simply sort in descending order and plot.
+Very summarized view, more interesting when we also show the direction of the effects.
+
+SHAP Feature Importance is an alternative to the [Permutation Feature IMportance](#feature-importance) measure.
+A big difference: Permutation Feature Importance is based on model performance, whereas SHAP is based on feature attribution.
+
+
+TODO: Add example
+
+TODO: Example interpretation
+
+TODO: Comparison with permutation feature importance plot
+
+
+### Summary Plot
+
+- Sort features by SHAP Importance
+- y-axis: one feature
+- x-axis: SHAP value
+- color: feature value (low to high)
+- points: instances from the data.
+
+Shows
+
+- Importance of feature through ranking
+- the range and distribution of the impact: e.g. does a feature only positively affect prediction? what's the range?
+- effect direction: are high feature values associated with higher contribution? or with negative?
+
+For the feature dependence, the summary plot give a first hint, but to really see what is the effect of one feature, the SHAP dependence plots is a better choice.
+
+### Feature Dependence
+
+Plot with feature value on x-axis and the corresponding shap values on y-axis.
+
+Pairs of $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
+
+SHAP Dependence Plots are an alternative to [Partial Dependence Plots](#pdp) and [Accumulated Local Effects](#ale).
+
+TODO: Example
+TODO: Example interpretation
+TODO: Comparison plot with PDP and ALE
+
+The plot can be improved by also visualizing feature interactions:
+
+
+### Feature Interactions
+
+Currently only implemented for TreeSHAP (?)
+They are based on Shapley interaction index from game theory.
+
+Result is per instance a matrix of size n.features x n.features.
+
+Shapley Interaction Index is defined as:
+
+$$\phi_{i,j}=\sum_{S\subeteq\\\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)$$
+
+
+when $i\neqj$ and:
+
+$$\delta_{ij}(S)=f_x(S\cup\{i,j\})-f_x(S\cup\{i\})-f_x(S\cup\{j\})+f_x(S)$$
+
+Basically the interaction gain by using both features, when account for the individual feature effects.
+That's in line with the definition of interaction in the [Feature Interaction chapter](#interaction).
+
+In TreeSHAP, the tree structure is again leveraged for computing the exact interaction values in an efficient way.
+
+TODO: Explain how feature interaction is computed.
+
+TODO: Add example of Feature Interactions
+TODO: Example interpretation
+
+### Clustering SHAP values
+
+Usually in clustering, you cluster on the features to get groups of instances from your data that are similar to each other and different between groups.
+
+This has the problem that you might use irrelevant features in the clustering, which get equal weight.
+
+SHAP clustering works by clustering on the SHAP values of each instance, instead of the feature values.
+That means you cluster instances by how similar their explanations are.
+Another advantage is that SHAP values are all on the same scale, as opposed to the original features that might stand for completely different things (how do you compare meter and number of children?).
+SHAP values for all features are contributions to the prediction and therefore on the same scale.
+
+You can use any type of clustering method of your choice.
+For example in shap package hierachical agglomerative cluster was used.
+
+
+The following plot shows all shapley values sorted by explanation similarity.
+
+```{r, fig.cap="Stacked SHAP feature attributions clustered by explanation similarity. Each position on the x-axis is an instance from the data. Red SHAP values increase the prediction, blue ones decrease it."}
+```
+
+
+TODO: Example
+TODO: Interpretation
 
 
 ### Advantages
@@ -210,11 +377,11 @@ Approximates shap values for deep neural networks.
 
 ### Software
 
-Python: shap
+Python: shap, also integrated into xgboost (LINK) and LightGBM (LINK)
 R:  [shapper](https://modeloriented.github.io/shapper/), integrated into [R xgboost packages](https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html)`
 Others?
 
 
 [^lundberg2016]: Lundberg, Scott M., and Su-In Lee. "A unified approach to interpreting model predictions." Advances in Neural Information Processing Systems. 2017.
 
-
+[^tree-shap]: Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. "Consistent individualized feature attribution for tree ensembles." arXiv preprint arXiv:1802.03888 (2018).
