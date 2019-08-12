@@ -5,7 +5,7 @@ set.seed(42)
 
 <!--{pagebreak}-->
 
-## SHAP {#shap}
+## SHAP (SHapley Additive exPlanations) {#shap}
 
 The SHAP (SHapley Additive exPlanations) method by Lundberg and Lee (2016)[^lundberg2016] explains individual predictions with the game-theoretic optimal [Shapley Values](#shapley).
 
@@ -80,142 +80,194 @@ for all inputs $z'\in\{0,1\}^M$, then
 $$\phi_i(f',x)\geq\phi_i(f,x)$$
 
 Consistency says that if a model changes so that the contribution of a simplifed feature increases or stays the same (regardles of other inputs), the attribution should also increase or stay the same.
-
 Lundberg showed that from Consistency the Shapley properties Linearity, Dummy and Symmetry follow.
 
 
+
+
+### Estimation with KernelSHAP
+
+There is a model-agnostic version of SHAP, called KernelSHAP and two model-specific implementations.
+We will start with KernelSHAP.
+
+<!-- The general Idea of linear model -->
+Instead of the Shapley sampling strategy, SHAP uses a weighted linear regression inspired by LIME.
+The Shapley samping approach estimates the Shapley Values by sampling coalitions of features, replacing features that are not in this coalition with values from a random instance and computes the marginal contribution of adding feature j.
+
+SHAP emphasizes the view of Shapley explanation as an additive attribution method that can be represented as a weighted linear model.
+This linear model is not on the original features.
+LIME for tabular data -- when numeric features are not binned -- works on original feature space.
+
 <!-- What is the simplified feature space -->
+The linear model for SHAP is on a simplified feature space.
+A 1 for feature $x_k'$ means that a feature is present.
+Converting a simplified feature with a 1 back to the original feature space means that the original feature takes on the value of the instance x that is to be explained.
+A 0 means that a feature is not present.
+Converting a simplified feature with a 0 back to the original feature space means that we have to fill in some value that simulates feature absence.
+For tabular data, we sample another instance which donates values to simulate feature absence.
+For image data, the original space are the individual pixels and the simplified feature space super-pixels (clusters of pixels).
+We can grey out all pixels belonging to a super pixel to simulate the absence of that super pixel.
+
+The mapping between original and simplified feature space is visualized in the following figure:
 
 
 
-<!-- h(x) and h_x(x')-->
+TODO: Add image of h, h_x
 
+```{r shap-simplified-feature, fig.cap = "", out.width=800}
+```
 
+Expressing this mathematically, we define a function that maps an instance z to z': $z'=h(z)$ with $h:\mathbb{R}^p\rightarrow\{0,1\}^k$.
 
-### Estimation
-
-Instead of the Shapley sampling strategy, it uses a linear regression approach, inspired by LIME.
-Along with SHAP comes an interpretation toolbox, which has global methods for feature importance, interaction detection and feature effects included.
-These methods basically aggregate the Shapley values and bring them in connection with the feature values to provide global insights into the model.
-The tools would work as well for Shapley Values not computed with SHAP.
-
-SHAP emphasizes the view of an explanation method as prediction model.
-Shapley Values does not have this emphasis, but can be viewed as such.
-Since Shapley Values sum up to the correct prediction (when samples are enough), the view as model is not necessary.
-
-
-**SHAP theory**
-New estimation method, inspired by LIME.
-It is called Kernel SHAP.
-
-Again, we can have feature x' instead of x.
-Where x' is some simplified version of x, like super-pixels instead of pixels.
-We assume that there is some function that maps x to x': $x'=h(x)$
-Also, this new x' is binary, which says whether feature is there or not (??)
+This new x' is a binary vector, where each entry says whether the corresponding simplified feature is present or not.
 Then we have the other direction $x=h_x(x')$ which maps the 1's back to x values of the original input and the 0's to random replacements (e.g. pixel averages when superpixels were used).
-
-The function h and h_x are a way of connecting LIME and Shapley Values.
-
-<!-- Explaining h(x) -->
-
-The function h() maps the features of instances to a simplified feature space $\mathbb{R}^p\rightarrow\{0,1\}^k$.
 Applied to the original x, h(x) is a vector of 1's.
 Applied to an instance z that is completely different from x, h(z) is a vector of 0's.
 Applied to an instance z that is partially the same as x, h(z) contains 1's for the parts where x and z are identical and 0's otherwise.
-
-How does the function h look like?
-This depends on the type of data.
-For images, h() maps the image data (raw pixels) to super pixels, i.e. patches of pixels that are similar.
-Let's say we split the image that we want to explain in 6 super pixels (there are many methods that can do this).
-The h-function then checks for each super pixel whether it has the same content as image x that we want to explain.
-So h(x) for the original image will be a vector of 1's.
-If we grey out one of the super pixels from the original image and draw a flower into another super pixel, then h will give us a vector where the two entries corresponding to the super pixels are set to 0.
-The other direction $h_x(x')$ is a bit more complicated.
-We have two cases per simplified feature: 1 and 0.
-For the 1's in the simplified space, the mapping back is easy, since we simply use for that super pixel the part from the original image.
-For the 0's, h_x has to map back to a version of the image where those super pixels are "missing". 
-We have many options there: grey out the super pixel, fill with average color of neighbouring super pixels or let a Generative Adversarial Network paint it.
-
-For text, we have many option how to map to the simplified feature space.
-Again, we start with the original text that we want to explain.
-This original text sets the h-function.
-One way to create this simplified space is to map to word present vs. not present.
-Again, the original text maps to a vector of 1's, which has the same length as the word count of the text.
-For version where we remove some of the words, the corresponding entries are set to 0.
-The inverse function h_x that maps from simplified feature space to text omits words with 0's.
-Another option would be to replace it with random words or words that could make sense in the context but are not the original word.
-
-For tabular data, the dimensionality of the simplified feature space is usually the same as the original feature space.
-If h(z) yields a vector of 1's, the instance has all entries like x.
-If h(z) yields a vector of 0's, all features are different from x.
-The inverse function h_x maps 1's back to the original feature values of x, the 0's have to map to "missing feature".
-Problem is that the model can't handle missing features, so one way is to randomly sample an instance z from the data distribution and fill all features with 0's in the simplified space with feature value from z.
-This, again, has the problem that unlikely combinations of features when features are dependent.
-
-
-
+The function h and h_x are a way of connecting LIME and Shapley Values.
+LIME (except for non-binned numerical features) also uses this binarized feature space.
 Given the h_x() function, we can evaluate f(h_x(z')) to calculate the predictions with observed or not observed features.
-
-For SHAP computation, 
-
-<!-- Kernel -->
-Also called KernelSHAP.
-They define a kernel, which tells us the weights:
-
-$$\pi_{x'}(z')=\frac{(M-1)}{(M{}choose|z'|)|z'|(M-|z'|)}$$
-
-
-Simple weighted linear regression on simplified feature space (feature present, feature absent).
-With L1 regression for sparse feature selection.
-
-Loss function that is minimized:
-
-$$L(f,g,\pi_{x'})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x'}(z')$$
-
-where $|z'|$ is the number of non-zero elements in z'.
-
-$$g(x')=\phi_0+\sum_{i=1}^M\phi_ix_i'$$
-That's basically the same formula as LIME uses, but with a different kernel.
-And this kernel here forces the coefficient to approximate to the Shapley Values.
-
-h is used to connect Shapley Value and LIME approach.
 Basically, h is:
+
 $$f(h_x(z'))=E[f(x)|x_S]$$
+
+Here we can see a possible issue:
+We have to define h_x in such a way that it samples from the distribution of the features conditional on features in set S.
+But the KernelSHAP implementation samples from the marginal distribution, creating unlikely instances.
 
 $h_x(x')=x$ even though x' has only 1's and 0's since it is tied to x (if all 1's, then it is x)
 
+After this excourse into the simplified feature space, we can talk about the actual estimation.
+SHAP is estimated with weighted linear regression.
 
-Neat trick:
+A rough summary of the KernelSHAP estimation algorithm, which estimates the feature attributions for explaining instance x's prediction of model f:
+
+- Choose number of samples M.
+- Sample new instances $z_k',\quad{}k\in\{1,\ldots,M\}$ in the simplified feature space (0's represent feature absence, 1's feature presence).
+- Get prediction for each z_k' by first converting them to the original feature space and then applying model f: $f(h_x(z_k'))$
+- Compute weights for each z_k'
+- Fit weighted (generalized) linear model
+- Return the $\phi_k$, the coefficients from the linear models, which are the Shapley values
+
+<!-- Kernel -->
+This procedure is almost identical to LIME (see [chapter on local models](#lime)).
+The big difference is the weighting of the samples.
+LIME weights the instances by how close they are to the original instance.
+An instance in the simplified feature space can be seen as a coalition.
+All the features with 1's are in this coalition, the 0's are absent.
+SHAP weights the sampled instances by the weight the coalition would get in the Shapley Value estimation:
+Coalations with very few features and with almost all features get high weights, the lowest weight is for coalations with half of the players present, the other half absent.
+
+
+To achieve this Shapley conform weight, the authors propose the SHAP kernel:
+
+$$\pi_{x'}(z')=\frac{(p-1)}{(p{}choose|z'|)|z'|(p-|z'|)}$$
+
+Here, p is the number of features in the simplified feature space, $|z'|$ the number of present features in instance z'.
+Lundberg and Lee show that, with this Kernel, indeed the correct SHAP values are recovered.
+
+TODO: Add image of ShAP kernel
+
+```{r shap-kernel, fig.cap="", out.width=800}
+```
+
+
+<!-- Sampling trick -->
+From this Figure we can also see that we can cover a high percentage of the cumulative weight, when we include low and high number of present features.
 The Shapley Value (and therefore the kernel) weights combinations very high, when either almost all (simplified) features are at zero or almost all (simplified) features are at 1.
 That means we learn the most about the contribution of the j-th feature to the prediction when we look at the situation where we only get to know the j-th features value or the situation where we know all feature values and look how much the prediction changes.
-
-The situation where we know halve of the features, we don't learn as much, at least for a specific combination of features to know.
-All combinations of "knowing half of the features and adding feature j" summed up have the same weight as adding feature j to the empty set or adding feature j to get the full set.
-
-The trick now is that we can enumerate these situations (also where 1 feature is known or where two features is known, etc.) and get a relative high weight already done, even though we are sampling.
+We can enumerate these situations (also where 1 feature is known or where two features is known, etc.) and get a relative high weight already done, even though we are sampling.
 Then we sample from the remaining combinations, with a readjusted weights.
 
 
-y generated by inverse computation of features (and sampling).
+<!-- Linear Model -->
+Packing it all together, we estimate the Shapley values by optimizing this linear function:
 
-TODO: Keep property stuff short since it really is just the Shapley properties.
+$$L(f,g,\pi_{x'})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x'}(z')$$
 
-**SHAP estimation**
+with g(x') being the additive attribution, the sum of Shapley values:
 
-**Unifying many methods**
+$$g(x')=\phi_0+\sum_{i=1}^M\phi_ix_i'$$
 
-The original SHAP paper talks a lot about the aspect of "unifying" lots of other prediction explanation approaches, like [LIME](#lime) or Deeplift.
+The loss optimization is a standard linear model.
+Instead of the original features, we use the simplified feature space and the sampled instances.
 
-This is a clever narrative, because instead of placing SHAP as one among many methods, the narrative places SHAP is the one explanation method to rule them all.
-All approaches are additive feature attribution methods.
-This means they explain a prediction as the weighted sum of the features (= a local linear model).
-
-$$g(x)=\phi_+\sum_{i=1}^M\phi_ix_i'$$
-
-Where g(x) is the predicted outcome of the explanation method and should be close to f(x).
+Since we are in a classic linear regression setting, we can also make use of the tools that come with it.
+For example, regularization.
+By adding an L1 penalty to this term, we can generate sparse explanations.
+(I am not so sure whether the resulting attribution values are still valid Shapley values)
 
 
-Attribution methods like LIME do not satisfy local acurracy and consistency.
+### TreeSHAP
+
+KernelSHAP is a heuristic and very expensive to compute.
+Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a fast implementation of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
+TreeSHAP is fast, computes exact Shapley values and avoids creating unrealistic instances for the estimation as KernelSHAP does when features are dependent.
+
+How much faster is it?
+For the exact Shapley values, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$ where T is the number of trees, L the maximum number of leaves in any tree and D the maximal depth of any tree.
+
+To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.
+
+I will explain it for one tree, but it can be done for multiple trees and the results averaged.
+
+For a given subset S and an instance x, we want to compute the expected prediction.
+For features in set S, we know that they take on the values of the corresponding features in instance x that we want to explain.
+For KernelSHAP we would sample the values for features not in S.
+To get the expected prediction we have to start at the root of the tree and go down until we hit the terminal nodes.
+Since not all feature values are given -- we only have subset S -- we have two distinguish two situations at each internal tree node.
+First situation: the node used a feature from S for the split.
+Then we go down the path of that node where the feature value matches the decision.
+If a node uses a feature that is not in set S, we follow both paths.
+We do this until we reach the terminal node in each path that we followed.
+The mean of these terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S.
+
+
+Another way to think about it:
+If we would condition on all features -- if S would be the set of all features -- then we would use the prediction from the node in which x would fall.
+If we would condition on no feature at all -- if S would be the empty set -- we would use the weighted averaged prediction from all terminal nodes.
+This is the same as taking the overall average prediction.
+For the inbetween case where S contains some features, but not all, we ignore the predictions from the nodes that we can't reach, because their decisions path contradict values in x_S.
+From the remaining terminal nodes, we average the predictions, weighted by the node sizes (i.e. number of training samples in that node).
+
+
+The thing is, we need to do this procedure for every possible subset S of the feature values.
+That is $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$.
+Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
+To reduce the complexity, the authors proposed a faster algorithm in their paper that computes in polynomial time instead of exponential.
+The basic idea is to push down all possible subsets S simultaneously.
+Per node, we have to keep track of the number of subsets that go to the child nodes based on the split feature.
+It is a bit trickier than that, since the subsets have different weights, so the algorithm also has to keep track of the overall weight of the subsets in each node.
+For example, when the first split in a tree is on feature $x_3$, then all the subsets that contain feature $x_3$ will go to one node (to the one where x goes).
+Subsets that do not contain feature $x_3$ go to both nodes with reduced weight.
+
+TreeSHAP works with boosting frameworks XGBoost, LightGBM, CatBoost, and most tree-based scikit-learn models.
+
+Next, we will look at SHAP explanations in action.
+
+### Examples
+
+TODO: CONTINUE HERE
+
+Let us try SHAP out.
+We trained a random forest classifier to predict [risk for cervical cancer](#cervical) with 100 trees.
+We use SHAP to explain individual predictions.
+Since the black box model is a random forest, we can use the fast TreeSHAP estimation method instead of the slower KernelSHAP.
+
+Feature attributions can be visualized as forces that either increase or decrease the prediction.
+The prediction starts from the baseline, the average of all predictions.
+Some of the feature values of this instance have a positive effect on the predicted value and increase the prediction.
+Some have a negative effect and decrease the prediction.
+Besides the direction, the strength of the effect can be different.
+Each SHAP get represented by an arrow that represents a force that increases the prediction (positive SHAP) or decreases it (negative SHAP).
+The forces balance out at the actual prediction of that particular data instance.
+
+The following figure shows the SHAP values visualized as forces for two women from the cervical cancer dataset:
+
+```{r, fig.cap = "SHAP values for explaining the predicted cancer probabilities of two individuals. The first woman has an average risk. Risk increasing effects such as STDs are canceled out by decreasing effects such as age. The second woman has a very high risk. Age of 51 and 34 years of smoking are the main drivers of cancer risk increase. There are almost no risk lowering effects.", out.width = 800}
+knitr::include_graphics("images/shap-explain-1.png")
+knitr::include_graphics("images/shap-explain-2.png")
+```
 
 
 
@@ -227,98 +279,12 @@ We can aggregate this matrix in different ways together with the data.
 
 We also have the feature matrix X, which we can link to their shapley values to understand the feature.
 
-### TreeSHAP, DeepSHAP
-
-KernelSHAP is just a heuristic and very expensive to compute.
-There are version for tree-based models and ensembles of such, and also for gradient based methods like neural networks.
-Those versions of SHAP are much faster to compute.
-In the case of trees, the correlation / dependence problem can also be avoided.
-
-
-**TreeSHAP**
-
-
-Described by Lundberg et. al (2018)[^tree-shap].
-TreeSHAP is a fast and exact method to compute SHAP for tree-based models and ensembles.
-
-Reduces computation for the exact Shapley Values from $O(TL2^M)$ to $O(TLD^2)$ where T is the number of trees, L the maximum number of leaves in any tree and D the maximal depth of any tree.
-
-TreeSHAP can handle the problem with correlated features, since it can use the tree structure to use the conditional instead of marginal distribution.
-
-Goes like this: Follow the tree down the path, use instances in terminal node to estimate the conditional distribution.
-
-Goal: Estimate $E(f(x)|x_S)$.
-To estimate this, we can follow the tree.
-But since not all feature values are given -- we only have subset S -- we have two types of decision nodes.
-First possibility is that the node used a feature in S for the split.
-Then we go down the path of that node where the feature value matches the decision.
-Repeat recursively.
-If a node uses a feature that is not in set S, we follow both paths, recursively.
-Once we hit the terminal nodes, we take the prediction from that nodes, weight them by the number of instances they had.
-
-
-We have T number of terminal nodes in a tree.
-And we have the instance of interest x and the set of feature values S on which we condition.
-If we would condition on all features -- i.e. S is the set of all features -- then we would use the prediction from the node in which x would fall.
-If we would condition on no feature at all -- i.e. S is the empty set -- we would use the prediction from all terminal nodes.
-This is the same as taking the overall average prediction.
-For the inbetween case where S has some features, but not all, we ignore the predictions from the nodes that contradict the values from x_S.
-From the remaining terminal nodes, we average the predictions, weighted by the node sizes (i.e. number of training samples in that node).
-But the thing is, we need to do this procedure for every possible subset S of the feature values.
-That is $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$.
-Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
-
-
-This same thing, the authors proposed as algorithm in the paper.
-But a faster version, that computes in polynomial time instead of exponential.
-
-
-The Shapley Value is basically a sum of sum for trees:
-The inner sum is for computation of E(f(x)|X_S), which we can get by going to the terminal nodes.
-The outer sum is over all possible subsets S.
-
-But in the end, this outer sum only weights the terminal nodes.
-So we can be faster when we can compute the weights of the terminal nodes.
-So we have to keep track how many of the subset land in which nodes.
-It is a bit tricker since we need also to keep track of the combined weight of the subsets, since they have different weights.
-For example, when the first split in a tree is on feature $x_3$, then all the subsets that contain feature $x_3$ will go to one node (to the one where x goes).
-The subsets that do not contain feature value for $x_3$ go to both.
-And so on.
-
-TreeSHAP works with boosting frameworks XGBoost, LightGBM, CatBoost, and most tree-based scikit-learn models.
-
-
-**DeepSHAP**
-
-Approximates shap values for deep neural networks.
-
-
-
-
-### Examples
-
-Let us try SHAP out.
-We trained a random forest classifier to predict [risk for cervical cancer](#cervical) with 100 trees.
-We use SHAP to explain individual predictions.
-
-Explaining a prediction can be visualized as forces that either push the prediction to be lower and higer.
-The prediction starts from the baseline, the average of all predictions.
-Some of the feature values of this instance have a positive effect on the predicted value:
-They increase the prediction.
-Some have a negative effect and decrease the prediction.
-Some have a larger, some a smaller effect.
-The effects, which we get through SHAP, can be visualized as "forces".
-Each SHAP get represented by an arrow that represents a force that pushes the baseline prediction either up (positive SHAP) or down (negative SHAP).
-The forces balance out at the actual prediction of that particular data instance.
-
-The following figure shows the SHAP values visualized as forces for two women from the cervical cancer dataset:
-
-```{r, fig.cap = "SHAP values for explaining the predicted cancer probabilities of two individuals. The first woman has an average risk. Risk increasing effects such as STDs are canceled out by decreasing effects such as age. The second woman has a very high risk. Age of 51 and 34 years of smoking are the main drivers of cancer risk increase. There are almost no risk lowering effects.", out.width = 800}
-knitr::include_graphics("images/shap-explain-1.png")
-knitr::include_graphics("images/shap-explain-2.png")
-```
 
 ### SHAP Feature Importance
+Along with SHAP comes an interpretation toolbox, which has global methods for feature importance, interaction detection and feature effects included.
+These methods basically aggregate the Shapley values and bring them in connection with the feature values to provide global insights into the model.
+The tools would work as well for Shapley Values not computed with SHAP.
+
 
 Mean of absolute shap values.
 
