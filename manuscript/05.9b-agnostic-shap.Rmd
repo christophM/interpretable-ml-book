@@ -7,19 +7,93 @@ set.seed(42)
 
 ## SHAP {#shap}
 
-SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)[^lundberg2016] is a sparse and faster version of Shapley values for explaining individual predictions.
-SHAP is also a little universe of interpretability built on top, providing its own measures for feature importance, feature dependence and feature interactions, methods for images and text and model-specific implementations.
+The SHAP (SHapley Additive exPlanations) method by Lundberg and Lee (2016)[^lundberg2016] explains individual predictions with the game-theoretic optimal [Shapley Values](#shapley).
 
+There are two reasons SHAP got its own chapter instead of being a subchapter of the [Shapley value chapter](#shapley).
+First, the authors propose a new kernel-based estimation approach inspired by [local surrogated models](#lime) and additionally introduce model-specific and efficient approaches for tree based models and neural networks.
+Second, SHAP comes with many global explanation methods, based on aggregations of the Shapley values. 
+
+
+I recommend reading the [chapter on Shapley values](#shapley) first, since SHAP computes Shapley values.
+I also recommend reading the [chapter on Local Models, aka LIME](#lime), since SHAP estimation is inspired by LIME.
 
 ### Definition
-I recommend reading the [chapter on Shapley Values](#shapley) first, since SHAP builds on Shapley values.
-Also read the [chapter on Local Models, aka LIME](#lime).
-Quick reminder: Shapley Values are a fair distribution of the prediction among the features.
-Shapley Values are slow to compute and not sparse.
 
-Assuming you know Shapley Value and LIME, SHAP can be summarized very quickly.
+The goal of SHAP is to explain an indiviudal prediction, by attributing each feature its contribution.
+A new thing that SHAP brings to the table is that the Shapley value explanation is represented as an additive feautre attribution method, a linear model.
+That view connects LIME and Shapley Values.
+SHAP is represented as an additive feature attribution method that fits following explanation model:
 
-SHAP computes Shapley Values.
+$$g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
+
+where g is the explanation model, $z'\in\{0,1\}^M$ a data instance in a simplified feature space, M the number of simplified features and $\phi_i\in\mathbb{R}$ the feature attribution values.
+The $\phi$'s are the indiviual feature contributions, the Shapley values.
+A quick reminder: Shapley values are a fair distribution of the prediction among the features.
+Simplified feature space means that we simply note whether a feature is present with a 1 and whether a feature is absent with a 0.
+Sounds counterintuitive, since the x' will be a vector of all 1's
+The representation as this linear formula is mainly a "trick" for the computation of the $\phi$'s, where we will also see that there can be 0's.
+More on that later.
+
+The formula becomes simpler then:
+
+$$g=\phi_0+\sum_{j=1}^M\phi_j$$
+
+This formula is then also the same as the Shapley Values as we know them. 
+
+
+<!-- Desirable properties -->
+There many solutions that result in a linear model for explaining a prediction (e.g. [LIME](#lime)), so the question is which one do we want.
+As we know, the [Shapley Values](#shapley) fulfill desirable properties: Efficiency, Symmetry, Dummy and Additivity.
+SHAP fullfils those as well, since it computes Shapley values.
+
+When reading the paper, a few discrepancies occur between SHAP properties and Shapley properties.
+SHAP reports the following three desirable properties:
+
+1) Local accuracy
+
+$$f(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
+
+If you define $\phi_0=E_X(\hat(f)(x))$ this is the same as in Shapley Efficiency property, just differently named.
+
+2) Missingness
+
+$$x_j'=0\Rightarrow\phi_j=0$$
+
+Missingness says that a missing feature gets an attribution of zero.
+Note that x_j'refers to a feature in the simplified feature space, where a 0 value represents absence of the feature value.
+In the simplified feature space, all feature values $x_j'$ of the instance to be explained should be a vector with all 1's.
+The presence of a 0 would mean that the feature value is already missing for the instance of interest.
+Through the local accuracy property, if there were missing features, the corresponding Shapley values could take on any value without hurting the local accuracy property.
+The Missingness property enforces that they get a zero attribution.
+The authors call it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
+In practice this is only relevant for features that are constant.
+There is no equivalent to this in Shapley values.
+
+3)  Consistency 
+
+Let $f_x(z')=f(h_x(z'))$ and $z_{\setminus{}i'}$ denote that $z_i'=0$, than for any two models f and f':
+
+$$f_x'(z')-f_x'(z_{\setminus{}i}')\geq{}f_x(z')-f_x(z_{\setminus{}i}')$$
+
+for all inputs $z'\in\{0,1\}^M$, then
+
+$$\phi_i(f',x)\geq\phi_i(f,x)$$
+
+Consistency says that if a model changes so that the contribution of a simplifed feature increases or stays the same (regardles of other inputs), the attribution should also increase or stay the same.
+
+Lundberg showed that from Consistency the Shapley properties Linearity, Dummy and Symmetry follow.
+
+
+<!-- What is the simplified feature space -->
+
+
+
+<!-- h(x) and h_x(x')-->
+
+
+
+### Estimation
+
 Instead of the Shapley sampling strategy, it uses a linear regression approach, inspired by LIME.
 Along with SHAP comes an interpretation toolbox, which has global methods for feature importance, interaction detection and feature effects included.
 These methods basically aggregate the Shapley values and bring them in connection with the feature values to provide global insights into the model.
@@ -31,14 +105,6 @@ Since Shapley Values sum up to the correct prediction (when samples are enough),
 
 
 **SHAP theory**
-
-Shap is an additive feature attribution method which fits following model:
-
-$$g(z')=\phi_0+\sum_{i=1}^M\phi_iz_i'$$
-
-where g is the explanation model, $z'\in\{0,1\}^M$ a data instance in a simplified feature space, M the number of simplified features and $\phi_i\in\mathbb{R}$ the feature attribution values.
-The $\phi$ result in the Shapley Values.
-
 New estimation method, inspired by LIME.
 It is called Kernel SHAP.
 
@@ -48,6 +114,7 @@ We assume that there is some function that maps x to x': $x'=h(x)$
 Also, this new x' is binary, which says whether feature is there or not (??)
 Then we have the other direction $x=h_x(x')$ which maps the 1's back to x values of the original input and the 0's to random replacements (e.g. pixel averages when superpixels were used).
 
+The function h and h_x are a way of connecting LIME and Shapley Values.
 
 <!-- Explaining h(x) -->
 
@@ -132,24 +199,6 @@ Then we sample from the remaining combinations, with a readjusted weights.
 y generated by inverse computation of features (and sampling).
 
 TODO: Keep property stuff short since it really is just the Shapley properties.
-Three desirable attributes for feature attribution methods:
-
-- Local accuracy (same as efficiency in Shapley)
-
-$$f(x)=g(x')=\phi_0+\sum_{i=1}^M\phi_ix_i'$$
-
-- Consistency (implie Linearity, Dummy, Symmetry)
-
-- Missingness. Which is somewhat confusing, because it is not explained in detail.
-  It basically says, when a feature is missing, its corresponding Shapley Value is zero.
-  In practice that's used for constant features.
-  Not sure how it is needed, since its more or less the same as Dummy?
-
-
-- Monotonicity <-> Linearity + Dummy
-- Lundberg showed: Monotonicity <-> Linearity + Dummy + Symmetry.
-  Can be found in supplementary material of the paper.
-
 
 **SHAP estimation**
 
