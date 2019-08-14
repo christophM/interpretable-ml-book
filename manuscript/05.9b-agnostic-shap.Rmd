@@ -9,92 +9,95 @@ set.seed(42)
 
 `r if(is.html){only.in.html}`
 
-The SHAP (SHapley Additive exPlanations) method by Lundberg and Lee (2016)[^lundberg2016] explains individual predictions with the game-theoretic optimal [Shapley Values](#shapley).
+The SHAP (SHapley Additive exPlanations) method by Lundberg and Lee (2016)[^lundberg2016] explains individual predictions.
+SHAP is based on the game theoretically optimal [Shapley Values](#shapley).
 
-There are two reasons SHAP got its own chapter instead of being a subchapter of the [Shapley value chapter](#shapley).
-First, the authors propose a new kernel-based estimation approach inspired by [local surrogated models](#lime) and additionally introduce model-specific and efficient approaches for tree based models and neural networks.
-Second, SHAP comes with many global explanation methods, based on aggregations of the Shapley values. 
+There are two reasons why SHAP has its own chapter and is not a subchapter of [Shapley values](#shapley).
+First, the SHAP authors propose KernelSHAP, a new kernel-based estimation approach for Shapley values inspired by [local surrogate models](#lime).
+Additionally they propose TreeSHAP, an efficient estimation approach for tree-based models.
 
+Second, SHAP is also an umbrella term for the many global explanation methods based on aggregations of Shapley values.
+This chapter explains both the new estimation approaches and the global interpretation methods.
 
-I recommend reading the [chapter on Shapley values](#shapley) first, since SHAP computes Shapley values.
-I also recommend reading the [chapter on Local Models, aka LIME](#lime), since SHAP estimation is inspired by LIME.
+I recommend reading the [chapter on Shapley values](#shapley) first, as SHAP computes Shapley values.
+I also recommend reading the [chapter on local models (LIME)](#lime), as SHAP estimation is inspired by LIME.
 
 ### Definition
 
-The goal of SHAP is to explain an indiviudal prediction, by attributing each feature its contribution.
-A new thing that SHAP brings to the table is that the Shapley value explanation is represented as an additive feautre attribution method, a linear model.
+The goal of SHAP is to explain the prediction of an instance x by computing the contribution of each feature to the prediction.
+One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feauture attribution method, a linear model.
 That view connects LIME and Shapley Values.
-SHAP is represented as an additive feature attribution method that fits following explanation model:
+SHAP specifies the explanation as an additive feature attribution with the following linear model:
 
-$$g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
+$$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
-where g is the explanation model, $z'\in\{0,1\}^M$ a data instance in a simplified feature space, M the number of simplified features and $\phi_i\in\mathbb{R}$ the feature attribution values.
-The $\phi$'s are the indiviual feature contributions, the Shapley values.
-A quick reminder: Shapley values are a fair distribution of the prediction among the features.
-Simplified feature space means that we simply note whether a feature is present with a 1 and whether a feature is absent with a 0.
-Sounds counterintuitive, since the x' will be a vector of all 1's
-The representation as this linear formula is mainly a "trick" for the computation of the $\phi$'s, where we will also see that there can be 0's.
-More on that later.
+where g is the explanation model, $z'\in\{0,1\}^M$ is a data instance in a simplified feature space, M is the number of simplified features and $\phi_j\in\mathbb{R}$ is the feature attribution for a feature j, the Shapley values.
+Simplified feature space means that we write a 1 if a feature is "present" and a 0 if it is absent.
+This should sound familiar to you if you know about Shapley values.
+To compute Shapley values, we simulate that features are not playing ("absent").
+Therefore the mapping to simplified features bridges the gap between Shapley values and linear model estimation.
+The representation as a linear model with simplified features is a trick for the computation of the $\phi$'s.
+For the instance of interest x, the simplified version x' is a vector of all 1's in simplified feature space.
+This means that for the instance for which we want the explanation, all features are "present".
+The formula becomes simpler:
 
-The formula becomes simpler then:
+$$g(x')=\phi_0+\sum_{j=1}^M\phi_j$$
 
-$$g=\phi_0+\sum_{j=1}^M\phi_j$$
-
-This formula is then also the same as the Shapley Values as we know them. 
-
+You can find this formula in similar notation in the [Shapley Value Chapter](#shapley).
+More about this later the actual estimation comes later.
+Let us first talk about the properties of the $\phi$'s before we go into the details of their estimation.
 
 <!-- Desirable properties -->
-There many solutions that result in a linear model for explaining a prediction (e.g. [LIME](#lime)), so the question is which one do we want.
-As we know, the [Shapley Values](#shapley) fulfill desirable properties: Efficiency, Symmetry, Dummy and Additivity.
-SHAP fullfils those as well, since it computes Shapley values.
+From the [Shapley values chapter](#shapley) we know that Shapley values are the only solution that satisfies properties of efficiency, symmetry, dummy and additivity.
+SHAP also satisfies these, since it computes Shapley values.
+In the SHAP paper, you will find discrepancies between SHAP properties and Shapley properties.
+SHAP describes the following three desirable properties:
 
-When reading the paper, a few discrepancies occur between SHAP properties and Shapley properties.
-SHAP reports the following three desirable properties:
-
-1) Local accuracy
+**1) Local accuracy**
 
 $$f(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
 
-If you define $\phi_0=E_X(\hat(f)(x))$ this is the same as in Shapley Efficiency property, just differently named.
+If you define $\phi_0=E_X(\hat{f}(x))$ and set all $x_j'$ to 1, this is the Shapley efficiency property.
+Only with a different name and using the simplified features.
 
-2) Missingness
+$$f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
+
+**2) Missingness**
 
 $$x_j'=0\Rightarrow\phi_j=0$$
 
 Missingness says that a missing feature gets an attribution of zero.
-Note that x_j'refers to a feature in the simplified feature space, where a 0 value represents absence of the feature value.
+Note that x_j' refers to a feature in the simplified feature space, where a value of 0 represents the absence of the feature value.
 In the simplified feature space, all feature values $x_j'$ of the instance to be explained should be a vector with all 1's.
-The presence of a 0 would mean that the feature value is already missing for the instance of interest.
-Through the local accuracy property, if there were missing features, the corresponding Shapley values could take on any value without hurting the local accuracy property.
-The Missingness property enforces that they get a zero attribution.
-The authors call it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
+The presence of a 0 would mean that the feature value is already for the instance of interest.
+This property is not among the properties of the "normal" Shapley values.
+So why do we need it for SHAP?
+Lundberg calls it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
+A missing feature could -- in theory -- have an arbitrary Shapley value without hurting the local accuracy property, since it is multiplied with x_j'=0.
+The Missingness property enforces that missing features get a Shapley value of 0. 
 In practice this is only relevant for features that are constant.
-There is no equivalent to this in Shapley values.
 
-3)  Consistency 
+**3)  Consistency**
 
-Let $f_x(z')=f(h_x(z'))$ and $z_{\setminus{}i'}$ denote that $z_i'=0$, than for any two models f and f':
+Let $f_x(z')=f(h_x(z'))$ and $z_{\setminus{}j'}$ indicate that $z_j'=0$, than for any two models f and f':
 
-$$f_x'(z')-f_x'(z_{\setminus{}i}')\geq{}f_x(z')-f_x(z_{\setminus{}i}')$$
+$$f_x'(z')-f_x'(z_{\setminus{}j}')\geq{}f_x(z')-f_x(z_{\setminus{}j}')$$
 
 for all inputs $z'\in\{0,1\}^M$, then
 
-$$\phi_i(f',x)\geq\phi_i(f,x)$$
+$$\phi_j(f',x)\geq\phi_j(f,x)$$
 
-Consistency says that if a model changes so that the contribution of a simplifed feature increases or stays the same (regardles of other inputs), the attribution should also increase or stay the same.
-Lundberg showed that from Consistency the Shapley properties Linearity, Dummy and Symmetry follow.
-
-
-
+The consistency property says that if a model changes so that the marginal contribution of a simplified feature increases or stays the same (regardless of other features), the Shapley value also increases or stay the same.
+From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee [^shap].
 
 ### Estimation with KernelSHAP
 
-There is a model-agnostic version of SHAP, called KernelSHAP and two model-specific implementations.
-We will start with KernelSHAP.
+
+TODO: CONTINUE HERE
 
 <!-- The general Idea of linear model -->
-Instead of the Shapley sampling strategy, SHAP uses a weighted linear regression inspired by LIME.
-The Shapley samping approach estimates the Shapley Values by sampling coalitions of features, replacing features that are not in this coalition with values from a random instance and computes the marginal contribution of adding feature j.
+Instead of the Shapley sampling strategy, SHAP uses weighted linear regression inspired by LIME.
+The Shapley sampling approach estimates the Shapley values by sampling coalitions of features, replacing features that are not in this coalition with values from a random instance and computes the marginal contribution of adding feature j.
 
 SHAP emphasizes the view of Shapley explanation as an additive attribution method that can be represented as a weighted linear model.
 This linear model is not on the original features.
