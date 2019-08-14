@@ -92,81 +92,79 @@ From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as
 
 ### Estimation with KernelSHAP
 
-
-TODO: CONTINUE HERE
+TODO: CONTINUE DEEPL HERE
 
 <!-- The general Idea of linear model -->
-Instead of the Shapley sampling strategy, SHAP uses weighted linear regression inspired by LIME.
-The Shapley sampling approach estimates the Shapley values by sampling coalitions of features, replacing features that are not in this coalition with values from a random instance and computes the marginal contribution of adding feature j.
-
-SHAP emphasizes the view of Shapley explanation as an additive attribution method that can be represented as a weighted linear model.
-This linear model is not on the original features.
-LIME for tabular data -- when numeric features are not binned -- works on original feature space.
-
-<!-- What is the simplified feature space -->
-The linear model for SHAP is on a simplified feature space.
-A 1 for feature $x_k'$ means that a feature is present.
-Converting a simplified feature with a 1 back to the original feature space means that the original feature takes on the value of the instance x that is to be explained.
-A 0 means that a feature is not present.
-Converting a simplified feature with a 0 back to the original feature space means that we have to fill in some value that simulates feature absence.
-For tabular data, we sample another instance which donates values to simulate feature absence.
-For image data, the original space are the individual pixels and the simplified feature space super-pixels (clusters of pixels).
-We can grey out all pixels belonging to a super pixel to simulate the absence of that super pixel.
-
-The mapping between original and simplified feature space is visualized in the following figure:
-
-
-```{r shap-simplified-feature, fig.cap = "Function h() maps a data instance to a binary vector which indicates which features are equal to the instance to be explained. The inverse function maps the binary vector to a valid instance. Absent features (with a 0 in simplified feature space) are replaced by sampled values.", out.width=800}
-knitr::include_graphics("images/shap-simplified-features.jpg")
-```
-
-Expressing this mathematically, we define a function that maps an instance z to z': $z'=h(z)$ with $h:\mathbb{R}^p\rightarrow\{0,1\}^k$.
-
-This new x' is a binary vector, where each entry says whether the corresponding simplified feature is present or not.
-Then we have the other direction $x=h_x(x')$ which maps the 1's back to x values of the original input and the 0's to random replacements (e.g. pixel averages when superpixels were used).
-Applied to the original x, h(x) is a vector of 1's.
-Applied to an instance z that is completely different from x, h(z) is a vector of 0's.
-Applied to an instance z that is partially the same as x, h(z) contains 1's for the parts where x and z are identical and 0's otherwise.
-The function h and h_x are a way of connecting LIME and Shapley Values.
-LIME (except for non-binned numerical features) also uses this binarized feature space.
-Given the h_x() function, we can evaluate f(h_x(z')) to calculate the predictions with observed or not observed features.
-Basically, h is:
-
-$$f(h_x(z'))=E[f(x)|x_S]$$
-
-Here we can see a possible issue:
-We have to define h_x in such a way that it samples from the distribution of the features conditional on features in set S.
-But the KernelSHAP implementation samples from the marginal distribution, creating unlikely instances.
-
-$h_x(x')=x$ even though x' has only 1's and 0's since it is tied to x (if all 1's, then it is x)
-
-After this excourse into the simplified feature space, we can talk about the actual estimation.
-SHAP is estimated with weighted linear regression.
+Instead of the Shapley sampling strategy, SHAP uses weighted linear regression inspired by LIME (sampling is still involved though)
 
 A rough summary of the KernelSHAP estimation algorithm, which estimates the feature attributions for explaining instance x's prediction of model f:
 
-- Choose number of samples M.
-- Sample new instances $z_k',\quad{}k\in\{1,\ldots,M\}$ in the simplified feature space (0's represent feature absence, 1's feature presence).
+- Choose number of samples K.
+- Sample K coalitions $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
 - Get prediction for each z_k' by first converting them to the original feature space and then applying model f: $f(h_x(z_k'))$
-- Compute weights for each z_k'
-- Fit weighted (generalized) linear model
-- Return the $\phi_k$, the coefficients from the linear models, which are the Shapley values
+- Compute weights for each z_k' with the SHAP kernel
+- Fit weighted linear model
+- Return the $\phi_k$, the coefficients from the linear models (Shapley values)
+
+Let us talk about the individual steps.
+First, sampling of feature coalitions.
+A coalition is represented by a vector of 0's and 1's, where a 1 for feature x_j' means that feature value x_j is part of the coalition ("present"), a 0 means it is "absent".
+We create a random coalition by repeated coin flips until we have a chain of 0's and 1's.
+For example, the vector of (1,0,1,0) means that we have a coalition of first and third feature.
+The K sampled coalitions becomes the dataset for the regression model.
+The target for the regression model is the prediction for a coalition.
+("Hold on!," you say, "The model was not trained on these binary coalition data and can't give predictions for them.".)
+To get from coalition of feature values to a valid data instance, we need a function $x=h_x(x')$ where $h_x:\{0,1\}^M\rightarrow\mathbb{R}^p$.
+The h_x(x') function maps the '1'-entries to the corresponding value from the instance x, that we want to explain.
+Makes sense since a '1' means that this feature value is present in the coalition.
+And it maps '0'-entries to the values of another instance that we sample from the data.
+This means that we equate "feature value is absent" with "feature value is replaced by random feature value from data".
+For tabular data, the mapping between original and simplified feature space is visualized in the following figure:
+
+```{r shap-simplified-feature, fig.cap = "Function h() maps a data instance to a binary vector which indicates which features are equal to features from x the instance to be explained. The inverse function maps the binary vector back to a valid instance. Absent features (with a 0 in simplified feature space) are replaced by sampled values.", out.width=800}
+knitr::include_graphics("images/shap-simplified-features.jpg")
+```
+
+
+<!--
+Given the h_x() function, we can evaluate f(h_x(z')) to calculate the predictions with observed or not observed features.
+
+$$f(h_x(z'))=E[f(x)|x_S]$$
+-->
+
+We have to define h_x in such a way that it samples the absent features conditional on features in set S
+As explained above, h_x samples from the marginal distribution.
+Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
+KernelSHAP therefore suffers from the same problem that all permutation-based interpretation methods suffer from:
+The estimation involves unlikely instances and can become unreliable.
+As we will see later, TreeSHAP for tree-ensembles is not affected by this issue.
+
+By the way, we are free how we define "players" in a coalition.
+For tabular data, each feature is usually a player.
+We could as well group some of the features into one player.
+We only have to adjust h_x accordingly, so that the whole group of features is sampled together from the data when the corresponding coalition entry is 0.
+This is very useful for image.
+Grouping pixels together to super pixels can make the explanations faster and more intuitive.
+This approach is also used by LIME.
 
 <!-- Kernel -->
-This procedure is almost identical to LIME (see [chapter on local models](#lime)).
-The big difference is the weighting of the samples.
+The procedure so far is very similar to both the Shapley sampling approach and LIME..
+The big difference to LIME comes now:
+It is how we weight the instances.
 LIME weights the instances by how close they are to the original instance.
-An instance in the simplified feature space can be seen as a coalition.
-All the features with 1's are in this coalition, the 0's are absent.
-SHAP weights the sampled instances by the weight the coalition would get in the Shapley Value estimation:
-Coalations with very few features and with almost all features get high weights, the lowest weight is for coalations with half of the players present, the other half absent.
+The more 0's there are in the coalition vector, the smaller the weight in LIME.
+SHAP weights the sampled instances by the weight the coalition would get in the Shapley value estimation.
+Coalitions that are close to the original instance (i.e. many 1's) and coalitions that are very different from the original instance (i.e. many 0's) get the largest weights.
+The intuition behind this is:
+We learn the most about individual features when we can study its effect in -- more or less -- isolation.
+When a feature is the only one in a coalition, we can learn about its isolated main effect on the prediction.
+When a feature is the only one missing from a coalition, we can learn about the interaction effects with all other features, since the difference between the coalition with all features and the one missing is the main effect of the feature plus all interactions.
+But when a feature is added to a very specific coalition, we learn little since there are many coalitions possible with the same number of features.
+To achieve this Shapley-conform weighting, the authors propose the SHAP kernel:
 
+$$\pi_{x'}(z')=\frac{(M-1)}{(M{}choose|z'|)|z'|(M-|z'|)}$$
 
-To achieve this Shapley conform weight, the authors propose the SHAP kernel:
-
-$$\pi_{x'}(z')=\frac{(p-1)}{(p{}choose|z'|)|z'|(p-|z'|)}$$
-
-Here, p is the number of features in the simplified feature space, $|z'|$ the number of present features in instance z'.
+Here, M is the number of coalition features, $|z'|$ the number of present features in instance z'.
 Lundberg and Lee show that, with this Kernel, indeed the correct SHAP values are recovered.
 
 TODO: Add image of ShAP kernel
@@ -186,6 +184,10 @@ Then we sample from the remaining combinations, with a readjusted weights.
 
 
 <!-- Linear Model -->
+SHAP reformulates this problem as a weighted linear regression problem on the simplified feature space.
+
+$$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
+
 Packing it all together, we estimate the Shapley values by optimizing this linear function:
 
 $$L(f,g,\pi_{x'})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x'}(z')$$
