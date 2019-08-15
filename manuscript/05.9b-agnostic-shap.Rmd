@@ -181,13 +181,9 @@ Here, M is the maximum coalition size, $|z'|$ the number of present features in 
 Lundberg and Lee show that linear regression with this kernel weight yields Shapley values.
 If you would use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!
 
-TODO: Add image of ShAP kernel
-
-```{r shap-kernel, fig.cap="", out.width=800}
-```
-
 <!-- Sampling trick -->
-This Figure shows that the smallest and largest coalitions take up most of the weight.
+We can be a bit smarter about the sampling of coalitions:
+The smallest and largest coalitions take up most of the weight.
 We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly.
 We start with all possible coalitions with 1 and M-1 features, 2 times M in total.
 When we have enough budget left (current budget is K - 2M), we can include coalitions with two features and with M-2 features and so on.
@@ -213,23 +209,23 @@ For example, we can add regularization terms to make the model sparse.
 If we add an L1 penalty to the loss L, we can create sparse explanations.
 (I am not so sure whether the resulting coefficients would still be valid Shapley values)
 
+### TreeSHAP
+
+Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
+TreeSHAP is fast, computes exact Shapley values, and correctly estimates the Shapley values when features are dependent.
+In comparison, KernelSHAP is expensive to compute and only approximates the actual Shapley values.
+
+How much faster is TreeSHAP?
+For the exact Shapley values, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
+
+<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
 
 TODO: CONTINUE HERE
 
-### TreeSHAP
-
-KernelSHAP is a heuristic and very expensive to compute.
-Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a fast implementation of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
-TreeSHAP is fast, computes exact Shapley values and avoids creating unrealistic instances for the estimation as KernelSHAP does when features are dependent.
-
-How much faster is it?
-For the exact Shapley values, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$ where T is the number of trees, L the maximum number of leaves in any tree and D the maximal depth of any tree.
-
-To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.
-
-I will explain it for one tree, but it can be done for multiple trees and the results averaged.
-
-For a given subset S and an instance x, we want to compute the expected prediction.
+I will explain the intuition how TreeSHAP works.
+The following text describes the intuition for one tree.
+For a given set of features $X_S$ and an instance x, we want to compute the expected prediction $E_{X_S|X_C}(f(x)|x_S)$.
+In $X_C$ are the feautures that are not in S.
 For features in set S, we know that they take on the values of the corresponding features in instance x that we want to explain.
 For KernelSHAP we would sample the values for features not in S.
 To get the expected prediction we have to start at the root of the tree and go down until we hit the terminal nodes.
