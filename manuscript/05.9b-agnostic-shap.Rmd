@@ -25,20 +25,29 @@ I also recommend reading the [chapter on local models (LIME)](#lime), as SHAP es
 ### Definition
 
 The goal of SHAP is to explain the prediction of an instance x by computing the contribution of each feature to the prediction.
+The SHAP explanation method computes Shapley values from coalitional game theory.
+The feature values of a data instance act as players in a coalition.
+Shapley values tell us how to fairly distribute the "payout" among the features.
+A player can be an individual feature values, e.g. for tabular data.
+A player can also be a group of feature values.
+For example to explain an image, pixels can be grouped to super pixels and the prediction distributed among them.
 One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feauture attribution method, a linear model.
 That view connects LIME and Shapley Values.
 SHAP specifies the explanation as an additive feature attribution with the following linear model:
 
 $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
-where g is the explanation model, $z'\in\{0,1\}^M$ is a data instance in a simplified feature space, M is the number of simplified features and $\phi_j\in\mathbb{R}$ is the feature attribution for a feature j, the Shapley values.
-Simplified feature space means that we write a 1 if a feature is "present" and a 0 if it is absent.
+where g is the explanation model, $z'\in\{0,1\}^M$ is the coalition vector, M is the maximum coalition size and $\phi_j\in\mathbb{R}$ is the feature attribution for a feature j, the Shapley values.
+What I call "coalition vector" is called "simplified features" in the SHAP paper.
+I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to super pixels.
+And we look at coalitions of many super pixels.
+So keep in mind that a "player" can also be a group of feature values.
+I believe it is helpful to think about the z's as describing coalitions:
+In the coalition vector, an entry of 1 means that the corresponding feature value is "present" and 0 that it is "absent".
 This should sound familiar to you if you know about Shapley values.
-To compute Shapley values, we simulate that features are not playing ("absent").
-Therefore the mapping to simplified features bridges the gap between Shapley values and linear model estimation.
-The representation as a linear model with simplified features is a trick for the computation of the $\phi$'s.
-For the instance of interest x, the simplified version x' is a vector of all 1's in simplified feature space.
-This means that for the instance for which we want the explanation, all features are "present".
+To compute Shapley values, we simulate that only some features values are not playing ("present") and some are not ("absent").
+The representation as a linear model of coalitions is a trick for the computation of the $\phi$'s.
+For the instance of interest x, the coalition vector x' is a vector of all 1's, i.e. all feature values are "present".
 The formula becomes simpler:
 
 $$g(x')=\phi_0+\sum_{j=1}^M\phi_j$$
@@ -58,7 +67,7 @@ SHAP describes the following three desirable properties:
 $$f(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
 
 If you define $\phi_0=E_X(\hat{f}(x))$ and set all $x_j'$ to 1, this is the Shapley efficiency property.
-Only with a different name and using the simplified features.
+Only with a different name and using the coalition vector.
 
 $$f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
 
@@ -67,9 +76,9 @@ $$f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
 $$x_j'=0\Rightarrow\phi_j=0$$
 
 Missingness says that a missing feature gets an attribution of zero.
-Note that x_j' refers to a feature in the simplified feature space, where a value of 0 represents the absence of the feature value.
-In the simplified feature space, all feature values $x_j'$ of the instance to be explained should be a vector with all 1's.
-The presence of a 0 would mean that the feature value is already for the instance of interest.
+Note that x_j' refers to the coalitions, where a value of 0 represents the absence of a feature value.
+In coalition notation, all feature values $x_j'$ of the instance to be explained should be a vector with all 1's.
+The presence of a 0 would mean that the feature value is missing for the instance of interest.
 This property is not among the properties of the "normal" Shapley values.
 So why do we need it for SHAP?
 Lundberg calls it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
@@ -87,123 +96,123 @@ for all inputs $z'\in\{0,1\}^M$, then
 
 $$\phi_j(f',x)\geq\phi_j(f,x)$$
 
-The consistency property says that if a model changes so that the marginal contribution of a simplified feature increases or stays the same (regardless of other features), the Shapley value also increases or stay the same.
+The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stay the same.
 From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee [^shap].
 
 ### Estimation with KernelSHAP
 
-TODO: CONTINUE DEEPL HERE
-
 <!-- The general Idea of linear model -->
-Instead of the Shapley sampling strategy, SHAP uses weighted linear regression inspired by LIME (sampling is still involved though)
+KernelSHAP estimates for an instance x the contributions each feature value to the prediction.
+KernelSHAP consists of 5 steps:
 
-A rough summary of the KernelSHAP estimation algorithm, which estimates the feature attributions for explaining instance x's prediction of model f:
-
-- Choose number of samples K.
 - Sample K coalitions $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
-- Get prediction for each z_k' by first converting them to the original feature space and then applying model f: $f(h_x(z_k'))$
-- Compute weights for each z_k' with the SHAP kernel
-- Fit weighted linear model
-- Return the $\phi_k$, the coefficients from the linear models (Shapley values)
+- Get prediction for each z_k' by first converting z_k' to the original feature space and then applying model f: $f(h_x(z_k'))$
+- Compute the weight for each z_k' with the SHAP kernel.
+- Fit weighted linear model.
+- Return Shapley values $\phi_k$, the coefficients from the linear models.
 
-Let us talk about the individual steps.
-First, sampling of feature coalitions.
-A coalition is represented by a vector of 0's and 1's, where a 1 for feature x_j' means that feature value x_j is part of the coalition ("present"), a 0 means it is "absent".
-We create a random coalition by repeated coin flips until we have a chain of 0's and 1's.
-For example, the vector of (1,0,1,0) means that we have a coalition of first and third feature.
-The K sampled coalitions becomes the dataset for the regression model.
+We can create a random coalition by repeated coin flips until we have a chain of 0's and 1's.
+For example, the vector of (1,0,1,0) means that we have a coalition of the first and third features.
+The K sampled coalitions become the dataset for the regression model.
 The target for the regression model is the prediction for a coalition.
-("Hold on!," you say, "The model was not trained on these binary coalition data and can't give predictions for them.".)
-To get from coalition of feature values to a valid data instance, we need a function $x=h_x(x')$ where $h_x:\{0,1\}^M\rightarrow\mathbb{R}^p$.
-The h_x(x') function maps the '1'-entries to the corresponding value from the instance x, that we want to explain.
-Makes sense since a '1' means that this feature value is present in the coalition.
-And it maps '0'-entries to the values of another instance that we sample from the data.
+("Hold on!," you say, "The model has not been trained on these binary coalition data and can't make predictions for them.")
+To get from a coalition of feature values to a valid data instance, we need a function $z=h_x(z')$ where $h_x:\{0,1\}^M\rightarrow\mathbb{R}^p$.
+The function h_x maps 1's to the corresponding value from the instance x, that we want to explain.
+For tabular data, it maps 0's to the values of another instance that we sample from the data.
 This means that we equate "feature value is absent" with "feature value is replaced by random feature value from data".
-For tabular data, the mapping between original and simplified feature space is visualized in the following figure:
+For tabular data, the following figure visualizes the mapping from coalitions to feature values:
 
-```{r shap-simplified-feature, fig.cap = "Function h() maps a data instance to a binary vector which indicates which features are equal to features from x the instance to be explained. The inverse function maps the binary vector back to a valid instance. Absent features (with a 0 in simplified feature space) are replaced by sampled values.", out.width=800}
+```{r shap-simplified-feature, fig.cap = "Function h_x() maps a coalition to a valid instance. For present features (z_j'=1) h_x maps to the feature value of x. For absent features (z_j'=0) h_x maps to the values of a randomly sampled data instance ", out.width=800}
 knitr::include_graphics("images/shap-simplified-features.jpg")
 ```
-
 
 <!--
 Given the h_x() function, we can evaluate f(h_x(z')) to calculate the predictions with observed or not observed features.
 
-$$f(h_x(z'))=E[f(x)|x_S]$$
 -->
 
-We have to define h_x in such a way that it samples the absent features conditional on features in set S
-As explained above, h_x samples from the marginal distribution.
+In a perfect world, h_x samples the absent features conditional on the present features:
+
+$$f(h_x(z'))=E_{X_C|X_S}[f(x)|x_S]$$
+
+where X_C is the set of absent features and X_S is the set of present features.
+However, as defined above, h_x for tabular data treats X_C and X_S as independent and integrates over the marginal distribution:
+
+$$f(h_x(z'))=E_{X_C}[f(x)]$$
+
 Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
-KernelSHAP therefore suffers from the same problem that all permutation-based interpretation methods suffer from:
-The estimation involves unlikely instances and can become unreliable.
+KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
+The estimation puts too much weight on unlikely instances.
+Results can become unreliable.
 As we will see later, TreeSHAP for tree-ensembles is not affected by this issue.
 
-By the way, we are free how we define "players" in a coalition.
+
+TODO: Visualize h_x for image data.
+
+<!--By the way, we are free how we define "players" in a coalition.
 For tabular data, each feature is usually a player.
 We could as well group some of the features into one player.
 We only have to adjust h_x accordingly, so that the whole group of features is sampled together from the data when the corresponding coalition entry is 0.
 This is very useful for image.
 Grouping pixels together to super pixels can make the explanations faster and more intuitive.
 This approach is also used by LIME.
+-->
+
 
 <!-- Kernel -->
-The procedure so far is very similar to both the Shapley sampling approach and LIME..
-The big difference to LIME comes now:
-It is how we weight the instances.
-LIME weights the instances by how close they are to the original instance.
-The more 0's there are in the coalition vector, the smaller the weight in LIME.
-SHAP weights the sampled instances by the weight the coalition would get in the Shapley value estimation.
-Coalitions that are close to the original instance (i.e. many 1's) and coalitions that are very different from the original instance (i.e. many 0's) get the largest weights.
-The intuition behind this is:
-We learn the most about individual features when we can study its effect in -- more or less -- isolation.
-When a feature is the only one in a coalition, we can learn about its isolated main effect on the prediction.
-When a feature is the only one missing from a coalition, we can learn about the interaction effects with all other features, since the difference between the coalition with all features and the one missing is the main effect of the feature plus all interactions.
-But when a feature is added to a very specific coalition, we learn little since there are many coalitions possible with the same number of features.
-To achieve this Shapley-conform weighting, the authors propose the SHAP kernel:
+So far, the procedure is similar to the Shapley sampling approach as well as to LIME.
+The big difference to LIME is the weighting of the instances in the regression model.
+LIME weights the instances according to how close they are to the original instance.
+The more 0's there are in the coalition vector, the smaller is the weight in LIME.
+SHAP weights the sampled instances according to the weight the coalition would get in the Shapley value estimation.
+Small coalitions (i.e. many 1's) and large coalitions (i.e. many 0's) get the largest weights.
+The intuition behind it is:
+We learn most about individual features if we can study their effects in isolation.
+If a coalition consists of a single feature, we can learn about the features isolated main effect on the prediction.
+If a coalition consists of all but one feature, we can learn about this features total effect (main effect plus feature interactions).
+If a coalition consists of half the features, we learn little about an individual features contribution, as there are many possible coalitions with half of the features.
+To achieve this Shapley compliant weighting, the authors propose the SHAP kernel:
 
-$$\pi_{x'}(z')=\frac{(M-1)}{(M{}choose|z'|)|z'|(M-|z'|)}$$
+$$\pi_{x}(z')=\frac{(M-1)}{(M{}choose|z'|)|z'|(M-|z'|)}$$
 
-Here, M is the number of coalition features, $|z'|$ the number of present features in instance z'.
-Lundberg and Lee show that, with this Kernel, indeed the correct SHAP values are recovered.
+Here, M is the maximum coalition size, $|z'|$ the number of present features in instance z'.
+Lundberg and Lee show that linear regression with this kernel weight yields Shapley values.
+If you would use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!
 
 TODO: Add image of ShAP kernel
 
 ```{r shap-kernel, fig.cap="", out.width=800}
 ```
 
-If you would use this SHAP kernel with LIME plus the simplified features, LIME would also estimate Shapley values!
-
-
 <!-- Sampling trick -->
-From this Figure we can also see that we can cover a high percentage of the cumulative weight, when we include low and high number of present features.
-The Shapley Value (and therefore the kernel) weights combinations very high, when either almost all (simplified) features are at zero or almost all (simplified) features are at 1.
-That means we learn the most about the contribution of the j-th feature to the prediction when we look at the situation where we only get to know the j-th features value or the situation where we know all feature values and look how much the prediction changes.
-We can enumerate these situations (also where 1 feature is known or where two features is known, etc.) and get a relative high weight already done, even though we are sampling.
-Then we sample from the remaining combinations, with a readjusted weights.
+This Figure shows that the smallest and largest coalitions take up most of the weight.
+We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly.
+We start with all possible coalitions with 1 and M-1 features, 2 times M in total.
+When we have enough budget left (current budget is K - 2M), we can include coalitions with two features and with M-2 features and so on.
+From the remaining coalition sizes, we sample with readjusted weights.
 
 
 <!-- Linear Model -->
-SHAP reformulates this problem as a weighted linear regression problem on the simplified feature space.
+We have the data, the target and the weights.
+Everything to build our weighted linear regression model:
 
 $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
-Packing it all together, we estimate the Shapley values by optimizing this linear function:
+We train the linear model g by optimizing the following loss function L:
 
-$$L(f,g,\pi_{x'})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x'}(z')$$
+$$L(f,g,\pi_{x})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x}(z')$$
 
-with g(x') being the additive attribution, the sum of Shapley values:
+This is the good old boring sum of squared errors that we usually optimized for linear models.
+The coefficients of the model, the $\phi_j$'s are the Shapley values.
 
-$$g(x')=\phi_0+\sum_{i=1}^M\phi_ix_i'$$
 
-The loss optimization is a standard linear model.
-Instead of the original features, we use the simplified feature space and the sampled instances.
+Since we are in a linear regression setting, we can also make use of the standard tools.
+For example, we can add regularization terms to make the model sparse.
+If we add an L1 penalty to the loss L, we can create sparse explanations.
+(I am not so sure whether the resulting coefficients would still be valid Shapley values)
 
-Since we are in a classic linear regression setting, we can also make use of the tools that come with it.
-For example, regularization.
-By adding an L1 penalty to this term, we can generate sparse explanations.
-(I am not so sure whether the resulting attribution values are still valid Shapley values)
 
+TODO: CONTINUE HERE
 
 ### TreeSHAP
 
