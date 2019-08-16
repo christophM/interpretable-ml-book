@@ -219,145 +219,131 @@ How much faster is TreeSHAP?
 For the exact Shapley values, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
 
 <!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
-
-TODO: CONTINUE HERE
-
-I will explain the intuition how TreeSHAP works.
-The following text describes the intuition for one tree.
-For a given set of features $X_S$ and an instance x, we want to compute the expected prediction $E_{X_S|X_C}(f(x)|x_S)$.
-In $X_C$ are the feautures that are not in S.
-For features in set S, we know that they take on the values of the corresponding features in instance x that we want to explain.
-For KernelSHAP we would sample the values for features not in S.
-To get the expected prediction we have to start at the root of the tree and go down until we hit the terminal nodes.
-Since not all feature values are given -- we only have subset S -- we have two distinguish two situations at each internal tree node.
-First situation: the node used a feature from S for the split.
-Then we go down the path of that node where the feature value matches the decision.
-If a node uses a feature that is not in set S, we follow both paths.
-We do this until we reach the terminal node in each path that we followed.
-The mean of these terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S.
-
-
-Another way to think about it:
-If we would condition on all features -- if S would be the set of all features -- then we would use the prediction from the node in which x would fall.
-If we would condition on no feature at all -- if S would be the empty set -- we would use the weighted averaged prediction from all terminal nodes.
-This is the same as taking the overall average prediction.
-For the inbetween case where S contains some features, but not all, we ignore the predictions from the nodes that we can't reach, because their decisions path contradict values in x_S.
-From the remaining terminal nodes, we average the predictions, weighted by the node sizes (i.e. number of training samples in that node).
-
-
-The thing is, we need to do this procedure for every possible subset S of the feature values.
-That is $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$.
+TreeSHAP estimates the correct conditional expectation $E_{X_S|X_C}(f(x)|x_S)$.
+I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
+If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be expected prediction.
+If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
+If S contains some, but not all, features, we ignore predictions of unreachable nodes.
+Unreachable means that the decision path that leads to this node contradicts values in $x_S$.
+From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node).
+The mean of the remaining terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S.
+The problem is that we have to apply this procedure for each possible subset S of the feature values.
+<!--
+This means $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$ times.
 Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
-To reduce the complexity, the authors proposed a faster algorithm in their paper that computes in polynomial time instead of exponential.
-The basic idea is to push down all possible subsets S simultaneously.
-Per node, we have to keep track of the number of subsets that go to the child nodes based on the split feature.
-It is a bit trickier than that, since the subsets have different weights, so the algorithm also has to keep track of the overall weight of the subsets in each node.
-For example, when the first split in a tree is on feature $x_3$, then all the subsets that contain feature $x_3$ will go to one node (to the one where x goes).
+-->
+Fortunately, TreeSHAP computes in polynomial time instead of exponential.
+The basic idea is to push all possible subsets S down the tree at the same time.
+For each decision node we have to keep track of the number of subsets.
+This depends on the subsets in the node and the split feature.
+For example, when the first split in a tree is on feature $x_3$, then all the subsets that contain feature $x_3$ will go to one node (the one where x goes).
 Subsets that do not contain feature $x_3$ go to both nodes with reduced weight.
-
-TreeSHAP works with boosting frameworks XGBoost, LightGBM, CatBoost, and most tree-based scikit-learn models.
+Unfortunately, subsets of different sizes have different weights.
+The algorithm has to keep track of the overall weight of the subsets in each node.
+This complicates the algorithm.
+I refer to [^tree-shap] for details of TreeSHAP.
+All these explanations applied to a single tree.
+The computation can be expanded to more trees.
+Thanks to the Additivity property of Shapley values, the Shapley values of a tree ensemble is the (weighted) average of the Shapley values of the individual trees.
 
 Next, we will look at SHAP explanations in action.
 
 ### Examples
 
-I trained a random forest classifier with 100 trees to predict [risk for cervical cancer](#cervical).
+I trained a random forest classifier with 100 trees to predict the [risk for cervical cancer](#cervical).
 We will use SHAP to explain individual predictions.
-Since random forests are tree-based, we can use the fast TreeSHAP estimation method instead of the slower KernelSHAP method.
+We can use the fast TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees.
 
-Since SHAP fits Shapley values, the interpretation is the same as presented in the [Shapley value chapter](#shapley).
+Since SHAP computes Shapley values, the interpretation is the same as in the [Shapley value chapter](#shapley).
 But with the Python shap package comes a different visualization:
 You can visualize feature attributions such as Shapley values as "forces".
 Each feature value is a force that either increases or decreases the prediction.
 The prediction starts from the baseline.
-The baseline for Shapley values and therefore SHAP is the average of all predictions.
-In the plot, each Shapley value is an arrow that pushes to increase the prediction (positive SHAP) or to decrease it (negative SHAP).
-These forces balance out at the actual prediction of that particular data instance.
+The baseline for Shapley values is the average of all predictions.
+In the plot, each Shapley value is an arrow that pushes to increase (positive value) or decrease (negative value) the prediction.
+These forces balance each other out at the actual prediction of the data instance.
 
-The following figure shows the SHAP values visualized as forces for two women from the cervical cancer dataset:
+The following figure shows SHAP explanations for two women from the cervical cancer dataset represented as forces:
 
-```{r, fig.cap = "SHAP values for explaining the predicted cancer probabilities of two individuals. The baseline -- average predicted probability -- is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are canceled out by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase predicted cancer risk. There are almost no effects that lower the cancer risk.", out.width = 800}
-knitr::include_graphics("images/shap-explain-1.png")
-knitr::include_graphics("images/shap-explain-2.png")
+```{r, fig.cap = "SHAP values to explain the predicted cancer probabilities of two individuals. The baseline -- the average predicted probability -- is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are offset by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase predicted cancer risk.", out.width = 800}
+img1 <-  rasterGrob(as.raster(png::readPNG("images/shap-explain-1.png")), interpolate = FALSE)
+img2 <-  rasterGrob(as.raster(png::readPNG("images/shap-explain-1.png")), interpolate = FALSE)
+grid.arrange(img1, img2, ncol = 1)
 ```
-
 These were explanations for individual predictions.
-Shapley values can be aggregated to global explanations.
-When we run SHAP for every instance, we get a matrix of Shapley values.
-The matrix has as many rows as data instances and as many columns as features.
-We can aggregate and combine this matrix with the feature values to get further insights such as feature importance and feature effects.
-The tools would work as well for Shapley Values not computed with SHAP.
+
+Shapley values can be combined into global explanations.
+If we run SHAP for every instance, we get a matrix of Shapley values.
+This matrix has as one row per data instance and one column per feature.
+We can interpret the entire model by analyzing the Shapley values in this matrix.
+
 We start with SHAP feature importance.
 
 ### SHAP Feature Importance
 
 The idea behind SHAP feature importance is simple:
-The features with the most impact on the model are the ones with the highest effects on the prediction.
-For the importance we are not interested in the direction of the effect, so we take the absolute values.
-Since we want to have a global importance, we measure the mean of absolute Shapley values over the data per feature:
+Features with large absolute Shapley values are important.
+Since we want the global importance, we average the absolute Shapley values per feature across the data:
 
 $$I_j=\sum_{i=1}^n{}|\phi_j^{(i)}|$$
 
-Once we have the importance for each feature, we sort them in descending order and plot them.
-The following figure shows the feature importance for the random forest trained in the examples chapter to predict cervical cancer.
+Next, we sort the features by decreasing importance and plot them.
+The following figure shows the SHAP feature importance for the random forest trained in the examples chapter for predicting cervical cancer.
 
-```{r fig.cap="SHAP feature importance measured as the mean absolute Shapley values. The number of years on hormonal contraceptives was the most important feature, changing the absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis).", out.width=800}
+```{r fig.cap="SHAP feature importance measured as the mean absolute Shapley values. The number of years with hormonal contraceptives was the most important feature, changing the predicted absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis).", out.width=800}
 knitr::include_graphics("images/shap-importance.png")
 ```
 
 SHAP feature importance is an alternative to the [permutation feature importance](#feature-importance).
 There is a big difference between both importance measures:
-Permutation feature importance is based on drop in model performance.
+Permutation feature importance is based on the decrease in model performance.
 SHAP is based on magnitude of feature attributions.
 
 
+The feature importance plot is useful, but contains no information beyond the importances.
+For a more informative plot, we will next look at the summary plot.
+
 ### Summary Plot
 
-The feature importance plot is useful, but contains no information beyond the importances.
-The summary plot combines feature importance with feature effects:
-It shows the importance through ranking.
-It shows range and distribution of Shapley values: e.g., does a feature only positively affect the prediction? What is the range of effects?
-The summary shows also the effect direction, e.g. whether high feature values are associated with positive or negative effect on the predictions.
-
-Each point on the summary plot is a Shapley value for one feature and one instance.
-The position on the y-axis is set by the feature and on the x-axis by the Shapley value.
+The summary plot combines feature importance with feature effects.
+Each point on the summary plot is a Shapley value for a feature and an instance.
+The position on the y-axis is determined by the feature and on the x-axis by the Shapley value.
 The color represents the value of the feature from low to high.
-Overlapping points are jittered in y-axis direction, so we get a sense of the distribution of Shapley values per feature.
+Overlapping points are jittered in y-axis direction, so we get a sense of the distribution of the Shapley values per feature.
+The features are ordered according to their importance.
 
-```{r fig.cap = "SHAP summary plot, which extends the SHAP feature importance plot. Low number of years on hormonal contraceptives decrease the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model, and are not necessarily causal in the real world.",  out.width=800}
+```{r fig.cap = "SHAP summary plot that extends the SHAP feature importance plot. Low number of years on hormonal contraceptives reduce the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model and are not necessarily causal in the real world.",  out.width=800}
 knitr::include_graphics("images/shap-importance-extended.png")
 ```
 
-In the summary plot we see first hints about the relationship between the value of a feature and the impact on the prediction.
+In the summary plot, we see first indications of the relationship between the value of a feature and the impact on the prediction.
 But to see the exact shape of the relationship, we have to look at SHAP dependence plots.
 
 ### SHAP Feature Dependence
 
-SHAP feature dependence is a simple plot:
-Pick a feature.
-For each instance from the data, plot a point with the feature value on the x-axis and corresponding Shapley value on the y-axis.
-Done.
-Mathematically, the plot contains this set of points: $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
+SHAP feature dependence might be the simplest global interpretation plot:
+1) Pick a feature.
+2) For each instance from the data, plot a point with the feature value on the x-axis and corresponding Shapley value on the y-axis.
+3) Done.
+
+Mathematically, the plot contains the following points: $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
 
 The following figure shows the SHAP feature dependence for years on hormonal contraceptives:
 
-```{r fig.cap="SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increase the predicted cancer probability.", out.width=800}
+```{r fig.cap="SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increases the predicted cancer probability.", out.width=800}
 knitr::include_graphics("images/shap-dependence.png")
 ```
 
 SHAP Dependence Plots are an alternative to [Partial Dependence Plots](#pdp) and [Accumulated Local Effects](#ale).
-Differences:
-PDP and ALE are average effects, SHAP dependence also shows the variance on the y-axis.
-Especially in case of interactions, the SHAP dependence plot will be much more dispersed.
-
-The plot can be improved by also visualizing feature interactions.
+While PDP and ALE plot show average effects, SHAP dependence also shows the variance on the y-axis.
+Especially in case of interactions, the SHAP dependence plot will be much more dispersed in the y-axis.
+The dependence plot can be improved by highlighting these feature interactions.
 
 
 ### SHAP Feature Interactions
 
 The interaction effect is the additional combined feature effect after accounting for the individual feature effects.
-
-For Shapley values, there is a mathematical definition of so called Shapley interaction index, which also comes from game theory:
+The Shapley interaction index from game theory is defined as:
 
 $$\phi_{i,j}=\sum_{S\subseteq\setminus\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)$$
 
@@ -365,40 +351,37 @@ when $i\neq{}j$ and:
 
 $$\delta_{ij}(S)=f_x(S\cup\{i,j\})-f_x(S\cup\{i\})-f_x(S\cup\{j\})+f_x(S)$$
 
-In words, the interaction is the marginal contribution of two feature i and j.
-We average this again over all possible feature coalitions S, like in the standard Shapley value.
-And we only count the interaction effect, i.e. we subtract the main effect of the features.
-Basically the interaction gain by using both features, when account for the individual feature effects.
-This is very similar to the definition of interaction in the [Feature Interaction chapter](#interaction).
-
+This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects.
+We average the values over all possible feature coalitions S, as in the Shapley value computation.
 When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions p x p, where p is the number of features.
 
 How can we use the interaction index?
-For example to automatically color the SHAP feature dependence plot:
+For example, to automatically color the SHAP feature dependence plot with the strongest interactions:
 
-```{r fig.cap = "SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases with close to 0 years, the occurence of a STD increases the predicted risk. For more years on contraceptives, the occurence of an STD decreases the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits).", out.width=800}
+```{r fig.cap = "SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases with close to 0 years, the occurence of  STD increases the predicted risk. For more years on contraceptives, the occurence of an STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits).", out.width=800}
 knitr::include_graphics("images/shap-dependence-interaction.png")
 ```
 
 ### Clustering SHAP values
 
-Shapley values can be used for clustering the data.
+You can cluster your data with the help Shapley values.
 The goal of clustering is to find groups of similar instances.
-Usually clustering is based on the features.
-Features are often on different scales, height might be measured in meters, color intensity from 0 to 100 and some sensor output between -1 and 1.
+Normally, clustering is based on features.
+Features are often on different scales.
+For example, height might be measured in meters, color intensity from 0 to 100 and some sensor output between -1 and 1.
 The difficulty is to compute distances between instances with such different, non-comparable features.
 
-SHAP clustering works by clustering on Shapley values of each instance, instead of the feature values.
-This means you cluster instances by explanation similarity.
-Another advantage is that SHAP values all have the same unit -- the unit of the prediction space.
-The Shapley values for the p features describe an instance.
-You can use any clustering method to cluster the instances.
-For the following example, hierachical agglomerative cluster was used.
-For the plot we create the force plot, which explains a prediction, for each instance.
-We rotate them, so that they are vertical and put them side by side.
-The clustering similarity sorts the instances.
+SHAP clustering works by clustering on Shapley values of each instance.
+This means that you cluster instances by explanation similarity.
+All SHAP values have the same unit -- the unit of the prediction space.
 
-```{r, fig.cap="Stacked SHAP feature attributions clustered by explanation similarity. Each position on the x-axis is an instance from the data. Red SHAP values increase the prediction, blue ones decrease it. One cluster stands out: To the right is a group with a high predicted cancer risk.", out.width=800}
+You can use any clustering method.
+The following example uses hierarchical agglomerative clustering to order the instances.
+
+The plot consists of all force plots, each of which explains the prediction of an instance.
+We rotate the force plots vertically and place them side by side according to their clustering similarity.
+
+```{r, fig.cap="Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. A cluster stands out: On the right is a group with a high predicted cancer risk.", out.width=800}
 knitr::include_graphics("images/shap-clustering.png")
 ```
 ### Advantages
@@ -440,7 +423,8 @@ Shapley values can be misinterpreted and access to data is needed to compute the
 ### Software
 
 The authors implemented SHAP in the [shap Python package](https://github.com/slundberg/shap).
-This package was used for all the examples in this chapter.
+This implementation works for tree-based models in the [scikit-learn](https://scikit-learn.org/stable/) machine learning library for Python.
+The shap package was also used for the examples in this chapter.
 
 SHAP is integrated into the tree boosting frameworks [xgboost](https://github.com/dmlc/xgboost/tree/master/python-package) and [LightGBM](https://github.com/microsoft/LightGBM).
 
