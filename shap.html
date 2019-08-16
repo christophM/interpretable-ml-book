@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>5.1 Partial Dependence Plot (PDP) | Interpretable Machine Learning</title>
+  <title>5.9 SHAP (SHapley Additive exPlanations) | Interpretable Machine Learning</title>
   <meta name="description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
   <meta name="generator" content="bookdown 0.12 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="5.1 Partial Dependence Plot (PDP) | Interpretable Machine Learning" />
+  <meta property="og:title" content="5.9 SHAP (SHapley Additive exPlanations) | Interpretable Machine Learning" />
   <meta property="og:type" content="book" />
   
   
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="christophM/interpretable-ml-book" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="5.1 Partial Dependence Plot (PDP) | Interpretable Machine Learning" />
+  <meta name="twitter:title" content="5.9 SHAP (SHapley Additive exPlanations) | Interpretable Machine Learning" />
   
   <meta name="twitter:description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
   
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="agnostic.html">
-<link rel="next" href="ice.html">
+<link rel="prev" href="shapley.html">
+<link rel="next" href="example-based.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -333,79 +333,195 @@ window.cookieconsent.initialise({
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="pdp" class="section level2">
-<h2><span class="header-section-number">5.1</span> Partial Dependence Plot (PDP)</h2>
-<p>The partial dependence plot (short PDP or PD plot) shows the marginal effect one or two features have on the predicted outcome of a machine learning model (J. H. Friedman 2001<a href="#fn27" class="footnoteRef" id="fnref27"><sup>27</sup></a>). A partial dependence plot can show whether the relationship between the target and a feature is linear, monotonic or more complex. For example, when applied to a linear regression model, partial dependence plots always show a linear relationship.</p>
-<!-- *Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects* -->
-<p>The partial dependence function for regression is defined as:</p>
-<p><span class="math display">\[\hat{f}_{x_S}(x_S)=E_{x_C}\left[\hat{f}(x_S,x_C)\right]=\int\hat{f}(x_S,x_C)d\mathbb{P}(x_C)\]</span></p>
-<p>The <span class="math inline">\(x_S\)</span> are the features for which the partial dependence function should be plotted and <span class="math inline">\(x_C\)</span> are the other features used in the machine learning model <span class="math inline">\(\hat{f}\)</span>. Usually, there are only one or two features in the set S. The feature(s) in S are those for which we want to know the effect on the prediction. The feature vectors <span class="math inline">\(x_S\)</span> and <span class="math inline">\(x_C\)</span> combined make up the total feature space x. Partial dependence works by marginalizing the machine learning model output over the distribution of the features in set C, so that the function shows the relationship between the features in set S we are interested in and the predicted outcome. By marginalizing over the other features, we get a function that depends only on features in S, interactions with other features included.</p>
-<p>The partial function <span class="math inline">\(\hat{f}_{x_S}\)</span> is estimated by calculating averages in the training data, also known as Monte Carlo method:</p>
-<p><span class="math display">\[\hat{f}_{x_S}(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})\]</span> The partial function tells us for given value(s) of features S what the average marginal effect on the prediction is. In this formula, <span class="math inline">\(x^{(i)}_{C}\)</span> are actual feature values from the dataset for the features in which we are not interested, and n is the number of instances in the dataset. An assumption of the PDP is that the features in C are not correlated with the features in S. If this assumption is violated, the averages calculated for the partial dependence plot will include data points that are very unlikely or even impossible (see disadvantages).</p>
-<p>For classification where the machine learning model outputs probabilities, the partial dependence plot displays the probability for a certain class given different values for feature(s) in S. An easy way to deal with multiple classes is to draw one line or plot per class.</p>
-<p>The partial dependence plot is a global method: The method considers all instances and gives a statement about the global relationship of a feature with the predicted outcome.</p>
-<p><strong>Categorical features</strong></p>
-<p>So far, we have only considered numerical features. For categorical features, the partial dependence is very easy to calculate. For each of the categories, we get a PDP estimate by forcing all data instances to have the same category. For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season, we get 4 numbers, one for each season. To compute the value for “summer”, we replace the season of all data instances with “summer” and average the predictions.</p>
-<div id="examples" class="section level3">
-<h3><span class="header-section-number">5.1.1</span> Examples</h3>
-<p>In practice, the set of features S usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots. Everything beyond that is quite tricky. Even 3D on a 2D paper or monitor is already challenging.</p>
-<p>Let us return to the regression example, in which we predict the number of <a href="bike-data.html#bike-data">bikes that will be rented on a given day</a>. First we fit a machine learning model, then we analyze the partial dependencies. In this case, we have fitted a random forest to predict the number of bicycles and use the partial dependence plot to visualize the relationships the model has learned. The influence of the weather features on the predicted bike counts is visualized in the following figure.</p>
-<div class="figure"><span id="fig:pdp-bike"></span>
-<img src="images/pdp-bike-1.png" alt="PDPs for the bicycle count prediction model and temperature, humidity and wind speed. The largest differences can be seen in the temperature. The hotter, the more bikes are rented. This trend goes up to 20 degrees Celsius, then flattens and drops slightly at 30. Marks on the x-axis indicate the data distribution." width="1050" />
+<div id="shap" class="section level2">
+<h2><span class="header-section-number">5.9</span> SHAP (SHapley Additive exPlanations)</h2>
+<p><em>This chapter is currently only available in this web version. ebook and print will follow.</em></p>
+<p>SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)<a href="#fn43" class="footnoteRef" id="fnref43"><sup>43</sup></a> is a method to explain individual predictions. SHAP is based on the game theoretically optimal <a href="shapley.html#shapley">Shapley Values</a>.</p>
+<p>There are two reasons why SHAP got its own chapter and is not a subchapter of <a href="shapley.html#shapley">Shapley values</a>. First, the SHAP authors proposed KernelSHAP, an alternative, kernel-based estimation approach for Shapley values inspired by <a href="lime.html#lime">local surrogate models</a>. And they proposed TreeSHAP, an efficient estimation approach for tree-based models. Second, SHAP comes with many global interpretation methods based on aggregations of Shapley values. This chapter explains both the new estimation approaches and the global interpretation methods.</p>
+<p>I recommend reading the chapters on <a href="shapley.html#shapley">Shapley values</a> and <a href="lime.html#lime">local models (LIME)</a> first.</p>
+<div id="definition" class="section level3">
+<h3><span class="header-section-number">5.9.1</span> Definition</h3>
+<p>The goal of SHAP is to explain the prediction of an instance x by computing the contribution of each feature to the prediction. The SHAP explanation method computes Shapley values from coalitional game theory. The feature values of a data instance act as players in a coalition. Shapley values tell us how to fairly distribute the “payout” (= the prediction) among the features. A player can be an individual feature value, e.g. for tabular data. A player can also be a group of feature values. For example to explain an image, pixels can be grouped to super pixels and the prediction distributed among them. One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feature attribution method, a linear model. That view connects LIME and Shapley Values. SHAP specifies the explanation as:</p>
+<p><span class="math display">\[g(z&#39;)=\phi_0+\sum_{j=1}^M\phi_jz_j&#39;\]</span></p>
+<p>where g is the explanation model, <span class="math inline">\(z&#39;\in\{0,1\}^M\)</span> is the coalition vector, M is the maximum coalition size and <span class="math inline">\(\phi_j\in\mathbb{R}\)</span> is the feature attribution for a feature j, the Shapley values. What I call “coalition vector” is called “simplified features” in the SHAP paper. I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to super pixels. I believe it is helpful to think about the z’s as describing coalitions: In the coalition vector, an entry of 1 means that the corresponding feature value is “present” and 0 that it is “absent”. This should sound familiar to you if you know about Shapley values. To compute Shapley values, we simulate that only some features values are playing (“present”) and some are not (“absent”). The representation as a linear model of coalitions is a trick for the computation of the <span class="math inline">\(\phi\)</span>’s. For x, the instance of interest, the coalition vector x’ is a vector of all 1’s, i.e., all feature values are “present”. The formula simplifies to:</p>
+<p><span class="math display">\[g(x&#39;)=\phi_0+\sum_{j=1}^M\phi_j\]</span></p>
+<p>You can find this formula in similar notation in the <a href="shapley.html#shapley">Shapley value</a> chapter. More about the actual estimation comes later. Let us first talk about the properties of the <span class="math inline">\(\phi\)</span>’s before we go into the details of their estimation.</p>
+<!-- Desirable properties -->
+<p>Shapley values are the only solution that satisfies properties of Efficiency, Symmetry, Dummy and Additivity. SHAP also satisfies these, since it computes Shapley values. In the SHAP paper, you will find discrepancies between SHAP properties and Shapley properties. SHAP describes the following three desirable properties:</p>
+<p><strong>1) Local accuracy</strong></p>
+<p><span class="math display">\[f(x)=g(x&#39;)=\phi_0+\sum_{j=1}^M\phi_jx_j&#39;\]</span></p>
+<p>If you define <span class="math inline">\(\phi_0=E_X(\hat{f}(x))\)</span> and set all <span class="math inline">\(x_j&#39;\)</span> to 1, this is the Shapley efficiency property. Only with a different name and using the coalition vector.</p>
+<p><span class="math display">\[f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j&#39;=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j\]</span></p>
+<p><strong>2) Missingness</strong></p>
+<p><span class="math display">\[x_j&#39;=0\Rightarrow\phi_j=0\]</span></p>
+<p>Missingness says that a missing feature gets an attribution of zero. Note that <span class="math inline">\(x_j&#39;\)</span> refers to the coalitions, where a value of 0 represents the absence of a feature value. In coalition notation, all feature values <span class="math inline">\(x_j&#39;\)</span> of the instance to be explained should be ‘1’. The presence of a 0 would mean that the feature value is missing for the instance of interest. This property is not among the properties of the “normal” Shapley values. So why do we need it for SHAP? Lundberg calls it a <a href="https://github.com/slundberg/shap/issues/175#issuecomment-407134438">“minor book-keeping property”</a>. A missing feature could – in theory – have an arbitrary Shapley value without hurting the local accuracy property, since it is multiplied with <span class="math inline">\(x_j&#39;=0\)</span>. The Missingness property enforces that missing features get a Shapley value of 0. In practice this is only relevant for features that are constant.</p>
+<p><strong>3) Consistency</strong></p>
+<p>Let <span class="math inline">\(f_x(z&#39;)=f(h_x(z&#39;))\)</span> and <span class="math inline">\(z_{\setminus{}j&#39;}\)</span> indicate that <span class="math inline">\(z_j&#39;=0\)</span>. For any two models f and f’ that satisfy:</p>
+<p><span class="math display">\[f_x&#39;(z&#39;)-f_x&#39;(z_{\setminus{}j}&#39;)\geq{}f_x(z&#39;)-f_x(z_{\setminus{}j}&#39;)\]</span></p>
+<p>for all inputs <span class="math inline">\(z&#39;\in\{0,1\}^M\)</span>, then:</p>
+<p><span class="math display">\[\phi_j(f&#39;,x)\geq\phi_j(f,x)\]</span></p>
+<p>The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same. From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee.</p>
+</div>
+<div id="kernelshap" class="section level3">
+<h3><span class="header-section-number">5.9.2</span> KernelSHAP</h3>
+<!-- The general Idea of linear model -->
+<p>KernelSHAP estimates for an instance x the contributions of each feature value to the prediction. KernelSHAP consists of 5 steps:</p>
+<ul>
+<li>Sample coalitions <span class="math inline">\(z_k&#39;\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}\)</span> (1 = feature present in coalition, 0 = feature absent).</li>
+<li>Get prediction for each <span class="math inline">\(z_k&#39;\)</span> by first converting <span class="math inline">\(z_k&#39;\)</span> to the original feature space and then applying model f: <span class="math inline">\(f(h_x(z_k&#39;))\)</span></li>
+<li>Compute the weight for each <span class="math inline">\(z_k&#39;\)</span> with the SHAP kernel.</li>
+<li>Fit weighted linear model.</li>
+<li>Return Shapley values <span class="math inline">\(\phi_k\)</span>, the coefficients from the linear model.</li>
+</ul>
+<p>We can create a random coalition by repeated coin flips until we have a chain of 0’s and 1’s. For example, the vector of (1,0,1,0) means that we have a coalition of the first and third features. The K sampled coalitions become the dataset for the regression model. The target for the regression model is the prediction for a coalition. (“Hold on!,” you say, “The model has not been trained on these binary coalition data and can’t make predictions for them.”) To get from coalitions of feature values to valid data instances, we need a function <span class="math inline">\(h_x(z&#39;)=z\)</span> where <span class="math inline">\(h_x:\{0,1\}^M\rightarrow\mathbb{R}^p\)</span>. The function <span class="math inline">\(h_x\)</span> maps 1’s to the corresponding value from the instance x that we want to explain. For tabular data, it maps 0’s to the values of another instance that we sample from the data. This means that we equate “feature value is absent” with “feature value is replaced by random feature value from data”. For tabular data, the following figure visualizes the mapping from coalitions to feature values:</p>
+<div class="figure"><span id="fig:shap-simplified-feature"></span>
+<img src="images/shap-simplified-features.jpg" alt="Function $h_x$ maps a coalition to a valid instance. For present features (1), $h_x$ maps to the feature values of x. For absent features (0), $h_x$ maps to the values of a randomly sampled data instance." width="800" />
 <p class="caption">
-FIGURE 5.2: PDPs for the bicycle count prediction model and temperature, humidity and wind speed. The largest differences can be seen in the temperature. The hotter, the more bikes are rented. This trend goes up to 20 degrees Celsius, then flattens and drops slightly at 30. Marks on the x-axis indicate the data distribution.
+FIGURE 5.42: Function <span class="math inline">\(h_x\)</span> maps a coalition to a valid instance. For present features (1), <span class="math inline">\(h_x\)</span> maps to the feature values of x. For absent features (0), <span class="math inline">\(h_x\)</span> maps to the values of a randomly sampled data instance.
 </p>
 </div>
-<p>For warm but not too hot weather, the model predicts on average a high number of rented bicycles. Potential bikers are increasingly inhibited in renting a bike when humidity exceeds 60%. In addition, the more wind the fewer people like to cycle, which makes sense. Interestingly, the predicted number of bike rentals does not fall when wind speed increases from 25 to 35 km/h, but there is not much training data, so the machine learning model could probably not learn a meaningful prediction for this range. At least intuitively, I would expect the number of bicycles to decrease with increasing wind speed, especially when the wind speed is very high.</p>
-<p>To illustrate a partial dependence plot with a categorical feature, we examine the effect of the season feature on the predicted bike rentals.</p>
-<div class="figure"><span id="fig:pdp-bike-cat"></span>
-<img src="images/pdp-bike-cat-1.png" alt="PDPs for the bike count prediction model and the season. Unexpectedly all seasons show the same effect, only for spring the model predicts less bicycle rentals." width="1050" />
+<p>In a perfect world, <span class="math inline">\(h_x\)</span> samples the absent features values conditional on the present features values:</p>
+<p><span class="math display">\[f(h_x(z&#39;))=E_{X_C|X_S}[f(x)|x_S]\]</span></p>
+<p>where <span class="math inline">\(X_C\)</span> is the set of absent features and <span class="math inline">\(X_S\)</span> is the set of present features. However, as defined above, <span class="math inline">\(h_x\)</span> for tabular data treats <span class="math inline">\(X_C\)</span> and <span class="math inline">\(X_S\)</span> as independent and integrates over the marginal distribution:</p>
+<p><span class="math display">\[f(h_x(z&#39;))=E_{X_C}[f(x)]\]</span></p>
+<p>Sampling from the marginal distribution means ignoring the dependence structure between present and absent features. KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods. The estimation puts too much weight on unlikely instances. Results can become unreliable. As we will see later, TreeSHAP for tree-ensembles is not affected by this issue.</p>
+<p>For images, the following figure describes a possible mapping function:</p>
+<div class="figure"><span id="fig:unnamed-chunk-22"></span>
+<img src="images/shap-superpixel.jpg" alt="Function $h_x$ maps coalitions of super pixels (sp) to images. Super-pixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option." width="800" />
 <p class="caption">
-FIGURE 5.3: PDPs for the bike count prediction model and the season. Unexpectedly all seasons show the same effect, only for spring the model predicts less bicycle rentals.
+FIGURE 5.43: Function <span class="math inline">\(h_x\)</span> maps coalitions of super pixels (sp) to images. Super-pixels are groups of pixels. For present features (1), <span class="math inline">\(h_x\)</span> returns the corresponding part of the original image. For absent features (0), <span class="math inline">\(h_x\)</span> greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option.
 </p>
 </div>
-<p>We also compute the partial dependence for <a href="cervical.html#cervical">cervical cancer classification</a>. This time we fit a random forest to predict whether a woman might get cervical cancer based on risk factors. We compute and visualize the partial dependence of the cancer probability on different features for the random forest:</p>
-<div class="figure"><span id="fig:pdp-cervical"></span>
-<img src="images/pdp-cervical-1.png" alt="PDPs of cancer probability based on age and years with hormonal contraceptives. For age, the PDP shows that the probability is low until 40 and increases after. The more years on hormonal contraceptives the higher the predicted cancer risk, especially after 10 years. For both features not many data points with large values were available, so the PD estimates are less reliable in those regions." width="1050" />
+<!-- Kernel -->
+<p>The big difference to LIME is the weighting of the instances in the regression model. LIME weights the instances according to how close they are to the original instance. The more 0’s in the coalition vector, the smaller the weight in LIME. SHAP weights the sampled instances according to the weight the coalition would get in the Shapley value estimation. Small coalitions (few 1’s) and large coalitions (i.e. many 1’s) get the largest weights. The intuition behind it is: We learn most about individual features if we can study their effects in isolation. If a coalition consists of a single feature, we can learn about the features’ isolated main effect on the prediction. If a coalition consists of all but one feature, we can learn about this features’ total effect (main effect plus feature interactions). If a coalition consists of half the features, we learn little about an individual features contribution, as there are many possible coalitions with half of the features. To achieve Shapley compliant weighting, the Lundberg et. al propose the SHAP kernel:</p>
+<p><span class="math display">\[\pi_{x}(z&#39;)=\frac{(M-1)}{\binom{M}{|z&#39;|}|z&#39;|(M-|z&#39;|)}\]</span></p>
+<p>Here, M is the maximum coalition size and <span class="math inline">\(|z&#39;|\)</span> the number of present features in instance z’. Lundberg and Lee show that linear regression with this kernel weight yields Shapley values. If you would use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!</p>
+<!-- Sampling trick -->
+<p>We can be a bit smarter about the sampling of coalitions: The smallest and largest coalitions take up most of the weight. We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly. We start with all possible coalitions with 1 and M-1 features, which makes 2 times M coalitions in total. When we have enough budget left (current budget is K - 2M), we can include coalitions with two features and with M-2 features and so on. From the remaining coalition sizes, we sample with readjusted weights.</p>
+<!-- Linear Model -->
+<p>We have the data, the target and the weights. Everything to build our weighted linear regression model:</p>
+<p><span class="math display">\[g(z&#39;)=\phi_0+\sum_{j=1}^M\phi_jz_j&#39;\]</span></p>
+<p>We train the linear model g by optimizing the following loss function L:</p>
+<p><span class="math display">\[L(f,g,\pi_{x})=\sum_{z&#39;\in{}Z}[f(h_x(z&#39;))-g(z&#39;)]^2\pi_{x}(z&#39;)\]</span></p>
+<p>where Z is the training data. This is the good old boring sum of squared errors that we usually optimize for linear models. The estimated coefficients of the model, the <span class="math inline">\(\phi_j\)</span>’s are the Shapley values.</p>
+<p>Since we are in a linear regression setting, we can also make use of the standard tools for regression. For example, we can add regularization terms to make the model sparse. If we add an L1 penalty to the loss L, we can create sparse explanations. (I am not so sure whether the resulting coefficients would still be valid Shapley values though)</p>
+</div>
+<div id="treeshap" class="section level3">
+<h3><span class="header-section-number">5.9.3</span> TreeSHAP</h3>
+<p>Lundberg et. al (2018)<a href="#fn44" class="footnoteRef" id="fnref44"><sup>44</sup></a> proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees. TreeSHAP is fast, computes exact Shapley values, and correctly estimates the Shapley values when features are dependent. In comparison, KernelSHAP is expensive to compute and only approximates the actual Shapley values.</p>
+<p>How much faster is TreeSHAP? For the exact Shapley values, it reduces the computational complexity from <span class="math inline">\(O(TL2^M)\)</span> to <span class="math inline">\(O(TLD^2)\)</span>, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.</p>
+<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
+<p>TreeSHAP estimates the correct conditional expectation <span class="math inline">\(E_{X_S|X_C}(f(x)|x_S)\)</span>. I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S. If we conditioned on all features – if S was the set of all features – then the prediction from the node in which the instance x falls would be the expected prediction. If we did no condition on any feature – if S was empty – we would use the weighted average of predictions of all terminal nodes. If S contains some, but not all, features, we ignore predictions of unreachable nodes. Unreachable means that the decision path that leads to this node contradicts values in <span class="math inline">\(x_S\)</span>. From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node). The mean of the remaining terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S. The problem is that we have to apply this procedure for each possible subset S of the feature values. <!--
+This means $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$ times.
+Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
+--> Fortunately, TreeSHAP computes in polynomial time instead of exponential. The basic idea is to push all possible subsets S down the tree at the same time. For each decision node we have to keep track of the number of subsets. This depends on the subsets in the parent node and the split feature. For example, when the first split in a tree is on feature x3, then all the subsets that contain feature x3 will go to one node (the one where x goes). Subsets that do not contain feature x3 go to both nodes with reduced weight. Unfortunately, subsets of different sizes have different weights. The algorithm has to keep track of the overall weight of the subsets in each node. This complicates the algorithm. I refer to the original paper for details of TreeSHAP. The computation can be expanded to more trees: Thanks to the Additivity property of Shapley values, the Shapley values of a tree ensemble is the (weighted) average of the Shapley values of the individual trees.</p>
+<p>Next, we will look at SHAP explanations in action.</p>
+</div>
+<div id="examples-4" class="section level3">
+<h3><span class="header-section-number">5.9.4</span> Examples</h3>
+<p>I trained a random forest classifier with 100 trees to predict the <a href="cervical.html#cervical">risk for cervical cancer</a>. We will use SHAP to explain individual predictions. We can use the fast TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees.</p>
+<p>Since SHAP computes Shapley values, the interpretation is the same as in the <a href="shapley.html#shapley">Shapley value chapter</a>. But with the Python shap package comes a different visualization: You can visualize feature attributions such as Shapley values as “forces”. Each feature value is a force that either increases or decreases the prediction. The prediction starts from the baseline. The baseline for Shapley values is the average of all predictions. In the plot, each Shapley value is an arrow that pushes to increase (positive value) or decrease (negative value) the prediction. These forces balance each other out at the actual prediction of the data instance.</p>
+<p>The following figure shows SHAP explanation force plots for two women from the cervical cancer dataset:</p>
+<div class="figure"><span id="fig:unnamed-chunk-23"></span>
+<img src="images/unnamed-chunk-23-1.png" alt="SHAP values to explain the predicted cancer probabilities of two individuals. The baseline -- the average predicted probability -- is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are offset by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase her predicted cancer risk." width="800" />
 <p class="caption">
-FIGURE 5.4: PDPs of cancer probability based on age and years with hormonal contraceptives. For age, the PDP shows that the probability is low until 40 and increases after. The more years on hormonal contraceptives the higher the predicted cancer risk, especially after 10 years. For both features not many data points with large values were available, so the PD estimates are less reliable in those regions.
+FIGURE 5.44: SHAP values to explain the predicted cancer probabilities of two individuals. The baseline – the average predicted probability – is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are offset by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase her predicted cancer risk.
 </p>
 </div>
-<p>We can also visualize the partial dependence of two features at once:</p>
-<div class="figure"><span id="fig:pdp-cervical-2d"></span>
-<img src="images/pdp-cervical-2d-1.png" alt="PDP of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45. For ages below 25, women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had 0 or more than 2 pregnancies. But be careful when drawing conclusions: This might just be a correlation and not causal!" width="1050" />
+<p>These were explanations for individual predictions.</p>
+<p>Shapley values can be combined into global explanations. If we run SHAP for every instance, we get a matrix of Shapley values. This matrix has one row per data instance and one column per feature. We can interpret the entire model by analyzing the Shapley values in this matrix.</p>
+<p>We start with SHAP feature importance.</p>
+</div>
+<div id="shap-feature-importance" class="section level3">
+<h3><span class="header-section-number">5.9.5</span> SHAP Feature Importance</h3>
+<p>The idea behind SHAP feature importance is simple: Features with large absolute Shapley values are important. Since we want the global importance, we average the absolute Shapley values per feature across the data:</p>
+<p><span class="math display">\[I_j=\sum_{i=1}^n{}|\phi_j^{(i)}|\]</span></p>
+<p>Next, we sort the features by decreasing importance and plot them. The following figure shows the SHAP feature importance for the random forest trained before for predicting cervical cancer.</p>
+<div class="figure"><span id="fig:unnamed-chunk-24"></span>
+<img src="images/shap-importance.png" alt="SHAP feature importance measured as the mean absolute Shapley values. The number of years with hormonal contraceptives was the most important feature, changing the predicted absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis)." width="800" />
 <p class="caption">
-FIGURE 5.5: PDP of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45. For ages below 25, women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had 0 or more than 2 pregnancies. But be careful when drawing conclusions: This might just be a correlation and not causal!
+FIGURE 5.45: SHAP feature importance measured as the mean absolute Shapley values. The number of years with hormonal contraceptives was the most important feature, changing the predicted absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis).
+</p>
+</div>
+<p>SHAP feature importance is an alternative to <a href="feature-importance.html#feature-importance">permutation feature importance</a>. There is a big difference between both importance measures: Permutation feature importance is based on the decrease in model performance. SHAP is based on magnitude of feature attributions.</p>
+<p>The feature importance plot is useful, but contains no information beyond the importances. For a more informative plot, we will next look at the summary plot.</p>
+</div>
+<div id="shap-summary-plot" class="section level3">
+<h3><span class="header-section-number">5.9.6</span> SHAP Summary Plot</h3>
+<p>The summary plot combines feature importance with feature effects. Each point on the summary plot is a Shapley value for a feature and an instance. The position on the y-axis is determined by the feature and on the x-axis by the Shapley value. The color represents the value of the feature from low to high. Overlapping points are jittered in y-axis direction, so we get a sense of the distribution of the Shapley values per feature. The features are ordered according to their importance.</p>
+<div class="figure"><span id="fig:unnamed-chunk-25"></span>
+<img src="images/shap-importance-extended.png" alt="SHAP summary plot. Low number of years on hormonal contraceptives reduce the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model and are not necessarily causal in the real world." width="800" />
+<p class="caption">
+FIGURE 5.46: SHAP summary plot. Low number of years on hormonal contraceptives reduce the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model and are not necessarily causal in the real world.
+</p>
+</div>
+<p>In the summary plot, we see first indications of the relationship between the value of a feature and the impact on the prediction. But to see the exact form of the relationship, we have to look at SHAP dependence plots.</p>
+</div>
+<div id="shap-dependence-plot" class="section level3">
+<h3><span class="header-section-number">5.9.7</span> SHAP Dependence Plot</h3>
+<p>SHAP feature dependence might be the simplest global interpretation plot: 1) Pick a feature. 2) For each data instance, plot a point with the feature value on the x-axis and the corresponding Shapley value on the y-axis. 3) Done.</p>
+<p>Mathematically, the plot contains the following points: <span class="math inline">\(\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n\)</span></p>
+<p>The following figure shows the SHAP feature dependence for years on hormonal contraceptives:</p>
+<div class="figure"><span id="fig:unnamed-chunk-26"></span>
+<img src="images/shap-dependence.png" alt="SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increases the predicted cancer probability." width="800" />
+<p class="caption">
+FIGURE 5.47: SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increases the predicted cancer probability.
+</p>
+</div>
+<p>SHAP dependence plots are an alternative to <a href="pdp.html#pdp">partial dependence plots</a> and <a href="ale.html#ale">accumulated local effects</a>. While PDP and ALE plot show average effects, SHAP dependence also shows the variance on the y-axis. Especially in case of interactions, the SHAP dependence plot will be much more dispersed in the y-axis. The dependence plot can be improved by highlighting these feature interactions.</p>
+</div>
+<div id="shap-interaction-values" class="section level3">
+<h3><span class="header-section-number">5.9.8</span> SHAP Interaction Values</h3>
+<p>The interaction effect is the additional combined feature effect after accounting for the individual feature effects. The Shapley interaction index from game theory is defined as:</p>
+<p><span class="math display">\[\phi_{i,j}=\sum_{S\subseteq\setminus\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)\]</span></p>
+<p>when <span class="math inline">\(i\neq{}j\)</span> and:</p>
+<p><span class="math display">\[\delta_{ij}(S)=f_x(S\cup\{i,j\})-f_x(S\cup\{i\})-f_x(S\cup\{j\})+f_x(S)\]</span></p>
+<p>This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects. We average the values over all possible feature coalitions S, as in the Shapley value computation. When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions M x M, where M is the number of features.</p>
+<p>How can we use the interaction index? For example, to automatically color the SHAP feature dependence plot with the strongest interaction:</p>
+<div class="figure"><span id="fig:unnamed-chunk-27"></span>
+<img src="images/shap-dependence-interaction.png" alt="SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of an STD increases the predicted cancer risk. For more years on contraceptives, the occurence of an STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits)." width="800" />
+<p class="caption">
+FIGURE 5.48: SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of an STD increases the predicted cancer risk. For more years on contraceptives, the occurence of an STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits).
 </p>
 </div>
 </div>
-<div id="advantages-5" class="section level3">
-<h3><span class="header-section-number">5.1.2</span> Advantages</h3>
-<p>The computation of partial dependence plots is <strong>intuitive</strong>: The partial dependence function at a particular feature value represents the average prediction if we force all data points to assume that feature value. In my experience, lay people usually understand the idea of PDPs quickly.</p>
-<p>If the feature for which you computed the PDP is not correlated with the other features, then the PDPs perfectly represent how the feature influences the prediction on average. In the uncorrelated case, the <strong>interpretation is clear</strong>: The partial dependence plot shows how the average prediction in your dataset changes when the j-th feature is changed. It is more complicated when features are correlated, see also disadvantages.</p>
-<p>Partial dependence plots are <strong>easy to implement</strong>.</p>
-<p>The calculation for the partial dependence plots has a <strong>causal interpretation</strong>. We intervene on a feature and measure the changes in the predictions. In doing so, we analyze the causal relationship between the feature and the prediction.<a href="#fn28" class="footnoteRef" id="fnref28"><sup>28</sup></a> The relationship is causal for the model – because we explicitly model the outcome as a function of the features – but not necessarily for the real world!</p>
+<div id="clustering-shap-values" class="section level3">
+<h3><span class="header-section-number">5.9.9</span> Clustering SHAP values</h3>
+<p>You can cluster your data with the help of Shapley values. The goal of clustering is to find groups of similar instances. Normally, clustering is based on features. Features are often on different scales. For example, height might be measured in meters, color intensity from 0 to 100 and some sensor output between -1 and 1. The difficulty is to compute distances between instances with such different, non-comparable features.</p>
+<p>SHAP clustering works by clustering on Shapley values of each instance. This means that you cluster instances by explanation similarity. All SHAP values have the same unit – the unit of the prediction space. You can use any clustering method. The following example uses hierarchical agglomerative clustering to order the instances.</p>
+<p>The plot consists of many force plots, each of which explains the prediction of an instance. We rotate the force plots vertically and place them side by side according to their clustering similarity.</p>
+<div class="figure"><span id="fig:unnamed-chunk-28"></span>
+<img src="images/shap-clustering.png" alt="Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. A cluster stands out: On the right is a group with a high predicted cancer risk." width="800" />
+<p class="caption">
+FIGURE 5.49: Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. A cluster stands out: On the right is a group with a high predicted cancer risk.
+</p>
 </div>
-<div id="disadvantages-5" class="section level3">
-<h3><span class="header-section-number">5.1.3</span> Disadvantages</h3>
-<p>The realistic <strong>maximum number of features</strong> in a partial dependence function is two. This is not the fault of PDPs, but of the 2-dimensional representation (paper or screen) and also of our inability to imagine more than 3 dimensions.</p>
-<p>Some PD plots do not show the <strong>feature distribution</strong>. Omitting the distribution can be misleading, because you might overinterpret regions with almost no data. This problem is easily solved by showing a rug (indicators for data points on the x-axis) or a histogram.</p>
-<p>The <strong>assumption of independence</strong> is the biggest issue with PD plots. It is assumed that the feature(s) for which the partial dependence is computed are not correlated with other features. For example, suppose you want to predict how fast a person walks, given the person’s weight and height. For the partial dependence of one of the features, e.g. height, we assume that the other features (weight) are not correlated with height, which is obviously a false assumption. For the computation of the PDP at a certain height (e.g. 200 cm), we average over the marginal distribution of weight, which might include a weight below 50 kg, which is unrealistic for a 2 meter person. In other words: When the features are correlated, we create new data points in areas of the feature distribution where the actual probability is very low (for example it is unlikely that someone is 2 meters tall but weighs less than 50 kg). One solution to this problem is <a href="ale.html#ale">Accumulated Local Effect plots</a> or short ALE plots that work with the conditional instead of the marginal distribution.</p>
-<p><strong>Heterogeneous effects might be hidden</strong> because PD plots only show the average marginal effects. Suppose that for a feature half your data points have a positive association with the prediction – the larger the feature value the larger the prediction – and the other half has a negative association – the smaller the feature value the larger the prediction. The PD curve could be a horizontal line, since the effects of both halves of the dataset could cancel each other out. You then conclude that the feature has no effect on the prediction. By plotting the <a href="ice.html#ice">individual conditional expectation curves</a> instead of the aggregated line, we can uncover heterogeneous effects.</p>
 </div>
-<div id="software-and-alternatives-1" class="section level3">
-<h3><span class="header-section-number">5.1.4</span> Software and Alternatives</h3>
-<p>There are a number of R packages that implement PDPs. I used the <code>iml</code> package for the examples, but there is also <code>pdp</code> or <code>DALEX</code>. In Python you can use <code>Skater</code>.</p>
-<p>Alternatives to PDPs presented in this book are <a href="ale.html#ale">ALE plots</a> and <a href="ice.html#ice">ICE curves</a>.</p>
+<div id="advantages-13" class="section level3">
+<h3><span class="header-section-number">5.9.10</span> Advantages</h3>
+<p>Since SHAP computes Shapley values, all the advantages of Shapley values apply: SHAP has a <strong>solid theoretical foundation</strong> in game theory. The prediction is <strong>fairly distributed</strong> among the feature values. We get <strong>contrastive explanations</strong> that compare the prediction with the average prediction.</p>
+<p>SHAP <strong>connects LIME and Shapley values</strong>. This is very useful to better understand both methods. It also helps to unify the field of interpretable machine learning.</p>
+<p>SHAP has a <strong>fast implementation for tree-based models</strong>. I believe this was key to the popularity of SHAP, because the biggest barrier for adoption of Shapley values is the slow computation.</p>
+<p>The fast computation makes it possible to compute the many Shapley values needed for the <strong>global model interpretations</strong>. The global interpretation methods include feature importance, feature dependence, interactions, clustering and summary plots. With SHAP, global interpretations are consistent with the local explanations, since the Shapley values are the “atomic unit” of the global interpretations. If you use LIME for local explanations and partial dependence plots plus permutation feature importance for global explanations, you lack a common foundation.</p>
+</div>
+<div id="disadvantages-13" class="section level3">
+<h3><span class="header-section-number">5.9.11</span> Disadvantages</h3>
+<p><strong>KernelSHAP is slow</strong>. This makes KernelSHAP impractical to use when you want to compute Shapley values for many instances. Also all global SHAP methods such as SHAP feature importance require computing Shapley values for a lot of instances.</p>
+<p><strong>KernelSHAP ignores feature dependence</strong>. Most other permutation based interpretation methods have this problem. By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution. However, if features are dependent, e.g. correlated, this leads to putting too much weight on unlikely data points. TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.</p>
+<p>The disadvantages of Shapley values also apply to SHAP: Shapley values can be misinterpreted and access to data is needed to compute them for new data (except for TreeSHAP).</p>
+</div>
+<div id="software-4" class="section level3">
+<h3><span class="header-section-number">5.9.12</span> Software</h3>
+<p>The authors implemented SHAP in the <a href="https://github.com/slundberg/shap">shap</a> Python package. This implementation works for tree-based models in the <a href="https://scikit-learn.org/stable/">scikit-learn</a> machine learning library for Python. The shap package was also used for the examples in this chapter. SHAP is integrated into the tree boosting frameworks <a href="https://github.com/dmlc/xgboost/tree/master/python-package">xgboost</a> and <a href="https://github.com/microsoft/LightGBM">LightGBM</a>. In R, there is the <a href="https://modeloriented.github.io/shapper/">shapper</a> package. SHAP is also included in the R <a href="https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html">xgboost</a> package.</p>
 
-<!--{pagebreak}-->
 </div>
 </div>
+<!-- </div> -->
 <div class="footnotes">
 <hr />
-<ol start="27">
-<li id="fn27"><p>Friedman, Jerome H. “Greedy function approximation: A gradient boosting machine.” Annals of statistics (2001): 1189-1232.<a href="pdp.html#fnref27">↩</a></p></li>
-<li id="fn28"><p>Zhao, Qingyuan, and Trevor Hastie. “Causal interpretations of black-box models.” Journal of Business &amp; Economic Statistics, to appear. (2017).<a href="pdp.html#fnref28">↩</a></p></li>
+<ol start="43">
+<li id="fn43"><p>Lundberg, Scott M., and Su-In Lee. “A unified approach to interpreting model predictions.” Advances in Neural Information Processing Systems. 2017.<a href="shap.html#fnref43">↩</a></p></li>
+<li id="fn44"><p>Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. “Consistent individualized feature attribution for tree ensembles.” arXiv preprint arXiv:1802.03888 (2018).<a href="shap.html#fnref44">↩</a></p></li>
 </ol>
 </div>
             </section>
@@ -413,8 +529,8 @@ FIGURE 5.5: PDP of cancer probability and the interaction of age and number of p
           </div>
         </div>
       </div>
-<a href="agnostic.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="ice.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="shapley.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="example-based.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -444,7 +560,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.2-agnostic-pdp.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.9b-agnostic-shap.Rmd",
 "text": "Edit"
 },
 "history": {
