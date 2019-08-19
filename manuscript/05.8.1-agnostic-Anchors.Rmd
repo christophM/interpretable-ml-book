@@ -9,13 +9,17 @@ set.seed(42)
 
 *Author: Tobias Goerke*
 
-Anchors aims to explain individual predictions of any black-box model by systematically manipulating an input instance’s features while observing the model’s corresponding output. It utilizes reinforcement learning techniques in combination with graph search algorithms to reduce the number of model calls (and hence the required runtime) to a minimum while still being able to recover from local optima. It was proposed by Ribeiro, Singh, and Guestrin in 2018[^Ribeiro2018Anchors] -- the same researchers that introduced the [LIME](#lime) algorithm. 
+`r if(is.html){only.in.html}`
 
-Like its predecessor, the anchors approach deploys a *perturbation-based* strategy to generate *local* explanations for predictions of black-box machine learning models. However, instead of surrogate models used by LIME, the resulting explanations are expressed as easy-to-understand *IF-THEN* rules, called *anchors*. These rules are reusable since they are *scoped*: anchors include the notion of coverage, stating exactly to which other, possibly unseen, instances they apply. Finding said results involves tackling an exploration or multi-armed bandit problem, which originates the discipline of the previously mentioned reinforcement learning. To this end, neighbors, or perturbations, are created and evaluated for every instance that is being explained. Doing so allows the approach to disregard the black box’s structure and its internal parameters so that these can remain both unobserved and unaltered. Thus, the algorithm proceeds *model-agnostically*, i.e., it can be applied to **any** class of model.
+Anchors explains individual predictions of any black-box model by finding a decision rule that "anchors" the prediction sufficiently.
+A rule anchors a prediction if changes in other feature values do not affect the prediction.
+Anchors utilizes reinforcement learning techniques in combination with graph search algorithms to reduce the number of model calls (and hence the required runtime) to a minimum while still being able to recover from local optima. It was proposed by Ribeiro, Singh, and Guestrin in 2018[^Ribeiro2018Anchors] -- the same researchers that introduced the [LIME](#lime) algorithm. 
 
-The authors compare both of their algorithms and visualize how differently these consult their neighborhoods to derive results. For this, Figure 1 depicts them explaining a complex binary classifier (predicts either **-** or **+**). LIME’s results do not indicate how faithful they are as LIME simply learns a line that best approximates the model given a perturbation space $D$. Given the same perturbation space, the anchors approach constructs explanations which adapt their coverage to the model’s behavior and clearly express their boundaries. Thus, they are faithful by design and state exactly for which instances they are valid. This makes anchors intuitive and easy to comprehend.
+Like its predecessor, the anchors approach deploys a *perturbation-based* strategy to generate *local* explanations for predictions of black-box machine learning models. However, instead of surrogate models used by LIME, the resulting explanations are expressed as easy-to-understand *IF-THEN* rules, called *anchors*. These rules are reusable since they are *scoped*: anchors include the notion of coverage, stating exactly to which other, possibly unseen, instances they apply. Finding anchors involves an exploration or multi-armed bandit problem, which originates in the discipline of reinforcement learning. To this end, neighbors, or perturbations, are created and evaluated for every instance that is being explained. Doing so allows the approach to disregard the black box’s structure and its internal parameters so that these can remain both unobserved and unaltered. Thus, the algorithm is *model-agnostic*, i.e., it can be applied to **any** class of model.
 
-```{r fig.cap="Figure 1: LIME vs. Anchors - A Toy Visualization", out.width=800}
+The authors compare both of their algorithms and visualize how differently these consult their neighborhoods to derive results. For this, the following figure depicts LIME and anchors explaining a complex binary classifier (predicts either **-** or **+**). LIME’s results do not indicate how faithful they are as LIME simply learns a line that best approximates the model given a perturbation space $D$. Given the same perturbation space, the anchors approach constructs explanations which adapt their coverage to the model’s behavior and clearly express their boundaries. Thus, they are faithful by design and state exactly for which instances they are valid. This makes anchors intuitive and easy to comprehend.
+
+```{r fig.cap="Figure 1: LIME vs. Anchors -- A Toy Visualization. Figure from Ribeiro, Singh, and Guestrin (2018).", out.width=800}
 knitr::include_graphics("images/anchors-visualization.jpg")
 ```
 
@@ -33,18 +37,14 @@ As mentioned before, the algorithm’s results come in the form of rules, called
 
 Table: one exemplary individual and the model's prediction
 
-|                              |
-|------------------------------|
-| IF SEX = female              |
-| AND Class = first            |
-| THEN PREDICT Survived = true |
-| WITH PRECISION = 97%         |
-| AND COVERAGE = 15%           |
+And the corresponding anchors explanation:
 
-Table: a corresponding anchors explanation
-
+IF `SEX = female`  
+AND `Class = first`  
+THEN PREDICT `Survived = true`  
+WITH PRECISION `97%`  
+AND COVERAGE `15%`  
  
-
 The example shows how anchors can provide important insights into a model's behavior. In this case, the result tells us that it applies to 15\% of perturbation space's instances. In those cases the explanation is 97\% accurate, meaning the displayed predicates are almost exclusively responsible for the predicted outcome. Lastly, it shows which attributes were taken into account by the model, which in this case, is the female sex and first class. Humans, being paramount for correctness, can use this rule to validate the model's behavior. 
 
 Having seen an example headfirst, a formal definition is pending; An anchor $A$ is formally defined as follows:
@@ -82,26 +82,29 @@ $$\underset{A\:\textrm{s.t.}\;P(prec(A)\geq\tau)\geq{}1-\delta}{\textrm{max}}cov
 This optimization causes the algorithm to return a rule that has the highest coverage among all eligible rules (all those that satisfy the precision threshold given the probabilistic definition). These rules are thought to be more important, as they describe a larger part of the model.
 Here it needs to be noted that rules with more predicates tend to have higher precision than rules with fewer predicates. After all, no neighbors different to $x$ can be generated for a rule that fixes every feature of $x$. Thus, the model will classify all neighbors equally and the rule’s precision will be $1$. On the other hand, a rule that fixes many features is overly specific and only applicable to a few instances. Hence, there is a *trade-off between precision and coverage*.
 
-The anchors approach uses four main components to find explanations, as is shown in Figure 2.
+The anchors approach uses four main components to find explanations, as is shown in the figure below.
 
-+ **Candidate Generation**: generates new explanation candidates. In the first round, one candidate per feature of $x$ gets created and fixes the respective value of possible perturbations. In every other round, the best candidates of the previous round are extended by one feature predicate that is not yet contained therein.
-+ **Best candidate identification**: rules that are created need to be compared in regards to which rule explains $x$ the best. This can be done by creating perturbations that match the currently observed rule and calling the model to evaluate them. However, calls to the model need to be minimized as to not induce too much computational overhead. This is why at the core of this component there is a pure-exploration Multi-Armed-Bandit (*MAB*; *KL-LUCB*[^KLLUCB], to be precise). MABs are used to efficiently explore and/or exploit different options (called arms in an analogy to slot machines) in a dynamic environment using sequential selection. For the algorithm’s case, each candidate rule is to be seen as an arm that can be pulled. Each time it is pulled, it gives us a little more information about its payoff (alternatively precision in anchors' case) and tells us about how well the rule describes the instance to be explained.
-+ **Candidate Precision Validation**: takes more samples in case the candidate’s precision (and whether it exceeds the $\tau$ threshold) is not statistically validated, yet.
-+ **Modified Beam Search**: all of the above components are assembled in a beam search, which is a graph search algorithm and a version of the breadth-first algorithm. It carries the $B$ best candidates of each round over to the next one (where $B$ is called the *Beam Width*). These $B$ best rules are then used to create new rules. It conducts at most $featureCount(x)$ rounds, as each feature can only be included in a rule at most once. Thus, at every round $i$, it generates candidates with exactly $i$ predicates and selects the B best thereof. Therefore, by setting $B$ high, the algorithm more likely avoids local optima. In turn, this requires an elevated number of model calls and thereby increases the computational load.
+**Candidate Generation**: generates new explanation candidates. In the first round, one candidate per feature of $x$ gets created and fixes the respective value of possible perturbations. In every other round, the best candidates of the previous round are extended by one feature predicate that is not yet contained therein.
 
-```{r fig.cap="Figure 2: The anchors algorithm’s components and their interrelations (simplified)", out.width=800}
+**Best Candidate Identification**: rules that are created need to be compared in regards to which rule explains $x$ the best. This can be done by creating perturbations that match the currently observed rule and calling the model to evaluate them. However, calls to the model need to be minimized as to not induce too much computational overhead. This is why at the core of this component there is a pure-exploration Multi-Armed-Bandit (*MAB*; *KL-LUCB*[^KLLUCB], to be precise). MABs are used to efficiently explore and/or exploit different options (called arms in an analogy to slot machines) in a dynamic environment using sequential selection. For the algorithm’s case, each candidate rule is to be seen as an arm that can be pulled. Each time it is pulled, it gives us a little more information about its payoff (alternatively precision in anchors' case) and tells us about how well the rule describes the instance to be explained.
+
+**Candidate Precision Validation**: takes more samples in case the candidate’s precision (and whether it exceeds the $\tau$ threshold) has not yet been statistically validated.
+
+**Modified Beam Search**: all of the above components are assembled in a beam search, which is a graph search algorithm and a version of the breadth-first algorithm. It carries the $B$ best candidates of each round over to the next one (where $B$ is called the *Beam Width*). These $B$ best rules are then used to create new rules. It conducts at most $featureCount(x)$ rounds, as each feature can only be included in a rule at most once. Thus, at every round $i$, it generates candidates with exactly $i$ predicates and selects the B best thereof. Therefore, by setting $B$ high, the algorithm more likely avoids local optima. In turn, this requires an elevated number of model calls and thereby increases the computational load.
+
+```{r fig.cap="The anchors algorithm’s components and their interrelations (simplified)", out.width=800}
 knitr::include_graphics("images/anchors-process.jpg")
 ```
 
 The described anchors proceeding is a perfect recipe to derive statistically sound information about why any system classified an instance the way it did. It systematically experiments with the model’s input and concludes by observing respective outputs. It relies on other well established and researched Machine Learning methods (MABs) to reduce the number of calls made to the model. This, in turn, drastically reduces the algorithm’s runtime.
 
 ### Complexity and Runtime
-Knowing the approach’s asymptotic runtime behavior helps to evaluate how well it is expected to perform on certain problems. Let $B$ denote the beam width and $f$ the feature size, then the anchors algorithm is subject to:[^1]
 
-$$\mathcal{O}(B\cdot{}f^2+f^2\cdot\mathcal{O}_{\textrm{MAB}\lbrack{}B\cdot{}f,B\rbrack})$$
+Knowing the approach’s asymptotic runtime behavior helps to evaluate how well it is expected to perform on certain problems. Let $B$ denote the beam width and $p$ the number of all features, then the anchors algorithm is subject to:
 
-[^1]
-This boundary disregards problem-independent hyperparameters, such as the statistical confidence $\delta$ or tolerance $\epsilon$. Abstracting from hyperparameters and the deployed Multi-Armed-Bandit is helpful for this to not introduce too many and complex parameters (see original paper for more info). The MAB basically chooses the $B$ best out of $B \cdot f$ candidates in each round and therefore, most MABs will multiply the $f^2$ factor more than any other parameter.
+$$\mathcal{O}(B\cdot{}p^2+p^2\cdot\mathcal{O}_{\textrm{MAB}\lbrack{}B\cdot{}p,B\rbrack})$$
+
+This boundary disregards problem-independent hyperparameters, such as the statistical confidence $\delta$ or tolerance $\epsilon$. Abstracting from hyperparameters and the deployed Multi-Armed-Bandit is helpful for this to not introduce too many and complex parameters (see original paper for more info). The MAB basically chooses the $B$ best out of $B \cdot p$ candidates in each round and therefore, most MABs will multiply the $p^2$ factor more than any other parameter.
 
 It becomes apparent: the algorithm’s efficiency decreases for feature abundant problems.
 
@@ -110,7 +113,7 @@ It becomes apparent: the algorithm’s efficiency decreases for feature abundant
 ### Tabular Data Example
 
 Tabular data is structured data represented by tables, wherein columns embody features and rows instances. 
-As described previously, one needs to define a model and a perturbation function before creating anchor explanations. While we assume that former exists, the latter can be freely created by the user. An easy way to do so is to use an intuitive default perturbation space for tabular explanation cases which can be built by sampling from a passed data set, e.g., the train set. 
+As described previously, one needs to define a model and a perturbation function before creating anchor explanations. While we assume that former exists, the latter can be freely created by the user. An easy way to do so is to use an intuitive default perturbation space for tabular explanation cases which can be built by sampling from, e.g., the training data. 
 When perturbing an instance, this default approach does not change the features that are subject to the anchors' predicates, while replacing the non-fixed features with values taken from another randomly sampled instance with a specified probability. This process yields new instances that are similar to the explained one but have adopted some values from other random instances. Thus, they resemble neighbors, even though the perturbation space offers values originating a global scope.
 
 We use the [bike rental data](#bike-data) and classify whether the number of rented bicycles are above or below the trend line. For this, we turn the regression into a classification problem.
@@ -177,7 +180,7 @@ plotExplanations(bike.explanations_edge)
 
 
 
-While choosing this default perturbation space is a comfortable choice to make, it may have an extensive impact on the algorithm and can thus lead to biased results in certain situations. For example, if the train set is unbalanced, the perturbation space is so, too. This condition further affects the rule-finding and the result's precision.
+While choosing this default perturbation space is a comfortable choice to make, it may have an extensive impact on the algorithm and can thus lead to biased results in certain situations. For example, if the train set is unbalanced, the perturbation space is as well. This condition further affects the rule-finding and the result's precision.
 
 The [cervical cancer](#cervical) data set is a great example of this. Constructing anchors for it leads to one of the following situations: 
 
@@ -202,9 +205,9 @@ cancer.explanation = explain(cervical[c(1,7),], cancer.explainer)
 plotExplanations(cancer.explanation)
 ```
 
-This problem can be approached in multiple ways. For one, a custom perturbation space can be defined that samples differently, e.g., from an unbalanced data set or a normal distribution Another method would consist in modifying the MAB's confidence $\delta$ and error $\epsilon$ values. This would cause the MAB to draw more samples, ultimately leading to the minority being sampled more often in absolute terms.  
+This problem can be approached in multiple ways. For one, a custom perturbation space can be defined that samples differently, e.g., from an unbalanced data set or a normal distribution. Another method would consist in modifying the MAB's confidence $\delta$ and error values $\epsilon$. This would cause the MAB to draw more samples, ultimately leading to the minority being sampled more often in absolute terms.  
 
-For this example, we use a subset of the cervical cancer set in which the majority of cases are labeled 'cancer'. We then have the framework create a corresponding perturbation space from it. Perturbations are now more likely to lead to varying predictions and the anchors algorithm can identify important features. However, one needs to take the coverage's definition into account: it is only defined within the perturbation space. In the previous examples, we used the train set as the perturbation space's basis. Since we only use a subset here, a high coverage does not necessarily indicate globally high rule importance. 
+For this example, we use a subset of the cervical cancer set in which the majority of cases are labeled 'cancer'. We then have the framework to create a corresponding perturbation space from it. Perturbations are now more likely to lead to varying predictions and the anchors algorithm can identify important features. However, one needs to take the coverage's definition into account: it is only defined within the perturbation space. In the previous examples, we used the train set as the perturbation space's basis. Since we only use a subset here, a high coverage does not necessarily indicate a globally high rule importance. 
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Balancing the data set before constructing anchors shows the model's reasoning for decisions in minority cases."}
 set.seed(1)
@@ -223,15 +226,27 @@ plotExplanations(cancer.explanation.balanced)
 
 ### Advantages
 
-The anchors approach offers multiple advantages over its predecessor. First, the algorithm’s output can better be dealt with, as rules are very easy to interpret (even for laypersons). Furthermore, anchors  are subsettable, and even state a measure of importance by including the notion of coverage. Second, the anchors approach does not malfunction when models are not linear or too complex in an instance’s neighborhood. As the approach does not deploy surrogate models but reinforcement learning, it can hardly underfit a model. Apart from that, the algorithm is model-agnostic and thus applicable to any model. Furthermore, it is highly efficient and can be well parallelized by making use of MABs that support batch sampling (e.g. BatchSAR).
+The anchors approach offers multiple advantages over LIME. First, the algorithm’s output can easier to understand, as rules are **easy to interpret** (even for laypersons).
+
+Furthermore, **anchors are subsettable**, and even state a measure of importance by including the notion of coverage. Second, the anchors approach **works when models are non-linear or complex** in an instance’s neighborhood. As the approach deploys reinforcement learning instead of surrogate models, it is less likely to underfit the model.
+
+Apart from that, the algorithm is **model-agnostic** and thus applicable to any model.
+
+Furthermore, it is **highly efficient and can be parallelized** by making use of MABs that support batch sampling (e.g. BatchSAR).
 
 ### Disadvantages
 
-The algorithm suffers from a highly configurable and impactful setup, just like most perturbation-based explainers. Not only do hyperparameters such as the beam width or precision threshold need to be tuned to yield expressive results but also does the perturbation function need to be designed specifically for one domain/use-case. Think of how tabular data gets perturbed and think of how to apply the same concepts to e.g. image data (Hint: these cannot be applied). Luckily, default approaches may be used in some domains (e.g. tabular), facilitating an initial explanation setup. Also, many scenarios require discretization as otherwise results are too specific, have low coverage and do not contribute to understanding the model. While discretization can significantly improve results, it may also blur decision boundaries if used carelessly and thus have the exact opposite effect. Since there is no best discretization technique, users need to be aware of the data before deciding on how to discretize data to not obtain poor results. Constructing anchors requires many model calls, just like all perturbation-based explainers. While the algorithm deploys MABs to minimize the number of calls, its runtime still very much depends on the model’s performance and is therefore highly variable. Lastly, the notion of coverage is undefined in some domains. For example, there is no obvious or universal definition of how superpixels in one image compare to such in other images.
+The algorithm suffers from a **highly configurable** and impactful setup, just like most perturbation-based explainers. Not only do hyperparameters such as the beam width or precision threshold need to be tuned to yield expressive results but also does the perturbation function need to be designed specifically for one domain/use-case. Think of how tabular data gets perturbed and think of how to apply the same concepts to e.g. image data (Hint: these cannot be applied). Luckily, default approaches may be used in some domains (e.g. tabular), facilitating an initial explanation setup.
+
+Also, **many scenarios require discretization** as otherwise results are too specific, have low coverage and do not contribute to understanding the model. While discretization can significantly improve results, it may also blur decision boundaries if used carelessly and thus have the exact opposite effect. Since there is no best discretization technique, users need to be aware of the data before deciding on how to discretize data to not obtain poor results.
+
+Constructing anchors requires **many model calls**, just like all perturbation-based explainers. While the algorithm deploys MABs to minimize the number of calls, its runtime still very much depends on the model’s performance and is therefore highly variable.
+
+Lastly, the notion of **coverage is undefined in some domains**. For example, there is no obvious or universal definition of how superpixels in one image compare to such in other images.
 
 ### Software and Alternatives
 
-There currently are two implementations available: a [Python package](https://github.com/marcotcr/anchor) (also integrated by [Alibi](https://github.com/SeldonIO/alibi)) and a [Java implementation](https://github.com/viadee/javaAnchorExplainer). The former is the authors' reference and the latter a high-performance implementation which comes with an R interface, called [anchorsOnR](https://github.com/viadee/anchorsOnR), which is used during the course of this paper. As of now, anchorsOnR supports tabular data only. However, anchors may theoretically be constructed for any domain.
+There currently are two implementations available: [anchor, a Python package](https://github.com/marcotcr/anchor) (also integrated by [Alibi](https://github.com/SeldonIO/alibi)) and a [Java implementation](https://github.com/viadee/javaAnchorExplainer). The former is the authors' reference and the latter a high-performance implementation which comes with an R interface, called [anchorsOnR](https://github.com/viadee/anchorsOnR), which is for the examples in this chapter. As of now, anchorsOnR supports tabular data only. However, anchors may theoretically be constructed for any domain.
 
 [^Ribeiro2018Anchors]: Marco Tulio Ribeiro, Sameer Singh, Carlos Guestrin. "Anchors: High-Precision Model-Agnostic Explanations." AAAI Conference on Artificial Intelligence (AAAI), 2018
 
