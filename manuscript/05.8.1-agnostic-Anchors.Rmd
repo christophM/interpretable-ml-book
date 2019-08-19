@@ -128,6 +128,8 @@ library(uuid)
 library(magrittr)
 set.seed(1)
 
+colPal = c("#555555","#DFAD47","#7EBCA9", "#E5344E", "#681885", "#d25d97", "#fd3c46", "#ff9a39", "#6893bf", "#42c3a8")
+
 load("../data/bike.RData")
 
 bike$target = factor(resid(lm(cnt ~ days_since_2011, data = bike)) > 0, 
@@ -161,7 +163,7 @@ bike.explainer = anchors(bike, mod, target = "target", bins = bikeDisc, tau = 0.
 bike.explained.instances = bike[c(40, 475, 610, 106, 200, 700),] 
 bike.explanations = explain(bike.explained.instances, bike.explainer)
 
-plotExplanations(bike.explanations)
+plotExplanations(bike.explanations, colPal = colPal)
 ```
 
 The results are instinctively interpretable and show for each explained instance, which features are most important for the model's prediction. As the anchors are short, they additionally have high coverage and hence apply to other cases.
@@ -175,7 +177,7 @@ bike.explainer_edge = anchors(bike, mod, target = "target", tau = 1, batchSize =
 bike.explained.instances_edge = bike[c(93, 300),] 
 bike.explanations_edge = explain(bike.explained.instances_edge, bike.explainer_edge)
 
-plotExplanations(bike.explanations_edge)
+plotExplanations(bike.explanations_edge, colPal = colPal)
 ```
 
 
@@ -202,7 +204,7 @@ mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Constructing anchors within unbalanced perturbation spaces leads to unexpressive results."}
 cancer.explainer = anchors(cervical, mod, beams = 1)
 cancer.explanation = explain(cervical[c(1,7),], cancer.explainer)
-plotExplanations(cancer.explanation)
+plotExplanations(cancer.explanation, colPal = colPal)
 ```
 
 This problem can be approached in multiple ways. For one, a custom perturbation space can be defined that samples differently, e.g., from an unbalanced data set or a normal distribution. Another method would consist in modifying the MAB's confidence $\delta$ and error values $\epsilon$. This would cause the MAB to draw more samples, ultimately leading to the minority being sampled more often in absolute terms.  
@@ -220,7 +222,7 @@ cancer.explainer.balanced = anchors(cervical.balanced, mod, tau = 1, beams = 2,
                                     delta = 0.05, epsilon = 0.05, batchSize = 1000,
                                     emptyRuleEvaluations = 1000)
 cancer.explanation.balanced = explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
-plotExplanations(cancer.explanation.balanced)
+plotExplanations(cancer.explanation.balanced, colPal = colPal)
 ```
 
 
