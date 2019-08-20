@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all()
 set.seed(42)
@@ -120,7 +125,7 @@ We use the [bike rental data](#bike-data) and classify whether the number of ren
 Then, using the default tabular perturbation space, we aim to explain some instances of the newly trained random forest. 
 
 ```{r results='hide', cache=TRUE}
-devtools::install_github("viadee/anchorsOnR")
+devtools::install_github("viadee/anchorsOnR", force = F)
 library(anchors)
 library(jsonlite)
 library(BBmisc)
@@ -135,6 +140,10 @@ load("../data/bike.RData")
 bike$target = factor(resid(lm(cnt ~ days_since_2011, data = bike)) > 0, 
                      levels = c(FALSE, TRUE), labels = c('below', 'above'))
 bike$cnt = NULL
+# Make long factor levels shorter
+levels(bike$weathersit)[levels(bike$weathersit)=="RAIN/SNOW/STORM"] <- "BAD"
+
+
 
 bike.task = makeClassifTask(data = bike, target = "target")
 
@@ -172,9 +181,9 @@ The rules shown above were generated with $\tau = 0.9$. Thus, we ask for anchors
 All of the previous rules were generated for situations where the model decides confidently based on a few features. However, there also are instances that are not as distinctly classified by the model. In such cases, anchors get more specific, comprise more features, and apply to fewer instances.
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Explaining instances near decision boundaries leads to specific rules comprising a higher number of feature predicates and lower coverage. Also, the empty rule, i.e., the base feature, gets less important. This can be interpreted as a signal for a decision boundary, as the instance is located in a volatile neighborhood."}
-bike.explainer_edge = anchors(bike, mod, target = "target", tau = 1, batchSize = 1000, beams = 1)
+bike.explainer_edge = anchors(bike, mod, target = "target", tau = 1, batchSize = 1000, beams = 1, allowSuboptimalSteps = F)
 
-bike.explained.instances_edge = bike[c(93, 300),] 
+bike.explained.instances_edge = bike[c(452, 300),] 
 bike.explanations_edge = explain(bike.explained.instances_edge, bike.explainer_edge)
 
 plotExplanations(bike.explanations_edge, colPal = colPal)
