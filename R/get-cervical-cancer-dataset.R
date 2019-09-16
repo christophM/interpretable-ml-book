@@ -8,7 +8,7 @@
 get.cervical.data = function(data_dir){
   cervical = read.csv(sprintf('%s/risk_factors_cervical_cancer.csv', data_dir), na.strings = c('?'), stringsAsFactors = FALSE)
   cervical = select(cervical, -Citology, -Schiller, -Hinselmann)
-  cervical$Biopsy = factor(cervical$Biopsy, levels = c(1, 0), labels=c('Cancer', 'Healthy'))
+  cervical$Biopsy = factor(cervical$Biopsy, levels = c(0, 1), labels=c('Healthy', 'Cancer'))
 
   ## subset variables to the ones that should be used in the book
   cervical = dplyr::select(cervical, Age, Number.of.sexual.partners, First.sexual.intercourse,

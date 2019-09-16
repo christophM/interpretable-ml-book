@@ -17,6 +17,8 @@ BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then echo $TRAVIS_BRANCH; else
 cd manuscript
 # Create references
 make -B 11-references.Rmd
+# Create datasets
+make -B data
 # Compile html version of book for gh-pages
 make -B html
 # Compile md version of book for leanpub

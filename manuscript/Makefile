@@ -5,6 +5,11 @@ md.files := $(shell cat ${book.file})
 
 package: ../DESCRIPTION ../R/*.R
 	Rscript  -e "devtools::install('../')"
+	
+data : ../R/*.R ../scripts/*.R
+	cd ..
+	Rscript scripts/prepare_data.R
+	cd manuscript
 
 html :  *.Rmd
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
