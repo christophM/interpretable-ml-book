@@ -69,6 +69,7 @@ All notable changes to the book will be documented here.
 - Added SHAP chapter
 - Added Anchors chapter
 - Fixed error in logistic regression chapter: Logistic regression was predicting class "Healthy", but interpretation in the text was for class "Cancer". Now regression weights have the correct sign.
+- Renamed Feature Importance chapter to "Permutation Feature Importance"
 
 ### v1.1 (2019-03-23) [Print version, ebook version]
 - Fixes wrong index in Cooks Distance summation (i -> j)
