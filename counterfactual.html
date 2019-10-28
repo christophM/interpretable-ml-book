@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2019-10-20" />
+<meta name="date" content="2019-10-28" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -476,21 +476,20 @@ FIGURE 6.1: The causal relationships between inputs of a machine learning model 
 <h3><span class="header-section-number">6.1.4</span> Disadvantages</h3>
 <p><strong>For each instance you will usually find multiple counterfactual explanations (Rashomon effect)</strong>. This is inconvenient – most people prefer simple explanations over the complexity of the real world. It is also a practical challenge. Let us say we generated 23 counterfactual explanations for one instance. Are we reporting them all? Only the best? What if they are all relatively “good”, but very different? These questions must be answered anew for each project. It can also be advantageous to have multiple counterfactual explanations, because then humans can select the ones that correspond to their previous knowledge.</p>
 <p>There is <strong>no guarantee that for a given tolerance <span class="math inline">\(\epsilon\)</span> a counterfactual instance is found</strong>. That is not necessarily the fault of the method, but rather depends on the data.</p>
-<p>The proposed method <strong>does not handle categorical features</strong> with many different levels well. The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values. For example, 6 categorical features with 10 unique levels would mean 1 million runs. A solution for only categorical features was proposed by Martens et. al (2014)<a href="#fn50" class="footnoteRef" id="fnref50"><sup>50</sup></a>. A good solution would be to use an optimizer that solves problems with a mix of continuous and discrete inputs.</p>
-<p>The counterfactuals method <strong>lacks a general software implementation</strong>. And a method is only useful if it is implemented. Fortunately, it should be easy to implement and hopefully I can remove this statement here soon.</p>
+<p>The proposed method <strong>does not handle categorical features</strong> with many different levels well. The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values. For example, 6 categorical features with 10 unique levels would mean 1 million runs. A solution for only categorical features was proposed by Martens et. al (2014)<a href="#fn50" class="footnoteRef" id="fnref50"><sup>50</sup></a>. A solution that handles both numerical and categorical variables with a principled way of generating perturbations for categorical variables is implemented in the Python package <a href="https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html">Alibi</a>.</p>
 </div>
 <div id="example-software" class="section level3">
 <h3><span class="header-section-number">6.1.5</span> Software and Alternatives</h3>
-<p>Unfortunately there is currently no software available for counterfactual explanations.</p>
+<p>Counterfactuals explanations are implemented in the Python package <a href="https://github.com/SeldonIO/alibi">Alibi</a>. Authors of the package implement a <a href="https://docs.seldon.io/projects/alibi/en/stable/methods/CF.html">simple counterfactual method</a> as well as an <a href="https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html">extended method</a> that uses class prototypes to improve the interpretability and convergence of the algorithm outputs<a href="#fn51" class="footnoteRef" id="fnref51"><sup>51</sup></a>.</p>
 <p>A very similar approach was proposed by Martens et. al (2014) for explaining document classifications. In their work, they focus on explaining why a document was or was not classified as a particular class. The difference to the method presented in this chapter is that Martens et. al (2014) focus on text classifiers, which have word occurrences as inputs.</p>
-<p>An alternative way to search counterfactuals is the Growing Spheres algorithm by Laugel et. al (2017)<a href="#fn51" class="footnoteRef" id="fnref51"><sup>51</sup></a>. The method first draws a sphere around the point of interest, samples points within that sphere, checks whether one of the sampled points yields the desired prediction, contracts or expands the sphere accordingly until a (sparse) counterfactual is found and finally returned. They do not use the word counterfactual in their paper, but the method is quite similar. They also define a loss function that favors counterfactuals with as few changes in the feature values as possible. Instead of directly optimizing the function, they suggest the above-mentioned search with spheres.</p>
+<p>An alternative way to search counterfactuals is the Growing Spheres algorithm by Laugel et. al (2017)<a href="#fn52" class="footnoteRef" id="fnref52"><sup>52</sup></a>. The method first draws a sphere around the point of interest, samples points within that sphere, checks whether one of the sampled points yields the desired prediction, contracts or expands the sphere accordingly until a (sparse) counterfactual is found and finally returned. They do not use the word counterfactual in their paper, but the method is quite similar. They also define a loss function that favors counterfactuals with as few changes in the feature values as possible. Instead of directly optimizing the function, they suggest the above-mentioned search with spheres.</p>
 <div class="figure"><span id="fig:counterfactuals-spheres"></span>
 <img src="images/spheres.jpg" alt="An illustration of Growing Spheres and selecting sparse counterfactuals by Laugel et. al (2017)." width="500" />
 <p class="caption">
 FIGURE 6.2: An illustration of Growing Spheres and selecting sparse counterfactuals by Laugel et. al (2017).
 </p>
 </div>
-<p>Anchors by Ribeiro et. al (2018)<a href="#fn52" class="footnoteRef" id="fnref52"><sup>52</sup></a> are the opposite of counterfactuals. Anchors answer the question: Which features are sufficient to anchor a prediction, i.e. changing the other features cannot change the prediction? Once we have found features that serve as anchors for a prediction, we will no longer find counterfactual instances by changing the features not used in the anchor.</p>
+<p>Anchors by Ribeiro et. al (2018)<a href="#fn53" class="footnoteRef" id="fnref53"><sup>53</sup></a> are the opposite of counterfactuals. Anchors answer the question: Which features are sufficient to anchor a prediction, i.e. changing the other features cannot change the prediction? Once we have found features that serve as anchors for a prediction, we will no longer find counterfactual instances by changing the features not used in the anchor.</p>
 <div class="figure"><span id="fig:counterfactual-anchors"></span>
 <img src="images/anchors.jpg" alt="Examples for anchors by Ribeiro et. al (2018)." width="500" />
 <p class="caption">
@@ -506,8 +505,9 @@ FIGURE 6.3: Examples for anchors by Ribeiro et. al (2018).
 <ol start="49">
 <li id="fn49"><p>Wachter, Sandra, Brent Mittelstadt, and Chris Russell. “Counterfactual explanations without opening the black box: Automated decisions and the GDPR.” (2017).<a href="counterfactual.html#fnref49">↩</a></p></li>
 <li id="fn50"><p>Martens, David, and Foster Provost. “Explaining data-driven document classifications.” (2014).<a href="counterfactual.html#fnref50">↩</a></p></li>
-<li id="fn51"><p>Laugel, Thibault, et al. “Inverse classification for comparison-based interpretability in machine learning.” arXiv preprint arXiv:1712.08443 (2017).<a href="counterfactual.html#fnref51">↩</a></p></li>
-<li id="fn52"><p>Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. “Anchors: High-precision model-agnostic explanations.” AAAI Conference on Artificial Intelligence (2018).<a href="counterfactual.html#fnref52">↩</a></p></li>
+<li id="fn51"><p>Van Looveren, Arnaud, and Janis Klaise. “Interpretable Counterfactual Explanations Guided by Prototypes.” arXiv preprint arXiv:1907.02584 (2019).<a href="counterfactual.html#fnref51">↩</a></p></li>
+<li id="fn52"><p>Laugel, Thibault, et al. “Inverse classification for comparison-based interpretability in machine learning.” arXiv preprint arXiv:1712.08443 (2017).<a href="counterfactual.html#fnref52">↩</a></p></li>
+<li id="fn53"><p>Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. “Anchors: High-precision model-agnostic explanations.” AAAI Conference on Artificial Intelligence (2018).<a href="counterfactual.html#fnref53">↩</a></p></li>
 </ol>
 </div>
             </section>
