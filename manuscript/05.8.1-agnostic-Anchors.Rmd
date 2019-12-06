@@ -118,17 +118,9 @@ For instance, we use the [bike rental data](#bike-data) to demonstrate the ancho
 Before creating anchor explanations, one needs to define a perturbation function. An easy way to do so is to use an intuitive default perturbation space for tabular explanation cases which can be built by sampling from, e.g., the training data. 
 When perturbing an instance, this default approach maintains the features' values that are subject to the anchors' predicates, while replacing the non-fixed features with values taken from another randomly sampled instance with a specified probability. This process yields new instances that are similar to the explained one but have adopted some values from other random instances. Thus, they resemble neighbors.
 
-```{r results='hide', cache=TRUE}
-devtools::install_github("viadee/anchorsOnR")
-library(anchors)
-library(jsonlite)
-library(BBmisc)
-library(uuid)
-library(magrittr)
-set.seed(1)
 
+```{r}
 colPal = c("#555555","#DFAD47","#7EBCA9", "#E5344E", "#681885", "#d25d97", "#fd3c46", "#ff9a39", "#6893bf", "#42c3a8")
-
 load("../data/bike.RData")
 
 bike$target = factor(resid(lm(cnt ~ days_since_2011, data = bike)) > 0, 
@@ -138,15 +130,24 @@ bike$cnt = NULL
 levels(bike$weathersit)[levels(bike$weathersit)=="RAIN/SNOW/STORM"] <- "BAD"
 
 
-
 bike.task = makeClassifTask(data = bike, target = "target")
+
+
+```
+
+```{r results='hide',  eval = FALSE}
+# If you want to update anchors, make sure to set eval=TRUE and add the RDS files to the repository
+devtools::install_github("viadee/anchorsOnR")
+library(anchors)
+library(jsonlite)
+library(BBmisc)
+library(uuid)
+library(magrittr)
+set.seed(1)
+
 
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', 
                                   id = 'bike-rf'), bike.task)
-```
-
-
-```{r message=FALSE, cache=TRUE, fig.cap="Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The 'base' rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.", fig.height=10, fig.width=10}
 bikeDisc = list(
   integer(),
   integer(),
@@ -162,7 +163,15 @@ bikeDisc = list(
 )
 
 bike.explainer = anchors(bike, mod, target = "target", bins = bikeDisc, tau = 0.9, batchSize = 1000, beams = 1)
+saveRDS(bike.explainer, file = "../data/cached-anchors.RDS")
 
+bike.explainer_edge = anchors(bike, mod, target = "target", tau = 1, batchSize = 1000, beams = 1, allowSuboptimalSteps = F)
+saveRDS(bike.explainer_edge, file = "../data/cached-anchors-edge.RDS")
+```
+
+
+```{r message=FALSE, cache=TRUE, fig.cap="Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The 'base' rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.", fig.height=10, fig.width=10}
+bike.explainer = readRDS("../data/cached-anchors.RDS")
 bike.explained.instances = bike[c(40, 475, 610, 106, 200, 700),] 
 bike.explanations = explain(bike.explained.instances, bike.explainer)
 
@@ -175,8 +184,7 @@ The rules shown above were generated with $\tau = 0.9$. Thus, we ask for anchors
 All of the previous rules were generated for instances where the model decides confidently based on a few features. However, other instances are not as distinctly classified by the model as more features are of importance. In such cases, anchors get more specific, comprise more features, and apply to fewer instances.
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Explaining instances near decision boundaries leads to specific rules comprising a higher number of feature predicates and lower coverage. Also, the empty rule, i.e., the base feature, gets less important. This can be interpreted as a signal for a decision boundary, as the instance is located in a volatile neighborhood.", fig.height=9, fig.width=10}
-bike.explainer_edge = anchors(bike, mod, target = "target", tau = 1, batchSize = 1000, beams = 1, allowSuboptimalSteps = F)
-
+bike.explainer_edge = readRDS("../data/cached-anchors-edge.RDS")
 bike.explained.instances_edge = bike[c(452, 300),] 
 bike.explanations_edge = explain(bike.explained.instances_edge, bike.explainer_edge)
 
@@ -192,20 +200,34 @@ The [cervical cancer](#cervical) data set is an excellent example of this situat
 + Explaining instances labeled *healthy* yields empty rules as all generated neighbors evaluate to *healthy*.
 + Explanations for instances labeled *cancer* are overly specific, i.e., comprise many feature predicates, since the perturbation space mostly covers values from *healthy* instances.
 
+```{r}
+load("../data/cervical.RData")
+cervical.sampled.healthy <- cervical[sample(which(cervical$Biopsy == "Healthy"), 20), ]
+cervical.balanced <- rbind(cervical[cervical$Biopsy == "Cancer", ], cervical.sampled.healthy)
+```
 
-```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE}
+
+```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide',  eval = FALSE}
 set.seed(1)
 
-load("../data/cervical.RData")
 cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', 
                                   predict.type = 'prob'), cervical.task)
+cancer.explainer = anchors(cervical, mod, beams = 1)
+saveRDS(cancer.explainer, file = "../data/cached-anchors-cervical.RDS")
+
+
+set.seed(1)
+cancer.explainer.balanced = anchors(cervical.balanced, mod, tau = 1, beams = 2,
+                                    delta = 0.05, epsilon = 0.05, batchSize = 1000,
+                                    emptyRuleEvaluations = 1000)
+saveRDS(cancer.explainer.balanced, file = "../data/cached-anchors-cervical-balanced.RDS")
 ```
 
 
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Constructing anchors within unbalanced perturbation spaces leads to unexpressive results.", fig.height=10, fig.width=10}
-cancer.explainer = anchors(cervical, mod, beams = 1)
+cancer.explainer = readRDS("../data/cached-anchors-cervical.RDS")
 cancer.explanation = explain(cervical[c(1,7),], cancer.explainer)
 plotExplanations(cancer.explanation, colPal = colPal)
 ```
@@ -215,15 +237,8 @@ This outcome may be unwanted and can be approached in multiple ways. For example
 For this example, we use a subset of the cervical cancer set in which the majority of cases are labeled *cancer*. We then have the framework to create a corresponding perturbation space from it. Perturbations are now more likely to lead to varying predictions, and the anchors algorithm can identify important features. However, one needs to take the coverage's definition into account: it is only defined within the perturbation space. In the previous examples, we used the train set as the perturbation space's basis. Since we only use a subset here, a high coverage does not necessarily indicate globally high rule importance. 
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Balancing the data set before constructing anchors shows the model's reasoning for decisions in minority cases.", fig.height=10, fig.width=11}
-set.seed(1)
-
-cervical.sampled.healthy <- cervical[sample(which(cervical$Biopsy == "Healthy"), 20), ]
-cervical.balanced <- rbind(cervical[cervical$Biopsy == "Cancer", ], cervical.sampled.healthy)
+cancer.explainer.balanced = readRDS("../data/cached-anchors-cervical-balanced.RDS")
 table(cervical.balanced$Biopsy)
-
-cancer.explainer.balanced = anchors(cervical.balanced, mod, tau = 1, beams = 2,
-                                    delta = 0.05, epsilon = 0.05, batchSize = 1000,
-                                    emptyRuleEvaluations = 1000)
 cancer.explanation.balanced = explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
 plotExplanations(cancer.explanation.balanced, colPal = colPal)
 ```
