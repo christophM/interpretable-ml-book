@@ -1,6 +1,7 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all()
 set.seed(42)
+library(anchors)
 ```
 
 <!--{pagebreak}-->
@@ -118,8 +119,14 @@ For instance, we use the [bike rental data](#bike-data) to demonstrate the ancho
 Before creating anchor explanations, one needs to define a perturbation function. An easy way to do so is to use an intuitive default perturbation space for tabular explanation cases which can be built by sampling from, e.g., the training data. 
 When perturbing an instance, this default approach maintains the features' values that are subject to the anchors' predicates, while replacing the non-fixed features with values taken from another randomly sampled instance with a specified probability. This process yields new instances that are similar to the explained one but have adopted some values from other random instances. Thus, they resemble neighbors.
 
+```{r results='hide', cache=FALSE}
+library(anchors)
+library(jsonlite)
+library(BBmisc)
+library(uuid)
+library(magrittr)
+set.seed(1)
 
-```{r}
 colPal = c("#555555","#DFAD47","#7EBCA9", "#E5344E", "#681885", "#d25d97", "#fd3c46", "#ff9a39", "#6893bf", "#42c3a8")
 load("../data/bike.RData")
 
@@ -131,7 +138,6 @@ levels(bike$weathersit)[levels(bike$weathersit)=="RAIN/SNOW/STORM"] <- "BAD"
 
 
 bike.task = makeClassifTask(data = bike, target = "target")
-
 
 ```
 
@@ -173,7 +179,7 @@ saveRDS(bike.explainer_edge, file = "../data/cached-anchors-edge.RDS")
 ```{r message=FALSE, cache=TRUE, fig.cap="Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The 'base' rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.", fig.height=10, fig.width=10}
 bike.explainer = readRDS("../data/cached-anchors.RDS")
 bike.explained.instances = bike[c(40, 475, 610, 106, 200, 700),] 
-bike.explanations = explain(bike.explained.instances, bike.explainer)
+bike.explanations = anchors::explain(bike.explained.instances, bike.explainer)
 
 plotExplanations(bike.explanations, colPal = colPal)
 ```
@@ -186,7 +192,7 @@ All of the previous rules were generated for instances where the model decides c
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Explaining instances near decision boundaries leads to specific rules comprising a higher number of feature predicates and lower coverage. Also, the empty rule, i.e., the base feature, gets less important. This can be interpreted as a signal for a decision boundary, as the instance is located in a volatile neighborhood.", fig.height=9, fig.width=10}
 bike.explainer_edge = readRDS("../data/cached-anchors-edge.RDS")
 bike.explained.instances_edge = bike[c(452, 300),] 
-bike.explanations_edge = explain(bike.explained.instances_edge, bike.explainer_edge)
+bike.explanations_edge = anchors::explain(bike.explained.instances_edge, bike.explainer_edge)
 
 plotExplanations(bike.explanations_edge, colPal = colPal)
 ```
@@ -228,7 +234,7 @@ saveRDS(cancer.explainer.balanced, file = "../data/cached-anchors-cervical-balan
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Constructing anchors within unbalanced perturbation spaces leads to unexpressive results.", fig.height=10, fig.width=10}
 cancer.explainer = readRDS("../data/cached-anchors-cervical.RDS")
-cancer.explanation = explain(cervical[c(1,7),], cancer.explainer)
+cancer.explanation = anchors::explain(cervical[c(1,7),], cancer.explainer)
 plotExplanations(cancer.explanation, colPal = colPal)
 ```
 
@@ -239,7 +245,7 @@ For this example, we use a subset of the cervical cancer set in which the majori
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Balancing the data set before constructing anchors shows the model's reasoning for decisions in minority cases.", fig.height=10, fig.width=11}
 cancer.explainer.balanced = readRDS("../data/cached-anchors-cervical-balanced.RDS")
 table(cervical.balanced$Biopsy)
-cancer.explanation.balanced = explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
+cancer.explanation.balanced = anchors::explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
 plotExplanations(cancer.explanation.balanced, colPal = colPal)
 ```
 
@@ -247,6 +253,26 @@ plotExplanations(cancer.explanation.balanced, colPal = colPal)
 ### Advantages
 
 The anchors approach offers multiple advantages over LIME. First, the algorithm’s output is easier to understand, as rules are **easy to interpret** (even for laypersons).
+#yhat = clf.predict(X)
+
+# customize the set of actions
+#A = rs.action_set.ActionSet(X)  ## matrix of features. ActionSet will learn default bounds and step-size.
+
+## get model coefficients and align
+# TODO: Flip when the desired class is in the other direction
+#w = clf.coef_
+#b = clf.intercept_ 
+
+#A.align(coefficients = w, intercept = b)  ## tells `ActionSet` which directions each feature should move in to produce positive change.
+
+# Get one individual
+#i = np.flatnonzero(yhat <= 0)[0]
+
+# build a flipset for one individual
+#fs = rs.flipset.Flipset(x = X.iloc[i].get_values(), action_set = A, coefficients = w, intercept = b)
+#fs.populate(enumeration_type = 'distinct_subsets', total_items = 45)
+#fs.df.to_csv('recourse.csv')
+
 
 Furthermore, **anchors are subsettable** and even state a measure of importance by including the notion of coverage. Second, the anchors approach **works when model predictions are non-linear or complex** in an instance’s neighborhood. As the approach deploys reinforcement learning techniques instead of fitting surrogate models, it is less likely to underfit the model.
 
@@ -266,7 +292,9 @@ Lastly, the notion of **coverage is undefined in some domains**. For example, th
 
 ### Software and Alternatives
 
-There currently are two implementations available: [anchor, a Python package](https://github.com/marcotcr/anchor) (also integrated by [Alibi](https://github.com/SeldonIO/alibi)) and a [Java implementation](https://github.com/viadee/javaAnchorExplainer). The former is the anchors algorithm's authors' reference and the latter a high-performance implementation which comes with an R interface, called [anchorsOnR](https://github.com/viadee/anchorsOnR), which was used for the examples in this chapter. As of now, anchorsOnR supports tabular data only. However, anchors may theoretically be constructed for any domain or type of data.
+There currently are two implementations available: [anchor, a Python package](https://github.com/marcotcr/anchor) (also integrated by [Alibi](https://github.com/SeldonIO/alibi)) and a [Java implementation](https://github.com/viadee/javaAnchorExplainer).
+The former is the anchors algorithm's authors' reference and the latter a high-performance implementation which comes with an R interface, called [anchors](https://github.com/viadee/anchorsOnR), which was used for the examples in this chapter.
+As of now, anchors supports tabular data only. However, anchors may theoretically be constructed for any domain or type of data.
 
 [^Ribeiro2018Anchors]: Marco Tulio Ribeiro, Sameer Singh, Carlos Guestrin. "Anchors: High-Precision Model-Agnostic Explanations." AAAI Conference on Artificial Intelligence (AAAI), 2018
 
