@@ -70,7 +70,7 @@ gitbook.require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
         var menu = _.chain(opts.all)
             .map(function(id) {
                 var site = SITES[id];
-
+                if (!site) return;
                 return {
                     text: site.label,
                     onClick: site.onClick

@@ -28,6 +28,18 @@ gitbook.require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
       }
     });
 
+    // add the View button (file view on Github)
+    var view = config.view;
+    if (view && view.link) gitbook.toolbar.createButton({
+      icon: 'fa fa-eye',
+      label: view.text || 'View Source',
+      position: 'left',
+      onClick: function(e) {
+        e.preventDefault();
+        window.open(view.link);
+      }
+    });
+
     // add the Download button
     var down = config.download;
     var normalizeDownload = function() {
@@ -72,7 +84,7 @@ gitbook.require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
     if (config.search !== false) info.push('f: Toggle search input ' +
       '(use <up>/<down>/Enter in the search input to navigate through search matches; ' +
       'press Esc to cancel search)');
-    gitbook.toolbar.createButton({
+    if (config.info !== false) gitbook.toolbar.createButton({
       icon: 'fa fa-info',
       label: 'Information about the toolbar',
       position: 'left',
@@ -85,6 +97,8 @@ gitbook.require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
     // highlight the current section in TOC
     var href = window.location.pathname;
     href = href.substr(href.lastIndexOf('/') + 1);
+    // accentuated characters need to be decoded (#819)
+    href = decodeURIComponent(href);
     if (href === '') href = 'index.html';
     var li = $('a[href^="' + href + location.hash + '"]').parent('li.chapter').first();
     var summary = $('ul.summary'), chaps = summary.find('li.chapter');
