@@ -164,7 +164,7 @@ bikeDisc = list(
 bike.explainer = anchors(bike, mod, target = "target", bins = bikeDisc, tau = 0.9, batchSize = 1000, beams = 1)
 
 bike.explained.instances = bike[c(40, 475, 610, 106, 200, 700),] 
-bike.explanations = explain(bike.explained.instances, bike.explainer)
+bike.explanations = anchorsOnR::explain(bike.explained.instances, bike.explainer)
 
 plotExplanations(bike.explanations, colPal = colPal)
 ```
@@ -178,7 +178,7 @@ All of the previous rules were generated for instances where the model decides c
 bike.explainer_edge = anchors(bike, mod, target = "target", tau = 1, batchSize = 1000, beams = 1, allowSuboptimalSteps = F)
 
 bike.explained.instances_edge = bike[c(452, 300),] 
-bike.explanations_edge = explain(bike.explained.instances_edge, bike.explainer_edge)
+bike.explanations_edge = anchorsOnR::explain(bike.explained.instances_edge, bike.explainer_edge)
 
 plotExplanations(bike.explanations_edge, colPal = colPal)
 ```
@@ -206,7 +206,7 @@ mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf
 
 ```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide', cache=TRUE, fig.cap="Constructing anchors within unbalanced perturbation spaces leads to unexpressive results.", fig.height=10, fig.width=10}
 cancer.explainer = anchors(cervical, mod, beams = 1)
-cancer.explanation = explain(cervical[c(1,7),], cancer.explainer)
+cancer.explanation = anchorsOnR::explain(cervical[c(1,7),], cancer.explainer)
 plotExplanations(cancer.explanation, colPal = colPal)
 ```
 
@@ -224,7 +224,7 @@ table(cervical.balanced$Biopsy)
 cancer.explainer.balanced = anchors(cervical.balanced, mod, tau = 1, beams = 2,
                                     delta = 0.05, epsilon = 0.05, batchSize = 1000,
                                     emptyRuleEvaluations = 1000)
-cancer.explanation.balanced = explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
+cancer.explanation.balanced = anchorsOnR::explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
 plotExplanations(cancer.explanation.balanced, colPal = colPal)
 ```
 
@@ -232,6 +232,26 @@ plotExplanations(cancer.explanation.balanced, colPal = colPal)
 ### Advantages
 
 The anchors approach offers multiple advantages over LIME. First, the algorithm’s output is easier to understand, as rules are **easy to interpret** (even for laypersons).
+#yhat = clf.predict(X)
+
+# customize the set of actions
+#A = rs.action_set.ActionSet(X)  ## matrix of features. ActionSet will learn default bounds and step-size.
+
+## get model coefficients and align
+# TODO: Flip when the desired class is in the other direction
+#w = clf.coef_
+#b = clf.intercept_ 
+
+#A.align(coefficients = w, intercept = b)  ## tells `ActionSet` which directions each feature should move in to produce positive change.
+
+# Get one individual
+#i = np.flatnonzero(yhat <= 0)[0]
+
+# build a flipset for one individual
+#fs = rs.flipset.Flipset(x = X.iloc[i].get_values(), action_set = A, coefficients = w, intercept = b)
+#fs.populate(enumeration_type = 'distinct_subsets', total_items = 45)
+#fs.df.to_csv('recourse.csv')
+
 
 Furthermore, **anchors are subsettable** and even state a measure of importance by including the notion of coverage. Second, the anchors approach **works when model predictions are non-linear or complex** in an instance’s neighborhood. As the approach deploys reinforcement learning techniques instead of fitting surrogate models, it is less likely to underfit the model.
 
