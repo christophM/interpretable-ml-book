@@ -1,4 +1,6 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
+
+
 devtools::load_all()
 set.seed(42)
 ```
@@ -8,7 +10,7 @@ set.seed(42)
 ## Shapley Values {#shapley}
 
 A prediction can be explained by assuming that each feature value of the instance is a "player" in a game where the prediction is the payout.
-The Shapley value -- a method from coalitional game theory -- tells us how to fairly distribute the "payout" among the features.
+Shapley values -- a method from coalitional game theory -- tells us how to fairly distribute the "payout" among the features.
 
 
 ### General Idea
@@ -16,14 +18,14 @@ The Shapley value -- a method from coalitional game theory -- tells us how to fa
 Assume the following scenario: 
 
 You have trained a machine learning model to predict apartment prices.
-For a certain apartment it predicts 300,000 € and you need to explain this prediction.
+For a certain apartment it predicts €300,000 and you need to explain this prediction.
 The apartment has a size of 50 m^2^, is located on the 2nd floor, has a park nearby and cats are banned:
 
-```{r shapley-instance, fig.cap = "The predicted price for a 50 m^2^ 2nd floor apartment with a nearby park and cat ban is 300,000€. Our goal is to explain how each of these features values contributed to the prediction.", out.width=500}
+```{r shapley-instance, fig.cap = "The predicted price for a 50 m^2^ 2nd floor apartment with a nearby park and cat ban is €300,000. Our goal is to explain how each of these feature values contributed to the prediction.", out.width=500}
 knitr::include_graphics("images/shapley-instance.png")
 ```
 
-The average prediction for all apartments is 310,000€.
+The average prediction for all apartments is €310,000.
 How much has each feature value contributed to the prediction compared to the average prediction?
 
 
@@ -43,12 +45,12 @@ What is the connection to machine learning predictions and interpretability?
 The "game" is the prediction task for a single instance of the dataset.
 The "gain" is the actual prediction for this instance minus the average prediction for all instances.
 The "players" are the feature values of the instance that collaborate to receive the gain (= predict a certain value).
-In our apartment example, the feature values `park-nearby`, `cat-banned`, `area-50` and `floor-2nd` worked together to achieve the prediction of 300,000€.
-Our goal is to explain the difference between the actual prediction (300,000€) and the average prediction (310,000€): a difference of -10,000€.
+In our apartment example, the feature values `park-nearby`, `cat-banned`, `area-50` and `floor-2nd` worked together to achieve the prediction of €300,000.
+Our goal is to explain the difference between the actual prediction (€300,000) and the average prediction (€310,000): a difference of -€10,000.
 
 The answer could be:
-The `park-nearby` contributed 30,000€; `size-50` contributed 10,000€; `floor-2nd` contributed 0€; `cat-banned` contributed -50,000€.
-The contributions add up to -10,000€, the final prediction minus the average predicted apartment price.
+The `park-nearby` contributed €30,000; `size-50` contributed €10,000; `floor-2nd` contributed €0; `cat-banned` contributed -€50,000.
+The contributions add up to -€10,000, the final prediction minus the average predicted apartment price.
 
 **How do we calculate the Shapley value for one feature?**
 
@@ -58,11 +60,11 @@ All clear now?
 In the following figure we evaluate the contribution of the `cat-banned` feature value when it is added to a coalition of `park-nearby` and `size-50`.
 We simulate that only `park-nearby`, `cat-banned` and `size-50` are in a coalition by randomly drawing another apartment from the data and using its value for the floor feature.
 The value `floor-2nd` was replaced by the randomly drawn `floor-1st`.
-Then we predict the price of the apartment with this combination (310,000€).
+Then we predict the price of the apartment with this combination (€310,000).
 In a second step, we remove `cat-banned` from the coalition by replacing it with a random value of the cat allowed/banned feature from the randomly drawn apartment.
 In the example it was `cat-allowed`, but it could have been `cat-banned` again.
-We predict the apartment price for the coalition of `park-nearby` and `size-50` (320,000€).
-The contribution of `cat-banned` was 310,000€ - 320,000€ = -10.000€.
+We predict the apartment price for the coalition of `park-nearby` and `size-50` (€320,000).
+The contribution of `cat-banned` was €310,000 - €320,000 = -€10.000.
 This estimate depends on the values of the randomly drawn apartment that served as a "donor" for the cat and floor feature values.
 We will get better estimates if we repeat this sampling step and average the contributions.
 
@@ -133,9 +135,10 @@ diff.prediction = actual.prediction - avg.prediction
 ```
 
 
-```{r shapley-cervical-plot, fig.cap = sprintf("Shapley values for woman %i in the cervical cancer dataset. With a prediction of %.2f, this woman's cancer probability is %.2f above the average prediction of %.2f. The number of diagnosed STDs increased the probability the most. The sum of contributions yields the difference between actual and average prediction (%.2f).", instance_indices, actual.prediction,diff.prediction, avg.prediction, diff.prediction)}
+```{r shapley-cervical-plot, fig.cap = sprintf("Shapley values for a woman in the cervical cancer dataset. With a prediction of %.2f, this woman's cancer probability is %.2f above the average prediction of %.2f. The number of diagnosed STDs increased the probability the most. The sum of contributions yields the difference between actual and average prediction (%.2f).", actual.prediction,diff.prediction, avg.prediction, diff.prediction)}
 shapley2 = Shapley$new(predictor, x.interest = x.interest, sample.size = 100)
-plot(shapley2) + scale_y_continuous("Feature value contribution") +
+plot(shapley2) + 
+  scale_y_continuous("Feature value contribution") +
   ggtitle(sprintf("Actual prediction: %.2f\nAverage prediction: %.2f\nDifference: %.2f", actual.prediction, avg.prediction, diff.prediction)) +
  scale_x_discrete("")
 ```
@@ -221,7 +224,7 @@ The Shapley value is defined via a value function val of players in S.
 
 The Shapley value of a feature value is its contribution to the payout, weighted and summed over all possible feature value combinations:
 
-$$\phi_j(val)=\sum_{S\subseteq\{x_{1},\ldots,x_{p}\}\setminus\{x_j\}}\frac{|S|!\left(p-|S|-1\right)!}{p!}\left(val\left(S\cup\{x_j\right)-val(S)\right)$$
+$$\phi_j(val)=\sum_{S\subseteq\{x_{1},\ldots,x_{p}\}\setminus\{x_j\}}\frac{|S|!\left(p-|S|-1\right)!}{p!}\left(val\left(S\cup\{x_j\}\right)-val(S)\right)$$
 
 where S is a subset of the features used in the model, x is the vector of feature values of the instance to be explained and p the number of features.
 $val_x(S)$ is the prediction for feature values in set S that are marginalized over features that are not included in set S:
@@ -236,10 +239,10 @@ $$val_{x}(S)=val_{x}(\{x_{1},x_{3}\})=\int_{\mathbb{R}}\int_{\mathbb{R}}\hat{f}(
 
 This looks similar to the feature contributions in the linear model!
 
-Don't get confused by the many uses of the word "value":
+Do not get confused by the many uses of the word "value":
 The feature value is the numerical or categorical value of a feature and instance;
-The Shapley value is the feature contribution to the prediction;
-The value function is the payout function for coalitions of players (feature values).
+the Shapley value is the feature contribution to the prediction;
+the value function is the payout function for coalitions of players (feature values).
 
 The Shapley value is the only attribution method that satisfies the properties **Efficiency**, **Symmetry**, **Dummy** and **Additivity**,  which together can be considered a definition of a fair payout.
 
@@ -249,7 +252,7 @@ The feature contributions must add up to the difference of prediction for x and 
 $$\sum\nolimits_{j=1}^p\phi_j=\hat{f}(x)-E_X(\hat{f}(X))$$
 
 **Symmetry**  
-The contributions of two features values j and k should be the same if they contribute equally to all possible coalitions.
+The contributions of two feature values j and k should be the same if they contribute equally to all possible coalitions.
 If 
 
 $$val(S\cup\{x_j\})=val(S\cup\{x_k\})$$ 
@@ -300,11 +303,11 @@ Strumbelj et al. (2014)[^strumbelj2014] propose an approximation with Monte-Carl
 
 $$\hat{\phi}_{j}=\frac{1}{M}\sum_{m=1}^M\left(\hat{f}(x^{m}_{+j})-\hat{f}(x^{m}_{-j})\right)$$
 
-where $\hat{f}(x^{m}_{+j})$ is the prediction for x, but with a random number of features values replaced by feature values from a random data point z, except for the respective value of feature j.
-The x-vector $x^{m}_{-j}$ is almost identical to $x^{m}_{+j}$, but the value $x_j^{m}$ is also taken from the sampled x.
+where $\hat{f}(x^{m}_{+j})$ is the prediction for x, but with a random number of feature values replaced by feature values from a random data point z, except for the respective value of feature j.
+The x-vector $x^{m}_{-j}$ is almost identical to $x^{m}_{+j}$, but the value $x_j^{m}$ is also taken from the sampled z.
 Each of these M new instances is a kind of "Frankenstein Monster" assembled from two instances.
 
-**Approximate Shapley Estimation for Single Feature Value**:
+**Approximate Shapley estimation for single feature value**:
 
 - Output: Shapley value for the value of the j-th feature
 - Required: Number of iterations M, instance of interest x, feature index j, data matrix X, and machine learning model f
@@ -314,9 +317,9 @@ Each of these M new instances is a kind of "Frankenstein Monster" assembled from
     - Order instance x: $x_o=(x_{(1)},\ldots,x_{(j)},\ldots,x_{(p)})$
     - Order instance z: $z_o=(z_{(1)},\ldots,z_{(j)},\ldots,z_{(p)})$
     - Construct two new instances
-      - $x_{+j}=(x_{(1)},\ldots,x_{(j-1)},x_{(j)},z_{(j+1)},\ldots,z_{(p)})$
-      - $x_{-j}=(x_{(1)},\ldots,x_{(j-1)},z_{(j)},z_{(j+1)},\ldots,z_{(p)})$
-    - $\phi_j^{m}=\hat{f}(x_{+j})-\hat{f}(x_{-j})$
+        - With feature j: $x_{+j}=(x_{(1)},\ldots,x_{(j-1)},x_{(j)},z_{(j+1)},\ldots,z_{(p)})$
+        - Without feature j: $x_{-j}=(x_{(1)},\ldots,x_{(j-1)},z_{(j)},z_{(j+1)},\ldots,z_{(p)})$
+    - Compute marginal contribution: $\phi_j^{m}=\hat{f}(x_{+j})-\hat{f}(x_{-j})$
 - Compute Shapley value as the average: $\phi_j(x)=\frac{1}{M}\sum_{m=1}^M\phi_j^{m}$
 
 First, select an instance of interest x, a feature j and the number of iterations M.
@@ -338,7 +341,7 @@ The procedure has to be repeated for each of the features to get all Shapley val
 
 ### Advantages
 
-The difference between the prediction and the average prediction is **fairly distributed** among the features values of the instance -- the Efficiency property of Shapley values.
+The difference between the prediction and the average prediction is **fairly distributed** among the feature values of the instance -- the Efficiency property of Shapley values.
 This property distinguishes the Shapley value from other methods such as [LIME](#lime).
 LIME does not guarantee that the prediction is fairly distributed among the features.
 The Shapley value might be the only method to deliver a full explanation.
@@ -363,7 +366,8 @@ In 99.9% of real-world problems, only the approximate solution is feasible.
 An exact computation of the Shapley value is computationally expensive because there are 2^k^ possible coalitions of the feature values and the "absence" of a feature has to be simulated by drawing random instances, which increases the variance for the estimate of the Shapley values estimation.
 The exponential number of the coalitions is dealt with by sampling coalitions and limiting the number of iterations M.
 Decreasing M reduces computation time, but increases the variance of the Shapley value.
-It is unclear how to choose a sensitive M.
+There is no good rule of thumb for the number of iterations M.
+M should be large enough to accurately estimate the Shapley values, but small enough to complete the computation in a reasonable time.
 It should be possible to choose M based on Chernoff bounds, but I have not seen any paper on doing this for Shapley values for machine learning predictions.
 
 The Shapley value **can be misinterpreted**.
@@ -379,7 +383,7 @@ Another solution is [SHAP](https://github.com/slundberg/shap) introduced by Lund
 
 The Shapley value returns a simple value per feature, but **no prediction model** like LIME.
 This means it cannot be used to make statements about changes in prediction for changes in the input, such as:
-"If I were to earn 300 € more a year, my credit score would increase by 5 points."
+"If I were to earn €300 more a year, my credit score would increase by 5 points."
 
 Another disadvantage is that **you need access to the data** if you want to calculate the Shapley value for a new data instance.
 It is not sufficient to access the prediction function because you need the data to replace parts of the instance of interest with values from randomly drawn instances of the data.
@@ -389,32 +393,28 @@ Like many other permutation-based interpretation methods, the Shapley value meth
 To simulate that a feature value is missing from a coalition, we marginalize the feature.
 This is achieved by sampling values from the feature's marginal distribution.
 This is fine as long as the features are independent.
-When feature are dependent, then we might sample feature values that do not make sense for this instance.
+When features are dependent, then we might sample feature values that do not make sense for this instance.
 But we would use those to compute the feature's Shapley value.
 To the best of my knowledge, there is no research on what that means for the Shapley values, nor a suggestion on how to fix it.
 One solution might be to permute correlated features together and get one mutual Shapley value for them.
-Or the sampling procedure might have to be adjusted to account for dependence of features
+Or the sampling procedure might have to be adjusted to account for dependence of features.
 
 ### Software and Alternatives
 
 Shapley values are implemented in the `iml` R package.
 
-SHAP, an alternative formulation of the Shapley values, is implemented in the Python package `shap`.
-SHAP turns the Shapley values method into an optimization problem and uses a special kernel function to measure proximity of data instances.
-The results of SHAP are sparse (many Shapley values are estimated to be zero), which is the biggest difference from the classic Shapley values.
+SHAP, an alternative estimation method for Shapley values, is presented in the [next chapter](#shap).
 
 Another approach is called breakDown, which is implemented in the `breakDown` R package[^breakdown].
 BreakDown also shows the contributions of each feature to the prediction, but computes them step by step. 
 Let us reuse the game analogy:
 We start with an empty team, add the feature value that would contribute the most to the prediction and iterate until all feature values are added.
 How much each feature value contributes depends on the respective feature values that are already in the "team", which is the big drawback of the breakDown method.
-It is faster than the Shapley method, and for models without interactions, the results are the same.
+It is faster than the Shapley value method, and for models without interactions, the results are the same.
 
 
-[^shapley1953]: Shapley, Lloyd S. 1953. “A Value for N-Person Games.” Contributions to the Theory of Games 2 (28): 307–17.
+[^shapley1953]: Shapley, Lloyd S. "A value for n-person games." Contributions to the Theory of Games 2.28 (1953): 307-317.
 
-[^strumbelj2014]: Strumbelj, Erik, Igor Kononenko, Erik Štrumbelj, and Igor Kononenko. 2014. “Explaining prediction models and individual predictions with feature contributions.” Knowledge and Information Systems 41 (3): 647–65. doi:10.1007/s10115-013-0679-x.
+[^strumbelj2014]: Štrumbelj, Erik, and Igor Kononenko. "Explaining prediction models and individual predictions with feature contributions." Knowledge and information systems 41.3 (2014): 647-665.
 
-[^lundberg2016]: Lundberg, Scott, and Su-In Lee. 2016. “An unexpected unity among methods for interpreting model predictions,” no. Nips: 1–6. http://arxiv.org/abs/1611.07478.
-
-[^breakdown]: Staniak, Mateusz and Przemyslaw Biecek (2018). "Explanations of Model Predictions with live and breakDown Packages." _ArXiv e-prints_. 1804.01955, <URL: https://arxiv.org/abs/1804.01955>.
+[^breakdown]: Staniak, Mateusz, and Przemyslaw Biecek. "Explanations of model predictions with live and breakDown packages." arXiv preprint arXiv:1804.01955 (2018).

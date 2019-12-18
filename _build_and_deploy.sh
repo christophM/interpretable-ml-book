@@ -12,11 +12,12 @@ BUILD_COMMIT_MSG="Update book (travis build ${TRAVIS_BUILD_NUMBER})"
 
 BRANCH=$(if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then echo $TRAVIS_BRANCH; else echo $TRAVIS_PULL_REQUEST_BRANCH; fi)
 
-
+# Create datasets
+Rscript scripts/prepare_data.R
 
 cd manuscript
 # Create references
-make -B 10-references.Rmd
+make -B 11-references.Rmd
 # Compile html version of book for gh-pages
 make -B html
 # Compile md version of book for leanpub

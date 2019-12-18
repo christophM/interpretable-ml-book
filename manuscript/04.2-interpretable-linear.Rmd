@@ -142,7 +142,7 @@ There is a catch, because R-squared increases with the number of features in the
 Therefore, it is better to use the adjusted R-squared, which accounts for the number of features used in the model.
 Its calculation is:
 
-$$\bar{R}^2=R^2-(1-R^2)\frac{p}{n-p-1}$$
+$$\bar{R}^2=R^2-(1-R^2)\frac{n-1}{n-p-1}$$
 
 where p is the number of features and n the number of instances.
 
@@ -213,7 +213,7 @@ The information of the weight table (weight and variance estimates) can be visua
 The following plot shows the results from the previous linear regression model.
 
 ```{r linear-weights-plot, fig.cap="Weights are displayed as points and the 95% confidence intervals as lines."}
-coef_plot(mod)
+coef_plot(mod) + scale_y_discrete("")
 ```
 
 The weight plot shows that rainy/snowy/stormy weather has a strong negative effect on the predicted number of bikes.
@@ -237,12 +237,12 @@ $$\text{effect}_{j}^{(i)}=w_{j}x_{j}^{(i)}$$
 The effects can be visualized with boxplots.
 A box in a boxplot contains the effect range for half of your data (25% to 75% effect quantiles).
 The vertical line in the box is the median effect, i.e. 50% of the instances have a lower and the other half a higher effect on the prediction.
-The horizontal lines extend to $\pm1.58\text{IQR}/\sqrt{n}$, with IQR being the inter quartile range (75% quantile minus 25% quantile).
+The horizontal lines extend to $\pm1.5\text{IQR}/\sqrt{n}$, with IQR being the inter quartile range (75% quantile minus 25% quantile).
 The dots are outliers.
 The categorical feature effects can be summarized in a single boxplot, compared to the weight plot, where each category has its own row.
 
 ```{r linear-effects, fig.cap="The feature effect plot shows the distribution of effects (= feature value times feature weight) across the data per feature."}
-effect_plot(mod, dat)
+effect_plot(mod, dat) + scale_x_discrete("")
 ```
 
 The largest contributions to the expected number of rented bicycles comes from the temperature feature and the days feature, which captures the trend of bike rentals over time.
@@ -297,13 +297,14 @@ pred_i = predictions[i]
 
 effect_plot(mod, dat) +
   geom_point(aes(x=key, y=value), color = 'red', data = effects_i, shape = 4, size=4) +
+  scale_x_discrete("") +
   ggtitle(sprintf('Predicted value for instance: %.0f\nAverage predicted value: %.0f\nActual value: %.0f', pred_i, predictions_mean, y[i]))
 ```
 
 If we average the predictions for the training data instances, we get an average of `r round(predictions_mean, 0)`. 
 In comparison, the prediction of the `r i`-th instance is small, since only `r round(pred_i, 0)` bicycle rents are predicted.
 The effect plot reveals the reason why.
-The boxplots show the distributions of the effects for all instances of the dataset, the red crosses show the effects for the `r i`-th instance.
+The boxplots show the distributions of the effects for all instances of the dataset, the crosses show the effects for the `r i`-th instance.
 The `r i`-th instance has a low temperature effect because on this day the temperature was `r round(X[i, 'temp'],0)` degrees, which is low compared to most other days (and remember that the weight of the temperature feature is positive).
 Also, the effect of the trend feature "days_since_2011" is small compared to the other data instances because this instance is from early 2011 (`r  X[i, 'days_since_2011']` days) and the trend feature also has a positive weight.
 

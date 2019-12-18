@@ -8,7 +8,7 @@ set.seed(42)
 ## Local Surrogate (LIME) {#lime}
 
 Local surrogate models are interpretable models that are used to explain individual predictions of black box machine learning models.
-Local interpretable model-agnostic explanations (LIME) (Ribeiro, M.T., Singh, S. and Guestrin, C., 2016[^Ribeiro2016lime]) is a paper in which the authors propose a concrete implementation of local surrogate models.
+Local interpretable model-agnostic explanations (LIME)[^Ribeiro2016lime] is a paper in which the authors propose a concrete implementation of local surrogate models.
 Surrogate models are trained to approximate the predictions of the underlying black box model.
 Instead of training a global surrogate model, LIME focuses on training local surrogate models to explain individual predictions.
 
@@ -51,7 +51,7 @@ A Lasso model with a high regularization parameter $\lambda$ yields a model with
 By retraining the Lasso models with slowly decreasing $\lambda$, one after the other, the features get weight estimates that differ from zero.
 If there are K features in the model, you have reached the desired number of features. 
 Other strategies are forward or backward selection of features.
-This means you either start with the full model (=containing all features) or with a model with only the intercept and then test which feature would bring the biggest improvement when added or removed, until a model with K features is reached.
+This means you either start with the full model (= containing all features) or with a model with only the intercept and then test which feature would bring the biggest improvement when added or removed, until a model with K features is reached.
 
 How do you get the variations of the data?
 This depends on the type of data, which can be either text, image or tabular data. 
@@ -61,12 +61,12 @@ In the case of tabular data, LIME creates new samples by perturbing each feature
 ### LIME for Tabular Data
 
 Tabular data is data that comes in tables, with each row representing an instance and each column a feature.
-LIME samples are not taken around the instance of interest, but from the training data's mass centre, which is problematic.
+LIME samples are not taken around the instance of interest, but from the training data's mass center, which is problematic.
 But it increases the probability that the result for some of the sample points predictions differ from the data point of interest and that LIME can learn at least some explanation.
 
 It is best to visually explain how sampling and local model training works:
 
-```{r lime-fitting, fig.cap='LIME algorithm for tabular data. A) Random forest predictions given features x1 and x2. Predicted classes: 1 (dark color) or 0 (light color). B) Instance of interest (yellow dot) and data sampled from a normal distribution (black dots). C) Assign higher weight to points near the instance of interest. D) Colors and signs of the grid show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(class=1) = 0.5).', fig.height=9, fig.width=9}
+```{r lime-fitting, fig.cap='LIME algorithm for tabular data. A) Random forest predictions given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and data sampled from a normal distribution (small dots). C) Assign higher weight to points near the instance of interest. D) Signs of the grid show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(class=1) = 0.5).', fig.height=9, fig.width=9}
 ## Creating dataset ###########################################################
 library("dplyr")
 library("ggplot2")
@@ -221,7 +221,7 @@ And where does the 0.75 even come from?
 In certain scenarios, you can easily turn your explanation around by changing the kernel width, as shown in the following figure:
 
 
-```{r lime-fail, fig.cap = "Explanation of the prediction of instance x = 1.6. The predictions of the black box model depending on a single feature is shown as a black line and the distribution of the data is shown with rugs. Three local surrogate models with different kernel widths are computed. The resulting linear regression model depends on the kernel width: Does the feature have a negative, positive or no effect for x = 1.6?"}
+```{r lime-fail, fig.cap = "Explanation of the prediction of instance x = 1.6. The predictions of the black box model depending on a single feature is shown as a thick line and the distribution of the data is shown with rugs. Three local surrogate models with different kernel widths are computed. The resulting linear regression model depends on the kernel width: Does the feature have a negative, positive or no effect for x = 1.6?"}
 set.seed(42)
 df = data.frame(x = rnorm(200, mean = 0, sd = 3))
 df$x[df$x < -5] = -5
@@ -246,9 +246,10 @@ df.all$width = factor(c(rep(c(0.1, 0.75, 2), each = nrow(df))))
 ggplot(df.all, aes(x = x, y = y)) + 
   geom_line(size = 2.5) + 
   geom_rug(sides = "b") + 
-  geom_line(aes(x = x, y = lime, group = width, color = width)) + 
+  geom_line(aes(x = x, y = lime, group = width, color = width, linetype = width)) + 
   geom_point(data = explain.p, aes(x = x, y = y), size = 12, shape = "x") + 
-  scale_color_discrete("Kernel width") + 
+  scale_color_viridis("Kernel width", discrete = TRUE) + 
+  scale_linetype("Kernel width") + 
   scale_y_continuous("Black Box prediction")
 
 ```
@@ -292,14 +293,20 @@ instance_indices = c(295, 8)
 set.seed(44)
 bike.train.x$temp = round(bike.train.x$temp, 2)
 pred = Predictor$new(model, data = bike.train.x, class = "above", type = "prob")
-lim = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[1],], k = n_features_lime)
-
-a = plot(lim) +
-  scale_y_discrete("")
-lim = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[2],], k = n_features_lime)
-b = plot(lim) +
-  scale_y_discrete("")
-grid.arrange(a, b, ncol = 2)
+lim1 = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[1],], k = n_features_lime)
+lim2= LocalModel$new(pred, x.interest = bike.train.x[instance_indices[2],], k = n_features_lime)
+wlim = c(min(c(lim1$results$effect, lim2$results$effect)), max(c(lim1$results$effect, lim2$results$effect)))
+a = plot(lim1) +
+  scale_y_continuous(limit = wlim) + 
+  geom_hline(aes(yintercept=0))   +
+  theme(axis.title.y=element_blank(),
+        axis.ticks.y=element_blank())
+b = plot(lim2) +
+    scale_y_continuous(limit = wlim) + 
+    geom_hline(aes(yintercept=0)) +
+  theme(axis.title.y=element_blank(),
+        axis.ticks.y=element_blank())
+grid.arrange(a, b, ncol = 1)
 ```
 
 From the figure it becomes clear that it is easier to interpret categorical features than numerical features.
@@ -398,7 +405,7 @@ The user can also specify a probability for turning off a superpixel in each per
 Since the computation of image explanations is rather slow, the [lime R package](https://github.com/thomasp85/lime) contains a precomputed example which we will also use to show the output of the method. 
 The explanations can be displayed directly on the image samples. 
 Since we can have several predicted labels per image (sorted by probability), we can explain the top `n_labels`.
-For the following image the top 3 predictions were *electric guitar*; *acoustic guitar*; and *labrador*. 
+For the following image the top 3 predictions were *electric guitar*; *acoustic guitar*; and *Labrador*. 
 
 
 ```{r lime-images-package-example, eval = FALSE, fig.show = "hide"}
@@ -411,7 +418,7 @@ explanation <- .load_image_example()
 plot_image_explanation(explanation)
 ```
 
-```{r lime-images-package-example-include, fig.cap="LIME expalanations for the top 3 classes for image classification made by Google's Inception neural network. The example is taken from the LIME paper, Ribeiro 2016.", out.width=500}
+```{r lime-images-package-example-include, fig.cap="LIME explanations for the top 3 classes for image classification made by Google's Inception neural network. The example is taken from the LIME paper (Ribeiro et. al., 2016).", out.width=500}
 knitr::include_graphics("images/lime-images-package-example-1.png")
 ```
 
@@ -428,7 +435,7 @@ And if it turns out that an xgboost model works better, you can replace the SVM 
 
 Local surrogate models benefit from the literature and experience of training and interpreting interpretable models.
 
-When using Lasso or short trees, the resulting **explanations are short (=selective) and possibly contrastive**. 
+When using Lasso or short trees, the resulting **explanations are short (= selective) and possibly contrastive**. 
 Therefore, they make [human-friendly explanations](#explanation).
 This is why I see LIME more in applications where the recipient of the explanation is a lay person or someone with very little time.
 It is not sufficient for complete attributions, so I do not see LIME in compliance scenarios where you might be legally required to fully explain a prediction.
@@ -438,18 +445,19 @@ LIME is one of the few methods that **works for tabular data, text and images**.
 
 The **fidelity measure** (how well the interpretable model approximates the black box predictions) gives us a good idea of how reliable the interpretable model is in explaining the black box predictions in the neighborhood of the data instance of interest.
 
-LIME is implemented in Python ([lime](https://github.com/marcotcr/lime) and [Skater](https://github.com/datascienceinc/Skater)) and R ([lime package](https://cran.r-project.org/web/packages/lime/index.html) and [iml package](https://cran.r-project.org/web/packages/iml/index.html)) and is **very easy to use**.
+LIME is implemented in Python ([lime](https://github.com/marcotcr/lime) library) and R ([lime package](https://cran.r-project.org/web/packages/lime/index.html) and [iml package](https://cran.r-project.org/web/packages/iml/index.html)) and is **very easy to use**.
 
-The explanations created with local surrogate models **can use other features than the original model**. 
-This can be a big advantage over other methods, especially if the original features cannot bet interpreted. 
+The explanations created with local surrogate models **can use other (interpretable) features than the original model was trained on.**.
+Of course, these interpretable features must be derived from the data instances.
 A text classifier can rely on abstract word embeddings as features, but the explanation can be based on the presence or absence of words in a sentence.
 A regression model can rely on a non-interpretable transformation of some attributes, but the explanations can be created with the original attributes.
-
+For example, the regression model could be trained on components of a principal component analysis (PCA) of answers to a survey, but LIME might be trained on the original survey questions.
+Using interpretable features for LIME can be a big advantage over other methods, especially when the model was trained with non-interpretable features.
 
 ### Disadvantages
 
 The correct definition of the neighborhood is a very big, unsolved problem when using LIME with tabular data.
-IMHO it is the biggest problem with LIME and the reason why I would recommend to use LIME only with great care.
+In my opinion it is the biggest problem with LIME and the reason why I would recommend to use LIME only with great care.
 For each application you have to try different kernel settings and see for yourself if the explanations make sense.
 Unfortunately, this is the best advice I can give to find good kernel widths.
 
@@ -470,6 +478,6 @@ Local surrogate models, with LIME as a concrete implementation, are very promisi
 But the method is still in development phase and many problems need to be solved before it can be safely applied.
 
 
-[^Ribeiro2016lime]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should i trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD international conference on knowledge discovery and data mining. ACM, 2016.
+[^Ribeiro2016lime]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should I trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD international conference on knowledge discovery and data mining. ACM (2016).
 
-[^limerobustness]: Alvarez-Melis, David, and Tommi S. Jaakkola. "On the Robustness of Interpretability Methods." arXiv preprint arXiv:1806.08049 (2018).
+[^limerobustness]: Alvarez-Melis, David, and Tommi S. Jaakkola. "On the robustness of interpretability methods." arXiv preprint arXiv:1806.08049 (2018).

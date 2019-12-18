@@ -140,9 +140,9 @@ In the linear model, the link function links the weighted sum of the features to
 Under the GLM framework, this concept generalizes to any distribution (from the exponential family) and arbitrary link functions.
 If y is a count of something, such as the number of coffees someone drinks on a certain day, we could model it with a GLM with a Poisson distribution and the natural logarithm as the link function:
 
-$$ln(E_Y(y|x)=x^{T}\beta$$
+$$ln(E_Y(y|x))=x^{T}\beta$$
 
-The logistic regression model is also a GLM that assumes a Bernoulli distribution and uses the logistic function as the link function.
+The logistic regression model is also a GLM that assumes a Bernoulli distribution and uses the logit function as the link function.
 The mean of the binomial distribution used in logistic regression is the probability that y is 1.
 
 $$x^{T}\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
@@ -187,7 +187,8 @@ df$y = rpois(lambda = lambda, n = n)
 
 tab = data.frame(table(df$y))
 
-ggplot(tab) + geom_col(aes(x = Var1, y = Freq)) +
+ggplot(tab) + 
+  geom_col(aes(x = Var1, y = Freq), fill = default_color, width = 0.3) +
   scale_x_discrete("Number of coffees on a given day") + 
   scale_y_continuous("Number of days")
 ```
@@ -202,7 +203,7 @@ A more obvious problem is that the predictions do not match the "allowed" domain
 mod.gaus = glm(y ~ ., data = df, x = TRUE)
 pred.gauss = data.frame(pred = predict(mod.gaus), actual = df$y)
 ggplot(pred.gauss) + 
-  geom_histogram(aes(x = pred)) + 
+  geom_histogram(aes(x = pred), fill = default_color) + 
   scale_x_continuous("Predicted number of coffees") + 
   scale_y_continuous("Frequency")
 ```
@@ -221,7 +222,7 @@ The fitted Poisson GLM leads to the following distribution of predicted values:
 mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson(link = "log"))
 pred.pois = data.frame(pred = predict(mod.pois, type = "response"), actual = df$y)
 ggplot(pred.pois)  + 
-  geom_histogram(aes(x = pred))+ 
+  geom_histogram(aes(x = pred), fill = default_color)+ 
   scale_x_continuous("Predicted number of coffees") + 
   scale_y_continuous("Frequency")
 ```
@@ -318,7 +319,7 @@ We create additional features which represent combinations of categories.
 Here is some artificial data containing working day (work) and a categorical weather feature (wthr): 
 
 ```{r data-frame-lm-cat}
-x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("Good", "Bad", "Ok", "Good"))
+x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("2", "0", "1", "2"))
 knitr::kable(x)
 ```
 
@@ -362,6 +363,8 @@ lm_summary = summary(mod)$coefficients
 lm_summary_print = lm_summary
 rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 
+# var name becomes to long otherwise
+rownames(lm_summary_print)[rownames(lm_summary_print) == "weathersitRAIN/SNOW/STORM"] = "weathersitRAIN/..."
 kable(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight', 'Std. Error', "2.5%","97.5%"))
 ```
 
@@ -385,7 +388,7 @@ The intercept of the 'NO WORKING DAY'-line at temperature = 0 is determined by t
 The intercept of the 'WORKING DAY'-line at temperature = 0 is determined by the intercept term + the effect of working day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)`).
 
 ```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bikes for a linear model. Effectively, we get two slopes for the temperature, one for each category of the working day feature."}
-jtools::interact_plot(mod, pred = "temp", modx = "workingday")
+interactions::interact_plot(mod, pred = "temp", modx = "workingday")
 ```
 
 ### Nonlinear Effects - GAMs {#gam}

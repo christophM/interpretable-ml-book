@@ -5,9 +5,9 @@ set.seed(42)
 
 <!--{pagebreak}-->
 
-## Feature Importance {#feature-importance}
+## Permutation Feature Importance {#feature-importance}
 
-The importance of a feature is the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome. 
+Permutation feature importance measures the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome. 
 
 ### Theory
 
@@ -73,7 +73,7 @@ By "random" I mean that the target outcome is independent of the 50 features.
 This is like predicting tomorrow's temperature given the latest lottery numbers.
 If the model "learns" any relationships, then it overfits.
 And in fact, the SVM did overfit on the training data.
-The mean absolute error (mae)for the training data is `r round(perf1,2)` and for the test data `r round(perf2,2)`, which is also the error of the best possible model that always predicts the mean outcome of 0 (mae of  `r round(mean(abs(y2)),2)`).
+The mean absolute error (short: mae) for the training data is `r round(perf1,2)` and for the test data `r round(perf2,2)`, which is also the error of the best possible model that always predicts the mean outcome of 0 (mae of  `r round(mean(abs(y2)),2)`).
 In other words, the SVM model is garbage.
 What values for the feature importance would you expect for the 50 features of this overfitted SVM?
 Zero because none of the features contribute to improved performance on unseen test data?
@@ -81,10 +81,10 @@ Or should the importances reflect how much the model depends on each of the feat
 Let us take a look at how the distributions of feature importances for training and test data differ.
 
 ```{r feature-imp-sim, fig.cap="Distributions of feature importance values by data type. An SVM was trained on a regression dataset with 50 random features and 200 instances. The SVM overfits the data: Feature importance based on the training data shows many important features. Computed on unseen test data, the feature importances are close to a ratio of one (=unimportant)."}
-pred = Predictor$new(mod, cbind(X, y), y = "y")
+pred = Predictor$new(mod, cbind(X, y = y), y = "y")
 imp = FeatureImp$new(pred, loss = "mae")
 
-pred2 = Predictor$new(mod, cbind(X2, y2), y = y2)
+pred2 = Predictor$new(mod, cbind(X2, y = y2), y = "y")
 imp2 = FeatureImp$new(pred2, loss = "mae")
 
 imp$results$dat.type = "Training data"
@@ -100,16 +100,16 @@ ggplot(imp.dat) + geom_boxplot(aes(x = dat.type, y = importance)) +
 It is unclear to me which of the two results is more desirable.
 So I will try to make a case for both versions and let you decide for yourself.
 
-**The Case for Test Data**
+**The case for test data**
 
 This is a simple case: 
 Model error estimates based on training data are garbage -> feature importance relies on model error estimates -> feature importance based on training data is garbage.  
 Really, it is one of the first things you learn in machine learning:
 If you measure the model error (or performance) on the same data on which the model was trained, the measurement is usually too optimistic, which means that the model seems to work much better than it does in reality.
 And since the permutation feature importance relies on measurements of the model error, we should use unseen test data.
-The feature importance based on training data makes us mistakenly believe that feature are important for the predictions, when in reality the model was just overfitting and the features weren't important at all.
+The feature importance based on training data makes us mistakenly believe that features are important for the predictions, when in reality the model was just overfitting and the features were not important at all.
 
-**The Case for Training Data**
+**The case for training data**
 
 ```{r garbage-svm-mvp}
 max.imp = imp$results[imp$results$importance == max(imp$results$importance),]
@@ -142,14 +142,14 @@ To the best of my knowledge, there is no research addressing the question of tra
 It will require more thorough examination than my "garbage-SVM" example.
 We need more research and more experience with these tools to gain a better understanding.
 
-Next, we will look at a some examples.
+Next, we will look at some examples.
 I based the importance computation on the training data, because I had to choose one and using the training data needed a few lines less code.
 
 ### Example and Interpretation
 
 I show examples for classification and regression. 
 
-**Cervical cancer (Classification)**
+**Cervical cancer (classification)**
 
 We fit a random forest model to predict [cervical cancer](#cervical).
 We measure the error increase by 1-AUC (1 minus the area under the ROC curve).
@@ -166,10 +166,10 @@ predictor = Predictor$new(mod, data = cervical[-which(names(cervical) == "Biopsy
 auc_error = function(actual, predicted) 1 - Metrics::auc(actual, predicted)
 importance = FeatureImp$new(predictor, loss = auc_error)
 imp.dat = data.frame(importance$results[c("feature", "permutation.error", "importance")])
-most_imp = importance$feature[importance$importance == max(importance$importance)]
+most_imp = imp.dat$feature[imp.dat$importance == max(imp.dat$importance)]
 ```
 
-```{r importance-cervical, fig.cap = sprintf("The importance of each of the features for predicting cervical cancer with a random forest. The most important feature was %s. Permuting %s resulted in an increase in 1-AUC by a factor of %.2f", most_imp, most_imp, max(importance$importance))}
+```{r importance-cervical, fig.cap = sprintf("The importance of each of the features for predicting cervical cancer with a random forest. The most important feature was %s. Permuting %s resulted in an increase in 1-AUC by a factor of %.2f", most_imp, most_imp, max(imp.dat$importance))}
 plot(importance) +
   scale_x_continuous("Feature importance (loss: 1 - AUC)") +
    scale_y_discrete("")
@@ -178,7 +178,7 @@ plot(importance) +
 
 The feature with the highest importance was `r imp.dat[1, 'feature']` associated with an error increase of `r round(imp.dat[1,'importance'], 2)` after permutation.
 
-**Bike sharing (Regression)**
+**Bike sharing (regression)**
 
 We fit a support vector machine model to predict [the number of rented bikes](#bike-data), given weather conditions and calendar information.
 As error measurement we use the mean absolute error.
@@ -230,7 +230,7 @@ You analyze the importance of one of the features that have a non-zero weight.
 You remove the feature and retrain the model.
 The model performance remains the same because another equally good feature gets a non-zero weight and your conclusion would be that the feature was not important.
 Another example:
-The model is a decision tree and we analyze the importance of the feature that was chose as the first split.
+The model is a decision tree and we analyze the importance of the feature that was chosen as the first split.
 You remove the feature and retrain the model. 
 Since another feature is chosen as the first split, the whole tree can be very different, which means that we compare the error rates of (potentially) completely different trees to decide how important that feature is for one of the trees.
 
@@ -283,12 +283,12 @@ Even though the importance values might make sense at the level of model behavio
 ### Software and Alternatives
 
 The `iml` R package was used for the examples.
-The `DALEX` R package and the Python `Skater` module also implement model-agnostic permutation feature importance.
+The `DALEX` R package and the Python `alibi` library also implement model-agnostic permutation feature importance.
 
 An algorithm called [PIMP](https://academic.oup.com/bioinformatics/article/26/10/1340/193348) adapts the feature importance algorithm to provide p-values for the importances.
 
 
-[^Breiman2001]: Breiman, Leo. 2001. “Random Forests.” Machine Learning 45 (1). Springer: 5-32.
+[^Breiman2001]: Breiman, Leo.“Random Forests.” Machine Learning 45 (1). Springer: 5-32 (2001).
 
-[^Fisher2018]: Fisher, Aaron, Cynthia Rudin, and Francesca Dominici. 2018. “Model Class Reliance: Variable Importance Measures for any Machine Learning Model Class, from the ‘Rashomon’ Perspective.” http://arxiv.org/abs/1801.01489.
+[^Fisher2018]: Fisher, Aaron, Cynthia Rudin, and Francesca Dominici. “Model Class Reliance: Variable importance measures for any machine learning model class, from the ‘Rashomon’ perspective.” http://arxiv.org/abs/1801.01489 (2018).
 

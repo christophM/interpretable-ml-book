@@ -40,7 +40,11 @@ After rendering, the HTML files of the  book will be in the "_book" folder. You 
 ```{r}
 browseURL('_book/index.html')
 ```
+## Notes on Printing with lulu.com
 
+- Export from Leanpub in 7.44" x 9.68" 	18.9cm x 24.6cm
+- For cover: 7.565 x 9.925", 19.226 x 25.224cm, see [recommended sizes](https://connect.lulu.com/en/discussion/33279/recommended-book-cover-image-dimensions)
+- Font for front cover: Francois One
 
 ## Writing
 
@@ -59,6 +63,25 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 ## Changelog
 All notable changes to the book will be documented here.
 
+### v1.2 (IN PROGRESS) [html version]
+- Started section on neural network interpretation
+- Added chapter on feature visualization
+- Added SHAP chapter
+- Added Anchors chapter
+- Fixed error in logistic regression chapter: Logistic regression was predicting class "Healthy", but interpretation in the text was for class "Cancer". Now regression weights have the correct sign.
+- Renamed Feature Importance chapter to "Permutation Feature Importance"
+- Errata:
+	- Chapter 4.3 GLM, GAM and more: Logistic regression uses logit, not logistic function as link function. 
+	- Chapter Linear models: Formula for adjusted R-squared was corrected
+
+### v1.1 (2019-03-23) [Print version, ebook version]
+- Fixes wrong index in Cooks Distance summation (i -> j)
+- fixed boxplot formula (1.5 instead of 1.58)
+- Change to colorblind-friendly color palettes (viridis)
+- Make sure plots work in black and white as well
+
+### v1.0 (2019-02-21)
+- Extensive proofreading and polishing
 
 ### v0.7 (2018-11-21)
 - Renamed Definitions chapter to Terminology
