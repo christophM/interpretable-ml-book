@@ -73,7 +73,8 @@ All notable changes to the book will be documented here.
 - Errata:
 	- Chapter 4.3 GLM, GAM and more: Logistic regression uses logit, not logistic function as link function. 
 	- Chapter Linear models: Formula for adjusted R-squared was corrected (twice) 
-        - Chapter RuleFit: Newly introduced mix up between Healthy and Cancer in OneR chapter was fixed.
+        - Chapter Decision Rules: Newly introduced mix up between Healthy and Cancer in OneR chapter was fixed.
+        - Chapter RuleFit: The importance of the linear term in the total importance formulate was indexed with an $l$ instead of $j$. 
 
 ### v1.1 (2019-03-23) [Print version, ebook version]
 - Fixes wrong index in Cooks Distance summation (i -> j)
