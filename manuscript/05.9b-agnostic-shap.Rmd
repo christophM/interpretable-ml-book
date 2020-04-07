@@ -123,12 +123,7 @@ For tabular data, the following figure visualizes the mapping from coalitions to
 knitr::include_graphics("images/shap-simplified-features.jpg")
 ```
 
-In a perfect world, $h_x$ samples the absent features values conditional on the present features values:
-
-$$f(h_x(z'))=E_{X_C|X_S}[f(x)|x_S]$$
-
-where $X_C$ is the set of absent features and $X_S$ is the set of present features.
-However, as defined above, $h_x$ for tabular data treats $X_C$ and $X_S$ as independent and integrates over the marginal distribution:
+$h_x$ for tabular data treats $X_C$ and $X_S$ as independent and integrates over the marginal distribution:
 
 $$f(h_x(z'))=E_{X_C}[f(x)]$$
 
@@ -136,7 +131,9 @@ Sampling from the marginal distribution means ignoring the dependence structure 
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
 The estimation puts too much weight on unlikely instances.
 Results can become unreliable.
-As we will see later, TreeSHAP for tree-ensembles is not affected by this issue.
+But it is necessary to sample from the marginal distribution.
+If the absent feature values would be sampled from the conditional distribution, then the resulting values are no longer Shapley values.
+The resulting values would violate the Shapley axiom of Dummy, which says that a feature that does not contribute to the outcome should have a Shapley value of zero.
 
 For images, the following figure describes a possible mapping function:
 
@@ -194,14 +191,17 @@ If we add an L1 penalty to the loss L, we can create sparse explanations.
 ### TreeSHAP
 
 Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
-TreeSHAP is fast, computes exact Shapley values, and correctly estimates the Shapley values when features are dependent.
-In comparison, KernelSHAP is expensive to compute and only approximates the actual Shapley values.
+TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
+
+TreeSHAP defines the value function using the conditional expectation $E_{X_S|X_C}(f(x)|x_S)$ instead of the marginal expectation.
+The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.[^dummy1][^dummy2]
+The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
 
 How much faster is TreeSHAP?
-For the exact Shapley values, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
+Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
 
 <!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
-TreeSHAP estimates the correct conditional expectation $E_{X_S|X_C}(f(x)|x_S)$.
+TreeSHAP uses the conditional expectation $E_{X_S|X_C}(f(x)|x_S)$ to estimate effects.
 I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
 If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
 If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
@@ -214,7 +214,7 @@ The problem is that we have to apply this procedure for each possible subset S o
 This means $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$ times.
 Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
 -->
-Fortunately, TreeSHAP computes in polynomial time instead of exponential.
+TreeSHAP computes in polynomial time instead of exponential.
 The basic idea is to push all possible subsets S down the tree at the same time.
 For each decision node we have to keep track of the number of subsets.
 This depends on the subsets in the parent node and the split feature.
@@ -234,8 +234,11 @@ Next, we will look at SHAP explanations in action.
 I trained a random forest classifier with 100 trees to predict the [risk for cervical cancer](#cervical).
 We will use SHAP to explain individual predictions.
 We can use the fast TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees.
+But instead of relying on the conditional distribution, this example uses the marginal distribution.
+This is described in the package, but not in the original paper.
+The Python TreeSHAP function is slower with the marginal distribution, but still faster than KernelSHAP, since it scales linearly with the rows in the data.
 
-Since SHAP computes Shapley values, the interpretation is the same as in the [Shapley value chapter](#shapley).
+Because we use the marginal distribution here, the interpretation is the same as in the [Shapley value chapter](#shapley).
 But with the Python shap package comes a different visualization:
 You can visualize feature attributions such as Shapley values as "forces".
 Each feature value is a force that either increases or decreases the prediction.
@@ -395,6 +398,11 @@ By replacing feature values with values from random instances, it is usually eas
 However, if features are dependent, e.g. correlated, this leads to putting too much weight on unlikely data points.
 TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.
 
+**TreeSHAP can produce unintuitive feature attributions**.
+While TreeSHAP solves the problem of extrapoloating to unlikely data points, it introduces a new problem.
+TreeSHAP changes the value function by relying on the conditional expected prediction.
+With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.
+
 The disadvantages of Shapley values also apply to SHAP:
 Shapley values can be misinterpreted and access to data is needed to compute them for new data (except for TreeSHAP).
 
@@ -410,3 +418,7 @@ SHAP is also included in the R [xgboost](https://rdrr.io/cran/xgboost/man/xgb.pl
 [^lundberg2016]: Lundberg, Scott M., and Su-In Lee. "A unified approach to interpreting model predictions." Advances in Neural Information Processing Systems. 2017.
 
 [^tree-shap]: Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. "Consistent individualized feature attribution for tree ensembles." arXiv preprint arXiv:1802.03888 (2018).
+
+[^dummy1]: Sundararajan, Mukund, and Amir Najmi. "The many Shapley values for model explanation." arXiv preprint arXiv:1908.08474 (2019).
+
+[^dummy2]: Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. "Feature relevance quantification in explainable AI: A causality problem." arXiv preprint arXiv:1910.13413 (2019). 
