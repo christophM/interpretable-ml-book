@@ -84,12 +84,19 @@ Integrated Gradients, DeepList and LRRP do so.
 (most axioms are like their shapley equivalents)
 
 
+[^unreliable-saliency] classify gradient based methods into 3 categories:
+Gradients, Signal Methods (DeConvNet, Guided BackProb, PatternNet) and Attribution methods (Deep Taylor, Integrated Gradients).
 
 
 ### Problems
 
+There are too many methods.
+And no clear path to check how they are doing, right?
+I mean we would need some groundtruth to really say if they are correct?
+Well, there is a different way, proposed as sanity checks for Saliency Maps [^sanity-checks].
+The rough idea is: We cannot know whether a saliency map is correct, but we can know if a method is insensitive to model and data, which is highly undesirable.
 
-Based on Sanity Checks for Saliency Maps [^sanity-checks]
+
 
 As many methods were proposed, their evaluation was mostly visual, i.e. does the highlighting of pixels make sense?
 The paper above brings some rigor to evaluation.
@@ -196,24 +203,42 @@ $$E_{grad}(x)=\frac{\delta{}S}{\delta{}x}|x=x_0$
 It is the same as the gradient method, but multiplied with the value of the feature / pixel.
 Helps with the problem of gradient saturation and reduces visual diffusion, as can be seen in the examples later.
 
-$$x\cdot\frac{\delta{}S}{\delta{}x}|x=x_0$$
+$$E_{GI}=x\cdot\frac{\delta{}f}{\delta{}x}|x=x_0$$
 
 All three methods are equivalent, as shown by M. Anaconda (in ReLU networks, no bias, zero baseline).
+
+When constant is added to image, does not work any more. [^unreliable-saliency]
+
+### Deep Taylor
+
+Deep Taylor is a reference method, i.e. attributions are relative to some reference data point.
+
+First, the attribution of an input neuron j is initialized to be equal to the output of taht neuron.
+iAttribution of other is set to zero. $s_j^{output}=y$, $s^{output}_{k\neqj}=0$
+
+The attribution then is backpropagated to inputs with the following rule:
+
+$$s^{l-1}_j=\frac{w\cdot(x-x_0)}{w^Tx}s_j^l$$
+
+where $x_0$ is the pixel vector of the reference image.
+
+
+When constant is added to image, does not work any more, depending on choice of reference point [^unreliable-saliency]
+Deep Taylor is equivalent to LRP, when an all zero reference point is chosen.
+When all zero is chosen, they method is sensitive to constant shift in image -> bad
+When
+
 
 
 ### Integrated Gradients
 
-$$E_{IG}=(x-\bar{x})\cdot\int_0^1\frac{\delta{}S(\bar{x}+\alpha(x-\bar{x})}{\delta{}x}$$
+$$E_{IG}=(x-x_0)\cdot\int_0^1\frac{\delta{}f(x_0+\alpha(x-x_0)}{\delta{}x}$$
 
-Here $\bar{x}$ is a reference image, that stands for absence of features.
+Here $x_0$ is a reference image, that stands for absence of features.
 Usually a black or otherwise one-colored image.
-
-
-### Guided Backpropagagion
-
-Builds on Deconvolution.
-Negative gradients are set to zero
-
+IG is a reference point method, i.e. they compare to a reference.
+IG is sensitive to constant shift [^unreliable-saliency] which is bad, but only when an all zero reference point is chosen.
+When a black image is chosen as reference, it is fine (set all pixels to the mininimum in the data).
 ### Guided GradCAM
 
 Builds on CAM.
@@ -234,27 +259,29 @@ Ancona et. al 2018.
 
 These gradient based methods are all different for different activation functions, since when the chain rule for derivation is applied, they replace the non-linear activations with a function $g(x)$ is different in different methods.
 
+### Deconvolution (DeConvNet)
 
-TODO: Create example with different relevance methods.
-
-Implementations:
-
-https://github.com/oracle/Skater/blob/master/skater/core/local_interpretation/dnni/deep_interpreter.py
-
-DeepLift Implementation https://github.com/kundajelab/deeplift
-DeepVisualization ToolBox https://github.com/yosinski/deep-visualization-toolbox
-Integrated Gradietns https://github.com/ankurtaly/Integrated-Gradients
-
-Some tips and tricks (for LRP): Methods for Interpreting and Understanding Deep Neural Networks
-LRP: Should work better on ReLU
-
-TODO: Find some more advice from this paper and mention here.
-
-Advantages of LRP over Deconvolution and Sensitivity Analysis.
-https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwj_5vL0m6DiAhUz8uAKHU6ED0oQFjAAegQIAhAC&url=https%3A%2F%2Fwww3.math.tu-berlin.de%2Fnumerik%2FCoSIPICDL2017%2FTalks%2Fmueller.pdf&usg=AOvVaw1yR_5ZwKPvKLxHvwsAfQgA
+TODO
 
 
-TODO: Insert image with edge detectors
+
+[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
+They also have a nice image explaining the difference between backpropagation of activation between saliency, deconvnet and guided backpropagation.
+
+DeConvNet uses a "Backward ReLU" operation.
+
+### Guided Backpropagagion
+
+Builds on Deconvolution.
+Negative gradients are set to zero.
+Gradient is backpropagated through backward ReLU, then forward ReLU.
+
+[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
+
+
+### PatternNet and pattern attribution
+
+Pieter-Jan Kindermans, Kristof T Schütt, Maximilian Alber, Klaus-Robert Müller, Dumitru Erhan,Been Kim, and Sven Dähne.  Learning how to explain neural networks: Patternnet and patternat-tribution.arXiv preprint arXiv:1705.05598v2, 2017.
 
 ### Alternative: Perturbation
 
@@ -278,7 +305,29 @@ Shapley Value is covered in the [#shap](Shap Chapter) and LIME in the [#lime](LI
 
 Paper: Visual Reasoning of Feature Attribution with Deep Recurrent Neural Networks
 
-### Example
+
+### Examples
+
+TODO: Create example with different relevance methods.
+
+Implementations:
+
+https://github.com/oracle/Skater/blob/master/skater/core/local_interpretation/dnni/deep_interpreter.py
+
+DeepLift Implementation https://github.com/kundajelab/deeplift
+DeepVisualization ToolBox https://github.com/yosinski/deep-visualization-toolbox
+Integrated Gradietns https://github.com/ankurtaly/Integrated-Gradients
+
+Some tips and tricks (for LRP): Methods for Interpreting and Understanding Deep Neural Networks
+LRP: Should work better on ReLU
+
+TODO: Find some more advice from this paper and mention here.
+
+Advantages of LRP over Deconvolution and Sensitivity Analysis.
+https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwj_5vL0m6DiAhUz8uAKHU6ED0oQFjAAegQIAhAC&url=https%3A%2F%2Fwww3.math.tu-berlin.de%2Fnumerik%2FCoSIPICDL2017%2FTalks%2Fmueller.pdf&usg=AOvVaw1yR_5ZwKPvKLxHvwsAfQgA
+
+
+TODO: Insert image with edge detectors
 
 I want to predict the following:
 TODO: INCLUDE IMAGE OF DOGO
@@ -312,8 +361,18 @@ Not sure if there is something interesting.
 - You have to see which methods works best for which network. It seems like LRP works better when there are not too many fully connected layers, because if there are too many, the relevance will be non-selective but distributed to many layers.
 - Some methods have similarities to edge detectors, which are independent of training data and model.
   Explanation becomes misleading.
+- These saliency maps can be very fragile.
+  [^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction can lead to very different pixels that are highlighted as explanation.
+  They looked at DeepLift, Vanilla (Simple) Gradient and Integrated Gradients.
+- Also [^unreliable-saliency] showed that these methods can be highly unreliable.
+  They added a constant shift to the input data, i.e. they added the same pixel changes to all images.
+  They compare two networks, original network and the one were the bias of the first layer is changes to adapt for the constant pixel shift, so that the activations of both networks are the same and so are the predictions.
+  Also the gradient is the same for both.
+  This means network 2 simply cancels out the constant shift in the first layer.
 
-A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
+
+### Software
+- A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
 
 
 
@@ -331,3 +390,9 @@ A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github
 
 
 [^better-understanding]: Ancona, Marco, et al. "Towards better understanding of gradient-based attribution methods for deep neural networks." arXiv preprint arXiv:1711.06104 (2017).
+
+[^fragile-saliency]: Ghorbani, Amirata, Abubakar Abid, and James Zou. "Interpretation of neural networks is fragile." Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 33. 2019.
+
+[^unreliable-saliency]: Kindermans, Pieter-Jan, et al. "The (un) reliability of saliency methods." Explainable AI: Interpreting, Explaining and Visualizing Deep Learning. Springer, Cham, 2019. 267-280. https://arxiv.org/pdf/1711.00867v1.pdf
+
+[^perplexing-behavior]: Nie, Weili, Yang Zhang, and Ankit Patel. "A theoretical explanation for perplexing behaviors of backpropagation-based visualizations." arXiv preprint arXiv:1805.07039 (2018).
