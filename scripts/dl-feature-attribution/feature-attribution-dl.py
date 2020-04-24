@@ -1,4 +1,4 @@
-# Code from here: ttps://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb
+# Code from here: https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb
 import keras
 import keras.backend
 import imp
@@ -36,7 +36,7 @@ methods = [
 #("pattern.attribution",   {},   imgnetutils.heatmap,       "PatternAttribution"),
 ("input_t_gradient",      {},                       imgnetutils.heatmap,       "Input * Gradient"),
 ("integrated_gradients",  {"steps": 64}, imgnetutils.heatmap,       "Integrated Gradients"),
-("lrp.z",                 {},                       imgnetutils.heatmap,       "LRP-Z"),                                                    
+("lrp.z",                 {},                       imgnetutils.heatmap,       "LRP-Z"),
 ("lrp.epsilon",           {"epsilon": 1},           imgnetutils.heatmap,       "LRP-Epsilon"),
 ("lrp.sequential_preset_a_flat",{"epsilon": 1},     imgnetutils.heatmap,       "LRP-PresetAFlat"),
 ("lrp.sequential_preset_b_flat",{"epsilon": 1},     imgnetutils.heatmap,       "LRP-PresetBFlat"),
