@@ -1,8 +1,10 @@
 ## Feature Attribution for Image Classification
+
 <!--
 Some literature
 - For feature attribution: http://blog.qure.ai/notes/deep-learning-visualization-gradient-based-methods
 - http://blog.qure.ai/notes/visualizing_deep_learning
+- Also check out: https://openreview.net/pdf?id=Hkn7CBaTW
 -->
 
 <!--Idea for chapter:
@@ -22,13 +24,15 @@ Questions
 
 -->
 
-
 <!-- short summary -->
 Saliency maps are "heatmaps" on top of images that highlight the pixels that were most responsible for a certain classification by a neural network.
 They are based on backpropagation of the gradient.
 
 <!--TODO: Insert first saliency map here, just as example -->
-
+For a long time, I dreaded writing this chapter.
+There are more methods then we need on this plaent.
+Enough to send a few to a parallel universe.
+No more new methods will be added.
 
 <!-- General idea and distinction -->
 Also known as: Feature attribution, feature contribution, feature relevance.
@@ -160,6 +164,21 @@ There are not rules.
 Some of those methods have the property of Completeness, meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image/data point minus the prediction of a reference point (e.g. all grey image).
 Integrated Gradient and SHAP have this property.
 
+
+### List of problems
+
+Before we start with all the approaches, let's look at problems.
+I know, a bit unusual, but it helps to weed out some of the approaches.
+
+
+- Saturated Gradient (explained in [^deeplift])
+- Disconinuities in the gradients, also called the Thresholding artifact. Stems from jump in ReLU.
+  Exists in Gradient and Gradient x Input
+- Insensitivity to Model
+- Insensitivity to Training Data
+- Failure to highlight negative contributions (due to backpropagation through ReLUs)
+
+
 ### List of approaches
 
 VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
@@ -167,20 +186,13 @@ VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
 - Relevance of feature is estimated by measuring how the prediction changes if feature is unknown, by simulating that the feature is unknown.
 - what this paper does differently: instead of simulating
 - Implementation: https://github.com/lmzintgraf/DeepVis-PredDiff
-
-
-
-- Saliency Map (gradient-based) also called "Vanilla Gradient"  2013, [^saliency]. Simple, easy to compute, relatively robust. One of the first two papers.
-- Deconvolutional Network, 2013 [^deconvnet] (one of the two first papers)
 - DeepSHAP (gradient-based)
   - version called DeepExplainer. There is a connection between SHAP and DeepLift
   - version called GradientExplainer. Connection between SHAP and Gradient Input algorithm.
-- (epsilon) Layer-Wise Relevance Propagation (gradient-based)
-- DeepLift (gradient-based)
-- Deep Taylor Decomposition (gradient-based)
-- Gradient * Input (gradient-based, surprise!) [^integrated-gradients] https://arxiv.org/abs/1605.01713
 - Occlusion (perturbation based) https://arxiv.org/abs/1311.2901
-- Integrated Gradients (gradient based) https://arxiv.org/abs/1703.01365
+
+- (epsilon) Layer-Wise Relevance Propagation (gradient-based)
+- Gradient * Input (gradient-based, surprise!) [^integrated-gradients] https://arxiv.org/abs/1605.01713
 - Shapley Value Sampling (perturbation based)
 - LIME (perturbation based)
 - Grad-CAM class activation maps (gradient-based) [^grad-cam]
@@ -188,14 +200,157 @@ VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
 - Smoothgrad [^smoothgrad]  https://arxiv.org/abs/1706.03825
 
 
-### Vanilla Gradient (Saliency Maps)
+We will go through many of the papers and approaches, starting with the earliest and ending with the latest ones.
+As it turns out, many methods have problems, which I will address so you can already see whether an approach makes sense to use.
+The approaches that do not work well are still included here for educational and historical purposes.
+With all these approaches, we start with an already trained CNN.
+
+This is going to be a longer list.
+That is why I did not want to cover Deep Learning stuff.
+It is so crowded.
+It is a mess.
+But, well, the stuff works and need interpretation.
+If you just want to read one, read Vanilla Gradient aka Saliency Maps.
+It works well and is simple.
+
+
+### DeconvNet, Deconvolution 2013-11-12
+
+Paper: Visualizing and Understanding Convolutional Networks
+By: Matthew D Zeiler, Rob Fergus
+Date: 2013-11-12
+
+The authors propose a Deconvolutional Network (DeconvNet).
+A DeconvNet kind of uses the same components as a Convolutional Neural Network, but reverses the operations such as filtering, pooling and activation.
+These nets have already been suggested two years earlier, but not for the purpose of visualization.
+
+We start with an already trained neural network.
+For a given image, we compute the all the feature maps.
+The approach constructs a second neural network that covers the convolutional layers, but in reverse.
+We start with the last convolutional layer (the feature maps) and go back until a reconstruction of the input image.
+Pooling layers are reversed by unpooling:
+Although this unpooling is not reversible (since max-pooling loses information), it is possible to obtain an approximation.
+This works by recording the location of the maxima within each pooling region.
+They call those "switch" variables.
+In the DeconvNet unpooling, these switches are used to map the reconstructions from the layer above to the maximally activated location below.
+The activation layer -- here Rectifying Linear Unit (ReLU) -- again uses ReLUs to backpropagate the reconstructions.
+
+
+The filtering units are simply transponsed, but applied to the rectified maps, not the output layer beneath.
+[On this github README](https://github.com/vdumoulin/conv_arithmetic) you can see some animations how this looks like.
+
+We do not cover too deeply here, because it has some problems and the following, more simple approaches work better.
+
+[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
+They also have a nice image explaining the difference between backpropagation of activation between saliency, deconvnet and guided backpropagation.
+
+DeConvNet uses a "Backward ReLU" operation.
+
+### Vanilla Gradient (Saliency Maps) 2014-04-19
+
+Paper: Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps
+By: Karen Simonyan, Andrea Vedaldi, Andrew Zisserman
+When: 2014-04-19
+Given: Image $I_0$, class $c$, score function $S_c(I)$.
+Goal: Ranke pixels of $I_0$ based on influence on $S_c(I_0)$.
+
 
 1. Do a forward pass of the data
 1. Do a backward pass of the desired class to the input features to get the gradient
-1. Visualize the gradients
+   $$E_{grad}(I_0)=\frac{\delta{}S_c}{\delta{}I}|_{I=I_0}$$
+1. Visualize the gradients. Either absolute or with negative / positive
 
-TODO: Check point condition
-$$E_{grad}(x)=\frac{\delta{}S}{\delta{}x}|x=x_0$
+Compared to DeconvNet:
+They differ mostly in how they backpropagate.
+Apart from the ReLU layer, DeconvNet is equivalent to the Vanilla Gradient approach.
+Vanilla Gradient can be seen as a generalization of DeconvNet.
+For ReLU ($X_{n+1}=max(X_n,0)$) the vanilla gradient computes: $\delta{}f/\delta{}X_n=\delta{}f/\delta{}X_{n+1}\mathbb{1}(X_n>0)$, where $\mathbb{1}$ is an (element-wise) indicator function.
+For DeconvNet ReLU, this is instead: $R_n=R_{n+1}\mathbb{1}(R_{n+1}>0)$, where $R_n$ and $R_{n+1}$ are the layer reconstructions.
+
+Vanilla Gradient has Saturation Problem (explained in [^deeplift]):
+Assuming ReLU activation layer is used, when the weighted feature sum goes below zero, the at some point the activation is capped at zero, but does not change any more, i.e. the activation is saturated.
+Let's say the input to the layer are two neurons with weights $-1$ and $-1$ and a bias of $1$.
+Passing that through the ReLU, the activation will be neuron 1 + neuron 2 when the sum of both neurons is smaller than 1.
+If the sum of both is greater than one, the activation remains sasturated at an activation of 1.
+Also the gradient at that point will be zero, i.e. all gradient based methods will show that this neuron is not important.
+
+### DeepLIFT
+
+Paper: Learning Important Features Through Propagating Activation Differences
+Authors: Avanti Shrikumar, Peyton Greenside, Anshul Kundaje
+Date: 2019-10-12 (arxiv, v2)
+Link: Learning important features through propagating activation diffe    rences
+[^deeplift]
+
+The name DeepLIFT stands for Deep Learning Important FeaTures.
+DeepLIFT attributes the difference in prediction from some reference point prediction among all features.
+DeepLIFT explains a prediction as the difference from the prediction of some reference point.
+This reference is a neutral or default input.
+The choice depends on the task.
+For an image this can be all black pixels.
+
+Notation:
+
+- $c$ is class of interest
+- $x$ is vector of input pixels
+- $x_0$ is reference image pixels
+- $f$ is the neural network prediction or score just before classification layer (before softmax)
+- $f(x)$ is predictions
+- $f(x_0)$ is prediction of reference image
+- $\Delta{}f=f(x)-f(x_0)$ is difference in prediction to reference image
+- $C_j$ is attribution assigned to the $j$-th pixel $x_j$
+
+
+DeepLIFT assigns scores to each input feature.
+Explained is the difference between some prediction $\Delta{}f=f(x)-f(x_0)$.
+
+$$\sum_{j=1}^p{}C_j$$
+
+where $C$ is the contribution of a feature.
+
+DeepLift works by a set of rules that are applied to calculate the individual contributions.
+
+$$\Delta{}y=\Delta{}y^++\Delta{}y^-$$
+
+For dense and convolutional layers, the postive parts and negative parts of an activation are described with:
+
+$$\Delta{}y^+=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i>0\}w_i(\Delta{}\x_i^{+}+\Delta{}x_i^{-})$$
+$$\Delta{}y^-=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i<0\}w_i(\Delta{}\x_i^{+}+\Delta{}x_i^{-})$$
+
+Contributions are calculated based on these differences (called "Linear Rule")
+$$C_{\Delta{}x_i^+\Delta{}y_i^+}=\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i^+$$
+$$C_{\Delta{}x_i^-\Delta{}y_i^+}=\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i^-$$
+$$C_{\Delta{}x_i^+\Delta{}y_i^-}=\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i^+$$
+$$C_{\Delta{}x_i^-\Delta{}y_i^-}=\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i^-$$
+
+where $y$ is the activation before the activation layer.
+Nonlinear activation functions such as ReLU, tanh and sigmoid are processed with the following rule:
+
+$$m_{\Delta{}x\Delta{}y}=\frac{\Delta{}y}{\Delta{}x}$$
+
+No distinction made between positive and negative deltas.
+
+
+There is a connection between DeepLIFT and Shapley VAlues.
+DeepLIFT is an approximation of Shapley Values but with reference point.
+
+### Integrated Gradients  2017-06-13
+
+Link: https://arxiv.org/pdf/1703.01365.pdf
+
+Integrated Gradients address the saturation and thresholding problems.
+Has a reference point.
+Can still give misguiding results, according to DeepLift paper.
+
+### Guided Backpropagation
+
+Combines Vanilla Gradient and Backpropagation?
+Guided Backpropagation computes grradients, but any gradient that becomes negative during the backward pass is discarded at the ReLUs (i.e. set to zero).
+
+### Layerwise Relevance Propagation LRP
+
+LRP for ReLU networks is equivalent -- up to some factor -- to Gradient \* Input.
+And Gradient x Input does not address the saturation problem.
 
 
 ### Gradient \* Input, DeepLift, $\epsilon$-LRP
@@ -226,9 +381,6 @@ where $x_0$ is the pixel vector of the reference image.
 When constant is added to image, does not work any more, depending on choice of reference point [^unreliable-saliency]
 Deep Taylor is equivalent to LRP, when an all zero reference point is chosen.
 When all zero is chosen, they method is sensitive to constant shift in image -> bad
-When
-
-
 
 ### Integrated Gradients
 
@@ -259,16 +411,17 @@ Ancona et. al 2018.
 
 These gradient based methods are all different for different activation functions, since when the chain rule for derivation is applied, they replace the non-linear activations with a function $g(x)$ is different in different methods.
 
-### Deconvolution (DeConvNet)
+### Grad-Cam
 
-TODO
+Associated Feature Map from final convolutional layer with class of intereted and computes gradients.
+Specific to CNN.
+Problem of zeroing out negative gradients during backpropagation.
 
+### Guided CAM
 
-
-[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
-They also have a nice image explaining the difference between backpropagation of activation between saliency, deconvnet and guided backpropagation.
-
-DeConvNet uses a "Backward ReLU" operation.
+Adaption of Grad-Cam?
+Specific to CNN
+Problem of zeroing out negative gradients during backpropagation.
 
 ### Guided Backpropagagion
 
@@ -353,7 +506,7 @@ Not sure if there is something interesting.
 - give a way to understand a predictions
 - visual
 - better than model-agnostic variants (e.g. shapley) since they rely on the gradient and can be computed faster.
--
+- Many methods to choose from
 
 
 
@@ -374,7 +527,7 @@ Not sure if there is something interesting.
 ### Software
 - A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
 
-
+[^deeplift]: Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
 [^integrated-gradients]: Sundararajan, Mukund, Ankur Taly, and Qiqi Yan. "Axiomatic attribution for deep networks." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
