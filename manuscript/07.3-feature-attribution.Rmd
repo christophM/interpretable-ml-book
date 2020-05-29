@@ -55,6 +55,8 @@ We can get a handle on them by understanding two things:
 1. Some methods manipulate parts of the image (model-agnostic) and some methods compute the gradient of the prediction (or classification score) with respect to the input features.
 2. The gradient based methods (of which there are many) mostly differ in how the gradient is computed.
 
+All methods have in common that in the end we get an output that has the same size as the input image and gives each pixel a value which somehow can be interpreted as the relevance of the pixel for the prediction or classification of that image.
+
 
 There are mostly three types of methods:
 
@@ -457,9 +459,39 @@ Gradient is backpropagated through backward ReLU, then forward ReLU.
 [^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
 
 By combining VAnilla Gradient and DeConvNet we end up with more zero attributions.
-Guided Backpropagation can also be used for [Feature Visualization](#feature-visualization).
+Like Deconvnet, Guided Backpropagation can also be used for [Feature Visualization](#feature-visualization).
 
-### Layerwise Relevance Propagation LRP
+![](images/backpass.png)
+
+### Layerwise Relevance Propagation LRP 2016
+
+Paper: On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation
+Authors: Alexander Binder, Sebastian Bach, Gregoire Montavon, Klaus-Robert Müller, and Wojciech Samek
+Date: 2015
+Link: http://iphome.hhi.de/samek/pdf/BinICISA16.pdf
+[^lrp]
+
+
+
+First, you do a forward pass of the image to get the prediction.
+Then, you do a backward pass and at each layer, redistribute the outcome among the layer below:
+
+Idea: $f(x)\approx\sum_{i=1}^pR_i$
+
+where each contribution $R_i$ belongs to an input pixel.
+Contributions can be positive or negative.
+
+$$R_i^{(l)}=\sum_{j}\frac{z_{ij}}{\sum_{i'}z_{i'j}}R_j^{(l+1)}$$
+
+with $z_{ij}=x_i^{(l)}w_{ij}^{(l,l+1)}$.
+
+where $i$ is the index of a neuron at layer $l$.
+The $j$ index runs over all upper-layer neurons, to which neuron $i$ contributes.
+Using this satisfies the efficiency property: $\sum_pR_p^{(1)}=f(x)$.
+In their paper, they call it conservation property.
+
+They introduce two more variants, LRP-$\beta$ and LRP-$\epsilon$, which relax the efficiency property to get some better numerical properties.
+
 
 LRP for ReLU networks is equivalent -- up to some factor -- to Gradient \* Input.
 And Gradient x Input does not address the saturation problem.
@@ -623,6 +655,10 @@ Not sure if there is something interesting.
 
 ### Software
 - A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
+- iNNvestigate: https://github.com/albermax/innvestigate [^innvestigate]
+
+
+<!-- References about individual methods -->
 
 [^deeplift]: Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
@@ -640,6 +676,10 @@ Not sure if there is something interesting.
 
 [^guided-backpropagation]: Springenberg, Jost Tobias, et al. "Striving for simplicity: The all convolutional net." arXiv preprint arXiv:1412.6806 (2014).
 
+[^lrp] Bach, Sebastian, et al. "On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation." PloS one 10.7 (2015).
+
+<!-- References about problems -->
+
 [^better-understanding]: Ancona, Marco, et al. "Towards better understanding of gradient-based attribution methods for deep neural networks." arXiv preprint arXiv:1711.06104 (2017).
 
 [^fragile-saliency]: Ghorbani, Amirata, Abubakar Abid, and James Zou. "Interpretation of neural networks is fragile." Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 33. 2019.
@@ -647,3 +687,8 @@ Not sure if there is something interesting.
 [^unreliable-saliency]: Kindermans, Pieter-Jan, et al. "The (un) reliability of saliency methods." Explainable AI: Interpreting, Explaining and Visualizing Deep Learning. Springer, Cham, 2019. 267-280. https://arxiv.org/pdf/1711.00867v1.pdf
 
 [^perplexing-behavior]: Nie, Weili, Yang Zhang, and Ankit Patel. "A theoretical explanation for perplexing behaviors of backpropagation-based visualizations." arXiv preprint arXiv:1805.07039 (2018).
+
+<!-- Toolboxes -->
+
+[^innvestigate]: "iNNvestigate neural networks!"(http://arxiv.org/abs/1808.04260) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans
+
