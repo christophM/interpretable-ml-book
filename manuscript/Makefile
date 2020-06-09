@@ -1,3 +1,5 @@
+.PHONY : sbrl
+
 all : html
 
 book.file := Book.txt
@@ -25,15 +27,15 @@ interpretable-ml.pdf : *.Rmd
 	rm -f interpretable-ml.Rmd
 	Rscript  -e "bookdown::render_book('./', 'bookdown::pdf_book')"
 	pdflatex $<
-	
+
 epub : _book/interpretable-ml.epub
-	
+
 _book/interpretable-ml.epub : *.Rmd
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
 	rm -f interpretable-ml.Rmd
 	Rscript  -e "bookdown::render_book('./', 'bookdown::epub_book')"
-	
-	
+
+
 mobi : _book/interpretable-ml.epub
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
 	rm -f interpretable-ml.Rmd
@@ -42,3 +44,7 @@ mobi : _book/interpretable-ml.epub
 
 11-references.Rmd : *.Rmd
 	Rscript ../scripts/references.R
+
+
+sbrl:
+	sudo apt install -y libgsl10-dev open-cobol
