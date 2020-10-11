@@ -64,6 +64,7 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 All notable changes to the book will be documented here.
 
 ### v1.2 (IN PROGRESS) [html version]
+- Added "Preface by the Author" chapter
 - Started section on neural network interpretation
 - Added chapter on feature visualization
 - Added SHAP chapter
