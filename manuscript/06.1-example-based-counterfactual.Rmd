@@ -31,8 +31,8 @@ We simply change the feature values of an instance before making the predictions
 We are interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (e.g. credit application accepted or rejected) or in which the prediction reaches a certain threshold (e.g. the probability for cancer reaches 10%).
 **A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.**
 
-The counterfactual explanation method is model-agnostic, since it only works with the model inputs and output.
-This method would also feel at home in the [model-agnostic chapter](#agnostic), since the interpretation can be expressed as a summary of the differences in feature values ("change features A and B to change the prediction").
+There are both, model-agnostic and model-specific, counterfactual explanation methods but throughout this chapter we want to focus model-agnostic methods which only work with the model inputs and output.
+These methods would also feel at home in the [model-agnostic chapter](#agnostic), since the interpretation can be expressed as a summary of the differences in feature values ("change features A and B to change the prediction").
 But a counterfactual explanation is itself a new instance, so it lives in this chapter ("starting from instance X, change A and B to get a counterfactual instance").
 Unlike [prototypes](#proto), counterfactuals do not have to be actual instances from the training data, but can be a new combination of feature values.
 
@@ -75,12 +75,13 @@ We therefore want to relax the requirement that the predicted output of the coun
 In the classification example, we could look for a counterfactual where the predicted probability of the rare class is increased to 10% instead of the current 2%.
 The question then is, what are the minimum changes to the features so that the predicted probability changes from 2% to 10% (or close to 10%)?
 Another quality criterion is that **a counterfactual should be as similar as possible to the instance regarding feature values**.
-This requires a distance measure between two instances.
+This requires a distance measure between two instances, for example the Manhattan Distance or the Gower distance if we have both discrete and continuous features.
 The counterfactual should not only be close to the original instance, but should also **change as few features as possible**.
-This can be achieved by selecting an appropriate  distance measure like the Manhattan distance.
+This can be achieved by selecting an appropriate  distance measure like the L-0 norm which counts the number of feature changes. 
 The last requirement is that **a counterfactual instance should have feature values that are likely**. 
 It would not make sense to generate a counterfactual explanation for the rent example where the size of an apartment is negative or the number of rooms is set to 200.
-It is even better when the counterfactual is likely according to the joint distribution of the data, e.g. an apartment with 10 rooms and 20 m^2^ should not be regarded as counterfactual explanation.
+It is even better when the counterfactual is likely according to the joint distribution of the data, e.g. an apartment with 10 rooms and 20 m^2^ should not be regarded as counterfactual explanation. 
+Ideally, if the number of square metres should be increased, an increase in the number of rooms is also suggested. 
 
 ### Generating Counterfactual Explanations
 
@@ -88,41 +89,45 @@ A simple and naive approach to generating counterfactual explanations is searchi
 This approach involves randomly changing feature values of the instance of interest and stopping when the desired output is predicted.
 Like the example where Anna tried to find a version of her apartment for which she could charge more rent.
 But there are better approaches than trial and error.
-First, we define a loss function that takes as input the instance of interest, a counterfactual and the desired (counterfactual) outcome. 
-The loss measures how far the predicted outcome of the counterfactual is from the predefined outcome and how far the counterfactual is from the instance of interest.
-We can either optimize the loss directly with an optimization algorithm or by searching around the instance, as suggested in the "Growing Spheres" method (see [Software and Alternatives](#example-software)).
+First, we define a loss function based on the criteria mentioned above. It takes as input the instance of interest, a counterfactual and the desired (counterfactual) outcome. 
+Then, we can optimize the loss directly with an optimization algorithm. 
+Many methods proceed in this way but differ in their definition of the loss function and optimization method. 
 
-In this section, I will present the approach suggested by Wachter et. al (2017)[^wachter].
-They suggest minimizing the following loss.
+In this section, I will focus on two of them: first, the one by Wachter et. al (2017)[^wachter] who introduced counterfactual explanation as an interpretation method and, second, the one by Dandl et al. (2020)[^dandl] that takes into account all four criteria mentioned above. 
+
+
+#### Method by Wachter et al. 
+Wachter et al. suggest minimizing the following loss.
 
 
 $$L(x,x^\prime,y^\prime,\lambda)=\lambda\cdot(\hat{f}(x^\prime)-y^\prime)^2+d(x,x^\prime)$$
 
 The first term is the quadratic distance between the model prediction for the counterfactual x' and the desired outcome y', which the user must define in advance.
 The second term is the distance d between the instance x to be explained and the counterfactual x', but more about this later.
+The loss measures how far the predicted outcome of the counterfactual is from the predefined outcome and how far the counterfactual is from the instance of interest.
 The parameter $\lambda$ balances the distance in prediction (first term) against the distance in feature values (second term).
-The loss is solved for a given $\lambda$ and returns a counterfactual x'.
-A higher value of $\lambda$ means that we prefer counterfactuals that come close to the desired outcome y', a lower value means that we prefer counterfactuals x' that are very similar to x in the feature values.
-If $\lambda$ is very large, the instance with the prediction that comes closest to y' will be selected, regardless how far it is away from x.
-Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x.
-The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from y'.
+The loss is solved for a given $\lambda$ and returns a counterfactual $x'$.
+A higher value of $\lambda$ means that we prefer counterfactuals that come close to the desired outcome $y'$, a lower value means that we prefer counterfactuals $x'$ that are very similar to x in the feature values.
+If $\lambda$ is very large, the instance with the prediction that comes closest to $y'$ will be selected, regardless how far it is away from $x$.
+Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to $x$.
+The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from $y'$.
 This constraint can be written as:
 
 $$|\hat{f}(x^\prime)-y^\prime|\leq\epsilon$$
 
 To minimize this loss function, any suitable optimization algorithm can be used, e.g. Nelder-Mead.
 If you have access to the gradients of the machine learning model, you can use gradient-based methods like ADAM.
-The instance x to be explained, the desired output y' and the tolerance parameter $\epsilon$ must be set in advance.
-The loss function is minimized for x' and the (locally) optimal counterfactual x' returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter).
+The instance $x$ to be explained, the desired output $y'$ and the tolerance parameter $\epsilon$ must be set in advance.
+The loss function is minimized for $x'$ and the (locally) optimal counterfactual $x'$ returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter).
 
 $$\arg\min_{x^\prime}\max_{\lambda}L(x,x^\prime,y^\prime,\lambda)$$
 
-The function d for measuring the distance between instance x and counterfactual x' is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).
+The function $d$ for measuring the distance between instance x and counterfactual $x'$ is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).
 
 $$d(x,x^\prime)=\sum_{j=1}^p\frac{|x_j-x^\prime_j|}{MAD_j}$$
 
-The total distance is the sum of all p feature-wise distances, that is, the absolute differences of feature values between instance x and counterfactual x'.
-The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset defined as:
+The total distance is the sum of all $p$ feature-wise distances, that is, the absolute differences of feature values between instance x and counterfactual $x'$.
+The feature-wise distances are scaled by the inverse of the median absolute deviation of feature $j$ over the dataset defined as:
 
 
 $$MAD_j=\text{median}_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-\text{median}_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)$$
@@ -136,7 +141,7 @@ Scaling with the MAD is necessary to bring all the features to the same scale --
 
 The recipe for producing the counterfactuals is simple:
 
-1. Select an instance x to be explained, the desired outcome y', a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
+1. Select an instance x to be explained, the desired outcome $y'$, a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
 1. Sample a random instance as initial counterfactual.
 1. Optimize the loss with the initially sampled counterfactual as starting point.
 1. While $|\hat{f}(x^\prime)-y^\prime|>\epsilon$:
@@ -145,28 +150,126 @@ The recipe for producing the counterfactuals is simple:
     - Return the counterfactual that minimizes the loss.
 1. Repeat steps 2-4 and return the list of counterfactuals or the one that minimizes the loss.
 
+Note that proposed method has three major disadvantages: 
+
+* It **only takes our first and second criteria into account** not the last two ("produce counterfactuals with only a few feature changes and likely feature values").
+* It does **not handle categorical features** with many different levels well. 
+The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values.
+For example, 6 categorical features with 10 unique levels would mean 1 million runs. 
+* **Choosing $\lambda$ is not straight-forward** and highly depends on user 
+preferences. 
+
+<!-- A solution for only categorical features was proposed by Martens et. al (2014)[^martens]. -->
+<!-- A solution that handles both numerical and categorical variables with a principled way of generating perturbations for categorical variables is implemented in the Python package [Alibi](https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html). -->
+Let us now have a look on another approach overcoming these issues. 
+
+
+#### Method by Dandl et al. 
+Dandl et al. suggest to simultaneously minimize a four-objective loss 
+$$  L(x,x',y',X^{obs})=\big(o_1(\hat{f}(x'),y'),\,o_2(x, x'),o_3(x,x'),o_4(x',X^{obs})\big) $$ 
+First, note that compared to the loss of Wachter et al. in addition to $x$, $x'$ and $y'$ we also need $X^{obs}$, the observed/training data, as an input. 
+This is necessary for the fourth term which reflects that our counterfactuals should have likely feature values. 
+We can extract what likely means directly from the input data we used to train our model or from another observed dataset. 
+Second, note that no balancing/weighting terms $\lambda$ appear in the loss because we do not collapse the four objectives 
+$o_1$, $o_2$, $o_3$ and $o_4$ into a single objective. 
+We will later see how we can optimize all four terms simultaneously. 
+
+The first term $o_1$ reflects that the prediction of our counterfactual $x'$ should be as close as possible to our desired prediction $y'$.
+We therefore want to minimize the distance between $\hat{f}(x')$ and $y'$ denoted as the Manhattan metric ($L_1$ norm): 
+
+$$ o_1(\hat{f}(x'),Y') = \begin{cases}0&\text{if $\hat{f}(x') \in Y'$}\\
+\inf \limits_{y'\in Y'}|\hat{f}(x')-y'|&\text{else}\end{cases}.$$
+
+The second component $o_2$ reflects that our counterfactual should be as similar as possible to our instance $x$. 
+It quantifies the distance between $x'$ and $x$ 
+as the Gower distance \cite{gower71}:
+\begin{equation*}
+o_2(x, x') = \frac{1}{p}\sum_{j = 1}^{p} \delta_G(x_j, x'_j)\in [0, 1]
+\end{equation*}
+with $p$ being the number of features.
+The value of $\delta_G$ depends on the feature type:
+\begin{equation*}
+\delta_G(x_j, x'_j) = 
+\begin{cases}
+\frac{1}{\widehat{R}_j}|x_j- x'_j| & \text{if $x_j$ is numerical} \\
+\mathbb{I}_{x_j \neq x'_j} & \text{if $x_j$ is categorical}
+\end{cases}
+\end{equation*}
+with $\widehat{R}_j$ as the value range of feature $j$, extracted from the observed dataset. 
+Note that the Gower distance can handle both numeric and discrete features but does not 
+count how many features were changed. 
+
+Therefore, we count the number of features in a third objectives $o_3$ using the $L_0$ norm:
+$$o_3(x,x')=||x-x'||_0=\sum_{j = 1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
+
+The fourth objective reflects that we want likely feature combinations for our counterfactual. 
+As an approximation for the likelihood, $o_4$ measures the average Gower distance between $x'$ and the nearest observed data point $x^{[1]}$. 
+$$o_4(x',\textbf{X}^{obs})=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x'_j,x^{[1]}_j)\in[0, 1]$$
+
+How can we minimize these four losses simultaneously? We use the **Non-dominated Sorting Genetic Algorithm** or short NSGA-II. 
+NSGA-II is a nature-inspired algorithm that applies Darwin's law of the "survival of the fittest". 
+We denote the fitness of a counterfactual by its vector of objectives values $(o_1, o_2, o_3, o_4)$. 
+The algorithm consists of four steps that are repeated until a stopping criterion is met. 
+One repetition is also called generation. 
+[Figure 6.2](#fig:nsgaII-cf) visualizes the four steps for one generation. 
+
+```{r nsgaII-cf, fig.cap = "Visualization of one generation of the NSGA-II algorithm.", out.width=700}
+knitr::include_graphics("images/cfexp-nsgaII.jpg")
+```
+
+In the first generation a group of counterfactual candidates is initialized by randomly changing some of the features compared to our instance $x$ to be explained. 
+Sticking with above's credit example, one counterfactual could suggest to increase the income by € 30,000 while another one proposes to have no default in the last 5 years and a reduction in age by 10. 
+All other features are equal to the value of $x$. 
+Each candidate is then evaluated using the four objective functions of above and the best ones with minimal objective values are selected. 
+They are pairwisely recombined to produce children that are pretty similar to them. 
+In addition, we slightly mutate the feature values of the children to explore the whole feature space.
+
+From the two resulting groups, the one including the parents and the one with children, we only want the best half using two sorting algorithms. 
+The nondominated sorting algorithm sorts the candidates according to the objective values. 
+The crowding distance sorting algorithm sorts the candidates with equally objective values according to their diversity. 
+In the end, we select the most promising and/or most diverse half of the candidates. 
+
+We use this set for the next generation and start again with the selection, recombination and mutation process. 
+By repeating the steps over and over again we hopefully approach more and more promising candidates with lower objective values.
+
+In the end we receive a whole set of solutions from which we can choose the ones we are most satisfied with or we can summarizes the most promising counterfactuals visually as we see in the following data example.  
+
 ### Examples
 
-Both examples are from the work of Wachter et. al (2017).
+The example is based on the credit dataset example in Dandl et al. (2020).
+The used German Credit Risk dataset is from a kaggle challenge. 
 
-In the first example, the authors train a three-layer fully-connected neural network to predict a student's average grade of the first year at law school, based on grade point average (GPA) prior to law school, race and law school entrance exam scores.
-The goal is to find counterfactual explanations for each student that answer the following question:
-How would the input features need to be changed, to get a predicted score of 0?
-Since the scores have been normalized before, a student with a score of 0 is as good as the average of the students.
-A negative score means a below-average result, a positive score an above-average result.
+The authors trained a support vector machine (with radial basis kernel) to predict the probability that a costumer has a good credit risk. 
+The corresponding dataset has 522 complete observations and nine features containing credit and customer information. 
 
-The following table shows the learned counterfactuals:
+The goal is to find counterfactual explanations for a customer with the following feature values 
 
-| Score | GPA | LSAT | Race | GPA x' | LSAT x' |  Race x'|
-| ------|--------------| --------------| --------------| -------| --------| ------- |
-| 0.17 | 3.1 | 39.0 | 0 | 3.1 | 34.0 | 0|
-| 0.54 | 3.7 | 48.0 | 0 | 3.7 | 32.4 | 0|
-| -0.77| 3.3 | 28.0 | 1 | 3.3 | 33.5 | 0|
-| -0.83| 2.4 | 28.5 | 1 | 2.4 | 35.8 | 0|
-| -0.57| 2.7 | 18.3 | 0 | 2.7 | 34.9 | 0|
+|age|sex|job |housing|savings|checking|credit.amount|duration|purpose|
+|---|---|----|-------------|--------|---------------|----------|----------|----|
+|58  |female  |1|free|little|little |6143            |48     |car|
 
-The first column contains the predicted score, the next 3 columns the original feature values and the last 3 columns the counterfactual feature values that result in a score close to 0.
-The first two rows are students with above-average predictions, the other three rows below-average.
+The SVM predicts a probability of 0.242 that the woman has a good credit risk. 
+The counterfactuals should answer how the input features need to be changed, to get a predicted probability larger 0.5?
+
+The following table shows the 10 best counterfactuals:
+
+|age|sex|job |credit.amount|duration|$o_2$|$o_3$|$o_3$|$\hat{f}(x')$|
+|---|---|----|-------------|--------|---------------|----------|----------|----|
+|0  |0  |2   |0            |-20     |0.108          |2         |0.036     |0.501|
+|0  |0  |2   |0            |-24     |0.114          |2         |0.029     |0.525|
+|0  |0  |2   |0            |-22     |0.111          |2         |0.033     |0.513|
+|-6 |0  |2   |0            |-24     |0.126          |3         |0.018     |0.505|
+|-3 |0  |2   |0            |-24     |0.120          |3         |0.024     |0.515|
+|-1 |0  |2   |0            |-24     |0.116          |3         |0.027     |0.522|
+|-30|male|2   |0            |-24     |0.285          |4         |0.005     |0.590|
+|-3 |male|1   |0            |-24     |0.195          |4         |0.012     |0.501|
+|-6 |male|1   |0            |-25     |0.202          |4         |0.011     |0.501|
+|-4 |male|1   |-1254        |-24     |0.204          |5         |0.002     |0.506|
+
+
+The first 5 column contains the proposed feature changes (only features that are changed are displayed), the next 3 columns the objective values ($o_1$ is 0 in all cases) and the last colum displays the predicted probability. 
+
+All counterfactuals suggest a reduction of the duration from 48 month to 23 to 28 month, some of them 
 The counterfactuals for the first two rows describe how the student features would have to change to decrease the predicted score and for the other three cases how they would have to change to increase the score to the average.
 The counterfactuals for increasing the score always change the race from black (coded with 1) to white (coded with 0) which shows a racial bias of the model.
 The GPA is not changed in the counterfactuals, but LSAT is.
@@ -220,12 +323,6 @@ It can also be advantageous to have multiple counterfactual explanations, becaus
 There is **no guarantee that for a given tolerance $\epsilon$ a counterfactual instance is found**.
 That is not necessarily the fault of the method, but rather depends on the data.
 
-The proposed method **does not handle categorical features** with many different levels well. 
-The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values.
-For example, 6 categorical features with 10 unique levels would mean 1 million runs.
-A solution for only categorical features was proposed by Martens et. al (2014)[^martens].
-A solution that handles both numerical and categorical variables with a principled way of generating perturbations for categorical variables is implemented in the Python package [Alibi](https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html).
-
 ### Software and Alternatives {#example-software}
 
 Counterfactuals explanations are implemented in the Python package [Alibi](https://github.com/SeldonIO/alibi). Authors of the package implement a [simple counterfactual method](https://docs.seldon.io/projects/alibi/en/stable/methods/CF.html) as well as an [extended method](https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html) that uses class prototypes to improve the interpretability and convergence of the algorithm outputs[^vanlooveren].
@@ -251,3 +348,5 @@ Anchors by Ribeiro et. al (2018)[^anchors] are the opposite of counterfactuals, 
 [^wachter]: Wachter, Sandra, Brent Mittelstadt, and Chris Russell. "Counterfactual explanations without opening the black box: Automated decisions and the GDPR." (2017).
 
 [^vanlooveren]: Van Looveren, Arnaud, and Janis Klaise. "Interpretable Counterfactual Explanations Guided by Prototypes."  arXiv preprint arXiv:1907.02584 (2019).
+
+[^dandl]: Dandl, Susanne, Christoph Molnar, Martin Binder, Bernd Bischl. "Multi-Objective Counterfactual Explanations". In: Bäck T. et al. (eds) Parallel Problem Solving from Nature – PPSN XVI. PPSN 2020. Lecture Notes in Computer Science, vol 12269. Springer, Cham (2020).
