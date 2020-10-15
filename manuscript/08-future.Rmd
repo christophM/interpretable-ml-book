@@ -1,7 +1,5 @@
 # A Look into the Crystal Ball {#future}
 
-![](images/prophet.png)
-
 What is the future of interpretable machine learning?
 This chapter is a speculative mental exercise and a subjective guess how interpretable machine learning will develop.
 I opened the book with rather pessimistic [short stories](#storytime) and would like to conclude with a more optimistic outlook. 

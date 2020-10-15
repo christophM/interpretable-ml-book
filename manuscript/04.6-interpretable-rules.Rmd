@@ -1,6 +1,8 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all(".")
 set.seed(42)
+
+if(!require("sbrl")) install.packages("../pkg/sbrl_1.2.tar.gz", repos = NULL, type = "source")
 ```
 
 <!--{pagebreak}-->
@@ -539,7 +541,8 @@ For this purpose I binned the continuous features based on the frequency of the 
 
 We get the following rules:
 
-```{r sbrl-cervical, results = "hide"}
+<!-- Set eval = TRUE to recompute the rules -->
+```{r sbrl-cervical, results = "hide", eval = FALSE}
 library("sbrl")
 library("arules")
 data("cervical")
@@ -571,11 +574,15 @@ get.sbrl.rules = function(x) {
 cervical2$label = cervical2$Biopsy
 cervical2$Biopsy = NULL
 rules = sbrl(cervical2, pos_sign = "Cancer", neg_sign = "Healthy", rule_maxlen = 2)
+rn = rules$rulenames
+rl = get.sbrl.rules(rules)
+saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-cervical.RDS")
 ```
 
 
 ```{r sbrl-cervical-show}
-kable(get.sbrl.rules(rules))
+rules = readRDS("../data/cached-sbrl-cervical.RDS")
+kable(rules$rules)
 ```
 
 Note that we get sensible rules, since the prediction on the THEN-part is not the class outcome, but the predicted probability for cancer.
@@ -597,7 +604,8 @@ I have arbitrarily created a classification task by creating a label that is 1 i
 
 The following list was learned by SBRL:
 
-```{r sbrl-bike, results = "hide"}
+<!-- Set eval = TRUE to recompute the rules -->
+```{r sbrl-bike, results = "hide", eval = FALSE}
 library("sbrl")
 library("arules")
 data("bike")
@@ -614,10 +622,13 @@ bike2 = as.data.frame(lapply(bike2, function(x) {
   }
 }))
 rules = sbrl(bike2, pos_sign = TRUE, neg_sign = FALSE, rule_maxlen = 3)
+rules = get.sbrl.rules(rules)
+saveRDS(rules, file = "../data/cached-sbrl-bike.RDS")
 ```
 
 ```{r sbrl-bike-show}
-kable(get.sbrl.rules(rules))
+rules = readRDS("../data/cached-sbrl-bike.RDS")
+kable(rules)
 ```
 
 Let us predict the probability that the number of bikes will exceed 4000 for a day in 2012 with a temperature of 17 degrees Celsius. 
