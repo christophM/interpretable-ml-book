@@ -83,6 +83,7 @@ All notable changes to the book will be documented here.
 - fixed boxplot formula (1.5 instead of 1.58)
 - Change to colorblind-friendly color palettes (viridis)
 - Make sure plots work in black and white as well
+- Extends counterfactual chapter with MOC (by Susanne Dandl)
 
 ### v1.0 (2019-02-21)
 - Extensive proofreading and polishing
