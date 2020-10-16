@@ -55,7 +55,7 @@ Stuff that both works for leanpub and for bookdown:
 - Chapters can be referenced by using `[text of the link](#tag-of-the-title)`
 - Figures can be referenced by using `[text of the link](#fig:tag-of-r-chunk-that-produced-figure)`
 - Start and end mathematical expressions with `$` (inline) or with `$$` (extra line). Will be automatically changed for leanpub with a regexpr. Conversion script only works if no empty spaces are in the formula.
-- Leave empty lines between formulas and text (if formula not inline)
+- Leave empty lines between formulas and text (if formula not inline). Formulas (with $$ ... $$) should be in one line and not over multiple lines (due to parser).
 - References have to be writen like this: `[^ref-tag]` and must be at the end of the respective file with `[^ref]: Details of the reference ...`. Make sure the space is included. References are collected in 10-reference.Rmd with the script references.R. Make sure not to use `[^ref-tag]: ` anywhere in the text, only at the bottom for the actual reference.
 
 Printing for  proofreading with extra line spacing:

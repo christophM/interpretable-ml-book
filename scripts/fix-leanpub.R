@@ -6,7 +6,7 @@ fixmath = function(doc0) {
   doc <- sub("^\\\\\\[$", "{\\$\\$}", doc0, perl = TRUE)
   doc <- sub("^\\\\\\]$", "{\\/\\$\\$}", doc, perl = TRUE)
   doc <- gsub("\\$\\$(\\S+)\\$\\$", "\\$\\1\\$", doc, perl = TRUE)
-  doc <- gsub("\\$(\\S+)\\$", "{\\$\\$}\\1{\\/\\$\\$}", doc, perl = TRUE)
+  doc <- gsub("^\\$(.+)\\$$", "{\\$\\$}\\1{\\/\\$\\$}", doc, perl = TRUE)
   # Adds pagebreaks for leanpub
   #doc = c("", "{pagebreak}","", doc)
   doc

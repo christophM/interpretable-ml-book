@@ -10,10 +10,10 @@ devtools::load_all()
 set.seed(42)
 ```
 
-A counterfactual explanation describes a causal situation in the form: "If $X$ had not occurred, $Y$ would not have occurred".
+A counterfactual explanation describes a causal situation in the form: "If X had not occurred, Y would not have occurred".
 For example: "If I hadn't taken a sip of this hot coffee, I wouldn't have burned my tongue".
-Event $Y$ is that I burned my tongue;
-cause $X$ is that I had a hot coffee.
+Event Y is that I burned my tongue;
+cause X is that I had a hot coffee.
 Thinking in counterfactuals requires imagining a hypothetical reality that contradicts the observed facts (e.g. a world in which I have not drunk the hot coffee), hence the name "counterfactual".
 The ability to think in counterfactuals makes us humans so smart compared to other animals.
 
@@ -77,7 +77,7 @@ We therefore want to relax the requirement that the predicted output of the coun
 In the classification example, we could look for a counterfactual where the predicted probability of the rare class is increased to 10% instead of the current 2%.
 The question then is, what are the minimum changes to the features so that the predicted probability changes from 2% to 10% (or close to 10%)?
 Another quality criterion is that **a counterfactual should be as similar as possible to the instance regarding feature values**.
-This requires a distance measure between two instances, for example the Manhattan Distance or the Gower distance if we have both discrete and continuous features.
+This requires a distance measure between two instances, for example the Manhattan distance or the Gower distance if we have both discrete and continuous features.
 The counterfactual should not only be close to the original instance, but should also **change as few features as possible**.
 This can be achieved by selecting an appropriate  distance measure like the L-0 norm which counts the number of feature changes. 
 The last requirement is that **a counterfactual instance should have feature values that are likely**. 
@@ -101,19 +101,18 @@ In this section, we focus on two of them: first, the one by Wachter et. al (2017
 #### Method by Wachter et al. 
 Wachter et al. suggest minimizing the following loss.
 
-
 $$L(x,x^\prime,y^\prime,\lambda)=\lambda\cdot(\hat{f}(x^\prime)-y^\prime)^2+d(x,x^\prime)$$
 
 The first term is the quadratic distance between the model prediction for the counterfactual x' and the desired outcome y', which the user must define in advance.
-The second term is the distance d between the instance $x$ to be explained and the counterfactual x', but more about this later.
+The second term is the distance d between the instance x to be explained and the counterfactual x', but more about this later.
 The loss measures how far the predicted outcome of the counterfactual is from the predefined outcome and how far the counterfactual is from the instance of interest.
 
-The function $d$ for measuring the distance between instance $x$ and counterfactual $x'$ is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).
+The function d for measuring the distance between instance x and counterfactual x' is the Manhattan distance weighted feature-wise with the inverse median absolute deviation (MAD).
 
 $$d(x,x^\prime)=\sum_{j=1}^p\frac{|x_j-x^\prime_j|}{MAD_j}$$
 
-The total distance is the sum of all $p$ feature-wise distances, that is, the absolute differences of feature values between instance $x$ and counterfactual $x'$.
-The feature-wise distances are scaled by the inverse of the median absolute deviation of feature $j$ over the dataset defined as:
+The total distance is the sum of all p feature-wise distances, that is, the absolute differences of feature values between instance x and counterfactual x'.
+The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset defined as:
 
 
 $$MAD_j=\text{median}_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-\text{median}_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)$$
@@ -127,25 +126,25 @@ it is more robust to outliers.
 Scaling with the MAD is necessary to bring all the features to the same scale -- it should not matter whether you measure the size of an apartment in square meters or square feet.
 
 The parameter $\lambda$ balances the distance in prediction (first term) against the distance in feature values (second term).
-The loss is solved for a given $\lambda$ and returns a counterfactual $x'$.
-A higher value of $\lambda$ means that we prefer counterfactuals with predictions close to the desired outcome $y'$, a lower value means that we prefer counterfactuals $x'$ that are very similar to $x$ in the feature values.
-If $\lambda$ is very large, the instance with the prediction closest to $y'$ will be selected, regardless how far it is away from $x$.
-Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to $x$.
-The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from $y'$.
+The loss is solved for a given $\lambda$ and returns a counterfactual x'.
+A higher value of $\lambda$ means that we prefer counterfactuals with predictions close to the desired outcome y', a lower value means that we prefer counterfactuals x' that are very similar to x in the feature values.
+If $\lambda$ is very large, the instance with the prediction closest to y' will be selected, regardless how far it is away from x.
+Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x.
+The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from y'.
 This constraint can be written as:
 
 $$|\hat{f}(x^\prime)-y^\prime|\leq\epsilon$$
 
 To minimize this loss function, any suitable optimization algorithm can be used, e.g. Nelder-Mead.
 If you have access to the gradients of the machine learning model, you can use gradient-based methods like ADAM.
-The instance $x$ to be explained, the desired output $y'$ and the tolerance parameter $\epsilon$ must be set in advance.
-The loss function is minimized for $x'$ and the (locally) optimal counterfactual $x'$ returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter):
+The instance x to be explained, the desired output y' and the tolerance parameter $\epsilon$ must be set in advance.
+The loss function is minimized for x' and the (locally) optimal counterfactual x' returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter):
 
 $$\arg\min_{x^\prime}\max_{\lambda}L(x,x^\prime,y^\prime,\lambda).$$
 
 Overall, the recipe for producing the counterfactuals is simple:
 
-1. Select an instance $x$ to be explained, the desired outcome $y'$, a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
+1. Select an instance x to be explained, the desired outcome y', a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
 1. Sample a random instance as initial counterfactual.
 1. Optimize the loss with the initially sampled counterfactual as starting point.
 1. While $|\hat{f}(x^\prime)-y^\prime|>\epsilon$:
@@ -154,10 +153,10 @@ Overall, the recipe for producing the counterfactuals is simple:
     - Return the counterfactual that minimizes the loss.
 1. Repeat steps 2-4 and return the list of counterfactuals or the one that minimizes the loss.
 
-The proposed method has some disadvantages. 
-It **only takes the first and second criteria into account** not the last two ("produce counterfactuals with only a few feature changes and likely feature values"). 
-$d$ does not prefer sparse solutions since increasing 10 features by 1 will give the same distance to $x$ as increasing one feature by 10. 
-Unrealistic feature combinations are not penalized. 
+The proposed method has some disadvantages.
+It **only takes the first and second criteria into account** not the last two ("produce counterfactuals with only a few feature changes and likely feature values").
+d does not prefer sparse solutions since increasing 10 features by 1 will give the same distance to x as increasing one feature by 10.
+Unrealistic feature combinations are not penalized.
 
 The method does **not handle categorical features** with many different levels well. 
 The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values.
@@ -171,52 +170,52 @@ Let us now have a look on another approach overcoming these issues.
 
 
 #### Method by Dandl et al. 
+
 Dandl et al. suggest to simultaneously minimize a four-objective loss 
-$$  L(x,x',y',X^{obs})=\big(o_1(\hat{f}(x'),y'),\,o_2(x, x'),o_3(x,x'),o_4(x',X^{obs})\big) $$ 
 
-Each of the four objectives $o_1$ to $o_4$ corresponds to one of the four criteria mentioned above. 
-The first term $o_1$ reflects that the prediction of our counterfactual $x'$ should be as close as possible to our desired prediction $y'$.
-We therefore want to minimize the distance between $\hat{f}(x')$ and $y'$, here calculated by the Manhattan metric ($L_1$ norm): 
+$$L(x,x',y',X^{obs})=\big(o_1(\hat{f}(x'),y'),o_2(x, x'),o_3(x,x'),o_4(x',X^{obs})\big) $$ 
 
-$$ o_1(\hat{f}(x'),y') = \begin{cases}0&\text{if $\hat{f}(x') \in y'$}\\
-\inf \limits_{y'\in y'}|\hat{f}(x')-y'|&\text{else}\end{cases}.$$
+Each of the four objectives $o_1$ to $o_4$ corresponds to one of the four criteria mentioned above.
+The first term $o_1$ reflects that the prediction of our counterfactual x' should be as close as possible to our desired prediction y'.
+We therefore want to minimize the distance between $\hat{f}(x')$ and y', here calculated by the Manhattan metric ($L_1$ norm):
 
-The second component $o_2$ reflects that our counterfactual should be as similar as possible to our instance $x$. 
-It quantifies the distance between $x'$ and $x$ 
+$$o_1(\hat{f}(x'),y')=\begin{cases}0&\text{if $\hat{f}(x')\in{}y'$}\\\inf\limits_{y'\in y'}|\hat{f}(x')-y'|&\text{else}\end{cases}.$$
+
+The second component $o_2$ reflects that our counterfactual should be as similar as possible to our instance $x$.
+It quantifies the distance between x' and x
 as the Gower distance:
-$$
-o_2(x, x') = \frac{1}{p}\sum_{j = 1}^{p} \delta_G(x_j, x'_j)
-$$
-with $p$ being the number of features.
-The value of $\delta_G$ depends on the feature type:
-$$
-\delta_G(x_j, x'_j) = 
-\begin{cases}
-\frac{1}{\widehat{R}_j}|x_j- x'_j| & \text{if $x_j$ is numerical} \\
-\mathbb{I}_{x_j \neq x'_j} & \text{if $x_j$ is categorical}
-\end{cases}
-$$
-Dividing the distance of a numeric feature $j$ by $\widehat{R}_j$, the observed value range, scales $delta_G$ for all features between 0 and 1. 
 
-The Gower distance can handle both numeric and discrete features but does not count how many features were changed. 
+$$o_2(x,x')=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x_j, x'_j)$$
+
+with p being the number of features.
+The value of $\delta_G$ depends on the feature type of $x_j$:
+
+$$\delta_G(x_j,x'_j)=\begin{cases}\frac{1}{\widehat{R}_j}|x_j-x'_j|&\text{if $x_j$ numerical}\\\mathbb{I}_{x_j\neq{}x'_j}&\text{if $x_j$ categorical}\end{cases}$$
+
+Dividing the distance of a numeric feature $j$ by $\widehat{R}_j$, the observed value range, scales $\delta_G$ for all features between 0 and 1.
+
+The Gower distance can handle both numeric and discrete features but does not count how many features were changed.
 Therefore, we count the number of features in a third objectives $o_3$ using the $L_0$ norm:
-$$o_3(x,x')=||x-x'||_0=\sum_{j = 1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
-By minimizing $o_3$ we aim for our third criteria - sparse feature changes. 
 
-The fourth objective reflects that our counterfactuals should have likely feature values/combinations. 
+$$o_3(x,x')=||x-x'||_0=\sum_{j=1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
+
+By minimizing $o_3$ we aim for our third criteria - sparse feature changes.
+
+The fourth objective reflects that our counterfactuals should have likely feature values/combinations.
 We can extract what likely means directly from the input data we used to train our model or from another observed dataset.
 We denote this dataset as $X^{obs}$.
-As an approximation for the likelihood, $o_4$ measures the average Gower distance between $x'$ and the nearest observed data point $x^{[1]} \in X^{obs}$. 
+As an approximation for the likelihood, $o_4$ measures the average Gower distance between x' and the nearest observed data point $x^{[1]}\in{}X^{obs}$.
+
 $$o_4(x',\textbf{X}^{obs})=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x'_j,x^{[1]}_j)$$
 
 Compared to Wachter et al., $L(x,x',y',X^{obs})$ has no balancing/weighting terms like $\lambda$. 
 We do not want to collapse the four objectives $o_1$, $o_2$, $o_3$ and $o_4$ into a single objective by summing them up and weighting them, but we want to optimize all four terms simultaneously.
 
-How can we do that? 
-We use the **Nondominated Sorting Genetic Algorithm**[^deb] or short NSGA-II. 
-NSGA-II is a nature-inspired algorithm that applies Darwin's law of the "survival of the fittest". 
-We denote the fitness of a counterfactual by its vector of objectives values $(o_1, o_2, o_3, o_4)$. 
-Fitter counterfactuals have lower objective values. 
+How can we do that?
+We use the **Nondominated Sorting Genetic Algorithm**[^deb] or short NSGA-II.
+NSGA-II is a nature-inspired algorithm that applies Darwin's law of the "survival of the fittest".
+We denote the fitness of a counterfactual by its vector of objectives values $(o_1,o_2,o_3,o_4)$.
+Fitter counterfactuals have lower objective values.
 
 The algorithm consists of four steps that are repeated until a stopping criterion is met, e.g. a maximum number of iterations/generations.
 [Figure 6.2](#fig:nsgaII-cf) visualizes the four steps of one generation. 
@@ -225,9 +224,9 @@ The algorithm consists of four steps that are repeated until a stopping criterio
 knitr::include_graphics("images/cfexp-nsgaII.jpg")
 ```
 
-In the first generation a group of counterfactual candidates is initialized by randomly changing some of the features compared to our instance $x$ to be explained. 
-Sticking with above's credit example, one counterfactual could suggest to increase the income by € 30,000 while another one proposes to have no default in the last 5 years and a reduction in age by 10. 
-All other feature values are equal to the values of $x$. 
+In the first generation a group of counterfactual candidates is initialized by randomly changing some of the features compared to our instance x to be explained.
+Sticking with above's credit example, one counterfactual could suggest to increase the income by € 30,000 while another one proposes to have no default in the last 5 years and a reduction in age by 10.
+All other feature values are equal to the values of x.
 Each candidate is then evaluated using the four objective functions of above.
 Among them, we randomly select some candidates, where fitter candidates are more likely selected.
 They are pairwise recombined to produce children that are pretty similar to them, e.g. by averaging their numerical feature values or by crossing over their categorical features. 
