@@ -122,7 +122,7 @@ If a method passes these checks, it could still be a wrong attribution method.
 But if it fails these checks, the method is definitely broken and should not be used.
 
 
-Problemns with guided backpropagaion and similar methods:
+Problems with guided backpropagaion and similar methods:
 Images closely resemble the output of edge detectors.
 Edge detectors are independent of the model and the data, so this is really bad for guided backpropagation.
 Gradients and GradCAM passed the sanity checks (model and data randomization).
@@ -141,8 +141,6 @@ Only GradCAM was okay.
 Feature attribution might also be called saliency maps.
 There are lots and lots of approaches to to this, all very similar.
 /We will only look at the general idea, and point out to some of the approaches.
-
-
 
 ### Some more theory
 
@@ -224,45 +222,6 @@ If you just want to read one, read Vanilla Gradient aka Saliency Maps.
 It works well and is simple.
 
 
-### DeconvNet, Deconvolution 2013-11-12
-
-Paper: Visualizing and Understanding Convolutional Networks
-By: Matthew D Zeiler, Rob Fergus
-Date: 2013-11-12
-
-The authors propose a Deconvolutional Network (DeconvNet).
-A DeconvNet kind of uses the same components as a Convolutional Neural Network, but reverses the operations such as filtering, pooling and activation.
-These nets have already been suggested two years earlier, but not for the purpose of visualization.
-
-We start with an already trained neural network.
-For a given image, we compute the all the feature maps.
-The approach constructs a second neural network that covers the convolutional layers, but in reverse.
-We start with the last convolutional layer (the feature maps) and go back until a reconstruction of the input image.
-Pooling layers are reversed by unpooling:
-Although this unpooling is not reversible (since max-pooling loses information), it is possible to obtain an approximation.
-This works by recording the location of the maxima within each pooling region.
-They call those "switch" variables.
-In the DeconvNet unpooling, these switches are used to map the reconstructions from the layer above to the maximally activated location below.
-The activation layer -- here Rectifying Linear Unit (ReLU) -- again uses ReLUs to backpropagate the reconstructions.
-
-
-The filtering units are simply transponsed, but applied to the rectified maps, not the output layer beneath.
-[On this github README](https://github.com/vdumoulin/conv_arithmetic) you can see some animations how this looks like.
-
-We do not cover too deeply here, because it has some problems and the following, more simple approaches work better.
-
-[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
-They also have a nice image explaining the difference between backpropagation of activation between saliency, deconvnet and guided backpropagation.
-
-DeConvNet uses a "Backward ReLU" operation.
-
-DeConvNet suffers from
-- Input sensitivity failure: Reason is that methods that back-propagated through ReLU only if ReLU is "turned on" for this input. I guess same issue as gradient saturation.
-
-
-DeConvNet can also be used for [Feature Visualization](#feature-visualization).
-DeConvNet is like vanilla gradient, except of the behavior at the ReLU units.
-
 ### Vanilla Gradient (Saliency Maps) 2014-04-19
 
 Paper: Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps
@@ -298,244 +257,55 @@ Here layers are just the activations before and after ReLU.
 Guided Backpropagation sets both to 0 in layer x-1: neurons that in the forward pass were 0 in layer x and neurons that are negative in the backward passe in layer x.
 Both DeConvNet and Guided Backpropagation do not compute the true gradient but an imputed one.
 
-### DeepLIFT
+### Grad-CAM
 
-Paper: Learning Important Features Through Propagating Activation Differences
-Authors: Avanti Shrikumar, Peyton Greenside, Anshul Kundaje
-Date: 2019-10-12 (arxiv, v2)
-Link: Learning important features through propagating activation diffe    rences
-[^deeplift]
+Grad-CAM stands for Gradient-weighted Class Activation Map.
+It is also gradient based.i
+Associated Feature Map from final convolutional layer with class of intereted and computes gradients.
+Specific to CNN.
+Problem of zeroing out negative gradients during backpropagation.
+Grad-CAM is a localization technique.
 
-Also backpropagation based approach.
-The name DeepLIFT stands for Deep Learning Important FeaTures.
-DeepLIFT attributes the difference in prediction from some reference point prediction among all features.
-DeepLIFT explains a prediction as the difference from the prediction of some reference point.
-This reference is a neutral or default input.
-The choice depends on the task.
-For an image this can be all black pixels.
+How it works:
 
-Notation:
+1. forward propagate input image
+1. obtain raw score for category (before softmax). all gradients are set to zero, except for class of interest.
+1. backpropagate signal to rectified convolutional feature map of interest
+1. feature maps are combined to compute coarse Grad-CAM localization -> Grad-CAM
+1. Multiply heatmap with guided backpropagation to get Guided Grad-CAM
 
-- $c$ is class of interest
-- $x$ is vector of input pixels
-- $x_0$ is reference image pixels
-- $f$ is the neural network prediction or score just before classification layer (before softmax)
-- $f(x)$ is predictions
-- $f(x_0)$ is prediction of reference image
-- $\Delta{}f=f(x)-f(x_0)$ is difference in prediction to reference image
-- $C_j$ is attribution assigned to the $j$-th pixel $x_j$
+Grad-CAM, like other techniques, assigns some importance to each neuron, for the decision of interest.
+This is the class prediction (which we find in the output layer), but can, in theory, be any other layer in the neural network.
+Grad-CAM backpropagates this information to the last convolutional layer.
 
 
-DeepLIFT assigns scores to each input feature.
-Explained is the difference between some prediction $\Delta{}f=f(x)-f(x_0)$.
+The localization map is described as:
 
-$$\sum_{j=1}^p{}C_j$$
+$$L^c_{Grad-CAM} \in \mathbb{R}^{uxv} = ReLU\left(\sum_{k} \alpha_k^c A^k\right)$$
 
-where $C$ is the contribution of a feature.
+where u is the width, v the height and c the class of interest.
 
-DeepLift works by a set of rules that are applied to calculate the individual contributions.
+We first need the gradient of the pre-softmax score for class c with respect to feature map activation $A^k$ of a convoluation layer:
 
-$$\Delta{}y=\Delta{}y^++\Delta{}y^-$$
+$$\frac{\delta y^c}{\delta A^k}$$
 
-For dense and convolutional layers, the postive parts and negative parts of an activation are described with:
+TODO: CONTINUE READING Grad-CAM paper at section 3
 
-$$\Delta{}y^+=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i>0\}w_i(\Delta{}\x_i^{+}+\Delta{}x_i^{-})$$
-$$\Delta{}y^-=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i<0\}w_i(\Delta{}\x_i^{+}+\Delta{}x_i^{-})$$
 
-Contributions are calculated based on these differences (called "Linear Rule")
-$$C_{\Delta{}x_i^+\Delta{}y_i^+}=\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i^+$$
-$$C_{\Delta{}x_i^-\Delta{}y_i^+}=\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i^-$$
-$$C_{\Delta{}x_i^+\Delta{}y_i^-}=\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i^+$$
-$$C_{\Delta{}x_i^-\Delta{}y_i^-}=\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i^-$$
 
-where $y$ is the activation before the activation layer.
-Nonlinear activation functions such as ReLU, tanh and sigmoid are processed with the following rule:
 
-$$m_{\Delta{}x\Delta{}y}=\frac{\Delta{}y}{\Delta{}x}$$
+can be used with different CNNs: with fully-connected layers, for structured output such as captioning and in multi-task outputs and for reinforcement learning.
 
-This rescale rule only addresses saturation and thresholding problems, but not the min/AND rule.
-
-So, alternatively can use the RevealCancel Rule, which addresses all three.
-But this rule can be sensitive to noise, so the ReScale rule can sometimes be preferable (see https://www.youtube.com/watch?v=f_iAM0NPwnM)
-
-No distinction made between positive and negative deltas.
-
-
-There is a connection between DeepLIFT and Shapley VAlues.
-DeepLIFT is an approximation of Shapley Values but with reference point.
-
-How to choose reference.
-Either there is a natural reference, such as all zeros for MNIST (is the background color).
-Or one can use multiple references and average results.
-
-
-DeepLift is Shapley Value approximation.
-Shapley where reference point is "not participating team"
-
-
-DeepLift breaks implementation invariance [^integrated-gradients].
-This happens because DeepLift (and also LRP) replace gradients (which are implementation invariant) with discrete gradients (i.e. finite sums) plus a modified form of backpropagation.
-For normal backpropagation, the implementation invariance comes from $\delta{}f/\delta{}x$ could be computed directly, without the chain-rule, in theory, and mathematically has to yield the same result with when using the chain-rule.
-The chain rule uses implementation details (i.e. intermediate layers), but will come to the same result in the end, which is the definition of implementation invariance.
-The chain rule does not hold for discrete gradients and thus implementation invariance breaks.
-
-### Integrated Gradients  2017-06-13
-
-Citation: [^integrated-gradients]
-Paper: Axiomatic Attribution for Deep Networks
-Link: https://arxiv.org/pdf/1703.01365.pdf
-
-
-Integrated gradients, informally, can be seen as combininig gradients with the path dependent approaches such as LRP and DeepLIFT.
-The basic idea: Choose some baseline input (e.g. black image), consider a straight line between baseline and actual image (in the pixel space), and integrated the gradients when moving the pixel colors from one image to the other.
-It's the path integral.
-If we had a two pixel image [0.1, 0.2] and a baseline image [0,0], intermediate steps would be [0.7, 1.4] and [0.01, 0.02] , when moving from image to baseline.
-
-They defined some desiderata, which, of course, Integrated Gradients all fulfil:
-- Sensitivity: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero.
-I think that is a fair requirement.
-Gradient alone does not fulfill this axiom, because gradient can be zero, but feature different.
-Also deconvnet and guided backpropagation break sensitivity.
-- Implementation Invariance: For two networks that have exactly the same predictions, no matter how the input looks like, the attribution should be the same.
-Even if the networks work differently inside.
-I think this is also a fair assumption.
-LRP and DeepLift don't satisfy implementation invariance.
-If methods don't have implementation invariance, they are senstive to unimportant workings of the network.
-- Completeness: The attributions / relevance score add up to the difference between input x and the chosen baseline.
-Integrated Gradients, DeepList and LRRP do so.
-- Dummy: if  a network does not depend on a feature at all, its relevance should be zero.
-- Linearity: If we linearly combine two networks (e.g. weighted sum of the prediction of both), then the attribution for a feature should also be a weighted sum (with same weights as in linear combination).
-- Symmetry: swapping two features should yield same attribution (see shapley value)
-  It's important to do the linear interpolation to achieve symmetry.
-  There are infinite path one could take, e.g. first fully change one pixel, than the next and so on.
-  Each path would lead to a different attribution.
-  Integrated Gradients chose the linear path.
-
-(most axioms are like their shapley equivalents)
-
-
-Integrated gradients correspond to a cost-sharing method called Aumann-Shapley.
-
-$$E_{IG}=(x-x_0)\cdot\int_0^1\frac{\delta{}f(x_0+\alpha(x-x_0)}{\delta{}x}$$
-
-Here $x_0$ is a reference image, that stands for absence of features.
-Usually a black or otherwise one-colored image.
-IG is a reference point method, i.e. they compare to a reference.
-IG is sensitive to constant shift [^unreliable-saliency] which is bad, but only when an all zero reference point is chosen.
-When a black image is chosen as reference, it is fine (set all pixels to the mininimum in the data).
-
-Numerical integral is, of course, some computation overhead compared to other methods.
-
-They are computed using summation.
-We cut the path into $m$ parts replace integration with the sum (which is called the Riemman approximation of integrals):
-
-$$E_{IG}=(x-x_0)\cdot\sum_{k=1}^m\frac{\delta{}f(x_0+\frac{k}{m}\cdot(x-x_0)}{\delta{}x}\cdot\frac{1}{m}$$
-
-
-Integrated Gradients address the saturation and thresholding problems.
-Has a reference point.
-Can still give misguiding results, according to DeepLift paper.
-https://distill.pub/2020/attribution-baselines/
-
-Integrated Gradients are motivated by Aumann-Shapley value from cooperative game theory.
-
-You can also average contributions over many different reference point, a reference distribution.
-
-
-### Guided Backpropagation 2015-04-13
-
-Paper: Striving for Simplicity: The all Convolutional Net
-Date: 2015-04-13
-Link: https://arxiv.org/pdf/1412.6806.pdf
-
-
-The paper proposes CNN architecture solely on convoluation layers without maxpooling layers.
-But also they introduce a new variant of DeConvNet.
-Combines Vanilla Gradient and Backpropagation?
-Guided Backpropagation computes grradients, but any gradient that becomes negative during the backward pass is discarded at the ReLUs (i.e. set to zero).
-
-Guided Backpropagation break Input Sensitivity (and Gradient Saturation?). [^integrated-gradients].
-
-Builds on Deconvolution.
-Negative gradients are set to zero.
-Gradient is backpropagated through backward ReLU, then forward ReLU.
-
-[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
-
-By combining VAnilla Gradient and DeConvNet we end up with more zero attributions.
-Like Deconvnet, Guided Backpropagation can also be used for [Feature Visualization](#feature-visualization).
-
-![](images/backpass.png)
-
-### Layerwise Relevance Propagation LRP 2016
-
-Paper: On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation
-Authors: Alexander Binder, Sebastian Bach, Gregoire Montavon, Klaus-Robert Müller, and Wojciech Samek
-Date: 2015
-Link: http://iphome.hhi.de/samek/pdf/BinICISA16.pdf
-[^lrp]
-
-
-
-First, you do a forward pass of the image to get the prediction.
-Then, you do a backward pass and at each layer, redistribute the outcome among the layer below:
-
-Idea: $f(x)\approx\sum_{i=1}^pR_i$
-
-where each contribution $R_i$ belongs to an input pixel.
-Contributions can be positive or negative.
-
-$$R_i^{(l)}=\sum_{j}\frac{z_{ij}}{\sum_{i'}z_{i'j}}R_j^{(l+1)}$$
-
-with $z_{ij}=x_i^{(l)}w_{ij}^{(l,l+1)}$.
-
-where $i$ is the index of a neuron at layer $l$.
-The $j$ index runs over all upper-layer neurons, to which neuron $i$ contributes.
-Using this satisfies the efficiency property: $\sum_pR_p^{(1)}=f(x)$.
-In their paper, they call it conservation property.
-
-They introduce two more variants, LRP-$\beta$ and LRP-$\epsilon$, which relax the efficiency property to get some better numerical properties.
-
-
-LRP for ReLU networks is equivalent -- up to some factor -- to Gradient \* Input.
-And Gradient x Input does not address the saturation problem.
-
-
-LRP breaks implementation invariance [^integrated-gradients].
-
-### Gradient \* Input, DeepLift, $\epsilon$-LRP
-
-It is the same as the gradient method, but multiplied with the value of the feature / pixel.
-Helps with the problem of gradient saturation and reduces visual diffusion, as can be seen in the examples later.
-
-$$E_{GI}=x\cdot\frac{\delta{}f}{\delta{}x}|x=x_0$$
-
-All three methods are equivalent, as shown by M. Anaconda (in ReLU networks, no bias, zero baseline).
-
-When constant is added to image, does not work any more. [^unreliable-saliency]
-
-### Deep Taylor
-
-Deep Taylor is a reference method, i.e. attributions are relative to some reference data point.
-
-First, the attribution of an input neuron j is initialized to be equal to the output of taht neuron.
-iAttribution of other is set to zero. $s_j^{output}=y$, $s^{output}_{k\neqj}=0$
-
-The attribution then is backpropagated to inputs with the following rule:
-
-$$s^{l-1}_j=\frac{w\cdot(x-x_0)}{w^Tx}s_j^l$$
-
-where $x_0$ is the pixel vector of the reference image.
-
-
-When constant is added to image, does not work any more, depending on choice of reference point [^unreliable-saliency]
-Deep Taylor is equivalent to LRP, when an all zero reference point is chosen.
-When all zero is chosen, they method is sensitive to constant shift in image -> bad
+Two extensions of Grad-CAM are mentioned here: Guided Grad-CAM and SmoothGrad.
 
 ### Guided GradCAM
 
 Builds on CAM.
 Gradient of class score with respect to feature map of the last layer (i.e. activation maps) instead of input pixels.
+Adaption of Grad-Cam?
+Specific to CNN
+Problem of zeroing out negative gradients during backpropagation.
+
 To get a pixel-level attribution, can be combined with guided backpropagation.
 
 
@@ -551,18 +321,6 @@ Deep Lift and $\epsilon$-LRP can both be re-formulated as computing backpropagat
 Ancona et. al 2018.
 
 These gradient based methods are all different for different activation functions, since when the chain rule for derivation is applied, they replace the non-linear activations with a function $g(x)$ is different in different methods.
-
-### Grad-Cam
-
-Associated Feature Map from final convolutional layer with class of intereted and computes gradients.
-Specific to CNN.
-Problem of zeroing out negative gradients during backpropagation.
-
-### Guided CAM
-
-Adaption of Grad-Cam?
-Specific to CNN
-Problem of zeroing out negative gradients during backpropagation.
 
 
 ### PatternNet and pattern attribution
@@ -712,3 +470,284 @@ Not sure if there is something interesting.
 
 [^innvestigate]: "iNNvestigate neural networks!"(http://arxiv.org/abs/1808.04260) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans
 
+
+
+<!-- not used
+
+
+### DeconvNet, Deconvolution 2013-11-12
+
+Paper: Visualizing and Understanding Convolutional Networks
+By: Matthew D Zeiler, Rob Fergus
+Date: 2013-11-12
+
+The authors propose a Deconvolutional Network (DeconvNet).
+A DeconvNet kind of uses the same components as a Convolutional Neural Network, but reverses the operations such as filtering, pooling and activation.
+These nets have already been suggested two years earlier, but not for the purpose of visualization.
+
+We start with an already trained neural network.
+For a given image, we compute the all the feature maps.
+The approach constructs a second neural network that covers the convolutional layers, but in reverse.
+We start with the last convolutional layer (the feature maps) and go back until a reconstruction of the input image.
+Pooling layers are reversed by unpooling:
+Although this unpooling is not reversible (since max-pooling loses information), it is possible to obtain an approximation.
+This works by recording the location of the maxima within each pooling region.
+They call those "switch" variables.
+In the DeconvNet unpooling, these switches are used to map the reconstructions from the layer above to the maximally activated location below.
+The activation layer -- here Rectifying Linear Unit (ReLU) -- again uses ReLUs to backpropagate the reconstructions.
+
+
+The filtering units are simply transponsed, but applied to the rectified maps, not the output layer beneath.
+[On this github README](https://github.com/vdumoulin/conv_arithmetic) you can see some animations how this looks like.
+
+We do not cover too deeply here, because it has some problems and the following, more simple approaches work better.
+
+[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
+They also have a nice image explaining the difference between backpropagation of activation between saliency, deconvnet and guided backpropagation.
+
+DeConvNet uses a "Backward ReLU" operation.
+
+DeConvNet suffers from
+- Input sensitivity failure: Reason is that methods that back-propagated through ReLU only if ReLU is "turned on" for this input. I guess same issue as gradient saturation.
+
+
+DeConvNet can also be used for [Feature Visualization](#feature-visualization).
+DeConvNet is like vanilla gradient, except of the behavior at the ReLU units.
+
+
+### DeepLIFT
+
+Paper: Learning Important Features Through Propagating Activation Differences
+Authors: Avanti Shrikumar, Peyton Greenside, Anshul Kundaje
+Date: 2019-10-12 (arxiv, v2)
+Link: Learning important features through propagating activation diffe    rences
+[^deeplift]
+
+Also backpropagation based approach.
+The name DeepLIFT stands for Deep Learning Important FeaTures.
+DeepLIFT attributes the difference in prediction from some reference point prediction among all features.
+DeepLIFT explains a prediction as the difference from the prediction of some reference point.
+This reference is a neutral or default input.
+The choice depends on the task.
+For an image this can be all black pixels.
+
+Notation:
+
+- $c$ is class of interest
+- $x$ is vector of input pixels
+- $x_0$ is reference image pixels
+- $f$ is the neural network prediction or score just before classification layer (before softmax)
+- $f(x)$ is predictions
+- $f(x_0)$ is prediction of reference image
+- $\Delta{}f=f(x)-f(x_0)$ is difference in prediction to reference image
+- $C_j$ is attribution assigned to the $j$-th pixel $x_j$
+
+
+DeepLIFT assigns scores to each input feature.
+Explained is the difference between some prediction $\Delta{}f=f(x)-f(x_0)$.
+
+$$\sum_{j=1}^p{}C_j$$
+
+where $C$ is the contribution of a feature.
+
+DeepLift works by a set of rules that are applied to calculate the individual contributions.
+
+$$\Delta{}y=\Delta{}y^++\Delta{}y^-$$
+
+For dense and convolutional layers, the postive parts and negative parts of an activation are described with:
+
+$$\Delta{}y^+=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i>0\}w_i(\Delta{}\x_i^{+}+\Delta{}x_i^{-})$$
+$$\Delta{}y^-=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i=\sum_{i}\mathbb{1}\{w_i\Delta{}x_i<0\}w_i(\Delta{}\x_i^{+}+\Delta{}x_i^{-})$$
+
+Contributions are calculated based on these differences (called "Linear Rule")
+$$C_{\Delta{}x_i^+\Delta{}y_i^+}=\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i^+$$
+$$C_{\Delta{}x_i^-\Delta{}y_i^+}=\mathbb{1}\{w_i\Delta{}x_i>0\}w_i\Delta{}x_i^-$$
+$$C_{\Delta{}x_i^+\Delta{}y_i^-}=\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i^+$$
+$$C_{\Delta{}x_i^-\Delta{}y_i^-}=\mathbb{1}\{w_i\Delta{}x_i<0\}w_i\Delta{}x_i^-$$
+
+where $y$ is the activation before the activation layer.
+Nonlinear activation functions such as ReLU, tanh and sigmoid are processed with the following rule:
+
+$$m_{\Delta{}x\Delta{}y}=\frac{\Delta{}y}{\Delta{}x}$$
+
+This rescale rule only addresses saturation and thresholding problems, but not the min/AND rule.
+
+So, alternatively can use the RevealCancel Rule, which addresses all three.
+But this rule can be sensitive to noise, so the ReScale rule can sometimes be preferable (see https://www.youtube.com/watch?v=f_iAM0NPwnM)
+
+No distinction made between positive and negative deltas.
+
+
+There is a connection between DeepLIFT and Shapley VAlues.
+DeepLIFT is an approximation of Shapley Values but with reference point.
+
+How to choose reference.
+Either there is a natural reference, such as all zeros for MNIST (is the background color).
+Or one can use multiple references and average results.
+
+
+DeepLift is Shapley Value approximation.
+Shapley where reference point is "not participating team"
+
+
+DeepLift breaks implementation invariance [^integrated-gradients].
+This happens because DeepLift (and also LRP) replace gradients (which are implementation invariant) with discrete gradients (i.e. finite sums) plus a modified form of backpropagation.
+For normal backpropagation, the implementation invariance comes from $\delta{}f/\delta{}x$ could be computed directly, without the chain-rule, in theory, and mathematically has to yield the same result with when using the chain-rule.
+The chain rule uses implementation details (i.e. intermediate layers), but will come to the same result in the end, which is the definition of implementation invariance.
+The chain rule does not hold for discrete gradients and thus implementation invariance breaks.
+
+
+### Deep Taylor
+
+Deep Taylor is a reference method, i.e. attributions are relative to some reference data point.
+
+First, the attribution of an input neuron j is initialized to be equal to the output of taht neuron.
+iAttribution of other is set to zero. $s_j^{output}=y$, $s^{output}_{k\neqj}=0$
+
+The attribution then is backpropagated to inputs with the following rule:
+
+$$s^{l-1}_j=\frac{w\cdot(x-x_0)}{w^Tx}s_j^l$$
+
+where $x_0$ is the pixel vector of the reference image.
+
+
+When constant is added to image, does not work any more, depending on choice of reference point [^unreliable-saliency]
+Deep Taylor is equivalent to LRP, when an all zero reference point is chosen.
+When all zero is chosen, they method is sensitive to constant shift in image -> bad
+
+### Integrated Gradients  2017-06-13
+
+Citation: [^integrated-gradients]
+Paper: Axiomatic Attribution for Deep Networks
+Link: https://arxiv.org/pdf/1703.01365.pdf
+
+
+Integrated gradients, informally, can be seen as combininig gradients with the path dependent approaches such as LRP and DeepLIFT.
+The basic idea: Choose some baseline input (e.g. black image), consider a straight line between baseline and actual image (in the pixel space), and integrated the gradients when moving the pixel colors from one image to the other.
+It's the path integral.
+If we had a two pixel image [0.1, 0.2] and a baseline image [0,0], intermediate steps would be [0.7, 1.4] and [0.01, 0.02] , when moving from image to baseline.
+
+They defined some desiderata, which, of course, Integrated Gradients all fulfil:
+- Sensitivity: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero.
+I think that is a fair requirement.
+Gradient alone does not fulfill this axiom, because gradient can be zero, but feature different.
+Also deconvnet and guided backpropagation break sensitivity.
+- Implementation Invariance: For two networks that have exactly the same predictions, no matter how the input looks like, the attribution should be the same.
+Even if the networks work differently inside.
+I think this is also a fair assumption.
+LRP and DeepLift don't satisfy implementation invariance.
+If methods don't have implementation invariance, they are senstive to unimportant workings of the network.
+- Completeness: The attributions / relevance score add up to the difference between input x and the chosen baseline.
+Integrated Gradients, DeepList and LRRP do so.
+- Dummy: if  a network does not depend on a feature at all, its relevance should be zero.
+- Linearity: If we linearly combine two networks (e.g. weighted sum of the prediction of both), then the attribution for a feature should also be a weighted sum (with same weights as in linear combination).
+- Symmetry: swapping two features should yield same attribution (see shapley value)
+  It's important to do the linear interpolation to achieve symmetry.
+  There are infinite path one could take, e.g. first fully change one pixel, than the next and so on.
+  Each path would lead to a different attribution.
+  Integrated Gradients chose the linear path.
+
+(most axioms are like their shapley equivalents)
+
+
+Integrated gradients correspond to a cost-sharing method called Aumann-Shapley.
+
+$$E_{IG}=(x-x_0)\cdot\int_0^1\frac{\delta{}f(x_0+\alpha(x-x_0)}{\delta{}x}$$
+
+Here $x_0$ is a reference image, that stands for absence of features.
+Usually a black or otherwise one-colored image.
+IG is a reference point method, i.e. they compare to a reference.
+IG is sensitive to constant shift [^unreliable-saliency] which is bad, but only when an all zero reference point is chosen.
+When a black image is chosen as reference, it is fine (set all pixels to the mininimum in the data).
+
+Numerical integral is, of course, some computation overhead compared to other methods.
+
+They are computed using summation.
+We cut the path into $m$ parts replace integration with the sum (which is called the Riemman approximation of integrals):
+
+$$E_{IG}=(x-x_0)\cdot\sum_{k=1}^m\frac{\delta{}f(x_0+\frac{k}{m}\cdot(x-x_0)}{\delta{}x}\cdot\frac{1}{m}$$
+
+
+Integrated Gradients address the saturation and thresholding problems.
+Has a reference point.
+Can still give misguiding results, according to DeepLift paper.
+https://distill.pub/2020/attribution-baselines/
+
+Integrated Gradients are motivated by Aumann-Shapley value from cooperative game theory.
+
+You can also average contributions over many different reference point, a reference distribution.
+
+
+### Guided Backpropagation 2015-04-13
+
+Paper: Striving for Simplicity: The all Convolutional Net
+Date: 2015-04-13
+Link: https://arxiv.org/pdf/1412.6806.pdf
+
+
+The paper proposes CNN architecture solely on convoluation layers without maxpooling layers.
+But also they introduce a new variant of DeConvNet.
+Combines Vanilla Gradient and Backpropagation?
+Guided Backpropagation computes grradients, but any gradient that becomes negative during the backward pass is discarded at the ReLUs (i.e. set to zero).
+
+Guided Backpropagation break Input Sensitivity (and Gradient Saturation?). [^integrated-gradients].
+
+Builds on Deconvolution.
+Negative gradients are set to zero.
+Gradient is backpropagated through backward ReLU, then forward ReLU.
+
+[^perplexing-behavior] showed that Guided Backpropagation and DeConvNet do partial image reconstruction, which is undesirable.
+
+By combining VAnilla Gradient and DeConvNet we end up with more zero attributions.
+Like Deconvnet, Guided Backpropagation can also be used for [Feature Visualization](#feature-visualization).
+
+![](images/backpass.png)
+
+### Layerwise Relevance Propagation LRP 2016
+
+Paper: On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation
+Authors: Alexander Binder, Sebastian Bach, Gregoire Montavon, Klaus-Robert Müller, and Wojciech Samek
+Date: 2015
+Link: http://iphome.hhi.de/samek/pdf/BinICISA16.pdf
+[^lrp]
+
+
+
+First, you do a forward pass of the image to get the prediction.
+Then, you do a backward pass and at each layer, redistribute the outcome among the layer below:
+
+Idea: $f(x)\approx\sum_{i=1}^pR_i$
+
+where each contribution $R_i$ belongs to an input pixel.
+Contributions can be positive or negative.
+
+$$R_i^{(l)}=\sum_{j}\frac{z_{ij}}{\sum_{i'}z_{i'j}}R_j^{(l+1)}$$
+
+with $z_{ij}=x_i^{(l)}w_{ij}^{(l,l+1)}$.
+
+where $i$ is the index of a neuron at layer $l$.
+The $j$ index runs over all upper-layer neurons, to which neuron $i$ contributes.
+Using this satisfies the efficiency property: $\sum_pR_p^{(1)}=f(x)$.
+In their paper, they call it conservation property.
+
+They introduce two more variants, LRP-$\beta$ and LRP-$\epsilon$, which relax the efficiency property to get some better numerical properties.
+
+
+LRP for ReLU networks is equivalent -- up to some factor -- to Gradient \* Input.
+And Gradient x Input does not address the saturation problem.
+
+
+LRP breaks implementation invariance [^integrated-gradients].
+
+### Gradient \* Input, DeepLift, $\epsilon$-LRP
+
+It is the same as the gradient method, but multiplied with the value of the feature / pixel.
+Helps with the problem of gradient saturation and reduces visual diffusion, as can be seen in the examples later.
+
+$$E_{GI}=x\cdot\frac{\delta{}f}{\delta{}x}|x=x_0$$
+
+All three methods are equivalent, as shown by M. Anaconda (in ReLU networks, no bias, zero baseline).
+
+When constant is added to image, does not work any more. [^unreliable-saliency]
+
+-->
