@@ -23,7 +23,7 @@ gitbook.require(["gitbook", "lodash", "jQuery"], function(gitbook, _, $) {
             'icon': 'fa fa-twitter',
             'onClick': function(e) {
                 e.preventDefault();
-                window.open("http://twitter.com/intent/tweet?text="+document.title+"&url="+encodeURIComponent(location.href)+"&hashtags=rmarkdown,bookdown");
+                window.open("http://twitter.com/intent/tweet?text="+encodeURIComponent(document.title)+"&url="+encodeURIComponent(location.href)+"&hashtags=rmarkdown,bookdown");
             }
         },
         'linkedin': {
