@@ -14,7 +14,7 @@ Some literature
 - Roughly explain 3 different approaches:
     - Vanilla Gradient: Because simple and educational.
     - Grad-CAM (or SmoothGRAD?) because it works
-    - Some other which is not GradCAM and still works. Integrated Gradients?
+    - Some other which is not GradCAM and still works. Integrated Gradients? LRP?
 - Application [VGG16, INNvestigate]
 - Problems of attribution methods
 - List of methods that are excluded because they don't work
@@ -260,11 +260,12 @@ Both DeConvNet and Guided Backpropagation do not compute the true gradient but a
 ### Grad-CAM
 
 Grad-CAM stands for Gradient-weighted Class Activation Map.
-It is also gradient based.i
+It is also gradient based.
 Associated Feature Map from final convolutional layer with class of intereted and computes gradients.
 Specific to CNN.
 Problem of zeroing out negative gradients during backpropagation.
-Grad-CAM is a localization technique.
+Grad-CAM is a localization technique, and thus try to answer the question:
+Where does the neural network look?
 
 How it works:
 
@@ -278,10 +279,31 @@ Grad-CAM, like other techniques, assigns some importance to each neuron, for the
 This is the class prediction (which we find in the output layer), but can, in theory, be any other layer in the neural network.
 Grad-CAM backpropagates this information to the last convolutional layer.
 
+Another, intuitive explanation:
+We want to understand at which parts of an image a convolutional layer "looks" for a certain classification.
+Usually, we investigate the last convolutional layer.
+A convolutional layers takes in either the images (if its the first conv layer) or the feature maps, and outputs other feature maps.
+To understand where this convolutional layer looks, we have to analyze these output feature maps.
+There are k feature maps, and we call them $A_1, A_2, \ldots, \A_k$.
+We could simply visualize the value of each of those feature maps, average this over the feature maps and overlay it on our images, so something like: 
+Not very helpful, however, since these feature maps have to encode information for all possible classes, but we are only interested in a certain class.
+This means we have to somehow decide how important each of the k feature map was for our class c that we are interested in.
+First, we want to know how important each feature map was for a classification.
+This is expressed by the weight $\alpha_k^c$.
+And this weight is computed by the gradient of the class score with respect to a particular position on that feature map.
+These gradients are then averaged over the entire width and height of that feature maps and, voila, we got us an importance score for that feature map.
+But we are not there yet, because this does not give us the localization.
+So we use this importance scores to weight each feature map.
+We compute the weighted average mean, which gives us a single "image" with width and height of the feature map.
+We remove all negative values from that, because we are only interested in the parts that contribute towards the chosen class c and not to the ones to other classes.
+This can also be expressed as applying a ReLU function to the weighted averaged feature map.
+The we scale the Grad-CAM map to be between 0 and 1 for visualization purposes and overlay it over the original image.
+
+The Grad-CAM algorithm can be found here: https://keras.io/examples/vision/grad_cam/
 
 The localization map is described as:
 
-$$L^c_{Grad-CAM} \in \mathbb{R}^{uxv} = ReLU\left(\sum_{k} \alpha_k^c A^k\right)$$
+$$L^c_{Grad-CAM} \in \mathbb{R}^{uxv} = \underline{ReLU}_{Pick positive values}\left(\sum_{k} \alpha_k^c A^k\right)$$
 
 where u is the width, v the height and c the class of interest.
 
@@ -289,25 +311,45 @@ We first need the gradient of the pre-softmax score for class c with respect to 
 
 $$\frac{\delta y^c}{\delta A^k}$$
 
-TODO: CONTINUE READING Grad-CAM paper at section 3
+The importance weights are defined as:
 
+$$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{global average pooling} \underline{\frac{\delta y^c}{\delta A_{ij}^k}}_{gradients via backprop}$$
 
+Index i and j refere to the width and height dimensions.
+This means that the gradients are global-average-pooled.
+
+A difference to other methods is that they Grad-CAM only shows the positive activations for a class and not the negative ones.
+This is due to the ReLU used in the Grad-CAM definition.
+The reasoning is that only positive activations are interesting -- all negative activations are important for other classes.
+
+Grad-CAM is an extension of Class ACtivation Maps (CAM), which can be used to localize discriminitaive image regions.
+This also makes Grad-CAM a localization technique.
+The difference of a localization technique to other attribution methods is sparsity:
+Many other methods attribute to each pixel how it was important and in which direction.
+Grad-CAM focuses on a small area. TODO: Explain how.
 
 
 can be used with different CNNs: with fully-connected layers, for structured output such as captioning and in multi-task outputs and for reinforcement learning.
 
 Two extensions of Grad-CAM are mentioned here: Guided Grad-CAM and SmoothGrad.
 
+The great thing about Grad-CAM is that besides image classification it works also for other image related tasks.
+This includes visual question answering and reinforcement learning.
+
 ### Guided GradCAM
 
-Builds on CAM.
-Gradient of class score with respect to feature map of the last layer (i.e. activation maps) instead of input pixels.
-Adaption of Grad-Cam?
-Specific to CNN
+From the description of Grad-CAM you can see that the localization is very coarse, since the last convolutional feature maps have a much coarser resolution compared to the input image.
+Other attribution techniques back-propagate the entire way back to the image and each of the pixels.
+They are therefore much more detailed and can really show you individual edges or spots that contributed most to a prediction.
+A fusion of both methods is called Guided Grad-CAM.
+And it is super simple.
+You compute for an image both the Grad-CAM output and the output from, for example, Deconvolution or some other pixel-wise attribution.
+The Grad-CAM output is then upsampled with bilinear interpoliation, then both maps are multiplied element-wise.
+Grad-CAM works like a lense that focuses on certain parts of the pixel-wise attribution map.
+
+TODO: Add image
+
 Problem of zeroing out negative gradients during backpropagation.
-
-To get a pixel-level attribution, can be combined with guided backpropagation.
-
 
 ### SmoothGrad
 
@@ -344,11 +386,6 @@ often the all black image, which has a prediction near zero.
 For LIME image it is the average of each RGB
 
 Shapley Value is covered in the [#shap](Shap Chapter) and LIME in the [#lime](LIME Chapter).
-
-### For RNNs
-
-Paper: Visual Reasoning of Feature Attribution with Deep Recurrent Neural Networks
-
 
 ### Examples
 
