@@ -60,7 +60,8 @@ if __name__ == "__main__":
                 model,
                 **method[1])
         if method[0] == "input":
-            a = image[None]/255
+            a = image[None]
+            a = (a - a.min())/ (a.max() - a.min())
         else:
             x = preprocess(image[None])
             # use preprocessing from other script
