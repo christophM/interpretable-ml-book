@@ -75,6 +75,10 @@ cam = gradcam(loss,
              )
 cam = normalize(cam)
 
+# Single image as example for chapter start
+plt.imshow(saliency_map_vanilla[0], cmap = 'jet')
+plt.savefig(os.path.join(image_path, 'vanilla.png'))
+
 f, ax = plt.subplots(nrows=3, ncols=3)
 fs = 10
 ax[0][0].set_title("Greyhound (vanilla)", fontsize=fs)

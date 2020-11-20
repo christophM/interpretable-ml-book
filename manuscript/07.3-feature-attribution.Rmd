@@ -1,5 +1,7 @@
 ## Feature Attribution for Image Classification
 
+`r if(is.html){only.in.html}`
+
 <!--
 Some literature
 - For feature attribution: http://blog.qure.ai/notes/deep-learning-visualization-gradient-based-methods
@@ -30,49 +32,40 @@ Questions
 -->
 
 <!-- short summary -->
-Saliency maps are "heatmaps" on top of images that highlight the pixels that were most responsible for a certain classification by a neural network.
+Saliency maps are "heatmaps" that are often overlayed on images to highlight the pixels that were responsible for a certain neural network classification.
 They are based on backpropagation of the gradient.
+And they look a bit like this:
 
-Other names: sensitivity map, saliency map, pixel attriution map, 
+```{r, out.width = "80%"}
+knitr::include_graphics("images/vanilla.png")
+```
 
-<!--TODO: Insert first saliency map here, just as example -->
-For a long time, I dreaded writing this chapter.
-There are more methods then we need on this planet.
-Enough to send a few to a parallel universe.
-No more new methods will be added.
-I thought about what would be the most useful for this chapter.
-Choose one or two methods and explain them in detail?
-Explain all methods in detail?
-Only explain one type of method?
-I decided to make it an overview, a guide through the jungle of different methods, but without going too much into details of single methods.
-Rather, it provides intuition for all the methods and practical findings from research what advantages and disadvantages each of the method has.
+Other names that are used in this context: sensitivity map, saliency map, pixel attriution map, gradient-based attribution methods, feature relevance, feature attribution, feature contribution
 
 <!-- General idea and distinction -->
-Also known as: Feature attribution, feature contribution, feature relevance.
 Saliency maps are feature attribution methods for images that attribute the prediction to the input features.
 Feature attribution explains individual predictions by attributing each input feature by how much it changed the prediction (negative or positive).
 Be it input pixels, tabular data or words.
 For saliency maps these are pixels.
-We only look at attribution methods that do not require to modify the network.
-This means only methods that work for a trained network.
-Formal definition:
+These methods usually do not change the network, and we will only look at methods that are post-hoc, meaning they can be applied after the network was trained as usual.
+
+A bit more formal definition would be this:
 A feature attribution method of the prediction for p-dimensional input x, relative to some base input (or prediction?) can be expressed as a vector of relevances: $(r_1,\ldots,r_p)$.
 The j-th element r~j~ is the contribution of the j-th feature input to the prediction.
 
 There is a confusing amount of approaches out there to compute feature attributions.
-We can get a handle on them by understanding two things:
-1. Some methods manipulate parts of the image (model-agnostic) and some methods compute the gradient of the prediction (or classification score) with respect to the input features.
+We can get a handle on them by understanding two things: 1. Some methods manipulate parts of the image (model-agnostic) and some methods compute the gradient of the prediction (or classification score) with respect to the input features.
 2. The gradient based methods (of which there are many) mostly differ in how the gradient is computed.
 
-All methods have in common that in the end we get an output that has the same size as the input image and gives each pixel a value which somehow can be interpreted as the relevance of the pixel for the prediction or classification of that image.
+All methods have in common that in the end we get an output that has the same size as the input image (or can at least be projected meaningfully onto it) and gives each pixel a value which somehow can be interpreted as the relevance of the pixel for the prediction or classification of that image.
 
+There are different ways to achieve these kind of attributions:
 
-There are mostly three types of methods:
-
-- Gradient based: Look at the gradients of the input pixels. Also called saliency.
-- Feature attribution: Explaining the prediction vs. average preidction
-- Path attribution based (also with gradient?): Look at some reference image. This article researches what is a good baseline.  Link: https://arxiv.org/pdf/1703.01365.pdf . Same as feature attribution, but with reference point instead.
-- Perturbation based: Replace some parts of the image
+- Gradient based: Look at the gradients of the input pixels. Also called saliency. The other option are perturbation based, which is model-agnostic and by replacing parts of the image with some "neutral" image.
+- The attribution might show only the positive  contributions towards the class of interest. Or it might show, in two different colors, both positive and negative. Or it might just show localization, which are regions that are important on an image
+- Then there gradient vs. path attribution. The gradient just tells us whether a change of this pixel (increasing color) would change the prediction. The path attribution compares the current image with a reference image (which can be some artificial "Null" image) and distributes the difference of the prediction for both among the pixels. This article researches what is a good baseline.  Link: https://arxiv.org/pdf/1703.01365.pdf . Same as feature attribution, but with reference point instead.
+[^unreliable-saliency] classify gradient based methods into 3 categories:
+Gradients, Signal Methods (DeConvNet, Guided BackProb, PatternNet) and Attribution methods (Deep Taylor, Integrated Gradients).
 
 
 For the pixels, attributions are averaged over the channels.
@@ -83,67 +76,24 @@ The interpretation of the gradient with respect to the input features is:
 If I were to change this feature, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
 The larger the absolute value of the gradient, the stronger the effect of changes in that feature.
 
+Question to myself:
+Using the pure gradient should not make too much sense, because it does not matter how I change the pixel, only by the absolute change in prediction?
 
 <!-- TODO: Explain the overall algorithm template here -->
-All methods have one-forward pass (i.e. get the prediction) and one backward pass (to get the gradients).
-Big problem with backpropagation / attribution methods:
-Neural network have non-linear transformation units, and that's also how most methods differ in how they deal with those.
-So it's not clear how to backpropagate through those units.
+The general recipe for the gradient-based attribution methods is simple:
+All methods have one-forward pass to get the prediction and one backward pass (to get the gradients).
+Then we know for each pixel the gradient.
+But there is one obstacle, which is one reason why we have so many different approaches:
+Neural network have non-linear transformation units, and therefore there is some ambiguity how to exactly do the backward pass of the gradients.
 The difference to the normal backpropagation is that we compute the gradient with respect to the input features.
 Backpropagagion compute the gradient with respect to the weights of the neural network.
 
 
 
 
-[^unreliable-saliency] classify gradient based methods into 3 categories:
-Gradients, Signal Methods (DeConvNet, Guided BackProb, PatternNet) and Attribution methods (Deep Taylor, Integrated Gradients).
+TODO: CONTINUE HERE WITH ROUGH DRAFT
 
 
-### Problems
-<!-- move this chapter after the method explanations -->
-There are too many methods.
-And no clear path to check how they are doing, right?
-I mean we would need some groundtruth to really say if they are correct?
-Well, there is a different way, proposed as sanity checks for Saliency Maps [^sanity-checks].
-The rough idea is: We cannot know whether a saliency map is correct, but we can know if a method is insensitive to model and data, which is highly undesirable.
-
-As many methods were proposed, their evaluation was mostly visual, i.e. does the highlighting of pixels make sense?
-The paper above brings some rigor to evaluation.
-They propose randomization tests for model and data to evaluate the sensitivity of the feature attribution approaches.
-The conclusions are quite striking.
-Many methods (which are widely used) are independent of both training data and the model parameters.
-That is bad news and means those methods should not be used.
-Model parameter randomization test: compare output of saliency method of model with the same output when the network gets random weights (but same architecture).
-Expectation: Quite different results.
-If results are similar, it means that the method is not connected to the model (bad).
-Data randomization test: Compare saliency maps of two trained networks.
-First network trained on training data, second network on training data but with shuffled data.
-Again, we would expect that the saliency maps differ quite a lot.
-If not, the method is broken.
-Theses are very basic checks.
-If a method passes these checks, it could still be a wrong attribution method.
-But if it fails these checks, the method is definitely broken and should not be used.
-
-
-Problems with guided backpropagaion and similar methods:
-Images closely resemble the output of edge detectors.
-Edge detectors are independent of the model and the data, so this is really bad for guided backpropagation.
-Gradients and GradCAM passed the sanity checks (model and data randomization).
-Guided BackProp & Guided GradCAM failed.
-Other cases (gradient \* input, integrated gradients, SmoothGrad) where not clear cut.
-
-
-
-Also very dependent on the activation function that was used (ReLU, Tanh, softmax, ...)
-
-
-Unfortunately, many of those methods have issues.
-In an experiment, where the labels were mixed and the model was retrained, the explanations were stil very similar.
-Only GradCAM was okay.
-
-Feature attribution might also be called saliency maps.
-There are lots and lots of approaches to to this, all very similar.
-/We will only look at the general idea, and point out to some of the approaches.
 
 ### Some more theory
 
@@ -167,65 +117,9 @@ There are not rules.
 Some of those methods have the property of Completeness, meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image/data point minus the prediction of a reference point (e.g. all grey image).
 Integrated Gradient and SHAP have this property.
 
-
-### List of problems
-
-Before we start with all the approaches, let's look at problems.
-I know, a bit unusual, but it helps to weed out some of the approaches.
-Some are also more "axiomatic" in the sense that these are problems to things that are desirable.
-
-- Saturated Gradient (explained in [^deeplift]).
-  Caused by the activation function.
-  The flat part of an activation function (e.g. ReLU) does not change at some value.
-  So looking at the gradient of a pixel, it might be zero, even though it contributed a lot, but the gradient is already saturated.
-- Disconinuities in the gradients, also called the Thresholding artifact. Stems from jump in ReLU.
-  Exists in Gradient and Gradient x Input
-- Insensitivity to Model
-- Insensitivity to Training Data
-- Failure to highlight negative contributions (due to backpropagation through ReLUs)
-- Input sensitivity failure: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero. Some methods fail this [^integrated-gradient].
-  Lack of input sensitivity leads to focus on irrelevant features.
-  Gradient saturation causes input sensitivity failure for DeConvNets and Guided Backpropagation.
-- Failure of Implementation Invariance: An attribution should be identical when two networks give exactly the same predictions for any inpt.
-  This means no matter what the network does internally, as long as the output remains the same, so should the attributions to the pixels.
-  If an attribution method suffers from failure of implementation invariance, it may attribute to irrelevant inputs.
-This happens because DeepLift (and also LRP) replace gradients (which are implementation invariant) with discrete gradients (i.e. finite sums) plus a modified form of backpropagation.-
-
-### List of approaches
-
-VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
-- Based on Shapley Value for explaining individual predictions
-- Relevance of feature is estimated by measuring how the prediction changes if feature is unknown, by simulating that the feature is unknown.
-- what this paper does differently: instead of simulating
-- Implementation: https://github.com/lmzintgraf/DeepVis-PredDiff
-- DeepSHAP (gradient-based)
-  - version called DeepExplainer. There is a connection between SHAP and DeepLift
-  - version called GradientExplainer. Connection between SHAP and Gradient Input algorithm.
-- Occlusion (perturbation based) https://arxiv.org/abs/1311.2901
-- (epsilon) Layer-Wise Relevance Propagation (gradient-based)
-- Gradient * Input (gradient-based, surprise!) [^integrated-gradients] https://arxiv.org/abs/1605.01713
-- Shapley Value Sampling (perturbation based)
-- LIME (perturbation based)
-- Grad-CAM class activation maps (gradient-based) [^grad-cam]
-- Guided Backpropagagion
-- Smoothgrad [^smoothgrad]  https://arxiv.org/abs/1706.03825
-
-
-We will go through many of the papers and approaches, starting with the earliest and ending with the latest ones.
-As it turns out, many methods have problems, which I will address so you can already see whether an approach makes sense to use.
-The approaches that do not work well are still included here for educational and historical purposes.
 With all these approaches, we start with an already trained CNN.
 
-This is going to be a longer list.
-That is why I did not want to cover Deep Learning stuff.
-It is so crowded.
-It is a mess.
-But, well, the stuff works and need interpretation.
-If you just want to read one, read Vanilla Gradient aka Saliency Maps.
-It works well and is simple.
-
-
-### Vanilla Gradient (Saliency Maps) 2014-04-19
+### Vanilla Gradient (Saliency Maps)
 
 Paper: Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps
 By: Karen Simonyan, Andrea Vedaldi, Andrew Zisserman
@@ -367,8 +261,6 @@ Why should this work?
 The theory is that the derivative has great fluctuations at small scales.
 The neural network did not have an incentive during training to keep those derivatives smooth.
 
-
-
 Goal: reduce noise and visual diffusion.
 Average over explanations.
 
@@ -377,11 +269,6 @@ $$E_{sg}(x)=\frac{1}{N}\sum_{i=1}^N{}E(x+g_i)$$
 where $g_i\sim{}N(0,\sigma^2)$ are sampled noise vector.
 
 Sigma should be set to a very low number like XXXX. TODO
-
-
-### PatternNet and pattern attribution
-
-Pieter-Jan Kindermans, Kristof T Schütt, Maximilian Alber, Klaus-Robert Müller, Dumitru Erhan,Been Kim, and Sven Dähne.  Learning how to explain neural networks: Patternnet and patternat-tribution.arXiv preprint arXiv:1705.05598v2, 2017.
 
 ### Alternative: Perturbation
 
@@ -401,56 +288,113 @@ For LIME image it is the average of each RGB
 
 Shapley Value is covered in the [#shap](Shap Chapter) and LIME in the [#lime](LIME Chapter).
 
+
+
+### Problems
+<!-- move this chapter after the method explanations -->
+There are too many methods.
+And no clear path to check how they are doing, right?
+I mean we would need some groundtruth to really say if they are correct?
+Well, there is a different way, proposed as sanity checks for Saliency Maps [^sanity-checks].
+The rough idea is: We cannot know whether a saliency map is correct, but we can know if a method is insensitive to model and data, which is highly undesirable.
+
+As many methods were proposed, their evaluation was mostly visual, i.e. does the highlighting of pixels make sense?
+The paper above brings some rigor to evaluation.
+They propose randomization tests for model and data to evaluate the sensitivity of the feature attribution approaches.
+The conclusions are quite striking.
+Many methods (which are widely used) are independent of both training data and the model parameters.
+That is bad news and means those methods should not be used.
+Model parameter randomization test: compare output of saliency method of model with the same output when the network gets random weights (but same architecture).
+Expectation: Quite different results.
+If results are similar, it means that the method is not connected to the model (bad).
+Data randomization test: Compare saliency maps of two trained networks.
+First network trained on training data, second network on training data but with shuffled data.
+Again, we would expect that the saliency maps differ quite a lot.
+If not, the method is broken.
+Theses are very basic checks.
+If a method passes these checks, it could still be a wrong attribution method.
+But if it fails these checks, the method is definitely broken and should not be used.
+
+
+Problems with guided backpropagaion and similar methods:
+Images closely resemble the output of edge detectors.
+Edge detectors are independent of the model and the data, so this is really bad for guided backpropagation.
+Gradients and GradCAM passed the sanity checks (model and data randomization).
+Guided BackProp & Guided GradCAM failed.
+Other cases (gradient \* input, integrated gradients, SmoothGrad) where not clear cut.
+
+Also very dependent on the activation function that was used (ReLU, Tanh, softmax, ...)
+
+Unfortunately, many of those methods have issues.
+In an experiment, where the labels were mixed and the model was retrained, the explanations were stil very similar.
+Only GradCAM was okay.
+
+Feature attribution might also be called saliency maps.
+There are lots and lots of approaches to to this, all very similar.
+/We will only look at the general idea, and point out to some of the approaches.
+
+
+### List of problems
+
+Before we start with all the approaches, let's look at problems.
+I know, a bit unusual, but it helps to weed out some of the approaches.
+Some are also more "axiomatic" in the sense that these are problems to things that are desirable.
+
+- Saturated Gradient (explained in [^deeplift]).
+  Caused by the activation function.
+  The flat part of an activation function (e.g. ReLU) does not change at some value.
+  So looking at the gradient of a pixel, it might be zero, even though it contributed a lot, but the gradient is already saturated.
+- Disconinuities in the gradients, also called the Thresholding artifact. Stems from jump in ReLU.
+  Exists in Gradient and Gradient x Input
+- Insensitivity to Model
+- Insensitivity to Training Data
+- Failure to highlight negative contributions (due to backpropagation through ReLUs)
+- Input sensitivity failure: If input and baseline differ in one feature and have different predictions, the relevance of that feature has to be non-zero. Some methods fail this [^integrated-gradient].
+  Lack of input sensitivity leads to focus on irrelevant features.
+  Gradient saturation causes input sensitivity failure for DeConvNets and Guided Backpropagation.
+- Failure of Implementation Invariance: An attribution should be identical when two networks give exactly the same predictions for any inpt.
+  This means no matter what the network does internally, as long as the output remains the same, so should the attributions to the pixels.
+  If an attribution method suffers from failure of implementation invariance, it may attribute to irrelevant inputs.
+This happens because DeepLift (and also LRP) replace gradients (which are implementation invariant) with discrete gradients (i.e. finite sums) plus a modified form of backpropagation.-
+
+
+
+
 ### Examples
 
 
-```{r}
-include_graphics{"images/smoothgrad.png"}
-```
-
-TODO: Create example with different relevance methods.
-
-Implementations:
-
-https://github.com/oracle/Skater/blob/master/skater/core/local_interpretation/dnni/deep_interpreter.py
-
-DeepLift Implementation https://github.com/kundajelab/deeplift
-DeepVisualization ToolBox https://github.com/yosinski/deep-visualization-toolbox
-Integrated Gradietns https://github.com/ankurtaly/Integrated-Gradients
-
-Some tips and tricks (for LRP): Methods for Interpreting and Understanding Deep Neural Networks
-LRP: Should work better on ReLU
-
-TODO: Find some more advice from this paper and mention here.
-
-Advantages of LRP over Deconvolution and Sensitivity Analysis.
-https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&ved=2ahUKEwj_5vL0m6DiAhUz8uAKHU6ED0oQFjAAegQIAhAC&url=https%3A%2F%2Fwww3.math.tu-berlin.de%2Fnumerik%2FCoSIPICDL2017%2FTalks%2Fmueller.pdf&usg=AOvVaw1yR_5ZwKPvKLxHvwsAfQgA
-
-
-TODO: Insert image with edge detectors
-
 I want to predict the following:
-TODO: INCLUDE IMAGE OF DOGO
+TODO: All the images here
+Most likely class Italian_greyhound (35.21%)
 
 Neural Network VGG16 TODO: CITE
 
-Most likely class Italian_greyhound (35.21%)
+```{r, out.width = "80%"}
+knitr::include_graphics("images/smoothgrad.png")
+```
 
-And my ouptut looks like this:
+TODO: Insert image with edge detectors
 
-TODO: All the images here
-
-TODO: Check wheter to cover pattern.net and pattern
-
-All examples are done with innVestigate
-
-### Relation to Image Segmentation
-
-Not sure if there is something interesting.
 
 
 ### Some more methods:
 
+VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
+- Based on Shapley Value for explaining individual predictions
+- Relevance of feature is estimated by measuring how the prediction changes if feature is unknown, by simulating that the feature is unknown.
+- what this paper does differently: instead of simulating
+- Implementation: https://github.com/lmzintgraf/DeepVis-PredDiff
+- DeepSHAP (gradient-based)
+  - version called DeepExplainer. There is a connection between SHAP and DeepLift
+  - version called GradientExplainer. Connection between SHAP and Gradient Input algorithm.
+- Occlusion (perturbation based) https://arxiv.org/abs/1311.2901
+- (epsilon) Layer-Wise Relevance Propagation (gradient-based)
+- Gradient * Input (gradient-based, surprise!) [^integrated-gradients] https://arxiv.org/abs/1605.01713
+- Shapley Value Sampling (perturbation based)
+- LIME (perturbation based)
+- Grad-CAM class activation maps (gradient-based) [^grad-cam]
+- Guided Backpropagagion
+- Smoothgrad [^smoothgrad]  https://arxiv.org/abs/1706.03825
 - Deep Inside: Simonyan, K.; Vedaldi, A.; Zisserman, A. Deep inside convolutional networks: Visualising image classificationmodels and saliency maps.arXiv preprint arXiv:1312.60342013.
 - All-CNN: Springenberg, J.; Dosovitskiy, A.; Brox, T.; Riedmiller, M. Striving for Simplicity: The All Convolutional Net.ICLR (workshop track), 2015.
 - Deep Visualization: Yosinski,  J.;  Clune,  J.;  Nguyen,  A.;  Fuchs,  T.;  Lipson,  H.   Understanding neural networks through deepvisualization.arXiv preprint arXiv:1506.065792015
@@ -466,20 +410,23 @@ Not sure if there is something interesting.
 
 
 ### Advantages
-- give a way to understand a predictions
-- visual
-- better than model-agnostic variants (e.g. shapley) since they rely on the gradient and can be computed faster.
-- Many methods to choose from
-
-
+- The explanations are visual and easy to understand.
+  Especially when methods only highlight important pixels, it becomes easy to understand that these were the most important regions fo the image.
+- Methods that rely on gradient are usually faster to compute than model-agnostic methods.
+  For example, [LIME](#lime) and [SHAP](#shap) can also be used, but are more expensive to compute.
+- There are many methods to choose from.
 
 ### Disadvantages
-- You have to see which methods works best for which network. It seems like LRP works better when there are not too many fully connected layers, because if there are too many, the relevance will be non-selective but distributed to many layers.
-- Some methods have similarities to edge detectors, which are independent of training data and model.
-  Explanation becomes misleading.
-- These saliency maps can be very fragile.
+- As with most interpretation methods, it is difficult to know whether the explanation is **correct**.
+- Saliency maps can be very fragile.
   [^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction can lead to very different pixels that are highlighted as explanation.
   They looked at DeepLift, Vanilla (Simple) Gradient and Integrated Gradients.
+- The amount of methods is also a problem for practice.
+  You have to see which methods works best for which network.
+  But again, since we have no good way of showing whether it is correct, it is a difficult task to decide for a method.
+  I mean, you can look at some explanations, but when they don't make sense, maybe it is just because the model works in weird ways.
+- Some methods have similarities to edge detectors, which are independent of training data and model.
+  Explanation becomes misleading.
 - Also [^unreliable-saliency] showed that these methods can be highly unreliable.
   They added a constant shift to the input data, i.e. they added the same pixel changes to all images.
   They compare two networks, original network and the one were the bias of the first layer is changes to adapt for the constant pixel shift, so that the activations of both networks are the same and so are the predictions.
@@ -487,10 +434,16 @@ Not sure if there is something interesting.
   This means network 2 simply cancels out the constant shift in the first layer.
 - It's rather difficult to know how well these methods work.
   Even for the work that tries to measure how well they work, there is some criticism that these evaluation methods dont work well ...
+- All in all, it is a very unsatisfying state of affairs.
+  We need to wait a bit longer for more research on this matter.
+
 
 ### Software
-- A lot of the methods are implemented in the DeepExplaiin Toolbox: https://github.com/marcoancona/DeepExplain
-- iNNvestigate: https://github.com/albermax/innvestigate [^innvestigate]
+
+There are various implementations of feature attribution methods.
+For the example, I used [tf-keras-vis](https://pypi.org/project/tf-keras-vis/).
+One of the most comprehensive libraries is [iNNvestigate](https://github.com/albermax/innvestigate), which implements vanilla gradient, smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP, ...
+A lot of the methods are implemented in the DeepExplain Toolbox: https://github.com/marcoancona/DeepExplain
 
 
 <!-- References about individual methods -->
@@ -655,6 +608,9 @@ The chain rule does not hold for discrete gradients and thus implementation inva
 
 Deep Lift and $\epsilon$-LRP can both be re-formulated as computing backpropagation for modified gradient function
 Ancona et. al 2018.
+Some tips and tricks (for LRP): Methods for Interpreting and Understanding Deep Neural Networks
+LRP: Should work better on ReLU
+
 
 These gradient based methods are all different for different activation functions, since when the chain rule for derivation is applied, they replace the non-linear activations with a function $g(x)$ is different in different methods.
 
