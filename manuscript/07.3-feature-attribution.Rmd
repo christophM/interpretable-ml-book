@@ -8,6 +8,7 @@ Some literature
 - http://blog.qure.ai/notes/visualizing_deep_learning
 - Also check out: https://openreview.net/pdf?id=Hkn7CBaTW
 - https://www.youtube.com/watch?v=h9Y3FI_3lBw
+- Good overview: TOWARDS BETTER UNDERSTANDING OF GRADIENT - BASED ATTRIBUTION METHODS FOR DEEP NEURAL NETWORKS [^better-understanding], 2018
 -->
 
 <!--Idea for chapter:
@@ -88,20 +89,7 @@ Neural network have non-linear transformation units, and therefore there is some
 The difference to the normal backpropagation is that we compute the gradient with respect to the input features.
 Backpropagagion compute the gradient with respect to the weights of the neural network.
 
-
-
-
-TODO: CONTINUE HERE WITH ROUGH DRAFT
-
-
-
-### Some more theory
-
-Good overview: TOWARDS BETTER UNDERSTANDING OF GRADIENT - BASED ATTRIBUTION METHODS FOR DEEP NEURAL NETWORKS.
-[^better-understanding], 2018
-This paper also served to structure this article.
-
-Here we consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
+More formally, we consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
 Output of DNN is called $S(x)=[S_1(x),\ldots,S_p(x)]$.
 Formally all those methods take in input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) and outputs an explanation $R^c=[R_1^c,\ldots,R_p^c]$, one relevance value for each of the p input features.
 The c indicicates the relevance for the c-th output.
@@ -112,33 +100,80 @@ But also if DNN was wrong, it might be interesting to look at the input relevanc
 
 The word attribution maps means that, for images, we visualize the pixels with red if they positively contributed, blue if negatively.
 Of course, you are free to choose any color you like.
-There are not rules.
 
 Some of those methods have the property of Completeness, meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image/data point minus the prediction of a reference point (e.g. all grey image).
 Integrated Gradient and SHAP have this property.
 
-With all these approaches, we start with an already trained CNN.
+With all these approaches, we assume that we have an already trained CNN.
+
+And we start with a rather simple approach, the "vanilla" gradient.
 
 ### Vanilla Gradient (Saliency Maps)
 
-Paper: Deep Inside Convolutional Networks: Visualising Image Classification Models and Saliency Maps
-By: Karen Simonyan, Andrea Vedaldi, Andrew Zisserman
-When: 2014-04-19
-Given: Image $I_0$, class $c$, score function $S_c(I)$.
-Goal: Ranke pixels of $I_0$ based on influence on $S_c(I_0)$.
+The idea of vanilla gradient, presented by [^saliency] as one of the first saliency approaches is quite simple, we compute the gradient of the loss function for the class we are interested in with respect to the input features.
+This gives us a map of the size of the input features with negative to positive values.
+Concerning naming, they called their approach "Image-Specific Class Saliency".
 
+The main recipe for this approach is:
 
-1. Do a forward pass of the data
-1. Do a backward pass of the desired class to the input features to get the gradient
+1. Do a forward pass of the image of interest
+1. Do a backward propagation of the desired class to the input features to get the gradient
    $$E_{grad}(I_0)=\frac{\delta{}S_c}{\delta{}I}|_{I=I_0}$$
+   Thereby we set all other classes to zero.
 1. Visualize the gradients. Either absolute or with negative / positive
 
-Compared to DeconvNet:
-They differ mostly in how they backpropagate.
-Apart from the ReLU layer, DeconvNet is equivalent to the Vanilla Gradient approach.
-Vanilla Gradient can be seen as a generalization of DeconvNet.
-For ReLU ($X_{n+1}=max(X_n,0)$) the vanilla gradient computes: $\delta{}f/\delta{}X_n=\delta{}f/\delta{}X_{n+1}\mathbb{1}(X_n>0)$, where $\mathbb{1}$ is an (element-wise) indicator function.
-For DeconvNet ReLU, this is instead: $R_n=R_{n+1}\mathbb{1}(R_{n+1}>0)$, where $R_n$ and $R_{n+1}$ are the layer reconstructions.
+More formally, we have an image I and the CNN give it a score $S_c(I)$ for class c.
+The score is a highly non-linear function of our image.
+But the motivation is that we can approximate that score by applying first-order Taylor expansion
+
+$$S_c(I)\approx{}w^T{}I+b,$$
+
+where w is the derivate of our score:
+
+$$w = \frac{\delta S_C}{\delta I}|_{I_0}$$
+
+Now, there is some ambiguity how to do a backward pass of the gradients, as non-linear units such as ReLU (Rectifying Linear Unit) "remove" the sign.
+So when we do a backpass, we don't know whether to assign a positive or negative or negative activation.
+Using my incredible ASCII art skill, the ReLU function looks like this "_/" and is defined as $X_{n+1}(x)=max(0,X_n)$ from layer $X_n$ to layer $X_{n-1}$.
+This means that when the activation of a neuron is 0, we do not know what to backpropagate.
+In the case of vanilla gradient approach, the ambiguity is resolved as:
+
+$$\frac{\delta f}{\delta X_n} = \frac{\delta f}{\delta X_{n+1}} \cdot \mathbb{1}(X_n > 0)$
+
+where $\mathbb{1}$ is the element-wise indicator function which is 0 where the activation at the lower layer was negative or zero, and 1 where it is positive.
+Or, in words, we take the gradient that we have back-propagated so far until the layer n+1, then simply set the gradients to zero where the activation at the layer below is not positive.
+
+Let's assume we have layer $X_n$ and $X_{n+1}=ReLU(X_{n+1})$. 
+Our fictive activation at $X_n$:
+
+$$
+\begin{pmatrix}
+1 & 0 \\
+-1 & -10 \\
+\end{pmatrix}
+$$
+
+And these are our gradient at $X_(n+1)$:
+
+$$
+\begin{pmatrix}
+0.4 & 1.1 \\
+-0.5 & -0.1  \\
+\end{pmatrix}
+$$
+
+The our gradients at $X_n$ will be:
+
+$$
+\begin{pmatrix}
+0.4 & 0 \\
+ 0 & 0  \\
+\end{pmatrix}
+$$
+
+
+
+#### Problems with Vanilla Gradient
 
 Vanilla Gradient has Saturation Problem (explained in [^deeplift]):
 Assuming ReLU activation layer is used, when the weighted feature sum goes below zero, the at some point the activation is capped at zero, but does not change any more, i.e. the activation is saturated.
@@ -147,12 +182,32 @@ Passing that through the ReLU, the activation will be neuron 1 + neuron 2 when t
 If the sum of both is greater than one, the activation remains sasturated at an activation of 1.
 Also the gradient at that point will be zero, i.e. all gradient based methods will show that this neuron is not important.
 
-Difference between vanilla gradient and deconvnet.
+And now my friends, you get to understand another method, more or less for free: DeconvNet
+
+### DeconvNet
+
+DeconvNet by [^deconvnet] is almost identical to Vanilla Gradient.
+A DeconvNet kind of uses the same components as a Convolutional Neural Network, but reverses the operations such as filtering, pooling and activation.
+Apart from the ReLU layer, DeconvNet is equivalent to the Vanilla Gradient approach.
+Vanilla Gradient can be seen as a generalization of DeconvNet.
+For ReLU ($X_{n+1}=max(X_n,0)$) the vanilla gradient computes: $\delta{}f/\delta{}X_n=\delta{}f/\delta{}X_{n+1}\mathbb{1}(X_n>0)$, where $\mathbb{1}$ is an (element-wise) indicator function.
+For DeconvNet ReLU, this is instead: $R_n=R_{n+1}\mathbb{1}(R_{n+1}>0)$, where $R_n$ and $R_{n+1}$ are the layer reconstructions.
 When doing the backpass from layer x to layer x-1, vanilla gradient "remembers" which of the layer x were set to zero in the forward pass and sets those to 0 in layer x-1.
 In DeConvNet, activation with negative value in layer x are set to zero in layer x-1.
 Here layers are just the activations before and after ReLU.
 Guided Backpropagation sets both to 0 in layer x-1: neurons that in the forward pass were 0 in layer x and neurons that are negative in the backward passe in layer x.
 Both DeConvNet and Guided Backpropagation do not compute the true gradient but an imputed one.
+If we continue our example from above, then the gradient $X_n$ (they call it layer reconstruction) becomes:
+
+$$
+\begin{pmatrix}
+0.4 & 1.1 \\
+0 & 0  \\
+\end{pmatrix}
+$$
+
+
+TODO: CONTINUE HERE
 
 ### Grad-CAM
 
@@ -446,7 +501,6 @@ One of the most comprehensive libraries is [iNNvestigate](https://github.com/alb
 A lot of the methods are implemented in the DeepExplain Toolbox: https://github.com/marcoancona/DeepExplain
 
 
-<!-- References about individual methods -->
 
 [^deeplift]: Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
@@ -505,7 +559,6 @@ This works by recording the location of the maxima within each pooling region.
 They call those "switch" variables.
 In the DeconvNet unpooling, these switches are used to map the reconstructions from the layer above to the maximally activated location below.
 The activation layer -- here Rectifying Linear Unit (ReLU) -- again uses ReLUs to backpropagate the reconstructions.
-
 
 The filtering units are simply transponsed, but applied to the rectified maps, not the output layer beneath.
 [On this github README](https://github.com/vdumoulin/conv_arithmetic) you can see some animations how this looks like.
