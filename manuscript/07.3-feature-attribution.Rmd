@@ -41,6 +41,7 @@ And they look a bit like this:
 knitr::include_graphics("images/vanilla.png")
 ```
 
+You will see later in the chapter what is going on in that particular image.
 Other names that are used in this context: sensitivity map, saliency map, pixel attriution map, gradient-based attribution methods, feature relevance, feature attribution, feature contribution
 
 <!-- General idea and distinction -->
@@ -292,48 +293,62 @@ TODO: Add image
 
 Problem of zeroing out negative gradients during backpropagation.
 
-TODO: CONTINUE HERE
-TODO: Move Smoothgrad below DeconvNet
-
 ### SmoothGrad
 
-SmoothGrad can be seen as an extension of any of the methods, rather than its own method.
-The paper for this method is titled "SmoothGrad: removing noise by adding noise" [^smoothgrad].
-So the goal with SmoothGrad is to remove noise.
-The idea is to take an image, generate more images by adding noise to this image, and then take the average of the resulting sensitivty maps as an explanation.
-Another way to integrate over noise is to add noise already at training time.
-And the paper shows that a combination of the two noise approches works best.
+The idea of SmoothGrad by Smilkov et. al 2017 [^smoothgrad] is to make gradient-based explanations less noisy by adding noise and averaging over multiple, artificially noisy, gradients.
+SmoothGrad is not an explanation method in itself, but can be seen as an extension to any gradient-based explanation method.
 
+SmoothGrad works in the following way:
+
+- Generate multiple version of the image of interest by adding noise to it
+- Create saliency maps for all images
+- Average the saliency maps
+
+Yes, it is that simple.
 Why should this work?
-The theory is that the derivative has great fluctuations at small scales.
-The neural network did not have an incentive during training to keep those derivatives smooth.
+The theory is that the derivative fluctuates greatly at small scales.
+Neural networks do not have an incentive during training to keep those derivatives smooth, their goal is to classify the images correctly.
+By averaging over multiple maps, these fluctuations are "smoothed" out.
 
-Goal: reduce noise and visual diffusion.
-Average over explanations.
+$$E_{sg}(x)=\frac{1}{N}\sum_{i=1}^n{}E(x+g_i)$$
 
-$$E_{sg}(x)=\frac{1}{N}\sum_{i=1}^N{}E(x+g_i)$$
+where $g_i\sim{}N(0,\sigma^2)$ are noise vectors sampled from the Gaussian distribution.
+However, the "ideal" noise level depends on the input image and network.
+The authors suggest to set it to a 10%-20% noise level, meaning that $\frac{\sigma}{x_{max} - x_{min}}$ should be between 0.1 and 0.2.
+The boundaries $x_{max}$ and $x_{min}$ refer to min and maximum pixel values of the image.
+The other parameter is the number of samples n, for which was suggested that above 50 there are diminishing returns, so 50 should be enough.
 
-where $g_i\sim{}N(0,\sigma^2)$ are sampled noise vector.
+### Alternative: Perturbation-based Methods
 
-Sigma should be set to a very low number like XXXX. TODO
-
-### Alternative: Perturbation
-
-Shapley, Occlusion, LIME for images
-
-Occlusion, Shapley Value, LIME, wiggle around the inputs, visualize the directions in which the output changes
-Problems with perturbation or occlusion: Network was never trained on those images, you are leaving the space of realistic images.
-Might not be relevant how the neural network behaves here.
+An alternative to gradient-based methods are perturbation-based method.
+Perturbation-based methods treat the neural network as a black box.
+They work by manipulating the input images and observing how the output changes.
+Two of those methods are covered in this book: Shapley in the [#shap](Shap Chapter) and LIME in the [#lime](LIME Chapter).
+They are more expensive to compute usually, because multiple predictions are needed.
+But they have the advantage that they are model-agnostic.
 
 
-They are more expensive because multiple passes through the network are needed.
-i.e. multiple predictions because many different version of the image are passed through.
+### Examples
 
-What is the baseline that is chosen?
-often the all black image, which has a prediction near zero.
-For LIME image it is the average of each RGB
+Let's see some example how these maps look like and how the methods compare, qualitatively.
+The network in question is VGG-16 which was trained on the ImageNet data, and therefore able to distinguish more than 20,000 categories.
+We start with the following images of XXX and XXX.
+For all of these images, we will have a look at the top classification and create explanations for this top class.
 
-Shapley Value is covered in the [#shap](Shap Chapter) and LIME in the [#lime](LIME Chapter).
+TODO: All the images here
+Most likely class Italian_greyhound (35.21%)
+
+Neural Network VGG16 TODO: CITE
+
+```{r, out.width = "80%"}
+knitr::include_graphics("images/smoothgrad.png")
+```
+
+TODO: Insert image with edge detectors
+
+
+### The Big Issue
+
 
 
 
@@ -407,21 +422,6 @@ This happens because DeepLift (and also LRP) replace gradients (which are implem
 
 
 
-### Examples
-
-
-I want to predict the following:
-TODO: All the images here
-Most likely class Italian_greyhound (35.21%)
-
-Neural Network VGG16 TODO: CITE
-
-```{r, out.width = "80%"}
-knitr::include_graphics("images/smoothgrad.png")
-```
-
-TODO: Insert image with edge detectors
-
 
 
 ### Some more methods:
@@ -483,6 +483,7 @@ VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
   Even for the work that tries to measure how well they work, there is some criticism that these evaluation methods dont work well ...
 - All in all, it is a very unsatisfying state of affairs.
   We need to wait a bit longer for more research on this matter.
+- Most methods only qualitively evaluated
 
 
 ### Software

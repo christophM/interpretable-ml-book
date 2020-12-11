@@ -2,6 +2,7 @@ import keras
 import keras.backend
 import imp
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import numpy as np
 import os
 import keras.applications.vgg16 as vgg16
@@ -77,10 +78,20 @@ cam = normalize(cam)
 
 # Single image as example for chapter start
 plt.imshow(saliency_map_vanilla[0], cmap = 'jet')
+plt.axis("off")
 plt.savefig(os.path.join(image_path, 'vanilla.png'))
 
-f, ax = plt.subplots(nrows=3, ncols=3)
+
+fig = plt.figure(figsize=(10,10))
+#gs = gridspec.GridSpec(nrows=3, ncols=3, width_ratios=[1,1,1],
+#                       wspace=0.0, hspace=0.0, top=0.95, bottom=0.05,
+#                       right=0.845)
+nrows = 3
+ncols = 3
+f, ax = plt.subplots(nrows=nrows, ncols=ncols)
+fig.subplots_adjust(wspace=0, hspace=0)
 fs = 10
+
 ax[0][0].set_title("Greyhound (vanilla)", fontsize=fs)
 ax[0][0].imshow(saliency_map_vanilla[0], cmap = 'jet')
 
@@ -108,8 +119,12 @@ ax[2][1].imshow(cam[1], cmap = 'jet')
 ax[2][2].set_title("Eel (Grad-Cam)", fontsize=fs)
 ax[2][2].imshow(cam[2], cmap = 'jet')
 
+for i in range(0, nrows):
+    for j in range(0, ncols):
+        ax[i][j].set_xticks([])
+        ax[i][j].set_yticks([])
+
 plt.tight_layout()
-plt.savefig(os.path.join(image_path, 'smoothgrad.png'))
-plt.show()
+plt.savefig(os.path.join(image_path, 'smoothgrad.png'), bbox_inches='tight')
 
 
