@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2020-12-07" />
+<meta name="date" content="2020-12-22" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -50,8 +50,6 @@
 
 
 
-<link href="libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
-<script src="libs/anchor-sections-1.0/anchor-sections.js"></script>
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script>
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -351,7 +349,7 @@ window.cookieconsent.initialise({
 <div id="shap" class="section level2">
 <h2><span class="header-section-number">5.10</span> SHAP (SHapley Additive exPlanations)</h2>
 <p><em>This chapter is currently only available in this web version. ebook and print will follow.</em></p>
-<p>SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)<a href="#fn47" class="footnoteRef" id="fnref47"><sup>47</sup></a> is a method to explain individual predictions. SHAP is based on the game theoretically optimal <a href="shapley.html#shapley">Shapley Values</a>.</p>
+<p>SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)<a href="#fn48" class="footnoteRef" id="fnref48"><sup>48</sup></a> is a method to explain individual predictions. SHAP is based on the game theoretically optimal <a href="shapley.html#shapley">Shapley Values</a>.</p>
 <p>There are two reasons why SHAP got its own chapter and is not a subchapter of <a href="shapley.html#shapley">Shapley values</a>. First, the SHAP authors proposed KernelSHAP, an alternative, kernel-based estimation approach for Shapley values inspired by <a href="lime.html#lime">local surrogate models</a>. And they proposed TreeSHAP, an efficient estimation approach for tree-based models. Second, SHAP comes with many global interpretation methods based on aggregations of Shapley values. This chapter explains both the new estimation approaches and the global interpretation methods.</p>
 <p>I recommend reading the chapters on <a href="shapley.html#shapley">Shapley values</a> and <a href="lime.html#lime">local models (LIME)</a> first.</p>
 <div id="definition" class="section level3">
@@ -421,8 +419,8 @@ FIGURE 5.49: Function <span class="math inline">\(h_x\)</span> maps coalitions o
 </div>
 <div id="treeshap" class="section level3">
 <h3><span class="header-section-number">5.10.3</span> TreeSHAP</h3>
-<p>Lundberg et. al (2018)<a href="#fn48" class="footnoteRef" id="fnref48"><sup>48</sup></a> proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees. TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.</p>
-<p>TreeSHAP defines the value function using the conditional expectation <span class="math inline">\(E_{X_S|X_C}(f(x)|x_S)\)</span> instead of the marginal expectation. The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.<a href="#fn49" class="footnoteRef" id="fnref49"><sup>49</sup></a><a href="#fn50" class="footnoteRef" id="fnref50"><sup>50</sup></a> The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.</p>
+<p>Lundberg et. al (2018)<a href="#fn49" class="footnoteRef" id="fnref49"><sup>49</sup></a> proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees. TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.</p>
+<p>TreeSHAP defines the value function using the conditional expectation <span class="math inline">\(E_{X_S|X_C}(f(x)|x_S)\)</span> instead of the marginal expectation. The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.<a href="#fn50" class="footnoteRef" id="fnref50"><sup>50</sup></a><a href="#fn51" class="footnoteRef" id="fnref51"><sup>51</sup></a> The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.</p>
 <p>How much faster is TreeSHAP? Compared to exact KernelSHAP, it reduces the computational complexity from <span class="math inline">\(O(TL2^M)\)</span> to <span class="math inline">\(O(TLD^2)\)</span>, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.</p>
 <!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
 <p>TreeSHAP uses the conditional expectation <span class="math inline">\(E_{X_S|X_C}(f(x)|x_S)\)</span> to estimate effects. I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S. If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction. If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes. If S contains some, but not all, features, we ignore predictions of unreachable nodes. Unreachable means that the decision path that leads to this node contradicts values in <span class="math inline">\(x_S\)</span>. From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node). The mean of the remaining terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S. The problem is that we have to apply this procedure for each possible subset S of the feature values. <!--
@@ -524,6 +522,7 @@ FIGURE 5.55: Stacked SHAP explanations clustered by explanation similarity. Each
 <p><strong>KernelSHAP ignores feature dependence</strong>. Most other permutation based interpretation methods have this problem. By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution. However, if features are dependent, e.g. correlated, this leads to putting too much weight on unlikely data points. TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.</p>
 <p><strong>TreeSHAP can produce unintuitive feature attributions</strong>. While TreeSHAP solves the problem of extrapolating to unlikely data points, it introduces a new problem. TreeSHAP changes the value function by relying on the conditional expected prediction. With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.</p>
 <p>The disadvantages of Shapley values also apply to SHAP: Shapley values can be misinterpreted and access to data is needed to compute them for new data (except for TreeSHAP).</p>
+<p>It is possible to create intentionally misleading interpretations with SHAP, which can hide biases <a href="#fn52" class="footnoteRef" id="fnref52"><sup>52</sup></a>. If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations). It is a disadvantage as the receiver of an explanation, as you can be less sure about their truthfulness.</p>
 </div>
 <div id="software-4" class="section level3">
 <h3><span class="header-section-number">5.10.12</span> Software</h3>
@@ -534,11 +533,12 @@ FIGURE 5.55: Stacked SHAP explanations clustered by explanation similarity. Each
 <!-- </div> -->
 <div class="footnotes">
 <hr />
-<ol start="47">
-<li id="fn47"><p>Lundberg, Scott M., and Su-In Lee. &quot;A unified approach to interpreting model predictions.&quot; Advances in Neural Information Processing Systems. 2017.<a href="shap.html#fnref47">↩</a></p></li>
-<li id="fn48"><p>Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. &quot;Consistent individualized feature attribution for tree ensembles.&quot; arXiv preprint arXiv:1802.03888 (2018).<a href="shap.html#fnref48">↩</a></p></li>
-<li id="fn49"><p>Sundararajan, Mukund, and Amir Najmi. &quot;The many Shapley values for model explanation.&quot; arXiv preprint arXiv:1908.08474 (2019).<a href="shap.html#fnref49">↩</a></p></li>
-<li id="fn50"><p>Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. &quot;Feature relevance quantification in explainable AI: A causality problem.&quot; arXiv preprint arXiv:1910.13413 (2019).<a href="shap.html#fnref50">↩</a></p></li>
+<ol start="48">
+<li id="fn48"><p>Lundberg, Scott M., and Su-In Lee. &quot;A unified approach to interpreting model predictions.&quot; Advances in Neural Information Processing Systems. 2017.<a href="shap.html#fnref48">↩</a></p></li>
+<li id="fn49"><p>Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. &quot;Consistent individualized feature attribution for tree ensembles.&quot; arXiv preprint arXiv:1802.03888 (2018).<a href="shap.html#fnref49">↩</a></p></li>
+<li id="fn50"><p>Sundararajan, Mukund, and Amir Najmi. &quot;The many Shapley values for model explanation.&quot; arXiv preprint arXiv:1908.08474 (2019).<a href="shap.html#fnref50">↩</a></p></li>
+<li id="fn51"><p>Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. &quot;Feature relevance quantification in explainable AI: A causality problem.&quot; arXiv preprint arXiv:1910.13413 (2019).<a href="shap.html#fnref51">↩</a></p></li>
+<li id="fn52"><p>Slack, Dylan, et al. &quot;Fooling lime and shap: Adversarial attacks on post hoc explanation methods.&quot; Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society. 2020.<a href="shap.html#fnref52">↩</a></p></li>
 </ol>
 </div>
             </section>
@@ -578,7 +578,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.9b-agnostic-shap.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/manuscript/05.9b-agnostic-shap.Rmd",
 "text": "Edit"
 },
 "history": {

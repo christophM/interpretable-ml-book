@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2020-12-07" />
+<meta name="date" content="2020-12-22" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -50,8 +50,6 @@
 
 
 
-<link href="libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
-<script src="libs/anchor-sections-1.0/anchor-sections.js"></script>
 <!-- Global site tag (gtag.js) - Google Analytics -->
 <script>
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -352,7 +350,7 @@ window.cookieconsent.initialise({
 <h2><span class="header-section-number">5.8</span> Scoped Rules (Anchors)</h2>
 <p><em>Authors: Tobias Goerke &amp; Magdalena Lang</em></p>
 <p><em>This chapter is currently only available in this web version. ebook and print will follow.</em></p>
-<p>Anchors explains individual predictions of any black-box classification model by finding a decision rule that &quot;anchors&quot; the prediction sufficiently. A rule anchors a prediction if changes in other feature values do not affect the prediction. Anchors utilizes reinforcement learning techniques in combination with a graph search algorithm to reduce the number of model calls (and hence the required runtime) to a minimum while still being able to recover from local optima. Ribeiro, Singh, and Guestrin proposed the algorithm in 2018<a href="#fn39" class="footnoteRef" id="fnref39"><sup>39</sup></a> -- the same researchers that introduced the <a href="lime.html#lime">LIME</a> algorithm.</p>
+<p>Anchors explains individual predictions of any black-box classification model by finding a decision rule that &quot;anchors&quot; the prediction sufficiently. A rule anchors a prediction if changes in other feature values do not affect the prediction. Anchors utilizes reinforcement learning techniques in combination with a graph search algorithm to reduce the number of model calls (and hence the required runtime) to a minimum while still being able to recover from local optima. Ribeiro, Singh, and Guestrin proposed the algorithm in 2018<a href="#fn40" class="footnoteRef" id="fnref40"><sup>40</sup></a> -- the same researchers that introduced the <a href="lime.html#lime">LIME</a> algorithm.</p>
 <p>Like its predecessor, the anchors approach deploys a <em>perturbation-based</em> strategy to generate <em>local</em> explanations for predictions of black-box machine learning models. However, instead of surrogate models used by LIME, the resulting explanations are expressed as easy-to-understand <em>IF-THEN</em> rules, called <em>anchors</em>. These rules are reusable since they are <em>scoped</em>: anchors include the notion of coverage, stating precisely to which other, possibly unseen, instances they apply. Finding anchors involves an exploration or multi-armed bandit problem, which originates in the discipline of reinforcement learning. To this end, neighbors, or perturbations, are created and evaluated for every instance that is being explained. Doing so allows the approach to disregard the black-box’s structure and its internal parameters so that these can remain both unobserved and unaltered. Thus, the algorithm is <em>model-agnostic</em>, meaning it can be applied to <strong>any</strong> class of model.</p>
 <p>In their paper, the authors compare both of their algorithms and visualize how differently these consult an instance's neighborhood to derive results. For this, the following figure depicts both LIME and anchors locally explaining a complex binary classifier (predicts either <strong>-</strong> or <strong>+</strong>) using two exemplary instances. LIME’s results do not indicate how faithful they are as LIME solely learns a linear decision boundary that best approximates the model given a perturbation space <span class="math inline">\(D\)</span>. Given the same perturbation space, the anchors approach constructs explanations whose coverage is adapted to the model’s behavior and clearly express their boundaries. Thus, they are faithful by design and state exactly for which instances they are valid. This property makes anchors particularly intuitive and easy to comprehend.</p>
 <div class="figure" style="text-align: center"><span id="fig:unnamed-chunk-21"></span>
@@ -429,7 +427,7 @@ AND COVERAGE <code>15%</code></p>
 <p>Thus, the proceeding strives for a rule that has the highest coverage among all eligible rules (all those that satisfy the precision threshold given the probabilistic definition). These rules are thought to be more important, as they describe a larger part of the model. Note that rules with more predicates tend to have higher precision than rules with fewer predicates. In particular, a rule that fixes every feature of <span class="math inline">\(x\)</span> reduces the evaluated neighborhood to identical instances. Thus, the model classifies all neighbors equally, and the rule’s precision is <span class="math inline">\(1\)</span>. At the same time, a rule that fixes many features is overly specific and only applicable to a few instances. Hence, there is a <em>trade-off between precision and coverage</em>.</p>
 <p>The anchors approach uses four main components to find explanations, as is shown in the figure below.</p>
 <p><strong>Candidate Generation</strong>: Generates new explanation candidates. In the first round, one candidate per feature of <span class="math inline">\(x\)</span> gets created and fixes the respective value of possible perturbations. In every other round, the best candidates of the previous round are extended by one feature predicate that is not yet contained therein.</p>
-<p><strong>Best Candidate Identification</strong>: Candidate rules are to be compared in regard to which rule explains <span class="math inline">\(x\)</span> the best. To this end, perturbations that match the currently observed rule are created evaluated by calling the model. However, these calls need to be minimized as to limit computational overhead. This is why, at the core of this component, there is a pure-exploration Multi-Armed-Bandit (<em>MAB</em>; <em>KL-LUCB</em><a href="#fn40" class="footnoteRef" id="fnref40"><sup>40</sup></a>, to be precise). MABs are used to efficiently explore and exploit different strategies (called arms in an analogy to slot machines) using sequential selection. In the given setting, each candidate rule is to be seen as an arm that can be pulled. Each time it is pulled, respective neighbors get evaluated, and we thereby obtain more information about the candidate rule's payoff (precision in anchors' case). The precision thus states how well the rule describes the instance to be explained.</p>
+<p><strong>Best Candidate Identification</strong>: Candidate rules are to be compared in regard to which rule explains <span class="math inline">\(x\)</span> the best. To this end, perturbations that match the currently observed rule are created evaluated by calling the model. However, these calls need to be minimized as to limit computational overhead. This is why, at the core of this component, there is a pure-exploration Multi-Armed-Bandit (<em>MAB</em>; <em>KL-LUCB</em><a href="#fn41" class="footnoteRef" id="fnref41"><sup>41</sup></a>, to be precise). MABs are used to efficiently explore and exploit different strategies (called arms in an analogy to slot machines) using sequential selection. In the given setting, each candidate rule is to be seen as an arm that can be pulled. Each time it is pulled, respective neighbors get evaluated, and we thereby obtain more information about the candidate rule's payoff (precision in anchors' case). The precision thus states how well the rule describes the instance to be explained.</p>
 <p><strong>Candidate Precision Validation</strong>: Takes more samples in case there is no statistical confidence yet that the candidate exceeds the <span class="math inline">\(\tau\)</span> threshold.</p>
 <p><strong>Modified Beam Search</strong>: All of the above components are assembled in a beam search, which is a graph search algorithm and a variant of the breadth-first algorithm. It carries the <span class="math inline">\(B\)</span> best candidates of each round over to the next one (where <span class="math inline">\(B\)</span> is called the <em>Beam Width</em>). These <span class="math inline">\(B\)</span> best rules are then used to create new rules. The beam search conducts at most <span class="math inline">\(featureCount(x)\)</span> rounds, as each feature can only be included in a rule at most once. Thus, at every round <span class="math inline">\(i\)</span>, it generates candidates with exactly <span class="math inline">\(i\)</span> predicates and selects the B best thereof. Therefore, by setting <span class="math inline">\(B\)</span> high, the algorithm more likely avoids local optima. In turn, this requires a high number of model calls and thereby increases the computational load.</p>
 <div class="figure"><span id="fig:unnamed-chunk-22"></span>
@@ -509,9 +507,9 @@ FIGURE 5.42: Balancing the data set before constructing anchors shows the model'
 </div>
 <div class="footnotes">
 <hr />
-<ol start="39">
-<li id="fn39"><p>Marco Tulio Ribeiro, Sameer Singh, Carlos Guestrin. &quot;Anchors: High-Precision Model-Agnostic Explanations.&quot; AAAI Conference on Artificial Intelligence (AAAI), 2018<a href="anchors.html#fnref39">↩</a></p></li>
-<li id="fn40"><p>Emilie Kaufmann and Shivaram Kalyanakrishnan. “Information Complexity in Bandit Subset Selection”. Proceedings of Machine Learning Research (2013).<a href="anchors.html#fnref40">↩</a></p></li>
+<ol start="40">
+<li id="fn40"><p>Marco Tulio Ribeiro, Sameer Singh, Carlos Guestrin. &quot;Anchors: High-Precision Model-Agnostic Explanations.&quot; AAAI Conference on Artificial Intelligence (AAAI), 2018<a href="anchors.html#fnref40">↩</a></p></li>
+<li id="fn41"><p>Emilie Kaufmann and Shivaram Kalyanakrishnan. “Information Complexity in Bandit Subset Selection”. Proceedings of Machine Learning Research (2013).<a href="anchors.html#fnref41">↩</a></p></li>
 </ol>
 </div>
             </section>
@@ -551,7 +549,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/05.8.1-agnostic-Anchors.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/manuscript/05.8.1-agnostic-Anchors.Rmd",
 "text": "Edit"
 },
 "history": {
