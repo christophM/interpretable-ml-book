@@ -34,9 +34,40 @@ image = preprocess(images)
 # Top prediction is 'Italian_greyhound', with index 171 according to
 # ~/.keras/models/imagenet_class_index.json
 # For the ramen it's soup bowl: 809
-# predictions = decode_predictions(model.predict(image), top = 1)[0]
-# TODO: CONTINUE here: https://github.com/keisen/tf-keras-vis/blob/master/examples/attentions.ipynb
-# TODO: Find out the index of interesting classes
+# Make sure to execute before applying model_modifier
+# And this is then how to get the probabilities and top classes:
+# decode_predictions(model.predict(image), top = 1)
+# Out[23]: 
+# [[('n02091032', 'Italian_greyhound', 0.35211313)],
+# [('n04263257', 'soup_bowl', 0.49959907)], 
+# [('n02526121', 'eel', 0.69820803)]]
+
+
+fig = plt.figure(figsize=(10,5))
+nrows = 1
+ncols = 3
+f, ax = plt.subplots(nrows=nrows, ncols=ncols)
+fig.subplots_adjust(wspace=0, hspace=0)
+fs = 10
+ax[0].set_title("Greyhound (vanilla)", fontsize=fs)
+ax[0].imshow(images[0])
+
+ax[1].set_title("Soup Bowl (vanilla)", fontsize=fs)
+ax[1].imshow(images[1])
+
+ax[2].set_title("Eel (vanilla)", fontsize=fs)
+ax[2].imshow(images[2])
+
+for i in range(0, ncols):
+    ax[i].set_xticks([])
+    ax[i].set_yticks([])
+
+
+plt.tight_layout()
+plt.savefig(os.path.join(image_path, 'original-images-classification.png'), bbox_inches='tight')
+
+
+
 def loss(output):
     # Italian_greyhound, soup bowl, eel
     return(output[0][921], output[1][809], output[2][390])
@@ -77,6 +108,7 @@ cam = gradcam(loss,
 cam = normalize(cam)
 
 # Single image as example for chapter start
+fig = plt.figure()
 plt.imshow(saliency_map_vanilla[0], cmap = 'jet')
 plt.axis("off")
 plt.savefig(os.path.join(image_path, 'vanilla.png'))

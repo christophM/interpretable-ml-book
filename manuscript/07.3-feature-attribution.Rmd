@@ -259,7 +259,7 @@ where u is the width, v the height and c the class of interest.
 1. Backpropagate the gradient of the class of interest to the last convolutional layer before the fully connected layers $\frac{\delta{}y^c}{\delta{}A^k}$
 1. Weight each feature map pixel by the gradient for the class. Index i and j refere to the width and height dimensions:
 
-   $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{global average pooling} \underline{\frac{\delta y^c}{\delta A_{ij}^k}}_{gradients via backprop}$$
+   $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{\text{global average pooling}} \underline{\frac{\delta y^c}{\delta A_{ij}^k}}_{\text{gradients via backprop}}$$
 
    This means that the gradients are global-average-pooled.
 1. Compute an average of the feature maps, weighted per pixel by the gradient
@@ -331,45 +331,101 @@ But they have the advantage that they are model-agnostic.
 ### Examples
 
 Let's see some example how these maps look like and how the methods compare, qualitatively.
-The network in question is VGG-16 which was trained on the ImageNet data, and therefore able to distinguish more than 20,000 categories.
-We start with the following images of XXX and XXX.
+The network in question is VGG-16 (Simonyan et. al 2014 [^vgg16]) which was trained on the ImageNet data, and therefore able to distinguish more than 20,000 categories.
+We start with the following images.
 For all of these images, we will have a look at the top classification and create explanations for this top class.
 
-CONTINUE HERE
+These are the images:
 
-TODO: Add all the original images here
-And also their classification scores for the top class
-Most likely class Italian_greyhound (35.21%)
+```{r, out.width = "80%", fig.show}
+knitr::include_graphics("images/original-images-classification.png")
+```
 
-Neural Network VGG16 TODO: CITE
+The left image with the honorable dog guarding the Interpretable Machine Learning book got a classification "Greyhound" with a probability score of 35\%.
+The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with probability of 50\%
+The third image shows an octopus on the ocean floor, with an incorrect classification as "Eel" with high confidence probability of 70%
 
 ```{r, out.width = "80%"}
 knitr::include_graphics("images/smoothgrad.png")
 ```
-TODO: Add interpretation (it's a mess here)
 
-TODO: Insert image with edge detectors
+Unfortunately, it is a bit of a mess.
+But let us have a look at the individual explanations, starting with the dog.
+The vanilla method and the version with smoothgrad applied both highlight the dog the most, which makes sense.
+But also some areas around the book are highlighted, which is odd.
+Grad-Cam highlights only the book area, which does not make any sense at all.
+And from here on, it gets a bit messier.
+The vanilla method seems to fail for both the soup bowl and the octopus (or, as the network thinks, eel).
+Both images look like the after impression of looking into the sun for too long.
+(Please do not look into the sun).
+Smoothgrad helps a lot, at least the areas are more defined.
+In the soup example some of the ingredeints are highlighted, such as the eggs and the meat, but also the area around the chop sticks.
+For the octopus image, mostly the animal itself is highlighted.
+Grad-Cam is all over the place.
+For the soup bowl, the egg part and, for some reason, the upper part of the bowl are highlighted.
+The octopus images are even messier.
 
 
-### The Big Issue
+You can already see the difficulties here in assessing whether we trust the explanations.
+As a first step, we have to think about which parts of the image contains information that are relevant to the images content and the classification.
+But then we also have to think about what the neural network might have used for the classification.
+Maybe the soup bowl was classified correctly because of the combination of eggs and chopstick, as smoothgrad implies?
+Or it detected the shape of the bow plus some ingredients as maybe Grad-Cam implies?
+We just do not know.
+
+And that is the big issue with all of these methods.
+We do not have a groundtruth explanation.
+We can, as a first step, only reject explanation that make clearly no sense (and even in this step we have no strong confidence, I mean, how the prediction process is very complicated in the neural network).
+
+There are approachs to investigate how robust and correct the explanations are.
+They give us some hints that the explanations sometims are even independent of network and data, which is really bad.
+
+
+### Advantages
+- The explanations are visual and easy to understand.
+  Especially when methods only highlight important pixels, it becomes easy to understand that these were the most important regions fo the image.
+- Methods that rely on gradient are usually faster to compute than model-agnostic methods.
+  For example, [LIME](#lime) and [SHAP](#shap) can also be used, but are more expensive to compute.
+- There are many methods to choose from.
+
+### Disadvantages
+- As with most interpretation methods, it is difficult to know whether the explanation is **correct**.
+- Saliency maps can be very fragile.
+  [^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction can lead to very different pixels that are highlighted as explanation.
+  They looked at DeepLift, Vanilla (Simple) Gradient and Integrated Gradients.
+- The paper sanity checks for Saliency Maps [^sanity-checks] investigated whether a saliency method is insensitive to model and data, which would be highly undesirable. It turns out that many methods have this undesirable attributes. TODO: LIST
+  Many methods (which are widely used) are independent of both training data and the model parameters.
+- The amount of methods is also a problem for practice.
+  You have to see which methods works best for which network.
+  But again, since we have no good way of showing whether it is correct, it is a difficult task to decide for a method.
+  I mean, you can look at some explanations, but when they don't make sense, maybe it is just because the model works in weird ways.
+- Some methods have similarities to edge detectors, which are independent of training data and model.
+  Explanation becomes misleading.
+- Also [^unreliable-saliency] showed that these methods can be highly unreliable.
+  They added a constant shift to the input data, i.e. they added the same pixel changes to all images.
+  They compare two networks, original network and the one were the bias of the first layer is changes to adapt for the constant pixel shift, so that the activations of both networks are the same and so are the predictions.
+  Also the gradient is the same for both.
+  This means network 2 simply cancels out the constant shift in the first layer.
+- It's rather difficult to know how well these methods work.
+  Even for the work that tries to measure how well they work, there is some criticism that these evaluation methods dont work well ...
+- All in all, it is a very unsatisfying state of affairs.
+  We need to wait a bit longer for more research on this matter.
+- Most methods only qualitively evaluated
+- Danger of cherry picking explanations due to the many methods available.
+  When someone shows you an explanation, how do you know that the metod was not picked because it showed a favourable explanation for the other party?
+
+### Software
+
+There are various implementations of feature attribution methods.
+For the example, I used [tf-keras-vis](https://pypi.org/project/tf-keras-vis/).
+One of the most comprehensive libraries is [iNNvestigate](https://github.com/albermax/innvestigate), which implements vanilla gradient, smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP, ...
+A lot of the methods are implemented in the DeepExplain Toolbox: https://github.com/marcoancona/DeepExplain
 
 
 
 
-### Problems
-<!-- move this chapter after the method explanations -->
-There are too many methods.
-And no clear path to check how they are doing, right?
-I mean we would need some groundtruth to really say if they are correct?
-Well, there is a different way, proposed as sanity checks for Saliency Maps [^sanity-checks].
-The rough idea is: We cannot know whether a saliency map is correct, but we can know if a method is insensitive to model and data, which is highly undesirable.
 
-As many methods were proposed, their evaluation was mostly visual, i.e. does the highlighting of pixels make sense?
-The paper above brings some rigor to evaluation.
-They propose randomization tests for model and data to evaluate the sensitivity of the feature attribution approaches.
-The conclusions are quite striking.
-Many methods (which are widely used) are independent of both training data and the model parameters.
-That is bad news and means those methods should not be used.
+### Sanity Checks for Saliency Maps
 Model parameter randomization test: compare output of saliency method of model with the same output when the network gets random weights (but same architecture).
 Expectation: Quite different results.
 If results are similar, it means that the method is not connected to the model (bad).
@@ -395,9 +451,6 @@ Unfortunately, many of those methods have issues.
 In an experiment, where the labels were mixed and the model was retrained, the explanations were stil very similar.
 Only GradCAM was okay.
 
-Feature attribution might also be called saliency maps.
-There are lots and lots of approaches to to this, all very similar.
-/We will only look at the general idea, and point out to some of the approaches.
 
 
 ### List of problems
@@ -422,10 +475,6 @@ Some are also more "axiomatic" in the sense that these are problems to things th
   This means no matter what the network does internally, as long as the output remains the same, so should the attributions to the pixels.
   If an attribution method suffers from failure of implementation invariance, it may attribute to irrelevant inputs.
 This happens because DeepLift (and also LRP) replace gradients (which are implementation invariant) with discrete gradients (i.e. finite sums) plus a modified form of backpropagation.-
-
-
-
-
 
 
 ### Some more methods:
@@ -459,43 +508,6 @@ VISUALIZING DEEP NEURAL NETWORK DECISIONS: PREDICTION DIFFERENCE ANALYSIS:
 - https://arxiv.org/pdf/1901.09392.pdf
 - https://arxiv.org/pdf/1912.01451.pdf this paper says that the methods to analyze saliency maps is itself not very reliable
 
-
-### Advantages
-- The explanations are visual and easy to understand.
-  Especially when methods only highlight important pixels, it becomes easy to understand that these were the most important regions fo the image.
-- Methods that rely on gradient are usually faster to compute than model-agnostic methods.
-  For example, [LIME](#lime) and [SHAP](#shap) can also be used, but are more expensive to compute.
-- There are many methods to choose from.
-
-### Disadvantages
-- As with most interpretation methods, it is difficult to know whether the explanation is **correct**.
-- Saliency maps can be very fragile.
-  [^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction can lead to very different pixels that are highlighted as explanation.
-  They looked at DeepLift, Vanilla (Simple) Gradient and Integrated Gradients.
-- The amount of methods is also a problem for practice.
-  You have to see which methods works best for which network.
-  But again, since we have no good way of showing whether it is correct, it is a difficult task to decide for a method.
-  I mean, you can look at some explanations, but when they don't make sense, maybe it is just because the model works in weird ways.
-- Some methods have similarities to edge detectors, which are independent of training data and model.
-  Explanation becomes misleading.
-- Also [^unreliable-saliency] showed that these methods can be highly unreliable.
-  They added a constant shift to the input data, i.e. they added the same pixel changes to all images.
-  They compare two networks, original network and the one were the bias of the first layer is changes to adapt for the constant pixel shift, so that the activations of both networks are the same and so are the predictions.
-  Also the gradient is the same for both.
-  This means network 2 simply cancels out the constant shift in the first layer.
-- It's rather difficult to know how well these methods work.
-  Even for the work that tries to measure how well they work, there is some criticism that these evaluation methods dont work well ...
-- All in all, it is a very unsatisfying state of affairs.
-  We need to wait a bit longer for more research on this matter.
-- Most methods only qualitively evaluated
-
-
-### Software
-
-There are various implementations of feature attribution methods.
-For the example, I used [tf-keras-vis](https://pypi.org/project/tf-keras-vis/).
-One of the most comprehensive libraries is [iNNvestigate](https://github.com/albermax/innvestigate), which implements vanilla gradient, smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP, ...
-A lot of the methods are implemented in the DeepExplain Toolbox: https://github.com/marcoancona/DeepExplain
 
 
 
@@ -533,6 +545,7 @@ A lot of the methods are implemented in the DeepExplain Toolbox: https://github.
 [^innvestigate]: "iNNvestigate neural networks!"(http://arxiv.org/abs/1808.04260) by Maximilian Alber, Sebastian Lapuschkin, Philipp Seegerer, Miriam Hägele, Kristof T. Schütt, Grégoire Montavon, Wojciech Samek, Klaus-Robert Müller, Sven Dähne, Pieter-Jan Kindermans
 
 
+[^vgg16]: Simonyan, Karen, and Andrew Zisserman. "Very deep convolutional networks for large-scale image recognition." arXiv preprint arXiv:1409.1556 (2014).
 <!-- not used
 
 
