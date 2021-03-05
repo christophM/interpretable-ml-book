@@ -21,7 +21,7 @@ knitr::include_graphics("images/vanilla.png")
 
 <!-- Other names -->
 You will see later in the chapter what is going on in that particular image.
-You might find methods that do these kind of pixel attributions under various names: sensitivity map, saliency map, pixel attribution map, gradient-based attribution methods, feature relevance, feature attribution, feature contribution.
+Pixel attribution methods can be found under various names: sensitivity map, saliency map, pixel attribution map, gradient-based attribution methods, feature relevance, feature attribution, and feature contribution.
 
 <!-- General idea and distinction -->
 Pixel attribution is a special case of feature attribution, but for images.
@@ -30,36 +30,37 @@ The features can be input pixels, tabular data or words.
 [SHAP](#shap), [Shapley Values](#shapley) and [LIME](#lime) are all examples of general feature attribution methods.
 
 More formally, we consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
-Output of DNN is called $S(x)=[S_1(x),\ldots,S_p(x)]$.
-Formally all those methods take in input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) and outputs an explanation $R^c=[R_1^c,\ldots,R_p^c]$, one relevance value for each of the p input features.
-The c indicicates the relevance for the c-th output.
-With all these approaches, we assume that we have an already trained CNN.
-
+The output of the neural network for image I is called $S(I)=[S_1(I),\ldots,S_C(I)]$.
+Formally all those methods take in input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) with p features and outputs an explanation one relevance value for each of the p input features: $R^c=[R_1^c,\ldots,R_p^c]$.
+The c indicicates the relevance for the c-th output $S_C(I)$.
 
 <!-- Distinction -->
-Pixel attribution is a special case of feature attribution, but for images.
 There is a confusing amount of pixel attribution approaches.
-Let us map out the territory a bit:
+It helps to understand that there are two different types of attribution methods:
 
 1. Occlusion- or perturbation-based: Methods like [SHAP](#shap}) and [LIME](#lime) manipulate parts of the image to generate explanations (model-agnostic).
-1. Gradient-based: Many methods compute the gradient of the prediction (or classification score) with respect to the input features. The gradient based methods (of which there are many) mostly differ in how the gradient is computed.
+1. Gradient-based: Many methods compute the gradient of the prediction (or classification score) with respect to the input features. The gradient-based methods (of which there are many) mostly differ in how the gradient is computed.
 
-The methods have in common that the output that has the same size as the input image (or can at least be projected meaningfully onto it) and give each pixel a value which somehow can be interpreted as the relevance of the pixel for the prediction or classification of that image.
+Both approaches have in common that the explanation has the same size as the input image (or can at least be projected meaningfully onto it) and give each pixel a value which can be interpreted as the relevance of the pixel for the prediction or classification of that image.
 
-Another useful category for pixel attribution methods is the question of baseline:
+Another useful categorization for pixel attribution methods is the question of baseline:
 
-1. Gradient only: The gradient just tells us whether a change of this pixel (increasing color) would change the prediction. Examples are Vanilla Gradient and Grad-CAM.
+1. Gradient-only methods tells us whether a change of a pixel would change the prediction. Examples are Vanilla Gradient and Grad-CAM.
 The interpretation of the gradient-only attribution is:
-If I were to change this feature, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
-The larger the absolute value of the gradient, the stronger the effect of changes in that feature.
-1. Path attribution: The path attribution compares the current image with a reference image (which can be some artificial "Null" image) and distributes the difference of the prediction for both among the pixels. This category contains both model-specific, gradient-based methods like Deep Taylor and Integrated Gradients, but also model-agnostic methods like LIME and SHAP.
-Some path attribution methods are "complete", meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image/data point minus the prediction of a reference point (e.g. all grey image).
+If I would change this pixel, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
+The larger the absolute value of the gradient, the stronger the effect of changes in that pixel.
+1. Path-attribution methods compares the current image with a reference image, which can be some artificial "Null" image like a completely grey image. These methods distribute the difference in prediction among the pixels. This category contains both model-specific, gradient-based methods like Deep Taylor and Integrated Gradients, but also model-agnostic methods like LIME and SHAP.
+Some path attribution methods are "complete", meaning that the sum of the relevance values for all input features sum up to the difference between the prediction of the image minus the prediction of a reference image.
 Examples are SHAP and Integrated Gradients.
-For the path-attribution, the interpretation is always with respect to the baseline:
+For path-attribution methods, the interpretation is always with respect to the baseline:
 The difference between the image's classification score and the baseline "image" classification score is distributed among the pixels.
+The choice of reference image has a big effect on the explanation.
+The common assumption is to use some "neutral" image.
+Of course, it is totally possible to use your favorite selfie, but you should ask yourself if it makes sense in an application.
+It would certainly assert dominance among the other project members.
 
 
-Add this point, I would usually give some intuition about how these methods work, but I think it is best if we just start with the Vanilla Gradient method, because it shows quite clearly the general recipe that many other methods follow.
+Add this point, I would usually give some intuition about how these methods work, but I think it is best if we just start with the Vanilla Gradient method, because it nicely shows the general recipe that many other methods follow.
 
 <!-- some material 
 Question to myself:
@@ -92,17 +93,17 @@ Concerning naming, they called their approach "Image-Specific Class Saliency".
 
 The main recipe for this approach is:
 
-1. Do a forward pass of the image of interest
-1. Do a backward propagation of the desired class to the input features to get the gradient
+1. Do a forward pass of the image of interest.
+1. Do a backward propagation of the desired class score to the input features to get the gradient:
    $$E_{grad}(I_0)=\frac{\delta{}S_c}{\delta{}I}|_{I=I_0}$$
    Thereby we set all other classes to zero.
-1. Visualize the gradients. Either absolute values or by highlighting negative / positive contributions.
+1. Visualize the gradients. You can either show the absolute values or highlight negative and positive contributions separately.
 
 More formally, we have an image I and the CNN gives it a score $S_c(I)$ for class c.
 The score is a highly non-linear function of our image.
-But the motivation is that we can approximate that score by applying a first-order Taylor expansion
+The idea behind using the gradient is that we can approximate that score by applying a first-order Taylor expansion
 
-$$S_c(I)\approx{}w^T{}I+b,$$
+$$S_c(I)\approx{}w^T{}I+b$$
 
 where w is the derivate of our score:
 
@@ -116,11 +117,11 @@ In the case of vanilla gradient approach, the ambiguity is resolved as:
 
 $$\frac{\delta f}{\delta X_n} = \frac{\delta f}{\delta X_{n+1}} \cdot \mathbf{I}(X_n > 0)$$
 
-Here, $\mathbf{I}$ is the element-wise indicator function which is 0 where the activation at the lower layer was negative or zero, and 1 where it is positive.
-Or, in words, we take the gradient that we have back-propagated so far until the layer n+1, then simply set the gradients to zero where the activation at the layer below is negative.
+Here, $\mathbf{I}$ is the element-wise indicator function which is 0 where the activation at the lower layer was negative, and 1 where it is positive or zero.
+Vanilla Gradient takes the gradient that we have back-propagated so far until the layer n+1, then simply set the gradients to zero where the activation at the layer below is negative.
 
-Let's assume we have layer $X_n$ and $X_{n+1}=ReLU(X_{n+1})$. 
-Our fictive activation at $X_n$:
+Let us look at an example where we have layers $X_n$ and $X_{n+1}=ReLU(X_{n+1})$. 
+Our fictive activation at $X_n$ is:
 
 $$
 \begin{pmatrix}
@@ -151,29 +152,30 @@ $$
 
 #### Problems with Vanilla Gradient
 
-Vanilla Gradient has Saturation Problem (explained in Avanti et. al, 2017 [^deeplift]):
-Assuming ReLU activation layer is used, when the weighted feature sum goes below zero, the at some point the activation is capped at zero, but does not change any more, i.e. the activation is saturated.
-Let's say the input to the layer are two neurons with weights $-1$ and $-1$ and a bias of $1$.
-Passing that through the ReLU, the activation will be neuron 1 + neuron 2 when the sum of both neurons is smaller than 1.
+Vanilla Gradient has a saturation problem (explained in Avanti et. al, 2017 [^deeplift]):
+When ReLU is used, and when the activation goes below zero, then at some point the activation is capped at zero and does not change any more.
+The activation is saturated.
+An example: The input to the layer are two neurons with weights $-1$ and $-1$ and a bias of $1$.
+Passing through the ReLU layer, the activation will be neuron 1 + neuron 2 when the sum of both neurons is smaller than 1.
 If the sum of both is greater than one, the activation remains saturated at an activation of 1.
-Also the gradient at that point will be zero, i.e. all gradient based methods will show that this neuron is not important.
+Also the gradient at that point will be zero, and Vanilla Gradient will say that this neuron is not important.
 
 And now my friends, you get to understand another method, more or less for free: DeconvNet
 
 ### DeconvNet
 
 DeconvNet by Zeiler an Fergus (2014) [^deconvnet] is almost identical to Vanilla Gradient.
-A DeconvNet kind of uses the same components as a Convolutional Neural Network, but reverses the operations such as filtering, pooling and activation.
+A DeconvNet is motivated to be a neural network in reverse and proposes operations that reverse filtering, pooling and activation.
 Apart from the ReLU layer, DeconvNet is equivalent to the Vanilla Gradient approach.
 Vanilla Gradient can be seen as a generalization of DeconvNet.
-For ReLU ($X_{n+1}=max(X_n,0)$) the vanilla gradient computes: $\delta{}f/\delta{}X_n=\delta{}f/\delta{}X_{n+1}\mathbf{I}(X_n>0)$, where $\mathbf{I}$ is an (element-wise) indicator function.
-For DeconvNet ReLU, this is instead: $R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$, where $R_n$ and $R_{n+1}$ are the layer reconstructions.
+DeconvNet makes a different choice for backpropagating the gradient throught ReLU:
+
+$R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$$,
+
+where $R_n$ and $R_{n+1}$ are the layer reconstructions.
 When doing the backpass from layer n to layer n-1, vanilla gradient "remembers" which of the layer n were set to zero in the forward pass and sets those to 0 in layer n-1.
-In DeConvNet, activation with negative value in layer x are set to zero in layer n-1.
-Here layers are just the activations before and after ReLU.
-Guided Backpropagation sets both to 0 in layer n-1: neurons that in the forward pass were 0 in layer x and neurons that are negative in the backward passe in layer n.
-Both DeConvNet and Guided Backpropagation do not compute the true gradient but an imputed one.
-If we continue our example from above, then the gradient $X_n$ (they call it layer reconstruction) becomes:
+Activations with negative value in layer x are set to zero in layer n-1.
+The gradient $X_n$ for the example from before becomes:
 
 $$
 \begin{pmatrix}
@@ -191,8 +193,8 @@ In contrast to other methods, the gradient is not backpropagated all the way bac
 
 Grad-CAM stands for Gradient-weighted Class Activation Map.
 And, as the name suggest it is based on the gradient of the neural networks.
-Grad-CAM, like other techniques, assigns some importance to each neuron, for the decision of interest.
-This is the class prediction (which we find in the output layer), but can, in theory, be any other layer in the neural network.
+Grad-CAM, like other techniques, assigns some relevance to each neuron for the decision of interest.
+This decision of interest can be the class prediction (which we find in the output layer), but can, in theory, be any other layer in the neural network.
 Grad-CAM backpropagates this information to the last convolutional layer.
 Grad-CAM can be used with different CNNs: with fully-connected layers, for structured output such as captioning and in multi-task outputs and for reinforcement learning.
 The great thing about Grad-CAM is that besides image classification it works also for other image related tasks.
@@ -202,72 +204,68 @@ This includes visual question answering and reinforcement learning.
 <!-- An intuitive explanation -->
 Let us start with an intuitive look at Grad-CAM.
 The goal of Grad-CAM is to understand at which parts of an image a convolutional layer "looks" for a certain classification.
-As a reminder, the first convolutional layer of a CNN takes as input the images and outputs feature maps, which encode learned features (see [Learned Features](#cnn-features)).
+As a reminder, the first convolutional layer of a CNN takes as input the images and outputs feature maps, which encode learned features (see the chapter on [Learned Features](#cnn-features)).
 The higher-up convolutional layers do the same, but take as input the feature maps of the convolutional layer before.
-To understand how the CNN makes decisions, Grad-CAM analyzes where in the feature maps of the last convolutional layers relevant stuff happens.
+To understand how the CNN makes decisions, Grad-CAM analyzes which regions in the feature maps of the last convolutional layers are activated.
 There are k feature maps in the last conv-layer, and I will call them $A_1, A_2, \ldots, A_k$.
 How can we "see" from the feature maps, how the CNN made a certain classification?
 First approach, we could simply visualize the raw values of each feature map, average this over the feature maps and overlay it on our images.
 This would not be helpful, since the feature maps encode information for **all classes**, but we are interested in a certain class.
-This means Grad-CAM has to decide how important each of the k feature map was for our class c that we are interested in.
-This means we weight each pixel of each feature map by the gradient.
-Then we average the feature maps pixel-wise weighted by the gradient.
+Grad-CAM has to decide how important each of the k feature map was for our class c that we are interested in.
+We have to weight each pixel of each feature map by the gradient before we take the average over the feature maps.
 This give us a heatmap which highlights regions that positively or negatively affect the class of interest.
 This heatmap is send through the ReLU function, which sets all negative values to zero.
-We remove all negative values, because we are only interested in the parts that contribute towards the chosen class c and not to the ones to other classes.
-Since we are only interest in our chosen class, the Grad-CAM authors suggest to look only at the positive gradients.
+GradCAM removes all negative values by using a ReLU function, because we are only interested in the parts that contribute towards the chosen class c and not to the ones to other classes.
 The word pixel here might be misleading, as the feature map is smaller than the image (because of the pooling units), but can later be mapped back to the region on the image.
-The we scale the Grad-CAM map to be between 0 and 1 for visualization purposes and overlay it over the original image.
+Then we scale the Grad-CAM map to be between 0 and 1 for visualization purposes and overlay it over the original image.
 
 
 <!-- Pseudo code-->
-Here again, in pseudo code and with some math.
+Let us look at the recipe for GradCAM.
 Our goal is to find the localization map defined as:
-$$L^c_{Grad-CAM} \in \mathbb{R}^{uxv} = \underbrace{ReLU}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
+
+$$L^c_{Grad-CAM} \in \mathbb{R}^{u\times v} = \underbrace{ReLU}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
 
 
 where u is the width, v the height and c the class of interest.
 
-1. Forward propagate the input image through the CNN
-1. Obtain raw score for the class of interest, meaning the activation of the neuron before the softmax layer
-1. Set all other class activations to zero 
-1. Backpropagate the gradient of the class of interest to the last convolutional layer before the fully connected layers $\frac{\delta{}y^c}{\delta{}A^k}$
-1. Weight each feature map pixel by the gradient for the class. Index i and j refere to the width and height dimensions:
-
+1. Forward propagate the input image through the CNN.
+1. Obtain raw score for the class of interest, meaning the activation of the neuron before the softmax layer.
+1. Set all other class activations to zero.
+1. Backpropagate the gradient of the class of interest to the last convolutional layer before the fully connected layers: $\frac{\delta{}y^c}{\delta{}A^k}$.
+1. Weight each feature map pixel by the gradient for the class. Index i and j refer to the width and height dimensions:
    $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{\text{global average pooling}} \underbrace{\frac{\delta y^c}{\delta A_{ij}^k}}_{\text{gradients via backprop}}$$
-
 This means that the gradients are global-average-pooled.
-1. Compute an average of the feature maps, weighted per pixel by the gradient
-1. Apply ReLU on averaged feature map
-1. For visualization: Scale values to interval between 0 and 1. Upscale image size and overlay on original image.
-1. Additional step for Guided Gra-CAM: Multiply heatmap with guided backpropagation
+1. Compute an average of the feature maps, weighted per pixel by the gradient.
+1. Apply ReLU on the averaged feature map.
+1. For visualization: Scale values to the interval between 0 and 1. Upscale the image size and overlay it on the original image.
+1. Additional step for Guided GradCAM: Multiply heatmap with guided backpropagation.
 
 
-The Grad-CAM algorithm can be found here: https://keras.io/examples/vision/grad_cam/
 <!-- Algorithm in Detail-->
 
 
 ### Guided GradCAM
 
 From the description of Grad-CAM you can guess that the localization is very coarse, since the last convolutional feature maps have a much coarser resolution compared to the input image.
-Other attribution techniques backpropagate the entire way back to the image and each of the pixels.
+Other attribution techniques backpropagate the entire way to the input pixels.
 They are therefore much more detailed and can really show you individual edges or spots that contributed most to a prediction.
 A fusion of both methods is called Guided Grad-CAM.
 And it is super simple.
-You compute for an image both the Grad-CAM output and the output from, for example, Deconvolution or some other pixel-wise attribution.
+You compute for an image both the Grad-CAM output and the output from, for example, Vanilla Gradient or some other pixel-wise attribution.
 The Grad-CAM output is then upsampled with bilinear interpolation, then both maps are multiplied element-wise.
 Grad-CAM works like a lense that focuses on certain parts of the pixel-wise attribution map.
 
 ### SmoothGrad
 
-The idea of SmoothGrad by Smilkov et. al 2017 [^smoothgrad] is to make gradient-based explanations less noisy by adding noise and averaging over multiple, artificially noisy, gradients.
+The idea of SmoothGrad by Smilkov et. al 2017 [^smoothgrad] is to make gradient-based explanations less noisy by adding noise and averaging over these artificially noisy gradients.
 SmoothGrad is not an explanation method in itself, but can be seen as an extension to any gradient-based explanation method.
 
 SmoothGrad works in the following way:
 
-- Generate multiple version of the image of interest by adding noise to it
-- Create saliency maps for all images
-- Average the saliency maps
+- Generate multiple version of the image of interest by adding noise to it.
+- Create saliency maps for all images.
+- Average the saliency maps.
 
 Yes, it is that simple.
 Why should this work?
@@ -275,31 +273,30 @@ The theory is that the derivative fluctuates greatly at small scales.
 Neural networks do not have an incentive during training to keep those derivatives smooth, their goal is to classify the images correctly.
 By averaging over multiple maps, these fluctuations are "smoothed" out.
 
-$$E_{sg}(x)=\frac{1}{N}\sum_{i=1}^n{}E(x+g_i)$$
+$$R_{sg}(x)=\frac{1}{N}\sum_{i=1}^n{}R(x+g_i)$$
 
 where $g_i\sim{}N(0,\sigma^2)$ are noise vectors sampled from the Gaussian distribution.
 However, the "ideal" noise level depends on the input image and network.
 The authors suggest to set it to a 10%-20% noise level, meaning that $\frac{\sigma}{x_{max} - x_{min}}$ should be between 0.1 and 0.2.
 The boundaries $x_{max}$ and $x_{min}$ refer to min and maximum pixel values of the image.
-The other parameter is the number of samples n, for which was suggested that above 50 there are diminishing returns, so 50 should be enough.
+The other parameter is the number of samples n, for which was suggested to use n = 50 since above that there are diminishing returns.
 
 
 ### Examples
 
-Let's see some example how these maps look like and how the methods compare, qualitatively.
-The network in question is VGG-16 (Simonyan et. al 2014 [^vgg16]) which was trained on the ImageNet data, and therefore able to distinguish more than 20,000 categories.
-We start with the following images.
-For all of these images, we will have a look at the top classification and create explanations for this top class.
+Let us see some examples how these maps look like and how the methods compare, qualitatively.
+The network in question is VGG-16 (Simonyan et. al 2014 [^vgg16]) which was trained on the ImageNet data, and therefore able to distinguish more than 20,000 classes.
+For the images below we will have a look at the top classification and create explanations for this top class.
 
-These are the images:
+These are the images and their classification by the neural network:
 
 ```{r, out.width = "80%", fig.show}
 knitr::include_graphics("images/original-images-classification.png")
 ```
 
 The left image with the honorable dog guarding the Interpretable Machine Learning book got a classification "Greyhound" with a probability score of 35\%.
-The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with probability of 50\%
-The third image shows an octopus on the ocean floor, with an incorrect classification as "Eel" with high confidence probability of 70%
+The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with probability of 50\%.
+The third image shows an octopus on the ocean floor, with an incorrect classification as "Eel" with high confidence probability of 70%.
 
 ```{r, out.width = "80%"}
 knitr::include_graphics("images/smoothgrad.png")
@@ -307,7 +304,7 @@ knitr::include_graphics("images/smoothgrad.png")
 
 Unfortunately, it is a bit of a mess.
 But let us have a look at the individual explanations, starting with the dog.
-The vanilla method and the version with SmoothGrad applied both highlight the dog the most, which makes sense.
+Vanilla Gradient and Vanilla Gradient + SmoothGrad both highlight the dog, which makes sense.
 But also some areas around the book are highlighted, which is odd.
 Grad-Cam highlights only the book area, which does not make any sense at all.
 And from here on, it gets a bit messier.
@@ -325,69 +322,64 @@ You can already see the difficulties here in assessing whether we trust the expl
 As a first step, we have to think about which parts of the image contains information that are relevant to the images content and the classification.
 But then we also have to think about what the neural network might have used for the classification.
 Maybe the soup bowl was classified correctly because of the combination of eggs and chopstick, as SmoothGrad implies?
-Or it detected the shape of the bow plus some ingredients as maybe Grad-Cam implies?
+Or maybe it detected the shape of the bow plus some ingredients as Grad-Cam implies?
 We just do not know.
 
 And that is the big issue with all of these methods.
 We do not have a ground truthexplanation.
-We can, as a first step, only reject explanation that make clearly no sense (and even in this step we have no strong confidence, I mean, how the prediction process is very complicated in the neural network).
-
-There are approaches to investigate how robust and correct the explanations are.
-They give us some hints that the explanations sometimes are even independent of network and data, which is really bad.
-
+We can, as a first step, only reject explanation that make clearly no sense (and even in this step we have no strong confidence, I mean, the prediction process is very complicated in the neural network).
 
 ### Advantages
 - The explanations are visual and easy to understand.
   Especially when methods only highlight important pixels, it becomes easy to understand that these were the most important regions of the image.
-- Methods that rely on gradient are usually faster to compute than model-agnostic methods.
+- Methods that rely on gradients are usually faster to compute than model-agnostic methods.
   For example, [LIME](#lime) and [SHAP](#shap) can also be used, but are more expensive to compute.
 - There are many methods to choose from.
 
 ### Disadvantages
 - As with most interpretation methods, it is difficult to know whether the explanation is **correct**, and a huge part of the evaluation is just qualitative ("These explanations look about right, let's publish the paper already.").
-- Saliency maps can be very fragile.
-  [^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction can lead to very different pixels that are highlighted as explanation.
- - Also [^unreliable-saliency] showed that these methods can be highly unreliable.
-  They added a constant shift to the input data, i.e. they added the same pixel changes to all images.
-  They compare two networks, original network and the one were the bias of the first layer is changes to adapt for the constant pixel shift, so that the activations of both networks are the same and so are the predictions.
+- Pixel attribution methods can be very fragile.
+  Ghorbani et. al (2019)[^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction can lead to very different pixels that are highlighted as explanation.
+ - Also Kindermanns et. al (2019) [^unreliable-saliency] showed that these methods can be highly unreliable.
+  They added a constant shift to the input data, meaning they added the same pixel changes to all images.
+  They compare two networks, original network and the one were the bias of the first layer is changed to adapt for the constant pixel shift, so that the activations of both networks are the same and so are the predictions.
   Also the gradient is the same for both.
   This means network 2 simply cancels out the constant shift in the first layer.
+  But the explanations changed.
  They looked at DeepLift, Vanilla (Simple) Gradient and Integrated Gradients.
 - The paper "Sanity Checks for Saliency Maps" [^sanity-checks] investigated whether saliency methods are insensitive to model and data.
   Insensitivity is highly undesirable, because this means the "explanation" is not related to the model or the data.
-  They compared methods that failed the checks to edge detectors which simply highlight strong pixel color changes in images and are not related to any prediction model or abstract features of the image, and requires not training.
+  The failing methods are similar to edge detectors.
+  Edge detectors simply highlight strong pixel color changes in images and are not related to a prediction model or abstract features of the image, and require not training.
   They checked the methods Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided GradCAM and SmoothGrad (with vanilla gradient).
-  Vanilla gradients and GradCAM pass the check, while Guided Backpropagation and Guided GradCAM fail.
-- However, the sanity checks paper itself has found some critiques with a paper called "Sanity Checks for Saliency Metrics" [^sanity-metrics] (of course).
+  Vanilla gradients and GradCAM passed the check, while Guided Backpropagation and Guided GradCAM fail.
+- However, the sanity checks paper itself has found some critiques by Tomsett et. al (2020) [^sanity-metrics] with a paper called "Sanity Checks for Saliency Metrics" (of course).
   They found that there is a lack of consistency for evaluation metrics (I know, it is getting quite meta now).
-  So we are back to where we started ... It remains difficult to evaluate this visual explanations.
-  This makes it very difficult for a practitioner of course, because there is no obvious choice of method.
+  So we are back to where we started ... It remains difficult to evaluate the visual explanations.
+  This makes it very difficult for a practitioner of course, because there is no obvious method to choose.
 - All in all, it is a very unsatisfying state of affairs.
   We need to wait a bit longer for more research on this matter.
   And please, no more invention of new methods, but rather more scrutiny of how to evaluate these methods.
 
 ### Software
 
-There are various implementations of feature attribution methods.
+There are various software implementations of pixel attribution methods.
 For the example, I used [tf-keras-vis](https://pypi.org/project/tf-keras-vis/).
-One of the most comprehensive libraries is [iNNvestigate](https://github.com/albermax/innvestigate), which implements vanilla gradient, smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP, ...
-A lot of the methods are implemented in the DeepExplain Toolbox: https://github.com/marcoancona/DeepExplain
+One of the most comprehensive libraries is [iNNvestigate](https://github.com/albermax/innvestigate), which implements Vanilla gradient, Smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP, ...
+A lot of the methods are implemented in the [DeepExplain Toolbox](https://github.com/marcoancona/DeepExplain).
 
 
-
-[^deeplift]: Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
+[^deeplift]: Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, (2017).
 
 [^integrated-gradients]: Sundararajan, Mukund, Ankur Taly, and Qiqi Yan. "Axiomatic attribution for deep networks." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, 2017.
 
 [^saliency]: Simonyan, Karen, Andrea Vedaldi, and Andrew Zisserman. "Deep inside convolutional networks: Visualising image classification models and saliency maps." arXiv preprint arXiv:1312.6034 (2013).
 
-[^grad-cam]: Selvaraju, Ramprasaath R., et al. "Grad-cam: Visual explanations from deep networks via gradient-based localization." Proceedings of the IEEE international conference on computer vision. 2017.
+[^grad-cam]: Selvaraju, Ramprasaath R., et al. "Grad-cam: Visual explanations from deep networks via gradient-based localization." Proceedings of the IEEE international conference on computer vision. (2017).
 
-[^sanity-checks]: Adebayo, Julius, et al. "Sanity checks for saliency maps." Advances in Neural Information Processing Systems. 2018.
+[^sanity-checks]: Adebayo, Julius, Justin Gilmer, Michael Muelly, Ian Goodfellow, Moritz Hardt, and Been Kim. "Sanity checks for saliency maps." arXiv preprint arXiv:1810.03292 (2018).
 
-
-[^sanity-metrics]: Harborne, Daniel, et al. "Sanity Checks for Saliency Metrics." arXiv preprint arXiv:192.01451
-
+[^sanity-metrics]: Tomsett, Richard, Dan Harborne, Supriyo Chakraborty, Prudhvi Gurram, and Alun Preece. "Sanity checks for saliency metrics." In Proceedings of the AAAI Conference on Artificial Intelligence, vol. 34, no. 04, pp. 6021-6029. 2020.
 
 [^smoothgrad]: Smilkov, Daniel, et al. "Smoothgrad: removing noise by adding noise." arXiv preprint arXiv:1706.03825 (2017).
 
@@ -395,7 +387,7 @@ A lot of the methods are implemented in the DeepExplain Toolbox: https://github.
 
 [^guided-backpropagation]: Springenberg, Jost Tobias, et al. "Striving for simplicity: The all convolutional net." arXiv preprint arXiv:1412.6806 (2014).
 
-[^lrp] Bach, Sebastian, et al. "On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation." PloS one 10.7 (2015).
+[^lrp]: Bach, Sebastian, et al. "On pixel-wise explanations for non-linear classifier decisions by layer-wise relevance propagation." PloS one 10.7 (2015).
 
 
 <!-- References about problems -->
@@ -404,7 +396,8 @@ A lot of the methods are implemented in the DeepExplain Toolbox: https://github.
 
 [^fragile-saliency]: Ghorbani, Amirata, Abubakar Abid, and James Zou. "Interpretation of neural networks is fragile." Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 33. 2019.
 
-[^unreliable-saliency]: Kindermans, Pieter-Jan, et al. "The (un) reliability of saliency methods." Explainable AI: Interpreting, Explaining and Visualizing Deep Learning. Springer, Cham, 2019. 267-280. https://arxiv.org/pdf/1711.00867v1.pdf
+[^unreliable-saliency]: Kindermans, Pieter-Jan, Sara Hooker, Julius Adebayo, Maximilian Alber, Kristof T. Schütt, Sven Dähne, Dumitru Erhan, and Been Kim. "The (un) reliability of saliency methods." In Explainable AI: Interpreting, Explaining and Visualizing Deep Learning, pp. 267-280. Springer, Cham, (2019).
+
 
 [^perplexing-behavior]: Nie, Weili, Yang Zhang, and Ankit Patel. "A theoretical explanation for perplexing behaviors of backpropagation-based visualizations." arXiv preprint arXiv:1805.07039 (2018).
 
