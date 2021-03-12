@@ -1,15 +1,13 @@
-## Pixel Attribution for Image Classification
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+```
+
+<!--{pagebreak}-->
+
+## Pixel Attribution (Saliency Maps) {#pixel-attribution}
 
 `r if(is.html){only.in.html}`
-
- <!--
-
-TODO: Add to criticism:
-- https://arxiv.org/pdf/1912.09818.pdf Many explanation methods act independently of weights in the upper layers of the NN. Only DeepLift passes the test
-
- -->
-
-
 
 <!-- short summary -->
 Pixel attribution methods highlight the pixels that were relevant for a certain image classification by a neural network.
@@ -38,18 +36,20 @@ The c indicates the relevance for the c-th output $S_C(I)$.
 There is a confusing amount of pixel attribution approaches.
 It helps to understand that there are two different types of attribution methods:
 
-1. Occlusion- or perturbation-based: Methods like [SHAP](#shap}) and [LIME](#lime) manipulate parts of the image to generate explanations (model-agnostic).
-1. Gradient-based: Many methods compute the gradient of the prediction (or classification score) with respect to the input features. The gradient-based methods (of which there are many) mostly differ in how the gradient is computed.
+**Occlusion- or perturbation-based**: Methods like [SHAP](#shap}) and [LIME](#lime) manipulate parts of the image to generate explanations (model-agnostic).
+
+**Gradient-based**: Many methods compute the gradient of the prediction (or classification score) with respect to the input features. The gradient-based methods (of which there are many) mostly differ in how the gradient is computed.
 
 Both approaches have in common that the explanation has the same size as the input image (or at least can be meaningfully projected onto it) and they assign each pixel a value that can be interpreted as the relevance of the pixel to the prediction or classification of that image.
 
 Another useful categorization for pixel attribution methods is the baseline question:
 
-1. Gradient-only methods tell us whether a change in a pixel would change the prediction. Examples are Vanilla Gradient and Grad-CAM.
+**Gradient-only methods** tell us whether a change in a pixel would change the prediction. Examples are Vanilla Gradient and Grad-CAM.
 The interpretation of the gradient-only attribution is:
 If I were to change this pixel, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
 The larger the absolute value of the gradient, the stronger the effect of a change at this pixel.
-1. Path-attribution methods compare the current image to a reference image, which can be an artificial "zero" image such as a completely grey image.
+
+**Path-attribution methods** compare the current image to a reference image, which can be an artificial "zero" image such as a completely grey image.
 The difference in actual and baseline prediction is divided  among the pixels.
 The baseline image can also be multiple images: a distribution of images.
 This category includes model-specific gradient-based methods such as Deep Taylor and Integrated Gradients, as well as model-agnostic methods such as LIME and SHAP.
@@ -239,9 +239,9 @@ SmoothGrad is not an standalone explanation method, but an extension to any grad
 
 SmoothGrad works in the following way:
 
-- Generate multiple versions of the image of interest by adding noise to it.
-- Create pixel attribution maps for all images.
-- Average the pixel attribution maps.
+1. Generate multiple versions of the image of interest by adding noise to it.
+1. Create pixel attribution maps for all images.
+1. Average the pixel attribution maps.
 
 Yes, it is that simple.
 Why should this work?
@@ -308,36 +308,42 @@ We do not have a ground truth for the explanations.
 We can only, in a first step, reject explanations that obviously make no sense (and even in this step we don't have strong confidence. The prediction process in the neural network is very complicated).
 
 ### Advantages
-- The explanations are visual and we are quick to recognize images.
-  In particular, when methods only highlight important pixels, it is easy to immediately recognize the important regions of the image.
-- Gradient-based methods are usually faster to compute than model-agnostic methods.
-  For example, [LIME](#lime) and [SHAP](#shap) can also be used to explain image classifications, but are more expensive to compute.
-- There are many methods to choose from.
+The explanations are **visual** and we are quick to recognize images.
+In particular, when methods only highlight important pixels, it is easy to immediately recognize the important regions of the image.
+
+Gradient-based methods are usually **faster to compute than model-agnostic methods**.
+For example, [LIME](#lime) and [SHAP](#shap) can also be used to explain image classifications, but are more expensive to compute.
+
+There are **many methods to choose from**.
 
 ### Disadvantages
-- As with most interpretation methods, it is difficult to know whether an explanation is **correct**, and a huge part of the evaluation is only qualitative ("These explanations look about right, let's publish the paper already.").
-- Pixel attribution methods can be very fragile.
-  Ghorbani et. al (2019)[^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction, can lead to very different pixels being highlighted as explanations.
- - Kindermanns et. al (2019) [^unreliable-saliency] also showed that these pixel attribution methods can be highly unreliable.
-  They added a constant shift to the input data, meaning they added the same pixel changes to all images.
-  They compared two networks, the original network and "shifted" network where the bias of the first layer is changed to adapt for the constant pixel shift.
-  Both networks produce the same predictions.
-  Also the gradient is the same for both.
-  But the explanations changed, which is an undesirable property.
-  They looked at DeepLift, Vanilla Gradient and Integrated Gradients.
-- The paper "Sanity Checks for Saliency Maps" [^sanity-checks] investigated whether saliency methods are insensitive to model and data.
-  Insensitivity is highly undesirable because it would mean that the "explanation" is unrelated to model and data.
-  Methods that are insensitive to model and training data are similar to edge detectors.
-  Edge detectors simply highlight strong pixel color changes in images and are unrelated to a prediction model or abstract features of the image, and require not training.
-  The methods tested were  Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with vanilla gradient).
-  Vanilla gradients and Grad-CAM passed the insensitivity check, while Guided Backpropagation and Guided GradCAM fail.
-- However, the sanity checks paper itself has found some criticism from Tomsett et. al (2020) [^sanity-metrics] with a paper called "Sanity Checks for Saliency Metrics" (of course).
-  They found that there is a lack of consistency for evaluation metrics (I know, it is getting pretty meta now).
-  So we are back to where we started ... It remains difficult to evaluate the visual explanations.
-  This makes it very difficult for a practitioner.
-- All in all, this is a very unsatisfactory state of affairs.
-  We have to wait a little bit for more research on this topic.
-  And please, no more invention of new methods, but more scrutiny of how to evaluate these methods.
+As with most interpretation methods, it is **difficult to know whether an explanation is correct**, and a huge part of the evaluation is only qualitative ("These explanations look about right, let's publish the paper already.").
+
+Pixel attribution methods can be very **fragile**.
+Ghorbani et. al (2019)[^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction, can lead to very different pixels being highlighted as explanations.
+
+Kindermanns et. al (2019) [^unreliable-saliency] also showed that these pixel attribution methods **can be highly unreliable**.
+They added a constant shift to the input data, meaning they added the same pixel changes to all images.
+They compared two networks, the original network and "shifted" network where the bias of the first layer is changed to adapt for the constant pixel shift.
+Both networks produce the same predictions.
+Also the gradient is the same for both.
+But the explanations changed, which is an undesirable property.
+They looked at DeepLift, Vanilla Gradient and Integrated Gradients.
+
+The paper "Sanity Checks for Saliency Maps" [^sanity-checks] investigated whether saliency methods are **insensitive to model and data**.
+Insensitivity is highly undesirable because it would mean that the "explanation" is unrelated to model and data.
+Methods that are insensitive to model and training data are similar to edge detectors.
+Edge detectors simply highlight strong pixel color changes in images and are unrelated to a prediction model or abstract features of the image, and require not training.
+The methods tested were  Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with vanilla gradient).
+Vanilla gradients and Grad-CAM passed the insensitivity check, while Guided Backpropagation and Guided GradCAM fail.
+However, the sanity checks paper itself has found some criticism from Tomsett et. al (2020) [^sanity-metrics] with a paper called "Sanity Checks for Saliency Metrics" (of course).
+They found that there is a lack of consistency for evaluation metrics (I know, it is getting pretty meta now).
+So we are back to where we started ... It remains difficult to evaluate the visual explanations.
+This makes it very difficult for a practitioner.
+
+All in all, this is a **very unsatisfactory state of affairs**.
+We have to wait a little bit for more research on this topic.
+And please, no more invention of new methods, but more scrutiny of how to evaluate these methods.
 
 ### Software
 
