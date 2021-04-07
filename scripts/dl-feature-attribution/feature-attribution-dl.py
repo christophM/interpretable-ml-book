@@ -1,4 +1,4 @@
-# Code from here: ttps://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb
+# Code from here: https://github.com/albermax/innvestigate/blob/master/examples/notebooks/imagenet_compare_methods.ipynb
 import keras
 import keras.backend
 import imp
@@ -28,18 +28,18 @@ methods = [
 ("gradient",              {"postprocess": "abs"},   inverse_graymap,       "Gradient"),
 ("smoothgrad",            {"augment_by_n": 64, "postprocess": "square"}, inverse_graymap,       "SmoothGrad"),
 # Signal
-("deconvnet",             {},                       imgnetutils.bk_proj,       "Deconvnet"),
-("guided_backprop",       {},                       imgnetutils.bk_proj,       "Guided Backprop"),
+#("deconvnet",             {},                       imgnetutils.bk_proj,       "Deconvnet"),
+#("guided_backprop",       {},                       imgnetutils.bk_proj,       "Guided Backprop"),
 #("pattern.net",           {},   imgnetutils.bk_proj,       "PatternNet"),
 # Interaction
-("deep_taylor",           {},                       imgnetutils.heatmap,       "Deep Taylor"),
+#("deep_taylor",           {},                       imgnetutils.heatmap,       "Deep Taylor"),
 #("pattern.attribution",   {},   imgnetutils.heatmap,       "PatternAttribution"),
-("input_t_gradient",      {},                       imgnetutils.heatmap,       "Input * Gradient"),
-("integrated_gradients",  {"steps": 64}, imgnetutils.heatmap,       "Integrated Gradients"),
-("lrp.z",                 {},                       imgnetutils.heatmap,       "LRP-Z"),                                                    
-("lrp.epsilon",           {"epsilon": 1},           imgnetutils.heatmap,       "LRP-Epsilon"),
-("lrp.sequential_preset_a_flat",{"epsilon": 1},     imgnetutils.heatmap,       "LRP-PresetAFlat"),
-("lrp.sequential_preset_b_flat",{"epsilon": 1},     imgnetutils.heatmap,       "LRP-PresetBFlat"),
+#("input_t_gradient",      {},                       imgnetutils.heatmap,       "Input * Gradient"),
+#("integrated_gradients",  {"steps": 64}, imgnetutils.heatmap,       "Integrated Gradients"),
+#("lrp.z",                 {},                       imgnetutils.heatmap,       "LRP-Z"),
+#("lrp.epsilon",           {"epsilon": 1},           imgnetutils.heatmap,       "LRP-Epsilon"),
+#("lrp.sequential_preset_a_flat",{"epsilon": 1},     imgnetutils.heatmap,       "LRP-PresetAFlat"),
+#("lrp.sequential_preset_b_flat",{"epsilon": 1},     imgnetutils.heatmap,       "LRP-PresetBFlat"),
 ]
 
 if __name__ == "__main__":
@@ -60,7 +60,8 @@ if __name__ == "__main__":
                 model,
                 **method[1])
         if method[0] == "input":
-            a = image[None]/255
+            a = image[None]
+            a = (a - a.min())/ (a.max() - a.min())
         else:
             x = preprocess(image[None])
             # use preprocessing from other script
