@@ -33,7 +33,7 @@ For rendering the book, start an R session and type:
 setwd("manuscript")
 # first, generate the references
 source("../scripts/references.R")
-bookdown::render_book('', 'bookdown::gitbook')
+bookdown::render_book('.', 'bookdown::gitbook')
 ```
 
 After rendering, the HTML files of the  book will be in the "_book" folder. You can either double-click index.html directly or, of course, do it in R:
