@@ -7,39 +7,113 @@ set.seed(42)
 
 ## Functional Decompositon {#decomposition}
 
-Short summary
+A prediction function is -- more or less -- simply a function that takes a high-dimensional input and outputs, in many cases, a 1-dimensional number.
+Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
+Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.
 
 
-This chapter introduces both decomposition as mental concept to understand other methods.
-But also as its own method.
+<!-- Intuition -->
+### Some Intuition
+We start with a simple function that takes only two features as input and produces a 1-dimensional output, the prediction.
+We can visualize what the function looks like using a 3-D plot or a heatmap:
+
+TODO: Visualize function
+
+This is a rather simple function to understand, so the use of decomposition might seem to much, but it is still useful.
+And especially when we have inputs with higher dimensions it should become clear why functional deomposition is so powerful.
+I did not show the formula that produced the function.
+This is on purpose, as in the machine learning setup, we don't have a neat little formula for the prediction function, but in the case that it has a closed formula (e.g., random forests), it would be long and ugly.
+
+Can we decompose this function into lower-dimensional components?
+This would allows us to disentangle effects of the features and all their interactions with other features.
+This would allow us to describe feature effects and importances. 
+The functional decomposition allows us to split the function into it's components.
+For a two-dimensional function f, which only depends on two input features: $f(x_1, x_2)$, we can split the function in the following way:
+
+$$f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1,2})$$
+
+The component $f_0$ is the intercept, components $f_1$ and $f_2$ are the main effects of $x_1$ and $x_2$ and $f_{1,2}$ is the interaction effect between the two features.
+The main effects tell us how each feature affects the prediction, independent of the other feature.
+The interaction effect tells us what the effect of the features is together.
+The intercept simply tells us what the prediction is when all feature effects are zero.
+
+This formulation is basically a linear regression model, but where we include the interaction terms between all features (which of course makes it non-linear in the original feature space).
 
 
-Problem: ML is high-dimensional function
+Here is the decomposition of the function above:
+
+TODO: centered PDPs for funtion above.
+
+Before we go into details how exactly this was computed, and whether this is the only solution (spoiler: no), we head deeper into the mathematics.
+
+### Deeper Into the Mathematics
+
+The example was two-dimensional.
+But let us talk about p-dimensional functions: $f: \mathbb{R}^p \mapsto \mathbb{R}^1$.
+How does a composition of this function look like?
+Here it is:
+
+$$f(x) = f_0 + f_1(x_1) + \ldots + f_p(x_p) + f_{1,2}(x_1, x_2) + \ldots + f_{p-1, p}(x_{p - 1}, x_p) + \ldots + f_{1,\ldots,p}(x_1, \ldots, x_p)$$
+
+Okay that's really ugly and long, we shorten it a bit.
+We can make it more precise and shorter by indexing all possible subsets of feature combinations: $S\subseteq\{1,\ldots,p\}$.
+This contains all main effects, and all interactions, and also the empty set, which we need to define the intercept.
+The the function $f$ can be decomposed as:
+
+$$f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)$$
+
+Here, $x_S$ is the vector of features in the index set $S$.
 
 
-Idea: Can we decompose it into lower level functions?
-Why: Allows disentanglement of effects and importances between features. Also allows visualization for 1 - 3 dims
 
+### How to estimate this?
 
+We start with the simple version first, where the features are independent of each other, and later think about the more difficult case when they have some dependence structures.
 
-Example : 1-dim function
+The big problem with a functional decomposition is that it is quite arbitrary if we don't pose any limitations on how each of the components look like.
+I can give you some food for thought.
+We start with the minimal requirement that summing up our components (the $f_S$'s) actually sums up to the function $f$.
+That means that no matter what input we put into $f$ and the components, the outcome is equal.
+Let's say you have a 3-dimensional function.
+It actually does not matter how this function look like, but the following decomposition would be valid:
+$f_0$ is 0.12.
+$f_1 = 2 \cdot x_1$ plus the number of shoes you own.
+$f_2, $f_3$, $f_{1,2}$, $f_{2,3}, f_{1,3}$ are all zero.
+And finally to make this trick work, I define:
 
-Example: 2-dim function
+$$f_{1,2,3} = f(x) - \sum_{S\subset\{1,\ldots,p\}} f_S(x_S)$$
 
-Problem: Not defined what gets into which part, but ignore for now
+Not very meaningful, and quite deceptive if you would present this as the interpretation of your model.
+How to we prevent this ambiguity?
 
+Enter the functional ANOVA
+
+### functional ANOVA
+
+TODO: CITE HOOKER and the axioms
+CITE: Stein
 
 Formula and how to interpret it and what to do with the individual parts
 
+Axioms
 
-Estimation:
-we need more restrictions to actually estimate individual parts, but that we will see in the functional decomp as method part
 
+Actually solved with (centered) PDPs
+
+
+### functional ANOVA for dependent features
+
+New axioms
+
+Definition
+
+Estimation
+
+### Alternative definition: ALE
 
 ## Viewing Other Methods as Decompositions
 
 You might want to come back to this chapter again if you have a good grasp on some of the othre methods.
-
 
 First on a high level:
 Feature effects are direct visualizations of the individual components.
@@ -67,3 +141,24 @@ References:
 - ALE
 - See what Hooker cites
 - See newer stuff (HDMR and whatnot)
+
+
+
+## Advantages
+
+A rigorous way of thinking about high-dimensional functions.
+
+Allows to understand most other interpretation methods much better.
+
+Separation and attribution of effects.
+
+
+## Disadvantages
+
+When output high-dimensional, than not as simple.
+
+Makes little sense for images and text.
+
+No clear superior way for the axioms. 
+
+
