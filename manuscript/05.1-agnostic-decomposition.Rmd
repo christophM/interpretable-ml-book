@@ -2,8 +2,15 @@
 devtools::load_all()
 set.seed(42)
 ```
-
 <!--{pagebreak}-->
+
+
+<!-- TODOs 
+
+- Find good chapter position. Maybe after PDP and ALE?
+- Research paper that cite  Generalized functional anova diagnostics for high-dimensional functions of dependent variables.
+-->
+
 
 ## Functional Decompositon {#decomposition}
 
@@ -17,7 +24,19 @@ Functional decomposition is both an interpretation method and mental model which
 We start with a simple function that takes only two features as input and produces a 1-dimensional output, the prediction.
 We can visualize what the function looks like using a 3-D plot or a heatmap:
 
-TODO: Visualize function
+```{r}
+x1 = seq(from = -1, to = 1, length.out = 100)
+x2 = seq(from = -1, to = 1, length.out = 100)
+f = function(x1, x2){
+   2 + exp(x1) - x2 + 0.5 * x1 * x2 
+}
+
+dat = expand.grid(x1 = x1, x2 = x2)
+dat$y = f(dat$x1, dat$x2)
+# mean(dat$y)
+p = ggplot(dat, aes(x = x1, y = x2, fill = y, z = y)) + geom_tile() + geom_contour()
+p
+```
 
 This is a rather simple function to understand, so the use of decomposition might seem to much, but it is still useful.
 And especially when we have inputs with higher dimensions it should become clear why functional deomposition is so powerful.
@@ -39,8 +58,30 @@ The intercept simply tells us what the prediction is when all feature effects ar
 
 This formulation is basically a linear regression model, but where we include the interaction terms between all features (which of course makes it non-linear in the original feature space).
 
+Let us look into the decomposition of the function above.
+I just give it here, with explanations coming later.
+We have the intercept with $f_0\sim3.18$
+Here is the rest of the decomposition of the function above:
 
-Here is the decomposition of the function above:
+
+
+```{r}
+```{r, out.height = 300, out.width = 900}
+pred.fun = function(model = NULL, newdata){
+  f(newdata$x1, newdata$x2)
+}
+pred = Predictor$new(predict.fun = pred.fun, data = dat, y = "y")
+p1 = FeatureEffect$new(pred, feature = "x1",  method = "ale")$plot(rug = FALSE) +
+  ggtitle(expression(paste(f[1], " main effect of ", X[1])))
+p2 = FeatureEffect$new(pred, feature = "x2", method = "ale")$plot(rug = FALSE) +
+  ggtitle(expression(paste(f[2], " main effect of ", X[2])))
+interact = FeatureEffect$new(pred, feature = c("x1", "x2"), method = "ale")
+p12 = interact$plot(rug = FALSE) + geom_contour(aes(z = .ale), color = "black") +
+  scale_fill_continuous("value", low = "blue",  high = "yellow") +
+  ggtitle(expression(paste(f[12], " interaction between ", X[1], " and ", X[2])))
+p1 + p2 + p12
+```
+
 
 TODO: centered PDPs for funtion above.
 
@@ -90,6 +131,57 @@ Enter the functional ANOVA
 
 ### functional ANOVA
 
+The functional ANOVA was proposed by Hooker (2004)[^fanova].
+The requirement is that the model prediction function f is square integrable.
+The decomposition is as any decomposition:
+
+$$f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)$$
+
+Hooker (2004) proposes to estimate the individual components as:
+
+$$f_S(x) = \int_{X_{-S}} \left( f(x) - \sum_{V \subset S} f_V(x)\right) d X_{-S})$$
+
+Ok, let's take this thing apart.
+Instead we can also write:
+
+$$f_S(x) = \int_{X_{-S}} \left( f(x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \right) d X_{-S})$$
+
+The first part is the integral over the prediction function, with respect of the features that are not in the set.
+This the same as the expectation of the function when we integrate out features $X_{-S}$, and pretending that all features follow a uniform distribution.
+The second part are all the lower dimensional components, so we apply some kind of centering.
+For example if $S=\{1,2\}$, meaning we look at the interaction effect of the first two features, and let's say there are, in total, 4 features.
+Since the formula is recursive in the sense that to compute higher order interactions, you have to also compute all lower-order interactions, we start with the lowest order, namely the $f_0$ component which is a constant.
+For $f_0$, the subset $S=\{\emptyset\}$ and therefore -S contains all features $XS.
+Therefore we get:
+
+$$f_S(x) = \int_{X} f(x) d X)$$
+
+This is simply the prediction function where we integrated over all features.
+And it can also be seen as the expectation of the function, but when we assume that all features are uniformly distributed.
+Now that we have $f_0$, we can get the formula for $f_1$:
+
+$$f_1(x) = \int_{X_{-1}} \left( f(x) - f_0\right) d X_{-S})$$
+
+The formula for $f_2(x)$ is equivalent.
+
+The the $V\subset{}S$ are $\{\emptyset,1,2\} and the formula becomes:
+
+$$f_{1,2}(x) = \int{\{3,4\}} \left( f(x) - (f_0(x) + f_1(x) + f_2(x))\right) d X_{3},X_4$$
+
+This example shows how each higher order effect is defined by integrating over all other features, but also be removing all the lower-order effects that are subsets of the higher-order effects.
+
+Hooker (2004) showed that this fullfills a few desirable axioms:
+
+- Zero Means: $\int{}f_S(x_S)dX_s=0$ for each $\S\neq\emptyset$.
+- Orthogonality: $\int{}f_S(x_S)f_V(x_v)dX=0$ for $S\neq{}V$
+- Variance Decomposition: Let $\sigma^2_{f}=\int{}f(x)^2dX$, then 
+  $$ \sigma^2(f) = \sum_{S \subseteq P} \sigma^2_S(f_S),$$
+  where P is the set of all features.
+
+The zero means axiom implies that all effects or interactions are centered around zero.
+The orthogonality axiom says that any two components do not share information, meaning that, for example, the first order effect of feature $X_1$ and the interaction term of $X_{1}$ and $X_2$ are not correlated.
+The variance decomposition allows us to split the variance of the function $f$ among the components, and guarantees that it really adds up in the end.
+
 TODO: CITE HOOKER and the axioms
 CITE: Stein
 
@@ -109,9 +201,24 @@ Definition
 
 Estimation
 
-### Alternative definition: ALE
 
-## Viewing Other Methods as Decompositions
+
+### Function Decomposition as Method
+
+There are different ways to decompose a function.
+
+For functions such as the [linear regression model](#limo) or [generalized additive models (GAMs)](#extended-lm), we already get a decomposition for free.
+
+References:
+
+- Stein
+- Hooker fANOVA 1 and 2
+- [Accumulated Local Effects Plots](#ale)
+- See what Hooker cites
+- See newer stuff (HDMR and whatnot)
+
+
+### Viewing Other Methods as Decompositions
 
 You might want to come back to this chapter again if you have a good grasp on some of the othre methods.
 
@@ -131,20 +238,9 @@ What happened in PFI with the interactions? They are alos divided among individu
 
 The SHAP interaction plots can also be better understood through decompositions.
 
-## Function Decomposition as Method
 
 
-References:
-
-- Stein
-- Hooker fANOVA 1 and 2
-- ALE
-- See what Hooker cites
-- See newer stuff (HDMR and whatnot)
-
-
-
-## Advantages
+### Advantages
 
 A rigorous way of thinking about high-dimensional functions.
 
@@ -153,7 +249,7 @@ Allows to understand most other interpretation methods much better.
 Separation and attribution of effects.
 
 
-## Disadvantages
+### Disadvantages
 
 When output high-dimensional, than not as simple.
 
@@ -161,4 +257,11 @@ Makes little sense for images and text.
 
 No clear superior way for the axioms. 
 
+Estimating higher effect components always difficult and no good way to visualize.
+
+[^fanova]: Hooker, Giles. "Discovering additive structure in black box functions." Proceedings of the tenth ACM SIGKDD international conference on Knowledge discovery and data mining. 2004.
+
+[^fanova2]: Hooker, Giles. "Generalized functional anova diagnostics for high-dimensional functions of dependent variables." Journal of Computational and Graphical Statistics 16.3 (2007): 709-732.
+
+[^ale]: Apley, Daniel W., and Jingyu Zhu. "Visualizing the effects of predictor variables in black box supervised learning models." Journal of the Royal Statistical Society: Series B (Statistical Methodology) 82.4 (2020): 1059-1086.
 
