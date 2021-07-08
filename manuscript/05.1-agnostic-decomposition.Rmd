@@ -14,9 +14,15 @@ set.seed(42)
 
 ## Functional Decompositon {#decomposition}
 
-A prediction function is -- more or less -- simply a function that takes a high-dimensional input and outputs, in many cases, a 1-dimensional number.
+A prediction function is, or can be simplified to,a function that takes a high-dimensional input and outputs a 1-dimensional number.
+The idea of functional decomposition is to split this high-dimensional function into lower-dimensional components, which allow to attribute effects to individual features and interactions between features.
 Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
 Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.
+
+This chapter is maybe the most central chapter in this book.
+It also comes very late, as the other chapters are mostly focused on methods.
+I see the primary value of functional decomposition in the mental model.
+Understanding functional decomposition gives you instant insights into other interpretation methods, and in general a better idea of model interpretation.
 
 
 <!-- Intuition -->
@@ -25,8 +31,8 @@ We start with a simple function that takes only two features as input and produc
 We can visualize what the function looks like using a 3-D plot or a heatmap:
 
 ```{r}
-x1 = seq(from = -1, to = 1, length.out = 100)
-x2 = seq(from = -1, to = 1, length.out = 100)
+x1 = seq(from = -1, to = 1, length.out = 30)
+x2 = seq(from = -1, to = 1, length.out = 30)
 f = function(x1, x2){
    2 + exp(x1) - x2 + 0.5 * x1 * x2 
 }
@@ -65,7 +71,6 @@ Here is the rest of the decomposition of the function above:
 
 
 
-```{r}
 ```{r, out.height = 300, out.width = 900}
 pred.fun = function(model = NULL, newdata){
   f(newdata$x1, newdata$x2)
@@ -81,9 +86,6 @@ p12 = interact$plot(rug = FALSE) + geom_contour(aes(z = .ale), color = "black") 
   ggtitle(expression(paste(f[12], " interaction between ", X[1], " and ", X[2])))
 p1 + p2 + p12
 ```
-
-
-TODO: centered PDPs for funtion above.
 
 Before we go into details how exactly this was computed, and whether this is the only solution (spoiler: no), we head deeper into the mathematics.
 
@@ -105,12 +107,19 @@ $$f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)$$
 
 Here, $x_S$ is the vector of features in the index set $S$.
 
+A function that takes in a p-dimensional vector can be split into $2^p$ components.
+
+$$|comps| = \sum_{i = 0}^p \over{p}{i} = 2^p$$
+
+For example, if the function has 10 features, we already would have 1042 components.
+With each additional feature, the number of components doubles (!!).
+So, clearly it is not feasible for most functions to compute all the components.
+Another reasons against computing all components is that components with $|S|>2$ are difficult to visualize and interpret.
 
 
-### How to estimate this?
+### How to Compute the Components
 
-We start with the simple version first, where the features are independent of each other, and later think about the more difficult case when they have some dependence structures.
-
+So far, our problem of functional decomposition is under-specified, meaning there is no unique solution.
 The big problem with a functional decomposition is that it is quite arbitrary if we don't pose any limitations on how each of the components look like.
 I can give you some food for thought.
 We start with the minimal requirement that summing up our components (the $f_S$'s) actually sums up to the function $f$.
@@ -127,9 +136,29 @@ $$f_{1,2,3} = f(x) - \sum_{S\subset\{1,\ldots,p\}} f_S(x_S)$$
 Not very meaningful, and quite deceptive if you would present this as the interpretation of your model.
 How to we prevent this ambiguity?
 
-Enter the functional ANOVA
 
-### functional ANOVA
+All methods:
+
+- Use restricted models where we get components
+- Stein
+- Hooker fANOVA 1 and 2
+- [Accumulated Local Effects Plots](#ale)
+- See what Hooker cites
+- See newer stuff (HDMR and whatnot)
+
+
+### Getting Decomposition for free
+
+For functions such as the [linear regression model](#limo) or [generalized additive models (GAMs)](#extended-lm), we already get a decomposition for free.
+
+Write more here?
+
+Mention that this is source of confusion.
+e.g. you could have linear regression model with interaction term.
+You could see this as decomposition.
+But if you apply one of the methods that follows, especially for the following methods, the results might differ.
+
+### Functional ANOVA
 
 The functional ANOVA was proposed by Hooker (2004)[^fanova].
 The requirement is that the model prediction function f is square integrable.
@@ -193,7 +222,9 @@ Axioms
 Actually solved with (centered) PDPs
 
 
-### functional ANOVA for dependent features
+### Generalized functional ANOVA for dependent features
+
+TODO
 
 New axioms
 
@@ -202,23 +233,32 @@ Definition
 Estimation
 
 
-
-### Function Decomposition as Method
-
-There are different ways to decompose a function.
-
-For functions such as the [linear regression model](#limo) or [generalized additive models (GAMs)](#extended-lm), we already get a decomposition for free.
-
-References:
-
-- Stein
-- Hooker fANOVA 1 and 2
-- [Accumulated Local Effects Plots](#ale)
-- See what Hooker cites
-- See newer stuff (HDMR and whatnot)
+### Accumulated Local Effects Plots
 
 
-### Viewing Other Methods as Decompositions
+Same as functional ANOVA for independent features.
+
+TODO
+
+
+TODO: Mention the disadvantage example in ALE paper for Generalized fANOVA for the correlated case.
+
+
+### Special Cases
+
+What if all components with $|S| > 2$ are zero?
+This means that we have no interactions.
+Which also means that we can use the [GAM](#lm-extended) to model this function.
+What if we know that the maximum number of features involved in interactions is 2, i.e., $|S|\leq{}2$?
+This would mean we could model it with an additive function that also allows interactions between two features, such as MARS (CITE) or GA2M.
+
+Can a function exist where lower-components are zero, but the the interactions are non-zero?
+For example, components for $X_1$ and $X_2$ are zero, but their interaction is not?
+Yes!
+For example, the XOR problem where $Y=X_1XOR{}X_2$.
+
+
+### Viewing Other Methods Through the Lens of Decomposition
 
 You might want to come back to this chapter again if you have a good grasp on some of the othre methods.
 
@@ -239,6 +279,14 @@ What happened in PFI with the interactions? They are alos divided among individu
 The SHAP interaction plots can also be better understood through decompositions.
 
 
+There are many methods that produce individual explanations in the form of $f(X)=\sum_{p=1}^n\phi_j$, which attribute one number per feature, see [Shapley Values](#shapley), [LIME](#lime) and most [pixel attribution methods for neural networks](#pixel-attribution), all of which you will encounter later in the book. 
+Looking at them through functional decomposition:
+When methods fulfill the property of efficiency, like for example Shapley values do, it means that the sum of attributions are equal to the prediction.
+This means that we decomposed the function.
+But there are only first order effects, no interactions.
+It means that all the interactions have to be split among the individual values per feature.
+And we do not get separate interation effects.
+
 
 ### Advantages
 
@@ -258,6 +306,12 @@ Makes little sense for images and text.
 No clear superior way for the axioms. 
 
 Estimating higher effect components always difficult and no good way to visualize.
+
+Functional ANOVA is very difficult to estimate, no available software.
+
+ALE is an alternative for when features are dependent, but offers no variance decomposition.
+
+
 
 [^fanova]: Hooker, Giles. "Discovering additive structure in black box functions." Proceedings of the tenth ACM SIGKDD international conference on Knowledge discovery and data mining. 2004.
 
