@@ -7,31 +7,31 @@ set.seed(42)
 
 ## Individual Conditional Expectation (ICE) {#ice}
 
-Individual Conditional Expectation (ICE) plots display one line per instance that shows how the instance's prediction changes when a feature changes. 
+Plot Individual Conditional Expectation (ICE) menampilkan satu baris per instance yang menunjukkan bagaimana prediksi instance berubah ketika fitur berubah.
 
-The partial dependence plot for the average effect of a feature is a global method because it does not focus on specific instances, but on an overall average.
-The equivalent to a PDP for individual data instances is called individual conditional expectation (ICE) plot (Goldstein et al. 2017[^Goldstein2017]).
-An ICE plot visualizes the dependence of the prediction on a feature for *each* instance separately, resulting in one line per instance, compared to one line overall in partial dependence plots.
-A PDP is the average of the lines of an ICE plot.
-The values for a line (and one instance) can be computed by keeping all other features the same, creating variants of this instance by replacing the feature's value with values from a grid and making predictions with the black box model for these newly created instances.
-The result is a set of points for an instance with the feature value from the grid and the respective predictions.
+Partial dependence plot untuk efek rata-rata dari suatu fitur adalah metode global karena tidak fokus pada contoh tertentu, tetapi pada rata-rata keseluruhan.
+Setara dengan PDP untuk instans data individual disebut plot individual conditional expectation (ICE) (Goldstein et al. 2017[^Goldstein2017]).
+Plot ICE memvisualisasikan ketergantungan prediksi pada fitur untuk *setiap* instans secara terpisah, menghasilkan satu baris per instans, dibandingkan dengan satu baris keseluruhan dalam partial dependence plot.
+PDP adalah rata-rata garis dari plot ICE.
+Nilai untuk satu baris (dan satu instans) dapat dihitung dengan menjaga semua fitur lainnya tetap sama, membuat varian instans ini dengan mengganti nilai fitur dengan nilai dari kisi dan membuat prediksi dengan model black box untuk instans yang baru dibuat ini.
+Hasilnya adalah satu set poin untuk sebuah instance dengan nilai fitur dari grid dan prediksi masing-masing.
 
-What is the point of looking at individual expectations instead of partial dependencies?
-Partial dependence plots can obscure a heterogeneous relationship created by interactions.
-PDPs can show you what the average relationship between a feature and the prediction looks like.
-This only works well if the interactions between the features for which the PDP is calculated and the other features are weak.
-In case of interactions, the ICE plot will provide much more insight.
+Apa gunanya melihat individual expectations daripada ketergantungan parsial?
+Partial dependence plot dapat mengaburkan hubungan heterogen yang diciptakan oleh interaksi.
+PDP dapat menunjukkan kepada Anda seperti apa hubungan rata-rata antara fitur dan prediksi.
+Ini hanya berfungsi dengan baik jika interaksi antara fitur yang dihitung PDP dan fitur lainnya lemah.
+Dalam hal interaksi, plot ICE akan memberikan lebih banyak wawasan.
 
-A more formal definition:
-In ICE plots, for each instance in $\{(x_{S}^{(i)},x_{C}^{(i)})\}_{i=1}^N$ the curve $\hat{f}_S^{(i)}$ is plotted against $x^{(i)}_{S}$, while $x^{(i)}_{C}$ remains  fixed.
+Definisi yang lebih formal:
+Dalam plot ICE, untuk setiap instance dalam $\{(x_{S}^{(i)},x_{C}^{(i)})\}_{i=1}^N$ kurva $\hat {f}_S^{(i)}$ diplot terhadap $x^{(i)}_{S}$, sedangkan $x^{(i)}_{C}$ tetap.
 
 ### Examples
 
-Let's go back to the [cervical cancer dataset](#cervical) and see how the prediction of each instance is associated with the feature "Age".
-We will analyze a random forest that predicts the probability of cancer for a woman given risk factors.
-In the [partial dependence plot](#pdp) we have seen that the cancer probability increases around the age of 50, but is this true for every woman in the dataset?
-The ICE plot reveals that for most women the age effect follows the average pattern of an increase at age 50, but there are some exceptions:
-For the few women that have a high predicted probability at a young age, the predicted cancer probability does not change much with age.
+Mari kembali ke [set data kanker serviks](#cervical) dan lihat bagaimana prediksi setiap kejadian dikaitkan dengan fitur "Usia".
+Kami akan menganalisis random forest yang memprediksi kemungkinan kanker untuk seorang wanita yang diberikan faktor risiko.
+Dalam [partial dependence plot](#pdp) kita telah melihat bahwa kemungkinan kanker meningkat sekitar usia 50, tetapi apakah ini benar untuk setiap wanita dalam kumpulan data?
+Plot ICE mengungkapkan bahwa bagi kebanyakan wanita, efek usia mengikuti pola rata-rata peningkatan pada usia 50, tetapi ada beberapa pengecualian:
+Untuk beberapa wanita yang memiliki kemungkinan prediksi tinggi di usia muda, kemungkinan kanker diprediksi tidak banyak berubah seiring bertambahnya usia.
 
 ```{r ice-cervical, fig.cap="ICE plot of cervical cancer probability by age. Each line represents one woman. For most women there is an increase in predicted cancer probability with increasing age. For some women with a predicted cancer probability above 0.4, the prediction does not change much at higher age."}
 library("mlr")
@@ -49,8 +49,8 @@ ice = FeatureEffect$new(pred.cervical, "Age", method = "ice")$plot() +
 ice
 ```
 
-The next figure shows ICE plots for the [bike rental prediction](#bike-data).
-The underlying prediction model is a random forest.
+Gambar berikut menunjukkan plot ICE untuk [prediksi sewa sepeda](#bike-data).
+Model prediksi yang mendasarinya adalah random forest.
 
 ```{r ice-bike, fig.cap='ICE plots of predicted bicycle rentals by weather conditions. The same effects can be observed as in the partial dependence plots.'}
 set.seed(42)
@@ -68,25 +68,25 @@ p3 = FeatureEffect$new(pred.bike, "windspeed", method = "ice")$plot() + scale_x_
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
 
-All curves seem to follow the same course, so there are no obvious interactions.
-That means that the PDP is already a good summary of the relationships between the displayed features and the predicted number of bicycles
+Semua kurva tampaknya mengikuti jalur yang sama, jadi tidak ada interaksi yang jelas.
+Itu berarti bahwa PDP sudah merupakan ringkasan yang baik dari hubungan antara fitur yang ditampilkan dan jumlah sepeda yang diprediksi
 
 #### Centered ICE Plot
 
-There is a problem with ICE plots:
-Sometimes it can be hard to tell whether the ICE curves differ between individuals because they start at different predictions.
-A simple solution is to center the curves at a certain point in the feature and  display only the difference in the prediction to this point.
-The resulting plot is called centered ICE plot (c-ICE).
-Anchoring the curves at the lower end of the feature is a good choice.
-The new curves are defined as:
+Ada masalah dengan plot ICE:
+Terkadang sulit untuk mengatakan apakah kurva ICE berbeda antar individu karena mereka mulai dari prediksi yang berbeda.
+Solusi sederhana adalah memusatkan kurva pada titik tertentu dalam fitur dan hanya menampilkan perbedaan prediksi ke titik ini.
+Plot yang dihasilkan disebut plot centered ICE (c-ICE).
+Penahan kurva di ujung bawah fitur adalah pilihan yang baik.
+Kurva baru didefinisikan sebagai:
 
 $$\hat{f}_{cent}^{(i)}=\hat{f}^{(i)}-\mathbf{1}\hat{f}(x^{a},x^{(i)}_{C})$$
 
-where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions (usually one or two), $\hat{f}$ is the fitted model and x^a^ is the anchor point.
+di mana $\mathbf{1}$ adalah vektor 1 dengan jumlah dimensi yang sesuai (biasanya satu atau dua), $\hat{f}$ adalah model yang dipasang dan x^a^ adalah titik jangkar.
 
 #### Example
 
-For example, take the cervical cancer ICE plot for age and center the lines on the youngest observed age:
+Misalnya, ambil plot ICE kanker serviks untuk usia dan pusatkan garis pada usia termuda yang diamati:
 
 ```{r ice-cervical-centered, fig.cap=sprintf("Centered ICE plot for predicted  cancer probability by age. Lines are fixed to 0 at age %i. Compared to age %i, the predictions for most women remain unchanged until the age of 45 where the predicted probability increases.", min(cervical_subset$Age), min(cervical_subset$Age))}
 library("iml")
@@ -96,10 +96,10 @@ ice$plot()  + scale_color_discrete(guide='none') +
     scale_y_continuous('Cancer probability difference to age 13')
 ```
 
-The centered ICE plots make it easier to compare the curves of individual instances.
-This can be useful if we do not want to see the absolute change of a predicted value, but the difference in the prediction compared to a fixed point of the feature range.
+Plot ICE yang terpusat memudahkan untuk membandingkan kurva masing-masing instance.
+Ini dapat berguna jika kita tidak ingin melihat perubahan absolut dari nilai prediksi, tetapi perbedaan prediksi dibandingkan dengan titik tetap dari rentang fitur.
 
-Let's have a look at centered ICE plots for the bicycle rental prediction:
+Mari kita lihat plot centered ICE untuk prediksi sewa sepeda:
 
 ```{r ice-bike-centered, fig.cap='Centered ICE plots of predicted number of bikes by weather condition. The lines show the difference in prediction compared to the prediction with the respective feature value at its observed minimum.'}
 data(bike)
@@ -122,45 +122,45 @@ gridExtra::grid.arrange(ice1, ice2, ice3, nrow = 1)
 
 #### Derivative ICE Plot
 
-Another way to make it visually easier to spot heterogeneity is to look at the individual derivatives of the prediction function with respect to a feature.
-The resulting plot is called the derivative ICE plot (d-ICE).
-The derivatives of a function (or curve) tell you whether changes occur and in which direction they occur.
-With the derivative ICE plot, it is easy to spot ranges of feature values where the black box predictions change for (at least some) instances.
-If there is no interaction between the analyzed feature $x_S$ and the other features $x_C$, then the prediction function can be expressed as:
+Cara lain untuk membuatnya lebih mudah secara visual untuk melihat heterogenitas adalah dengan melihat turunan individual dari fungsi prediksi sehubungan dengan fitur.
+Plot yang dihasilkan disebut sebagai plot derivative ICE (d-ICE).
+Turunan dari suatu fungsi (atau kurva) memberi tahu Anda apakah perubahan terjadi dan ke arah mana perubahan itu terjadi.
+Dengan plot derivative ICE, mudah untuk menemukan rentang nilai fitur di mana prediksi black box berubah untuk (setidaknya beberapa) contoh.
+Jika tidak ada interaksi antara fitur yang dianalisis $x_S$ dan fitur lainnya $x_C$, maka fungsi prediksi dapat dinyatakan sebagai:
 
 $$\hat{f}(x)=\hat{f}(x_S,x_C)=g(x_S)+h(x_C),\quad\text{with}\quad\frac{\delta\hat{f}(x)}{\delta{}x_S}=g'(x_S)$$
 
-Without interactions, the individual partial derivatives should be the same for all instances.
-If they differ, it is due to interactions and it becomes visible in the d-ICE plot.
-In addition to displaying the individual curves for the derivative of the prediction function with respect to the feature in S, showing the standard deviation of the derivative helps to highlight regions in feature in S with heterogeneity in the estimated derivatives.
-The derivative ICE plot takes a long time to compute and is rather impractical.
+Tanpa interaksi, turunan parsial individu harus sama untuk semua instance.
+Jika berbeda, itu karena interaksi dan menjadi terlihat di plot d-ICE.
+Selain menampilkan kurva individu untuk turunan dari fungsi prediksi sehubungan dengan fitur di S, menunjukkan standar deviasi dari turunan membantu untuk menyoroti daerah dalam fitur di S dengan heterogenitas dalam turunan yang diperkirakan.
+Plot derivative ICE membutuhkan waktu lama untuk dihitung dan agak tidak praktis.
 
 
 ### Advantages
 
-Individual conditional expectation curves are **even more intuitive to understand** than partial dependence plots.
-One line represents the predictions for one instance if we vary the feature of interest. 
+Kurva individual conditional expectation **bahkan lebih intuitif untuk dipahami** daripada partial dependence plot.
+Satu baris mewakili prediksi untuk satu contoh jika kita memvariasikan fitur yang diinginkan.
 
-Unlike partial dependence plots, ICE curves can **uncover heterogeneous relationships**.
+Tidak seperti partial dependence plot, kurva ICE dapat **mengungkap hubungan heterogen**.
 
 ### Disadvantages 
 
-ICE curves **can only display one feature** meaningfully, because two features would require the drawing of several overlaying surfaces and you would not see anything in the plot.
+Kurva ICE **hanya dapat menampilkan satu fitur** secara bermakna, karena dua fitur akan memerlukan penggambaran beberapa permukaan overlay dan Anda tidak akan melihat apa pun dalam plot.
 
-ICE curves suffer from the same problem as PDPs: 
-If the feature of interest is correlated with the other features, then **some points in the lines might be invalid data points** according to the joint feature distribution. 
+Kurva ICE mengalami masalah yang sama dengan PDP:
+Jika fitur yang diinginkan berkorelasi dengan fitur lainnya, maka **beberapa titik dalam garis mungkin merupakan titik data yang tidak valid** menurut distribusi fitur gabungan.
 
-If many ICE curves are drawn, the **plot can become overcrowded** and you will not see anything. 
-The solution: Either add some transparency to the lines or draw only a sample of the lines.
+Jika banyak kurva ICE digambar, **plot bisa menjadi penuh sesak** dan Anda tidak akan melihat apa pun.
+Solusinya: Tambahkan sedikit transparansi pada garis atau gambar hanya sampel garis.
 
-In ICE plots it might not be easy to **see the average**. 
-This has a simple solution:
-Combine individual conditional expectation curves with the partial dependence plot.
+Dalam plot ICE mungkin tidak mudah untuk **melihat rata-rata**.
+Ini memiliki solusi sederhana:
+Gabungkan kurva individual conditional expectation dengan partial dependence plot.
 
 ### Software and Alternatives
 
-ICE plots are implemented in the R packages `iml` (used for these examples), `ICEbox`[^ICEbox], and `pdp`.
-Another R package that does something very similar to ICE is `condvis`. In Python, partial dependence plots are built into scikit-learn starting with version 0.24.0.
+Plot ICE diimplementasikan dalam paket R `iml` (digunakan untuk contoh ini), `ICEbox`[^ICEbox], dan `pdp`.
+Paket R lain yang melakukan sesuatu yang sangat mirip dengan ICE adalah `condvis`. Dalam Python, partial dependence plot dibangun ke dalam scikit-learn dimulai dengan versi 0.24.0.
 
 
 

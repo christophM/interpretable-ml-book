@@ -4,247 +4,146 @@
 
 `r if(is.html){only.in.html}`
 
-So far, we have encountered many methods to explain black-box models through feature attribution.
-However, there are some limitations regarding the feature-based approach.
-First, features are not necessarily user-friendly in terms of interpretability.
-For example, the importance of a single pixel in an image usually does not convey much meaningful interpretation.
-Second, the expressiveness of a feature-based explanation is constrained by the number of features.
+Sejauh ini, kami menemukan banyak metode untuk menjelaskan model black box melalui feature attribution.
+Namun, ada beberapa keterbatasan mengenai pendekatan berbasis fitur.
+Pertama, fitur belum tentu ramah pengguna dalam hal interpretasi.
+Misalnya, pentingnya satu piksel dalam sebuah gambar biasanya tidak memberikan banyak interpretasi yang berarti.
+Kedua, ekspresi dari penjelasan berbasis fitur dibatasi oleh jumlah fitur.
 
-The concept-based approach addresses both limitations mentioned above.
-A concept can be any abstraction, such as a color, an object, or even an idea.
-Given any user-defined concept, although a neural network might not be explicitly trained with the given concept, the concept-based approach detects that concept embedded within the latent space learned by the network.
-In other words, the concept-based approach can generate explanations that are not limited by the feature space of a neural network.
+Pendekatan berbasis konsep membahas kedua keterbatasan yang disebutkan di atas.
+Konsep dapat berupa abstraksi apa pun, seperti warna, objek, atau bahkan ide.
+Mengingat konsep yang ditentukan pengguna, meskipun jaringan saraf mungkin tidak dilatih secara eksplisit dengan konsep yang diberikan, pendekatan berbasis konsep mendeteksi konsep yang tertanam dalam ruang laten yang dipelajari oleh jaringan.
+Dengan kata lain, pendekatan berbasis konsep dapat menghasilkan penjelasan yang tidak dibatasi oleh ruang fitur jaringan saraf.
 
-In this chapter, we will primarily focus on the Testing with Concept Activation Vectors (TCAV) paper by Kim et al.[^tcav]
+Dalam bab ini, kami terutama akan fokus pada makalah Testing with Concept Activation Vectors (TCAV) oleh Kim et al.[^tcav]
 
 ### TCAV: Testing with Concept Activation Vectors
 
-TCAV is proposed to generate global explanations for neural networks, but, in theory, it should also work for any model where taking directional derivative is possible.
-For any given concept, TCAV measures the extent of that concept's influence on the model's prediction for a certain class.
-For example, TCAV can answer questions such as how the concept of "striped" influences a model classifying an image as a "zebra".
-Since TCAV describes the relationship between a concept and a class, instead of explaining a single prediction, it provides useful global interpretation for a model's overall behavior.
+TCAV diusulkan untuk menghasilkan penjelasan global untuk jaringan saraf, tetapi, secara teori, TCAV juga harus bekerja untuk model apa pun yang memungkinkan pengambilan turunan terarah.
+Untuk setiap konsep yang diberikan, TCAV mengukur sejauh mana pengaruh konsep tersebut pada prediksi model untuk kelas tertentu.
+Misalnya, TCAV dapat menjawab pertanyaan seperti bagaimana konsep "bergaris" memengaruhi model yang mengklasifikasikan gambar sebagai "zebra".
+Karena TCAV menjelaskan hubungan antara konsep dan kelas, alih-alih menjelaskan prediksi tunggal, TCAV memberikan interpretasi global yang berguna untuk perilaku model secara keseluruhan.
 
-<!-- #### Intuition
-
-Many methods we have encountered so far are explaining the behavior of a model in terms of its features.
-There are two limitations of interpretability based on feature attribution: First, features are not necessarily user-friendly.
-For example, the importance of a single pixel usually does not convey much meaningful interpretation.
-Second, the expressiveness of feature-based explanations is constrained by the number of features.
-Considering neural networks are capable of mapping the given features into a more expressive representation, we want to leverage that high-level representation to generate explanations that are more easily understood by humans. -->
 
 #### Concept Activation Vector (CAV)
 
-A CAV is simply the numerical representation that generalizes a concept in the activation space of a neural network layer.
-A CAV, denoted as $v_l^C$, depends on a concept $C$ and a neural network layer $l$, where $l$ is also called as a bottleneck of the model.
-For calculating the CAV of a concept $C$, first, we need to prepare two datasets: a concept dataset which represents $C$ and a random dataset that consists of arbitrary data.
-For instance, to define the concept of "striped", we can collect images of striped objects as the concept dataset, while the random dataset is a group of random images without stripes.
-Next, we target a hidden layer $l$ and train a binary classifier which separates the activations generated by the concept set from those generated by the random set.
-The coefficient vector of this trained binary classifier is then the CAV $v_l^C$.
-In practice, we can use a SVM or a logistic regression model as the binary classifier.
-Lastly, given an image input $x$, we can measure its "conceptual sensitivity" by calculating the directional derivative of the prediction in the direction of the unit CAV:
+CAV hanyalah representasi numerik yang menggeneralisasi konsep dalam ruang aktivasi lapisan jaringan saraf.
+CAV, dilambangkan sebagai $v_l^C$, bergantung pada konsep $C$ dan lapisan jaringan saraf $l$, di mana $l$ juga disebut sebagai bottleneck model.
+Untuk menghitung CAV dari sebuah konsep $C$, pertama-tama, kita perlu menyiapkan dua kumpulan data: kumpulan data konsep yang mewakili $C$ dan kumpulan data acak yang terdiri dari data arbitrer.
+Misalnya, untuk mendefinisikan konsep "bergaris", kita dapat mengumpulkan gambar objek bergaris sebagai dataset konsep, sedangkan dataset acak adalah sekelompok gambar acak tanpa garis.
+Selanjutnya, kami menargetkan lapisan tersembunyi $l$ dan melatih pengklasifikasi biner yang memisahkan aktivasi yang dihasilkan oleh kumpulan konsep dari yang dihasilkan oleh kumpulan acak.
+Vektor koefisien dari pengklasifikasi biner terlatih ini adalah CAV $v_l^C$.
+Dalam praktiknya, kita dapat menggunakan SVM atau logistic regression model sebagai pengklasifikasi biner.
+Terakhir, dengan masukan gambar $x$, kita dapat mengukur "sensitivitas konseptual" dengan menghitung turunan arah dari prediksi dalam arah unit CAV:
 
 $$S_{C,k,l}(x)=\nabla h_{l,k}(f_l(x))\cdot v_l^C$$
 
-where $f_l$ maps the input $x$ to the activation vector of the layer $l$ and $h_{l,k}$ maps the activation vector to the logit output of class $k$.
+di mana $f_l$ memetakan input $x$ ke vektor aktivasi layer $l$ dan $h_{l,k}$ memetakan vektor aktivasi ke output logit kelas $k$.
 
-Mathematically, the sign of $S_{C,k,l}(x)$ only depends on the angle between the gradient of $h_{l,k}(f_l(x))$ and $v_l^C$.
-If the angle is greater than 90 degrees, $S_{C,k,l}(x)$ will be positive, and if the angle is less than 90 degrees, $S_{C,k,l}(x)$ will be negative.
-Since the gradient $\nabla h_{l,k}$ points to the direction that maximizes the output the most rapidly, conceptual sensitivity $S_{C,k,l}$, intuitively, indicates whether $v_l^C$ points to the similar direction that maximizes $h_{l,k}$.
-Thus, $S_{C,k,l}(x)>0$ can be interpreted as concept $C$ encouraging the model to classify $x$ into class $k$.
+Secara matematis, tanda $S_{C,k,l}(x)$ hanya bergantung pada sudut antara gradien $h_{l,k}(f_l(x))$ dan $v_l^C$.
+Jika sudutnya lebih besar dari 90 derajat, $S_{C,k,l}(x)$ akan positif, dan jika sudutnya kurang dari 90 derajat, $S_{C,k,l}(x)$ akan menjadi negatif.
+Karena gradien $\nabla h_{l,k}$ menunjuk ke arah yang paling cepat memaksimalkan keluaran, sensitivitas konseptual $S_{C,k,l}$, secara intuitif, menunjukkan apakah $v_l^C$ menunjuk ke arah serupa yang memaksimalkan $h_{l,k}$.
+Dengan demikian, $S_{C,k,l}(x)>0$ dapat diinterpretasikan sebagai konsep $C$ yang mendorong model untuk mengklasifikasikan $x$ ke dalam kelas $k$.
 
 #### Testing with CAVs (TCAV)
 
-In the last paragraph, we have learned how to calculate the conceptual sensitivity of a single data point.
-However, our goal is to produce a global explanation that indicates an overall conceptual sensitivity of an entire class.
-A very straightforward approach done by TCAV is to calculate the ratio of inputs with positive conceptual sensitivities to the number of inputs for a class:
+Dalam paragraf terakhir, kita telah mempelajari cara menghitung sensitivitas konseptual dari satu titik data.
+Namun, tujuan kami adalah untuk menghasilkan penjelasan global yang menunjukkan sensitivitas konseptual keseluruhan dari seluruh kelas.
+Pendekatan yang sangat mudah dilakukan oleh TCAV adalah menghitung rasio input dengan sensitivitas konseptual positif terhadap jumlah input untuk suatu kelas:
 
 $$TCAV_{Q_{C,k,l}}=\frac{|{x\in X_k:S_{C,k,l}(x)>0}|}{|X_k|}$$
 
-Going back to our example, we are interested in how the concept of "striped" influences the model while classifying images as "zebra".
-We collect data that are labeled as "zebra" and calculate conceptual sensitivity for each input image.
-Then the TCAV score of the concept "striped" with predicting class "zebra" is the number of "zebra" images that have positive conceptual sensitivities divided by the total number of the "zebra" images.
-In other words, a $TCAV_{Q_{"striped","zebra",l}}$ equal to 0.8 indicates that 80% of predictions for "zebra" class are positively influenced by the concept of "striped".
+Kembali ke contoh kami, kami tertarik pada bagaimana konsep "bergaris" memengaruhi model saat mengklasifikasikan gambar sebagai "zebra".
+Kami mengumpulkan data yang diberi label sebagai "zebra" dan menghitung sensitivitas konseptual untuk setiap gambar masukan.
+Kemudian skor TCAV konsep “bergaris” dengan kelas prediksi “zebra” adalah jumlah citra “zebra” yang memiliki sensitivitas konseptual positif dibagi dengan jumlah citra “zebra”.
+Dengan kata lain, $TCAV_{Q_{"striped","zebra",l}}$ sama dengan 0,8 menunjukkan bahwa 80% prediksi untuk kelas "zebra" dipengaruhi secara positif oleh konsep "striped".
 
-This looks great, but how do we know our TCAV score is meaningful?
-After all, a CAV is trained by user-selected concept and random datasets.
-If datasets used to train the CAV are bad, the explanation can be misleading and useless.
-And thus, we perform a simple statistical significance test to help TCAV become more reliable.
-That is, instead of training only one CAV, we train multiple CAVs using different random datasets while keeping the concept dataset the same.
-A meaningful concept should generate CAVs with consistent TCAV scores.
-More detailed test procedure is shown as the following:
+Ini terlihat bagus, tetapi bagaimana kita tahu bahwa skor TCAV kita berarti?
+Bagaimanapun, CAV dilatih oleh konsep yang dipilih pengguna dan kumpulan data acak.
+Jika kumpulan data yang digunakan untuk melatih CAV buruk, penjelasannya bisa menyesatkan dan tidak berguna.
+Dan dengan demikian, kami melakukan uji signifikansi statistik sederhana untuk membantu TCAV menjadi lebih andal.
+Artinya, alih-alih melatih hanya satu CAV, kami melatih beberapa CAV menggunakan kumpulan data acak yang berbeda sambil menjaga kumpulan data konsep tetap sama.
+Konsep yang bermakna harus menghasilkan CAV dengan skor TCAV yang konsisten.
+Prosedur pengujian yang lebih rinci ditunjukkan sebagai berikut:
 
-1. Collect $N$ random datasets, where it is recommended that $N$ is at least 10.
-2. Fix the concept dataset and calculate TCAV score using each of $N$ random datasets.
-3. Apply a two-sided t-test to $N$ TCAV scores against another $N$ TCAV scores generated by a random CAV.
-A random CAV can be obtained by choosing a random dataset as the concept dataset.
+1. Kumpulkan set data acak $N$, di mana direkomendasikan bahwa $N$ setidaknya 10.
+2. Perbaiki kumpulan data konsep dan hitung skor TCAV menggunakan masing-masing kumpulan data acak $N$.
+3. Terapkan uji-t dua sisi untuk skor TCAV $N$ terhadap skor TCAV $N$ lainnya yang dihasilkan oleh CAV acak.
+CAV acak dapat diperoleh dengan memilih dataset acak sebagai dataset konsep.
 
-It is also suggested to apply a multiple testing correction method here if you have multiple hypotheses.
-The original paper uses Bonferroni correction, and here the number of hypotheses is equal to the number of concepts you are testing.
+Disarankan juga untuk menerapkan metode koreksi pengujian berganda di sini jika Anda memiliki banyak hipotesis.
+Makalah asli menggunakan koreksi Bonferroni, dan di sini jumlah hipotesis sama dengan jumlah konsep yang Anda uji.
 
 ### Example
 
-Let us see an example available on the TCAV [GitHub](https://github.com/tensorflow/tcav/blob/master/Run_TCAV.ipynb).
-Continuing the “zebra” class example we have been using previously, this example shows the result of the TCAV scores of “striped”, “zigzagged”, and “dotted” concepts.
-The image classifier we are using is InceptionV3[^inception], a convolutional neural network trained using ImageNet data.
-Each concept or random dataset contains 50 images, and we are using 10 random datasets for the statistical significance test with the significance level of 0.05.
-We are not using the Bonferroni correction because we only have a few random datasets, but it is recommended to add the correction in practice to avoid false discovery.
+Mari kita lihat contoh yang tersedia di TCAV [GitHub](https://github.com/tensorflow/tcav/blob/master/Run_TCAV.ipynb).
+Melanjutkan contoh kelas “zebra” yang telah kita gunakan sebelumnya, contoh ini menunjukkan hasil skor TCAV konsep “striped”, “zigzagged”, dan “dotted”.
+Pengklasifikasi gambar yang kami gunakan adalah InceptionV3[^inception], convolutional neural networks yang dilatih menggunakan data ImageNet.
+Setiap konsep atau kumpulan data acak berisi 50 gambar, dan kami menggunakan 10 kumpulan data acak untuk uji signifikansi statistik dengan tingkat signifikansi 0,05.
+Kami tidak menggunakan koreksi Bonferroni karena kami hanya memiliki beberapa kumpulan data acak, tetapi disarankan untuk menambahkan koreksi dalam praktik untuk menghindari penemuan yang salah.
 
 ```{r fig.cap = "The example of measuring TCAV scores of three concepts for the model predicting “zebra”. The targeted bottleneck is a layer called “mixed4c”. A star sign above “dotted” indicates that “dotted” has not passed the statistical significance test, i.e., having the p-value larger than 0.05. Both “striped” and “zigzagged” have passed the test, and both concepts are useful for the model to identify “zebra” images according to TCAV. Figure originally from the TCAV GitHub.", out.width=800}
 knitr::include_graphics("images/tcav.png")
 ```
 
-In practice, you may want to use more than 50 images in each dataset to train better CAVs.
-You may also want to use more than 10 random datasets to perform better statistical significance tests.
-You can also apply TCAV to multiple bottlenecks to have a more thorough observation.
+Dalam praktiknya, Anda mungkin ingin menggunakan lebih dari 50 gambar di setiap kumpulan data untuk melatih CAV yang lebih baik.
+Anda mungkin juga ingin menggunakan lebih dari 10 kumpulan data acak untuk melakukan uji signifikansi statistik yang lebih baik.
+Anda juga dapat menerapkan TCAV ke beberapa kemacetan untuk mendapatkan pengamatan yang lebih menyeluruh.
 
 ### Advantages
 
-Since users are only required to collect data for training the concepts that they are interested in, **TCAV does not require users to have machine learning expertise**.
-This allows TCAV to be extremely useful for domain experts to evaluate their complicated neural network models.
+Karena pengguna hanya diharuskan mengumpulkan data untuk melatih konsep yang mereka minati, **TCAV tidak mengharuskan pengguna memiliki keahlian machine learning**.
+Hal ini memungkinkan TCAV menjadi sangat berguna bagi pakar domain untuk mengevaluasi model jaringan saraf mereka yang rumit.
 
-Another unique characteristic of TCAV is its **customizability** enabled by TCAV's **explanations beyond feature attribution**.
-Users can investigate any concept as long as the concept can be defined by its concept dataset.
-In other words, a user can control the balance between the complexity and the interpretability of explanations based on their needs: If a domain expert understands the problem and concept very well, they can shape the concept dataset using more complicated data to generate a more fine-grained explanation.
+Karakteristik unik lainnya dari TCAV adalah **kemampuan penyesuaiannya** yang diaktifkan oleh **penjelasan di luar feature attribution** TCAV.
+Pengguna dapat menyelidiki konsep apa pun selama konsep tersebut dapat didefinisikan oleh kumpulan data konsepnya.
+Dengan kata lain, pengguna dapat mengontrol keseimbangan antara kompleksitas dan interpretasi penjelasan berdasarkan kebutuhan mereka: Jika ahli domain memahami masalah dan konsep dengan sangat baik, mereka dapat membentuk kumpulan data konsep menggunakan data yang lebih rumit untuk menghasilkan yang lebih baik. -penjelasan berbutir
 
-Finally, TCAV generates **global explanations** that relate concepts to any class.
-A global explanation gives you an idea that whether your overall model behaves properly or not, which usually cannot be done by local explanations. 
-And thus, TCAV can be used to identify potential "flaws" or "blind spots" happened during the model training: Maybe your model has learned to weight a concept inappropriately.
-If a user can identify those ill-learned concepts, one can use the knowledge to **improve their model**.
-Let us say there is a classifier that predicts "zebra" with a high accuracy. TCAV, however, shows that the classifier is more sensitive towards the concept of "dotted" instead of "striped".
-This might indicate that the classifier is accidentally trained by an unbalanced dataset, allowing you to improve the model by either adding more "striped zebra" images or less "dotted zebra" images to the training dataset.
+Terakhir, TCAV menghasilkan **penjelasan global** yang menghubungkan konsep dengan kelas mana pun.
+Penjelasan global memberi Anda gambaran apakah model keseluruhan Anda berperilaku baik atau tidak, yang biasanya tidak dapat dilakukan oleh local explanation.
+Dan dengan demikian, TCAV dapat digunakan untuk mengidentifikasi potensi "cacat" atau "titik buta" yang terjadi selama pelatihan model: Mungkin model Anda telah belajar menimbang konsep secara tidak tepat.
+Jika pengguna dapat mengidentifikasi konsep-konsep yang kurang dipelajari tersebut, seseorang dapat menggunakan pengetahuan tersebut untuk **meningkatkan model mereka**.
+Katakanlah ada pengklasifikasi yang memprediksi "zebra" dengan akurasi tinggi. TCAV, bagaimanapun, menunjukkan bahwa classifier lebih sensitif terhadap konsep "bertitik" daripada "bergaris".
+Ini mungkin menunjukkan bahwa pengklasifikasi dilatih secara tidak sengaja oleh set data yang tidak seimbang, memungkinkan Anda untuk meningkatkan model dengan menambahkan lebih banyak gambar "zebra bergaris" atau lebih sedikit gambar "zebra bertitik" ke set data pelatihan.
 
 ### Disadvantages
 
-TCAV might **perform badly on shallower neural networks**.
-As many papers suggested [^probe], concepts in deeper layers are more separable.
-If a network is too shallow, its layers may not be capable of separating concepts clearly so that TCAV is not applicable.
+TCAV mungkin **berperforma buruk pada jaringan saraf yang lebih dangkal**.
+Seperti yang disarankan oleh banyak makalah [^probe], konsep di lapisan yang lebih dalam lebih dapat dipisahkan.
+Jika jaringan terlalu dangkal, lapisannya mungkin tidak dapat memisahkan konsep dengan jelas sehingga TCAV tidak dapat diterapkan.
 
-Since TCAV requires **additional annotations** for concept datasets, it can be very expensive for tasks that do not have ready labelled data.
-A possible alternative to TCAV when annotating is expensive is to use ACE[^ace] which we will briefly talk about it in the next section.
+Karena TCAV memerlukan **anotasi tambahan** untuk kumpulan data konsep, maka biayanya bisa sangat mahal untuk tugas yang tidak memiliki data berlabel siap pakai.
+Alternatif yang mungkin untuk TCAV ketika anotasi mahal adalah dengan menggunakan ACE[^ace] yang akan kita bicarakan secara singkat di bagian selanjutnya.
 
-Although TCAV is hailed because of its customizability, it is **difficult to apply to concepts that are too abstract or general**.
-This is mainly because TCAV describes a concept by its corresponding concept dataset.
-The more abstract or general a concept is, such as "happiness", the more data are required to train a CAV for that concept.  
+Meskipun TCAV dipuji karena kemampuan penyesuaiannya, **sulit untuk diterapkan pada konsep yang terlalu abstrak atau umum**.
+Ini terutama karena TCAV menggambarkan sebuah konsep dengan kumpulan data konsep yang sesuai.
+Semakin abstrak atau umum suatu konsep, seperti "kebahagiaan", semakin banyak data yang diperlukan untuk melatih CAV untuk konsep tersebut.
 
-<!-- **TCAV can be difficult to "debug"**.
-A typical TCAV explanation generates $N$ TCAV scores, where $N$ = 500.
-Each TCAV score is calculated using 50 concept images and 50 random images. 
-When TCAV scores do not pass the statistical significance, it can be due to the quality of the concept datasets, the number of images, or the size of $N$.
-This process of "debugging" TCAV can be time-consuming depending on the model and the task. -->
-<!-- TCAV can be **computationally expensive**. A typical TCAV explanation is generated by running  TCAV calculation 500 trials, with training a CAV using 50 concept images and 50 random images during each trial. You may even want to increase the scale of training data and trials if the explanation is not statistically significant. -->
-Though TCAV gains popularity in applying to image data, it has **relatively limited applications in text data and tabular data**.
+Meskipun TCAV mendapatkan popularitas dalam penerapannya pada data gambar, ia memiliki **aplikasi yang relatif terbatas pada data teks dan data tabular**.
 
 ### Bonus: Other Concept-based Approaches
 
-The concept-based approach has attracted increasing popularity in recent, and there are many new methods inspired by the utilization of concepts. Here we would like to briefly mention these methods, and we recommend you read the original works if you are interested.
+Pendekatan berbasis konsep telah menarik popularitas yang meningkat akhir-akhir ini, dan ada banyak metode baru yang terinspirasi oleh pemanfaatan konsep. Di sini kami ingin menyebutkan metode ini secara singkat, dan kami sarankan Anda membaca karya aslinya jika Anda tertarik.
 
-Automated Concept-based Explanation (ACE)[^ace] can be seen as the automated version of TCAV.
-ACE goes through a set of images of a class and automatically generates concepts based on the clustering of image segments.
-<!-- Given a trained image classifier, ACE takes a set of images of a class and applies a sophiscated segmentation method to those images, generating meaningful segments.
-Next, each segment is resized and fed into the classifier.
-The segments are then clustered based on the distance among their activation vectors, where outlier segments in the clusters are removed.
-Each cluster now represents a concept and can be used to calculate concept importance score, such as the TCAV score, for that class of the classifier. -->
+Automated Concept-based Explanation (ACE)[^ace] dapat dilihat sebagai versi otomatis dari TCAV.
+ACE melewati serangkaian gambar kelas dan secara otomatis menghasilkan konsep berdasarkan pengelompokan segmen gambar.
 
-Concept bottleneck models (CBM)[^cbm] are intrinsically interpretable neural networks.
-A CBM is similar to an encoder-decoder model, where the first half of the CBM maps inputs to concepts, and the second half uses the mapped concepts to predict model outputs.
-Each neuron activation of the bottleneck layer then represents the importance of a concept.
-Furthermore, users can do intervention to the neuron activations of the bottleneck to generate counterfactual explanations of the model.
-<!-- The idea is to first use inputs to predict concepts. 
-Here the concept output layer is called the bottleneck of the model, and each of its neurons represents a concept.
-The CBM then uses the predicted concepts to predict the model output.
-This means that each input image requires two labels: a class label and a concept label.
-After training a concept bottleneck model, users can directly observe the concept importance at the bottleneck layer.
-An additional cool feature of CBMs is its availability of generating counterfactual explanations: By interventing the concept activation values at the bottleneck layer, it can tell you "if a concept $C$ presents, then the model would not have predicted class $K$." -->
+Model Concept bottleneck (CBM)[^cbm] adalah jaringan saraf yang dapat ditafsirkan secara intrinsik.
+CBM mirip dengan model encoder-decoder, di mana paruh pertama CBM memetakan input ke konsep, dan paruh kedua menggunakan konsep yang dipetakan untuk memprediksi output model.
+Setiap aktivasi neuron dari lapisan bottleneck kemudian mewakili pentingnya sebuah konsep.
+Selanjutnya, pengguna dapat melakukan intervensi terhadap aktivasi neuron dari bottleneck untuk menghasilkan counterfactual explanations dari model tersebut.
 
-Concept whitening (CW)[^cw] is another approach to generate intrinsically interpretable image classifiers.
-To use CW, one just simply substitutes a normalization layer, such as a batch normalization layer, with a CW layer.
-And thus, CW is very useful when users want to transform their pre-trained image classifiers to be intrinsically interpretable, while maintaining the model performance.
-CW is heavily inspired by whitening transformation, and we highly recommend you to study the mathematics behind whitening transformation if you are interested in learning more about CW.
+Concept whitening (CW)[^cw] adalah pendekatan lain untuk menghasilkan pengklasifikasi gambar yang dapat ditafsirkan secara intrinsik.
+Untuk menggunakan CW, cukup dengan mengganti lapisan normalisasi, seperti lapisan normalisasi batch, dengan lapisan CW.
+Dan dengan demikian, CW sangat berguna ketika pengguna ingin mengubah pengklasifikasi gambar yang telah dilatih sebelumnya agar dapat ditafsirkan secara intrinsik, sambil mempertahankan kinerja model.
+CW sangat terinspirasi oleh transformasi pemutihan, dan kami sangat menyarankan Anda untuk mempelajari matematika di balik transformasi pemutihan jika Anda tertarik untuk mempelajari lebih lanjut tentang CW.
 
 ### Software
 
-The official Python library of [TCAV](https://pypi.org/project/tcav/) requires Tensorflow, but there are other versions implemented online.
-The easy-to-use Jupyter notebooks are also accessible on the [tensorflow/tcav](https://github.com/tensorflow/tcav/tree/master).
-
-<!-- You have to learn the concepts from data.
-That means if you want to understand whether the network uses the concept of "female" for the classification of e.g. images, you have to provide some examples of "female" (could be images with women in it), and non-female (images without women in it).
-
-You send all those images through the network 
-
-Good thing is that TCAV does not require to change the network you are using, but you can use the network that you already have.
-
-TCAV uses directional derivatives to quantify the importance of a concept for the classification or prediction.
-The concept is defined by the user and must be defined via some positive and negative data examples.
-For example for the image classification of a zebra, the concept might be stripes.
-The concept is defined byselecting images of stripes and some randomly sampled images without stripes.
-
-Code for TCAV: https://github.com/tensorflow/tcav
-
-TODO: CONTINUE DESCRIBING TCAV
-
-Good things about TCAV:
-The concepts are not required to be known at training time.
-Really any concept can be analyzed, as long as you find some positive and negative examples. -->
-
-<!-- Feature Visualization for RNNs -->
-<!-- For RNNs: https://medium.com/@plusepsilon/visualizations-of-recurrent-neural-networks-c18f07779d56
-https://distill.pub/2019/memorization-in-rnns/
-http://lstm.seas.harvard.edu/
-
-TODO: Checkout RNNVis and LSTMVis
-
-List of notebooks:
-https://github.com/tensorflow/lucid
-More a tool for getting a general, better understanding of cnns, but not for daily job.
-
-### Word Embeddings
-
-**Word Embeddings**
-Word embeddings represent words as vectors which can be used to compute the similarity between words.
-As another way to visualize concepts that were learned are word embeddings.
-An embedding maps a discrete feature (e.g. a word) to a m-dimensional vector.
-A word embedding is the vector in some embedding space a word is mapped onto.
-The embedding space is learned by the neural network.
-The directions in that space often correlate to concepts.
-This means that words with similar vectors have some similarity, e.g. cat and dog.
-This also has the nice effect that we can do arithmetics in that space.
-e.g.
-
-$$embedding(king)-embedding(queen)=embedding(man)-embedding(woman)$$
-
-The embeddings are high-dimensional vectors.
-For visualization, they are often mapped to 2 Dimensions (e.g. with tSNE) TODO: CITE
-
-What can you do with embeddings?
-You can visualize the concepts that were learned.
-Embedding let us analyze what the neural network learned.
-For example, did it learn some kind of bias?
-How do we get word embeddings?
-Other use cases include to use these embeddings as feature transformations before the e.g. text is used in a machine learning model.
-
-How are they created?
-It's a mapping from categorical features (e.g. words) to some vectors.
-They can be initialized with random weights and the embeddings are learned along with the thing you are trying to predict, e.g. with a recurrent neural network.
-An alternativ is to use a pre-trained embedding like word2vec, GloVe or fasttext.
-Those are trained over huge corpuses of text to predict words from their neighboring words.
+Pustaka Python resmi [TCAV](https://pypi.org/project/tcav/) memerlukan Tensorflow, tetapi ada versi lain yang diterapkan secara online.
+Notebook Jupyter yang mudah digunakan juga dapat diakses di [tensorflow/tcav](https://github.com/tensorflow/tcav/tree/master).
 
 
- - concepts can transform when learning, e.g. dog into waterfall
-
-**Detecting Concepts During Training Time**
-
-Towards Robust Interpretability with Self-Explaining Neural Networks
-
-
-**Software**
-
-- CAffee and with GANS https://github.com/Evolving-AI-Lab/synthesizing
-
-
-### Other approaches for concepts
-
-- Word embeddings https://papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf
--  -->
 
 [^tcav]: Kim, Been, et al. "Interpretability beyond feature attribution: Quantitative testing with concept activation vectors (tcav)." Proceedings of the 35th International Conference on Machine Learning (2018).
 

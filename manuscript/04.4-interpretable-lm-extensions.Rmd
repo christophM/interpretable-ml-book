@@ -7,30 +7,29 @@ set.seed(42)
 
 ## GLM, GAM and more {#extend-lm}
 
-The biggest strength but also the biggest weakness of the [linear regression model](#limo) is that the prediction is modeled as a weighted sum of the features.
-In addition, the linear model comes with  many other assumptions.
-The bad news is (well, not really news) that all those assumptions are often violated in reality: 
-The outcome given the features might have a non-Gaussian distribution, the features might interact and the relationship between the features and the outcome might be nonlinear.
-The good news is that the statistics community has developed a variety of modifications that transform the linear regression model from a simple blade into a Swiss knife.
+Kekuatan terbesar tetapi juga kelemahan terbesar dari [model linear regression](#limo) adalah bahwa prediksi dimodelkan sebagai jumlah bobot fitur.
+Selain itu, model linier hadir dengan banyak asumsi lain.
+Berita buruknya adalah (yah, bukan benar-benar berita) bahwa semua asumsi itu sering dilanggar dalam kenyataan:
+Hasil yang diberikan fitur mungkin memiliki distribusi non-Gaussian, fitur mungkin berinteraksi dan hubungan antara fitur dan hasilnya mungkin nonlinier.
+Kabar baiknya adalah bahwa komunitas statistik telah mengembangkan berbagai modifikasi yang mengubah model linear regression dari pisau sederhana menjadi pisau Swiss.
 
+Bab ini jelas bukan panduan pasti Anda untuk memperluas model linier.
+Sebaliknya, ini berfungsi sebagai ikhtisar ekstensi seperti Generalized Linear Models (GLMs) dan Generalized Additive Models (GAMs) dan memberi Anda sedikit intuisi.
+Setelah membaca, Anda harus memiliki gambaran yang solid tentang bagaimana memperluas model linier.
+Jika Anda ingin mempelajari lebih lanjut tentang model linear regression terlebih dahulu, saya sarankan Anda membaca [bab tentang model linear regression](#limo), jika Anda belum melakukannya.
 
-This chapter is definitely not your definite guide to extending linear models. 
-Rather, it serves as an overview of extensions such as Generalized Linear Models (GLMs) and Generalized Additive Models (GAMs) and gives you a little intuition.
-After reading, you should have a solid overview of how to extend linear models.
-If you want to learn more about the linear regression model first, I suggest you read the [chapter on linear regression models](#limo), if you have not already.
-
-Let us remember the formula of a linear regression model:
+Mari kita ingat rumus model linear regression:
 
 $$y=\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}+\epsilon$$
 
-The linear regression model assumes that the outcome y of an instance can be expressed by a weighted sum of its p features with an individual error $\epsilon$ that follows a Gaussian distribution.
-By forcing the data into this corset of a formula, we obtain a lot of model interpretability.
-The feature effects are additive, meaning no interactions, and the relationship is linear, meaning an increase of a feature by one unit can be directly translated into an increase/decrease of the predicted outcome.
-The linear model allows us to compress the relationship between a feature and the expected outcome into a single number, namely the estimated weight.
+Model linear regression mengasumsikan bahwa hasil y dari sebuah instance dapat dinyatakan dengan jumlah bobot fitur p dengan individual error $\epsilon$ yang mengikuti distribusi Gaussian.
+Dengan memaksakan data ke dalam korset formula ini, kami memperoleh banyak interpretasi model.
+Efek fitur bersifat aditif, artinya tidak ada interaksi, dan hubungannya linier, artinya peningkatan fitur sebesar satu unit dapat langsung diterjemahkan ke dalam peningkatan/penurunan hasil yang diprediksi.
+Model linier memungkinkan kita untuk memadatkan hubungan antara fitur dan hasil yang diharapkan menjadi satu angka, yaitu bobot yang diperkirakan.
 
-But a simple weighted sum is too restrictive for many real world prediction problems.
-In this chapter we will learn about three problems of the classical linear regression model and how to solve them.
-There are many more problems with possibly violated assumptions, but we will focus on the three shown in the following figure:
+Tapi jumlah tertimbang sederhana terlalu membatasi untuk banyak masalah prediksi dunia nyata.
+Dalam bab ini kita akan belajar tentang tiga masalah model linear regression klasik dan bagaimana menyelesaikannya.
+Ada banyak lagi masalah dengan asumsi yang mungkin dilanggar, tetapi kami akan fokus pada tiga yang ditunjukkan pada gambar berikut:
 
 ```{r three-lm-problems, fig.cap = "Three assumptions of the linear model (left side): Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Reality usually does not adhere to those assumptions (right side): Outcomes might have non-Gaussian distributions, features might interact and the relationship might be nonlinear."}
 theme_blank = theme(axis.line=element_blank(),axis.text.x=element_blank(),
@@ -75,106 +74,104 @@ gridExtra::grid.arrange(p.glm, p.interaction, p.gam)
 
 ```
 
-There is a solution to all these problems:
+Ada solusi untuk semua masalah ini:
 
-**Problem**: The target outcome y given the features does not follow a Gaussian distribution.  
-**Example**: Suppose I want to predict how many minutes I will ride my bike on a given day.
-As features I have the type of day, the weather and so on.
-If I use a linear model, it could predict negative minutes because it assumes a Gaussian distribution which does not stop at 0 minutes.
-Also if I want to predict probabilities with a linear model, I can get probabilities that are negative or greater than 1.  
-**Solution**: [Generalized Linear Models (GLMs)](#glm).
+**Masalah**: Hasil target y yang diberikan fitur tidak mengikuti distribusi Gaussian.
+**Contoh**: Misalkan saya ingin memprediksi berapa menit saya akan mengendarai sepeda pada hari tertentu.
+Sebagai fitur saya memiliki jenis hari, cuaca dan sebagainya.
+Jika saya menggunakan model linier, itu bisa memprediksi menit negatif karena mengasumsikan distribusi Gaussian yang tidak berhenti pada 0 menit.
+Juga jika saya ingin memprediksi probabilitas dengan model linier, saya bisa mendapatkan probabilitas yang negatif atau lebih besar dari 1.
+**Solusi**: [Generalized Linear Models (GLM)](#glm).
 
-**Problem**: The features interact.  
-**Example**: On average, light rain has a slight negative effect on my desire to go cycling.
-But in summer, during rush hour, I welcome rain, because then all the fair-weather cyclists stay at home and I have the bicycle paths for myself!
-This is an interaction between time and weather that cannot be captured by a purely additive model.  
-**Solution**: [Adding interactions manually](#lm-interact).
+**Masalah**: Fitur berinteraksi.
+**Contoh**: Rata-rata, hujan ringan memiliki sedikit efek negatif pada keinginan saya untuk bersepeda.
+Tapi di musim panas, selama jam sibuk, saya menyambut hujan, karena semua pengendara sepeda cuaca cerah tinggal di rumah dan saya memiliki jalur sepeda untuk diri saya sendiri!
+Ini adalah interaksi antara waktu dan cuaca yang tidak dapat ditangkap oleh model aditif murni.
+**Solusi**: [Menambahkan interaksi secara manual](#lm-interact).
 
-**Problem**: The true relationship between the features and y is not linear.  
-**Example**: Between 0 and 25 degrees Celsius, the influence of the temperature on my desire to ride a bike could be linear, which means that an increase from 0 to 1 degree causes the same increase in cycling desire as an increase from 20 to 21. 
-But at higher temperatures my motivation to cycle levels off and even decreases - I do not like to bike when it is too hot.  
-**Solutions**: [Generalized Additive Models (GAMs); transformation of features](#gam).
+**Masalah**: Hubungan sebenarnya antara fitur dan y tidak linier.
+**Contoh**: Antara 0 dan 25 derajat Celcius, pengaruh suhu terhadap keinginan saya untuk bersepeda dapat bersifat linier, yang berarti bahwa peningkatan dari 0 ke 1 derajat menyebabkan peningkatan keinginan bersepeda yang sama dengan peningkatan dari 20 sampai 21.
+Tetapi pada suhu yang lebih tinggi, motivasi saya untuk bersepeda turun dan bahkan menurun - saya tidak suka bersepeda saat terlalu panas.
+**Solusi**: [Generalized Additive Models (GAM); transformasi fitur](#gam).
 
-The solutions to these three problems are presented in this chapter.
-Many further extensions of the linear model are omitted.
-If I attempted to cover everything here, the chapter would quickly turn into a book within a book about a topic that is already covered in many other books.
-But since you are already here, I have made a little problem plus solution overview for linear model extensions, which you can find at the [end of the chapter](#more-lm-extension).
-The name of the solution is meant to serve as a starting point for a search.
+Solusi untuk ketiga masalah ini disajikan dalam bab ini.
+Banyak ekstensi lebih lanjut dari model linier dihilangkan.
+Jika saya mencoba untuk membahas semuanya di sini, bab ini akan dengan cepat berubah menjadi buku di dalam buku tentang topik yang sudah dibahas di banyak buku lain.
+Tetapi karena Anda sudah berada di sini, saya telah membuat sedikit masalah plus gambaran umum solusi untuk ekstensi model linier, yang dapat Anda temukan di [akhir bab](#more-lm-extension).
+Nama solusi dimaksudkan sebagai titik awal pencarian.
 
 ### Non-Gaussian Outcomes - GLMs {#glm}
 
-The linear regression model assumes that the outcome given the input features follows a Gaussian distribution.
-This assumption excludes many cases:
-The outcome can also be a category (cancer vs. healthy), a count (number of children), the time to the occurrence of an event (time to failure of a machine) or a very skewed outcome with a few very high values (household income).
-The linear regression model can be extended to model all these types of outcomes.
-This extension is called **Generalized Linear Models** or **GLMs** for short.
-Throughout this chapter, I will use the name GLM for both the general framework and for particular models from that framework.
-The core concept of any GLM is: 
-Keep the weighted sum of the features, but allow non-Gaussian outcome distributions and connect the expected mean of this distribution and the weighted sum through a possibly nonlinear function.
-For example, the logistic regression model assumes a Bernoulli distribution for the outcome and links the expected mean and the weighted sum using the logistic function.
+Model linear regression mengasumsikan bahwa hasil yang diberikan fitur masukan mengikuti distribusi Gaussian.
+Asumsi ini mengecualikan banyak kasus:
+Hasil juga dapat berupa kategori (kanker vs. sehat), hitungan (jumlah anak), waktu terjadinya suatu peristiwa (waktu kegagalan mesin) atau hasil yang sangat miring dengan beberapa nilai yang sangat tinggi (pendapatan rumah tangga).
+Model linear regression dapat diperluas untuk memodelkan semua jenis hasil ini.
+Ekstensi ini disebut **Generalized Linear Models** atau **GLM** singkatnya.
+Sepanjang bab ini, saya akan menggunakan nama GLM untuk kerangka umum dan model khusus dari kerangka itu.
+Konsep inti dari setiap GLM adalah:
+Pertahankan jumlah tertimbang dari fitur, tetapi izinkan distribusi hasil non-Gaussian dan hubungkan rata-rata yang diharapkan dari distribusi ini dan jumlah tertimbang melalui fungsi yang mungkin nonlinier.
+Misalnya, logistic regression model mengasumsikan distribusi Bernoulli untuk hasil dan menghubungkan rata-rata yang diharapkan dan jumlah tertimbang menggunakan fungsi logistik.
 
-The GLM mathematically links the weighted sum of the features with the mean value of the assumed distribution using the link function g, which can be chosen flexibly depending on the type of outcome. 
+GLM secara matematis menghubungkan jumlah bobot fitur dengan nilai rata-rata dari distribusi yang diasumsikan menggunakan fungsi tautan g, yang dapat dipilih secara fleksibel tergantung pada jenis hasil.
 
 $$g(E_Y(y|x))=\beta_0+\beta_1{}x_{1}+\ldots{}\beta_p{}x_{p}$$
 
-GLMs consist of three components:
-The link function g, the weighted sum $X^T\beta$ (sometimes called linear predictor) and a probability distribution from the exponential family that defines $E_Y$.
+GLM terdiri dari tiga komponen:
+Fungsi tautan g, jumlah bobot $X^T\beta$ (kadang-kadang disebut prediktor linier) dan distribusi probabilitas dari keluarga eksponensial yang mendefinisikan $E_Y$.
 
-The exponential family is a set of distributions that can be written with the same (parameterized) formula that includes an exponent, the mean and variance of the distribution and some other parameters.
-I will not go into the mathematical details because this is a very big universe of its own that I do not want to enter.
-Wikipedia has a neat [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
-Any distribution from this list can be chosen for your GLM.
-Based on the type of the outcome you want to predict, choose a suitable distribution.
-Is the outcome a count of something (e.g. number of children living in a household)?
-Then the Poisson distribution could be a good choice.
-Is the outcome always positive (e.g. time between two events)?
-Then the exponential distribution could be a good choice.
+Keluarga eksponensial adalah himpunan distribusi yang dapat ditulis dengan rumus yang sama (berparameter) yang mencakup eksponen, mean dan varians dari distribusi dan beberapa parameter lainnya.
+Saya tidak akan membahas detail matematika karena ini adalah alam semesta yang sangat besar yang tidak ingin saya masuki.
+Wikipedia memiliki [daftar distribusi yang rapi dari keluarga eksponensial](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions).
+Distribusi apa pun dari daftar ini dapat dipilih untuk GLM Anda.
+Berdasarkan jenis hasil yang ingin Anda prediksi, pilih distribusi yang sesuai.
+Apakah hasilnya menghitung sesuatu (misalnya jumlah anak yang tinggal di rumah tangga)?
+Maka distribusi Poisson bisa menjadi pilihan yang baik.
+Apakah hasilnya selalu positif (misalnya waktu antara dua peristiwa)?
+Maka distribusi eksponensial bisa menjadi pilihan yang baik.
 
+Mari kita pertimbangkan model linier klasik sebagai kasus khusus dari GLM.
+Fungsi tautan untuk distribusi Gaussian dalam model linier klasik hanyalah fungsi identitas.
+Distribusi Gaussian diparameterisasi oleh mean dan parameter varians.
+Rata-rata menggambarkan nilai yang kita harapkan rata-rata dan varians menggambarkan seberapa besar nilai bervariasi di sekitar rata-rata ini.
+Dalam model linier, fungsi tautan menghubungkan jumlah bobot fitur dengan rata-rata distribusi Gaussian.
 
-Let us consider the classic linear model as a special case of a GLM.
-The link function for the Gaussian distribution in the classic linear model is simply the identity function.
-The Gaussian distribution is parameterized by the mean and the variance parameters.
-The mean describes the value that we expect on average and the variance describes how much the values vary around this mean.
-In the linear model, the link function links the weighted sum of the features to the mean of the Gaussian distribution.
-
-Under the GLM framework, this concept generalizes to any distribution (from the exponential family) and arbitrary link functions.
-If y is a count of something, such as the number of coffees someone drinks on a certain day, we could model it with a GLM with a Poisson distribution and the natural logarithm as the link function:
+Di bawah kerangka kerja GLM, konsep ini digeneralisasikan ke distribusi apa pun (dari keluarga eksponensial) dan fungsi tautan arbitrer.
+Jika y adalah hitungan sesuatu, seperti jumlah kopi yang diminum seseorang pada hari tertentu, kita dapat memodelkannya dengan GLM dengan distribusi Poisson dan logaritma natural sebagai fungsi tautan:
 
 $$ln(E_Y(y|x))=x^{T}\beta$$
 
-The logistic regression model is also a GLM that assumes a Bernoulli distribution and uses the logit function as the link function.
-The mean of the binomial distribution used in logistic regression is the probability that y is 1.
+Model logistic regression juga merupakan GLM yang mengasumsikan distribusi Bernoulli dan menggunakan fungsi logit sebagai fungsi link.
+Rerata distribusi binomial yang digunakan dalam logistic regression adalah probabilitas bahwa y adalah 1.
 
 $$x^{T}\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
 
-And if we solve this equation to have P(y=1) on one side, we get the logistic regression formula:
+Dan jika kita memecahkan persamaan ini untuk memiliki P(y=1) di satu sisi, kita mendapatkan rumus logistic regression:
 
 $$P(y=1)=\frac{1}{1+exp(-x^{T}\beta)}$$
 
-Each distribution from the exponential family has a canonical link function that can be derived mathematically from the distribution.
-The GLM framework makes it possible to choose the link function independently of the distribution.
-How to choose the right link function?
-There is no perfect recipe. 
-You take into account knowledge about the distribution of your target, but also theoretical considerations and how well the model fits your actual data.
-For some distributions the canonical link function can lead to values that are invalid for that distribution.
-In the case of the exponential distribution, the canonical link function is the negative inverse, which can lead to negative predictions that are outside the domain of the exponential distribution.
-Since you can choose any link function, the simple solution is to choose another function that respects the domain of the distribution.
+Setiap distribusi dari keluarga eksponensial memiliki fungsi tautan kanonik yang dapat diturunkan secara matematis dari distribusi tersebut.
+Kerangka kerja GLM memungkinkan untuk memilih fungsi tautan secara independen dari distribusi.
+Bagaimana cara memilih fungsi tautan yang tepat?
+Tidak ada resep yang sempurna.
+Anda memperhitungkan pengetahuan akun tentang distribusi target Anda, tetapi juga pertimbangan teoritis dan seberapa baik model sesuai dengan data Anda yang sebenarnya.
+Untuk beberapa distribusi, fungsi tautan kanonik dapat menghasilkan nilai yang tidak valid untuk distribusi tersebut.
+Dalam kasus distribusi eksponensial, fungsi tautan kanonik adalah kebalikan negatif, yang dapat menyebabkan prediksi negatif yang berada di luar domain distribusi eksponensial.
+Karena Anda dapat memilih fungsi tautan apa pun, solusi sederhananya adalah memilih fungsi lain yang menghormati domain distribusi.
 
-**Examples**
+**Contoh**
+Saya telah mensimulasikan kumpulan data tentang perilaku minum kopi untuk menyoroti perlunya GLM.
+Misalkan Anda telah mengumpulkan data tentang perilaku minum kopi Anda sehari-hari.
+Jika Anda tidak suka kopi, berpura-puralah tentang teh.
+Seiring dengan jumlah cangkir, Anda mencatat tingkat stres Anda saat ini pada skala 1 sampai 10, seberapa baik Anda tidur malam sebelumnya pada skala 1 sampai 10 dan apakah Anda harus bekerja pada hari itu.
+Tujuannya adalah untuk memprediksi jumlah kopi yang diberikan fitur stres, tidur dan bekerja.
+Saya mensimulasikan data selama 200 hari.
+Stres dan tidur digambar secara seragam antara 1 dan 10 dan pekerjaan ya/tidak digambar dengan peluang 50/50 (sungguh hidup!).
+Untuk setiap hari, jumlah kopi kemudian diambil dari distribusi Poisson, memodelkan intensitas $\lambda$ (yang juga merupakan nilai yang diharapkan dari distribusi Poisson) sebagai fungsi dari fitur tidur, stres, dan kerja.
+Anda bisa menebak kemana arah cerita ini:
+*"Hei, mari kita memodelkan data ini dengan model linier ... Oh tidak berhasil ... Mari kita coba GLM dengan distribusi Poisson ... SURPRISE! Sekarang berhasil!".*
+Saya harap saya tidak merusak cerita terlalu banyak untuk Anda.
 
-I have simulated a dataset on coffee drinking behavior to highlight the need for GLMs.
-Suppose you have collected data about your daily coffee drinking behavior.
-If you do not like coffee, pretend it is about tea.
-Along with number of cups, you record your current stress level on a scale of 1 to 10, how well you slept the night before on a scale of 1 to 10 and whether you had to work on that day.
-The goal is to predict the number of coffees given the features stress, sleep and work.
-I simulated data for 200 days.
-Stress and sleep were drawn uniformly between 1 and 10 and work yes/no was drawn with a 50/50 chance (what a life!). 
-For each day, the number of coffees was then drawn from a Poisson distribution, modelling the intensity $\lambda$ (which is also the expected value of the Poisson distribution) as a function of the features sleep, stress and work.
-You can guess where this story will lead:
-*"Hey, let us model this data with a linear model ... Oh it does not work ... Let us try a GLM with Poisson distribution ... SURPRISE! Now it works!".*
-I hope I did not spoil the story too much for you.
-
-Let us look at the distribution of the target variable, the number of coffees on a given day:
+Mari kita lihat distribusi variabel target, jumlah kopi pada hari tertentu:
 
 ```{r poisson-data, fig.cap = "Simulated distribution of number of daily coffees for 200 days."}
 # simulate data where the normal linear model fails.
@@ -193,11 +190,11 @@ ggplot(tab) +
   scale_y_continuous("Number of days")
 ```
 
-On `r tab[1,2]` of the `r n` days you had no coffee at all and on the most extreme day you had `r tab[nrow(tab),1]`.
-Let us naively use a linear model to predict the number of coffees using sleep level, stress level and work yes/no as features.
-What can go wrong when we falsely assume a Gaussian distribution?
-A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights. 
-A more obvious problem is that the predictions do not match the "allowed" domain of the true outcome, as the following figure shows.
+Pada `r tab[1,2]` dari `r n` hari Anda tidak minum kopi sama sekali dan pada hari yang paling ekstrem Anda memiliki `r tab[nrow(tab),1]`.
+Mari kita secara naif menggunakan model linier untuk memprediksi jumlah kopi menggunakan tingkat tidur, tingkat stres dan bekerja ya/tidak sebagai fitur.
+Apa yang bisa salah ketika kita salah mengasumsikan distribusi Gaussian?
+Asumsi yang salah dapat membuat estimasi menjadi tidak valid, terutama confidence intervals dari bobot.
+Masalah yang lebih jelas adalah bahwa prediksi tidak cocok dengan domain "diizinkan" dari hasil sebenarnya, seperti yang ditunjukkan gambar berikut.
 
 ```{r failing-linear-model, fig.cap = "Predicted number of coffees dependent on stress, sleep and work. The linear model predicts negative values."}
 mod.gaus = glm(y ~ ., data = df, x = TRUE)
@@ -208,15 +205,15 @@ ggplot(pred.gauss) +
   scale_y_continuous("Frequency")
 ```
 
-The linear model does not make sense, because it predicts negative number of coffees.
-This problem can be solved with Generalized Linear Models (GLMs).
-We can change the link function and the assumed distribution. 
-One possibility is to keep the Gaussian distribution and use a link function that always leads to positive predictions such as the log-link (the inverse is the exp-function) instead of the identity function.
-Even better: 
-We choose a distribution that corresponds to the data generating process and an appropriate link function. 
-Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as link function. 
-In this case, the data was even generated with the Poisson distribution, so the Poisson GLM is the perfect choice.
-The fitted Poisson GLM leads to the following distribution of predicted values:
+Model linier tidak masuk akal, karena memprediksi jumlah kopi negatif.
+Masalah ini dapat diselesaikan dengan Generalized Linear Models (GLMs).
+Kita dapat mengubah fungsi tautan dan distribusi yang diasumsikan.
+Salah satu kemungkinan adalah menjaga distribusi Gaussian dan menggunakan fungsi tautan yang selalu mengarah pada prediksi positif seperti tautan log (kebalikannya adalah fungsi exp) alih-alih fungsi identitas.
+Bahkan lebih baik:
+Kami memilih distribusi yang sesuai dengan proses pembuatan data dan fungsi tautan yang sesuai.
+Karena hasilnya adalah hitungan, distribusi Poisson adalah pilihan alami, bersama dengan logaritma sebagai fungsi tautan.
+Dalam hal ini, data bahkan dihasilkan dengan distribusi Poisson, sehingga GLM Poisson adalah pilihan yang tepat.
+GLM Poisson yang dipasang mengarah ke distribusi nilai prediksi berikut:
 
 ```{r linear-model-positive, fig.cap = "Predicted number of coffees dependent on stress, sleep and work. The GLM with Poisson assumption and log link is an appropriate model for this dataset."}
 mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson(link = "log"))
@@ -227,22 +224,22 @@ ggplot(pred.pois)  +
   scale_y_continuous("Frequency")
 ```
 
-No negative amounts of coffees, looks much better now.
+Tidak ada jumlah negatif kopi, terlihat jauh lebih baik sekarang.
 
-**Interpretation of GLM weights**
+**Interpretasi bobot GLM**
 
-The assumed distribution together with the link function determines how the estimated feature weights are interpreted.
-In the coffee count example, I used a GLM with Poisson distribution and log link, which implies the following relationship between the features and the expected outcome.
+Distribusi yang diasumsikan bersama dengan fungsi tautan menentukan bagaimana perkiraan bobot fitur diinterpretasikan.
+Dalam contoh hitungan kopi, saya menggunakan GLM dengan distribusi Poisson dan tautan log, yang menyiratkan hubungan berikut antara fitur dan hasil yang diharapkan.
 
 $$ln(E(\text{coffees}|\text{stress},\text{sleep},\text{work}))=\beta_0+\beta_{\text{stress}}x_{\text{stress}}+\beta_{\text{sleep}}x_{\text{sleep}}+\beta_{\text{work}}x_{\text{work}}$$
 
-To interpret the weights we invert the link function so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome. 
+Untuk menginterpretasikan bobot, kami membalikkan fungsi tautan sehingga kami dapat menginterpretasikan efek fitur pada hasil yang diharapkan dan bukan pada logaritma dari hasil yang diharapkan.
 
 $$E(\text{coffees}|\text{stress},\text{sleep},\text{work})=exp(\beta_0+\beta_{\text{stress}}x_{\text{stress}}+\beta_{\text{sleep}}x_{\text{sleep}}+\beta_{\text{work}}x_{\text{work}})$$
 
-Since all the weights are in the exponential function, the effect interpretation is not additive, but multiplicative, because exp(a + b) is exp(a) times exp(b).
-The last ingredient for the interpretation is the actual weights of the toy example.
-The following table lists the estimated weights and exp(weights) together with the 95% confidence interval:
+Karena semua bobot berada dalam fungsi eksponensial, interpretasi efek bukanlah aditif, tetapi perkalian, karena exp(a + b) adalah exp(a) kali exp(b).
+Bahan terakhir untuk interpretasi adalah bobot sebenarnya dari contoh mainan.
+Tabel berikut mencantumkan perkiraan bobot dan exp(bobot) bersama dengan confidence intervals 95%:
 
 ```{r poisson-model-params}
 cc = data.frame(summary(mod.pois)$coefficients)
@@ -255,37 +252,37 @@ cc$ci = sprintf("%.2f [%.2f, %.2f]", cc$exp.beta, cc$`2.5 %`, cc$`97.5 %`)
 kable(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2)
 ```
 
-Increasing the stress level by one point multiplies the expected number of coffees by the factor `r round(cc["stress", "exp.beta"], 2)`. 
-Increasing the sleep quality by one point multiplies the expected number of coffees by the factor `r round(cc["sleep", "exp.beta"], 2)`.
-The predicted number of coffees on a work day is on average `r round(cc["workYES", "exp.beta"], 2)` times the number of coffees on a day off.
-In summary, the more stress, the less sleep and the more work, the more coffee is consumed.
+Meningkatkan tingkat stres dengan satu poin mengalikan jumlah kopi yang diharapkan dengan faktor `r round(cc["stress", "exp.beta"], 2)`.
+Meningkatkan kualitas tidur satu poin mengalikan jumlah kopi yang diharapkan dengan faktor `r round(cc["sleep", "exp.beta"], 2)`.
+Jumlah kopi yang diprediksi pada hari kerja rata-rata adalah `r round(cc["workYES", "exp.beta"], 2)` kali jumlah kopi pada hari libur.
+Singkatnya, semakin banyak stres, semakin sedikit tidur dan semakin banyak bekerja, semakin banyak kopi yang dikonsumsi.
 
-In this section you learned a little about Generalized Linear Models that are useful when the target does not follow a Gaussian distribution. 
-Next, we look at how to integrate interactions between two features into the linear regression model.
+Pada bagian ini Anda belajar sedikit tentang Generalized Linear Models yang berguna ketika target tidak mengikuti distribusi Gaussian.
+Selanjutnya, kita melihat bagaimana mengintegrasikan interaksi antara dua fitur ke dalam model linear regression.
 
 ### Interactions {#lm-interact}
 
-The linear regression model assumes that the effect of one feature is the same regardless of the values of the other features (= no interactions).
-But often there are interactions in the data.
-To predict the [number of bicycles](#bike-data) rented, there may be an interaction between temperature and whether it is a working day or not.
-Perhaps, when people have to work, the temperature does not influence the number of rented bikes much, because people will ride the rented bike to work no matter what happens.
-On days off, many people ride for pleasure, but only when it is warm enough.
-When it comes to rental bicycles, you might expect an interaction between temperature and working day.
+Model linear regression mengasumsikan bahwa efek dari satu fitur adalah sama terlepas dari nilai fitur lainnya (= tidak ada interaksi).
+Namun seringkali ada interaksi dalam data.
+Untuk memprediksi [jumlah sepeda](#bike-data) yang disewa, mungkin ada interaksi antara suhu dan hari kerja atau tidak.
+Mungkin, ketika orang harus bekerja, suhu tidak terlalu mempengaruhi jumlah sepeda sewaan, karena orang akan mengendarai sepeda sewaan untuk bekerja apa pun yang terjadi.
+Pada hari libur, banyak orang bersepeda untuk bersenang-senang, tetapi hanya jika cuaca cukup hangat.
+Dalam hal penyewaan sepeda, Anda mungkin mengharapkan interaksi antara suhu dan hari kerja.
 
-How can we get the linear model to include interactions?
-Before you fit the linear model, add a column to the feature matrix that represents the interaction between the features and fit the model as usual.
-The solution is elegant in a way, since it does not require any change of the linear model, only additional columns in the data.
-In the working day and temperature example, we would add a new feature that has zeros for no-work days, otherwise it has the value of the temperature feature, assuming that working day is the reference category.
-Suppose our data looks like this:
+Bagaimana kita bisa mendapatkan model linier untuk memasukkan interaksi?
+Sebelum Anda menyesuaikan model linier, tambahkan kolom ke matriks fitur yang mewakili interaksi antara fitur dan sesuaikan model seperti biasa.
+Solusinya elegan, karena tidak memerlukan perubahan model linier, hanya kolom tambahan dalam data.
+Dalam contoh hari kerja dan suhu, kami akan menambahkan fitur baru yang memiliki nol untuk hari tidak bekerja, selain itu memiliki nilai fitur suhu, dengan asumsi bahwa hari kerja adalah kategori referensi.
+Misalkan data kita terlihat seperti ini:
 
 ```{r data-frame}
 x = data.frame(work = c("Y", "N", "N", "Y"), temp = c(25, 12, 30, 5))
 knitr::kable(x)
 ```
 
-The data matrix used by the linear model looks slightly different.
-The following table shows what the data prepared for the model looks like if we do not specify any interactions.
-Normally, this transformation is performed automatically by any statistical software.
+Matriks data yang digunakan oleh model linier terlihat sedikit berbeda.
+Tabel berikut menunjukkan seperti apa data yang disiapkan untuk model jika kita tidak menentukan interaksi apa pun.
+Biasanya, transformasi ini dilakukan secara otomatis oleh perangkat lunak statistik apa pun.
 
 ```{r data-frame-lm-no-interaction}
 mod = lm(1:4 ~ ., data = x)
@@ -294,11 +291,11 @@ colnames(model.tab)[1] = "Intercept"
 knitr::kable(model.tab)
 ```
 
-The first column is the intercept term.
-The second column encodes the categorical feature, with 0 for the reference category and 1 for the other.
-The third column contains the temperature.
+Kolom pertama adalah istilah intersep.
+Kolom kedua mengkodekan fitur kategoris, dengan 0 untuk kategori referensi dan 1 untuk yang lain.
+Kolom ketiga berisi suhu.
 
-If we want the linear model to consider the interaction between temperature and the workingday feature, we have to add a column for the interaction:
+Jika kita ingin model linier mempertimbangkan interaksi antara suhu dan fitur hari kerja, kita harus menambahkan kolom untuk interaksi:
 
 ```{r data-frame-lm}
 mod = lm(1:4 ~ work * temp, data = x)
@@ -307,23 +304,23 @@ colnames(model.tab)[1] = "Intercept"
 knitr::kable(model.tab)
 ```
 
-The new column "workY.temp" captures the interaction between the features working day (work) and temperature (temp).
-This new feature column is zero for an instance if the work feature is at the reference category ("N" for no working day), otherwise it assumes the values of the instances temperature feature.
-With this type of encoding, the linear model can learn a different linear effect of temperature for both types of days.
-This is the interaction effect between the two features.
-Without an interaction term, the combined effect of a categorical and a numerical feature can be described by a line that is vertically shifted for the different categories.
-If we include the interaction, we allow the effect of the numerical features (the slope) to have a different value in each category.
+Kolom baru "workY.temp" menangkap interaksi antara fitur hari kerja (kerja) dan suhu (temp).
+Kolom fitur baru ini adalah nol untuk instans jika fitur kerja berada pada kategori referensi ("N" tanpa hari kerja), jika tidak, ia mengasumsikan nilai fitur suhu instans.
+Dengan jenis pengkodean ini, model linier dapat mempelajari efek linier yang berbeda dari suhu untuk kedua jenis hari.
+Ini adalah efek interaksi antara dua fitur.
+Tanpa istilah interaksi, efek gabungan dari fitur kategoris dan numerik dapat dijelaskan dengan garis yang digeser secara vertikal untuk kategori yang berbeda.
+Jika kami memasukkan interaksi, kami mengizinkan efek fitur numerik (kemiringan) memiliki nilai yang berbeda di setiap kategori.
 
-The interaction of two categorical features works similarly.
-We create additional features which represent combinations of categories. 
-Here is some artificial data containing working day (work) and a categorical weather feature (wthr): 
+Interaksi dua fitur kategoris bekerja dengan cara yang sama.
+Kami membuat fitur tambahan yang mewakili kombinasi kategori.
+Berikut adalah beberapa data buatan yang berisi hari kerja (kerja) dan fitur cuaca kategoris (wthr):
 
 ```{r data-frame-lm-cat}
 x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("2", "0", "1", "2"))
 knitr::kable(x)
 ```
 
-Next, we include interaction terms: 
+Selanjutnya, kami menyertakan istilah interaksi:
 
 ```{r data-frame-lm-cat2}
 mod = lm(1:4 ~ work * wthr, data = x)
@@ -332,24 +329,24 @@ colnames(model.tab)[1] = c("Intercept")
 knitr::kable(model.tab)
 ```
 
-The first column serves to estimate the intercept.
-The second column is the encoded work feature.
-Columns three and four are for the weather feature, which requires two columns because you need two weights to capture the effect for three categories, one of which is the reference category.
-The rest of the columns capture the interactions.
-For each category of both features (except for the reference categories), we create a new feature column that is 1 if both features have a certain category, otherwise 0.
+Kolom pertama berfungsi untuk memperkirakan intersep.
+Kolom kedua adalah fitur kerja yang disandikan.
+Kolom tiga dan empat adalah untuk fitur cuaca, yang memerlukan dua kolom karena Anda memerlukan dua bobot untuk menangkap efek untuk tiga kategori, salah satunya adalah kategori referensi.
+Kolom lainnya menangkap interaksi.
+Untuk setiap kategori dari kedua fitur (kecuali untuk kategori referensi), kami membuat kolom fitur baru yaitu 1 jika kedua fitur memiliki kategori tertentu, jika tidak 0.
 
-For two numerical features, the interaction column is even easier to construct: 
-We simply multiply both numerical features.
+Untuk dua fitur numerik, kolom interaksi bahkan lebih mudah dibuat:
+Kami hanya mengalikan kedua fitur numerik.
 
-There are approaches to automatically detect and add interaction terms. 
-One of them can be found in the [RuleFit chapter](#rulefit).
-The RuleFit algorithm first mines interaction terms and then estimates a linear regression model including interactions.
+Ada pendekatan untuk mendeteksi dan menambahkan istilah interaksi secara otomatis.
+Salah satunya dapat ditemukan di [bab RuleFit](#rulefit).
+Algoritme RuleFit pertama-tama menambang istilah interaksi dan kemudian memperkirakan model linear regression termasuk interaksi.
 
-**Example**
+**Contoh**
 
-Let us return to the [bike rental prediction task](#bike-data) which we have already modeled in the [linear model chapter](#limo).
-This time, we additionally consider an interaction between the temperature and the working day feature.
-This results in the following estimated weights and confidence intervals.
+Mari kita kembali ke [tugas prediksi sewa sepeda](#bike-data) yang telah kita modelkan di [bab model linier](#limo).
+Kali ini, kami juga mempertimbangkan interaksi antara suhu dan fitur hari kerja.
+Ini menghasilkan perkiraan bobot dan confidence intervals berikut.
 
 ```{r example-lm-interaction}
 data(bike)
@@ -368,24 +365,24 @@ rownames(lm_summary_print)[rownames(lm_summary_print) == "weathersitRAIN/SNOW/ST
 kable(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight', 'Std. Error', "2.5%","97.5%"))
 ```
 
-The additional interaction effect is negative (`r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`) and differs significantly from zero, as shown by the 95% confidence interval, which does not include zero.
-By the way, the data are not iid, because days that are close to each other are not independent from each other.
-Confidence intervals might be misleading, just take it with a grain of salt.
-The interaction term changes the interpretation of the weights of the involved features.
-Does the temperature have a negative effect given it is a working day?
-The answer is no, even if the table suggests it to an untrained user.
-We cannot interpret the "workingdayWORKING DAY:temp" interaction weight in isolation, since the interpretation would be:
-"While leaving all other feature values unchanged, increasing the interaction effect of temperature for working day decreases the predicted number of bikes."
-But the interaction effect only adds to the main effect of the temperature.
-Suppose it is a working day and we want to know what would happen if the temperature were 1 degree warmer today.
-Then we need to sum both the weights for "temp" and "workingdayWORKING DAY:temp" to determine how much the estimate increases.
+Efek interaksi tambahan negatif (`r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`) dan berbeda secara signifikan dari nol, seperti yang ditunjukkan oleh confidence intervals 95%, yang tidak tidak termasuk nol.
+Omong-omong, datanya tidak iid, karena hari-hari yang dekat satu sama lain tidak independen satu sama lain.
+confidence intervals mungkin menyesatkan, ambil saja dengan sebutir garam.
+Istilah interaksi mengubah interpretasi bobot fitur yang terlibat.
+Apakah suhu memiliki efek negatif mengingat ini adalah hari kerja?
+Jawabannya tidak, bahkan jika tabel menyarankannya kepada pengguna yang tidak terlatih.
+Kami tidak dapat menginterpretasikan bobot interaksi "workingdayWORKING DAY:temp" secara terpisah, karena interpretasinya adalah:
+"Sambil membiarkan semua nilai fitur lainnya tidak berubah, meningkatkan efek interaksi suhu untuk hari kerja akan menurunkan jumlah sepeda yang diprediksi."
+Tetapi efek interaksi hanya menambah efek utama suhu.
+Misalkan ini adalah hari kerja dan kita ingin tahu apa yang akan terjadi jika suhu 1 derajat lebih hangat hari ini.
+Kemudian kita perlu menjumlahkan bobot untuk "temp" dan "workingdayWORKING DAY:temp" untuk menentukan seberapa besar peningkatan perkiraan.
 
-It is easier to understand the interaction visually. 
-By introducing an interaction term between a categorical and a numerical feature, we get two slopes for the temperature instead of one.
-The temperature slope for days on which people do not have to work ('NO WORKING DAY') can be read directly from the table (`r round(lm_summary_print['temp','Estimate'], 1)`).
-The temperature slope for days on which people have to work ('WORKING DAY') is the sum of both temperature weights (`r round(lm_summary_print['temp','Estimate'], 1)`  `r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`).
-The intercept of the 'NO WORKING DAY'-line at temperature = 0 is determined by the intercept term of the linear model (`r round(lm_summary_print['(Intercept)','Estimate'], 1)`).
-The intercept of the 'WORKING DAY'-line at temperature = 0 is determined by the intercept term + the effect of working day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)`).
+Lebih mudah untuk memahami interaksi secara visual.
+Dengan memperkenalkan istilah interaksi antara fitur kategoris dan numerik, kami mendapatkan dua kemiringan untuk suhu, bukan satu.
+Kemiringan suhu untuk hari-hari di mana orang tidak harus bekerja ('NO WORKING DAY') dapat dibaca langsung dari tabel (`r round(lm_summary_print['temp','Estimate'], 1)`).
+Kemiringan suhu untuk hari-hari di mana orang harus bekerja ('WORKING DAY') adalah jumlah dari kedua bobot suhu (`r round(lm_summary_print['temp','Estimate'], 1)`  `r round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY:temp','Estimate'], 1)`).
+Perpotongan garis 'NO WORKING DAY' pada suhu = 0 ditentukan oleh suku intersep dari model linier (`r round(lm_summary_print['(Intercept)','Estimate'], 1)`).
+Intersep garis 'WORKING DAY' pada suhu = 0 ditentukan oleh istilah intersep + efek hari kerja (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)`).
 
 ```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bikes for a linear model. Effectively, we get two slopes for the temperature, one for each category of the working day feature."}
 interactions::interact_plot(mod, pred = "temp", modx = "workingday")
@@ -394,22 +391,22 @@ interactions::interact_plot(mod, pred = "temp", modx = "workingday")
 ### Nonlinear Effects - GAMs {#gam}
 
 
-**The world is not linear.**
-Linearity in linear models means that no matter what value an instance has in a particular feature, increasing the value by one unit always has the same effect on the predicted outcome.
-Is it reasonable to assume that increasing the temperature by one degree at 10 degrees Celsius has the same effect on the number of rental bikes as increasing the temperature when it already has 40 degrees?
-Intuitively, one expects that increasing the temperature from 10 to 11 degrees Celsius has a positive effect on bicycle rentals and from 40 to 41 a negative effect, which is also the case, as you will see, in many examples throughout the book.
-The temperature feature has a linear, positive effect on the number of rental bikes, but at some point it flattens out and even has a negative effect at high temperatures.
-The linear model does not care, it will dutifully find the best linear plane (by minimizing the Euclidean distance).
+**Dunia ini tidak linier.**
+Linearitas dalam model linier berarti bahwa tidak peduli berapa nilai sebuah instance dalam fitur tertentu, peningkatan nilai satu unit selalu memiliki efek yang sama pada hasil yang diprediksi.
+Apakah masuk akal untuk berasumsi bahwa peningkatan suhu satu derajat pada 10 derajat Celcius memiliki efek yang sama pada jumlah sepeda sewaan dengan peningkatan suhu ketika sudah mencapai 40 derajat?
+Secara intuitif, orang berharap bahwa peningkatan suhu dari 10 menjadi 11 derajat Celcius memiliki efek positif pada persewaan sepeda dan dari 40 menjadi 41 efek negatif, yang juga terjadi, seperti yang akan Anda lihat, dalam banyak contoh di seluruh buku ini.
+Fitur suhu memiliki efek positif linier pada jumlah sepeda sewaan, tetapi di beberapa titik mendatar dan bahkan memiliki efek negatif pada suhu tinggi.
+Model linier tidak peduli, ia akan dengan patuh menemukan bidang linier terbaik (dengan meminimalkan jarak Euclidean).
 
-You can model nonlinear relationships using one of the following techniques:
+Anda dapat memodelkan hubungan nonlinier menggunakan salah satu teknik berikut:
 
-- Simple transformation of the feature (e.g. logarithm)
-- Categorization of the feature
-- Generalized Additive Models (GAMs)
+- Transformasi sederhana dari fitur (misalnya logaritma)
+- Kategorisasi fitur
+- Generalized Additive Models (GAM)
 
-Before I go into the details of each method, let us start with an example that illustrates all three of them.
-I took the [bike rental dataset](#bike-data) and trained a linear model with only the temperature feature to predict the number of rental bikes.
-The following figure shows the estimated slope with: the standard linear model, a linear model with transformed temperature (logarithm), a linear model with temperature treated as categorical feature and using regression splines (GAM).
+Sebelum saya masuk ke rincian masing-masing metode, mari kita mulai dengan contoh yang menggambarkan ketiganya.
+Saya mengambil [dataset sewa sepeda](#bike-data) dan melatih model linier dengan hanya fitur suhu untuk memprediksi jumlah sepeda sewaan.
+Gambar berikut menunjukkan perkiraan kemiringan dengan: model linier standar, model linier dengan transformasi suhu (logaritma), model linier dengan suhu yang diperlakukan sebagai fitur kategoris dan menggunakan regresi splines (GAM).
 
 ```{r nonlinear-effects, fig.cap = "Predicting the number of rented bicycles using only the temperature feature. A linear model (top left) does not fit the data well. One solution is to transform the feature with e.g. the logarithm (top right), categorize it (bottom left), which is usually a bad decision, or use Generalized Additive Models that can automatically fit a smooth curve for temperature (bottom right)."}
 mod.simpel = lm(cnt ~ temp, data = bike)
@@ -447,59 +444,58 @@ ggplot(bike.plt) +
 ```
 
 
-**Feature transformation**
+**Transformasi fitur**
 
-Often the logarithm of the feature is used as a transformation.
-Using the logarithm indicates that every 10-fold temperature increase has the same linear effect on the number of bikes, so changing from 1 degree Celsius to 10 degrees Celsius has the same effect as changing from 0.1 to 1 (sounds wrong).
-Other examples for feature transformations are the square root, the square function and the exponential function.
-Using a feature transformation means that you replace the column of this feature in the data with a function of the feature, such as the logarithm, and fit the linear model as usual.
-Some statistical programs also allow you to specify transformations in the call of the linear model.
-You can be creative when you transform the feature.
-The interpretation of the feature changes according to the selected transformation. 
-If you use a log transformation, the interpretation in a linear model becomes:
-"If the logarithm of the feature is increased by one, the prediction is increased by the corresponding weight."
-When you use a GLM with a link function that is not the identity function, then the interpretation gets more complicated, because you have to incorporate both transformations into the interpretation (except when they cancel each other out, like log and exp, then the interpretation gets easier).
+Seringkali logaritma fitur digunakan sebagai transformasi.
+Menggunakan logaritma menunjukkan bahwa setiap kenaikan suhu 10 kali lipat memiliki efek linier yang sama pada jumlah sepeda, jadi perubahan dari 1 derajat Celcius ke 10 derajat Celcius memiliki efek yang sama dengan perubahan dari 0,1 ke 1 (kedengarannya salah).
+Contoh lain untuk transformasi fitur adalah akar kuadrat, fungsi kuadrat dan fungsi eksponensial.
+Menggunakan transformasi fitur berarti Anda mengganti kolom fitur ini dalam data dengan fungsi fitur, seperti logaritma, dan menyesuaikan model linier seperti biasa.
+Beberapa program statistik juga memungkinkan Anda untuk menentukan transformasi dalam panggilan model linier.
+Anda bisa menjadi kreatif saat mengubah fitur.
+Interpretasi fitur berubah sesuai dengan transformasi yang dipilih.
+Jika Anda menggunakan transformasi log, interpretasi dalam model linier menjadi:
+"Jika logaritma fitur bertambah satu, prediksi bertambah dengan bobot yang sesuai."
+Ketika Anda menggunakan GLM dengan fungsi tautan yang bukan fungsi identitas, maka interpretasinya menjadi lebih rumit, karena Anda harus memasukkan kedua transformasi ke dalam interpretasi (kecuali ketika mereka saling membatalkan, seperti log dan exp, maka interpretasinya menjadi lebih mudah).
 
-**Feature categorization**
+**Kategorisasi fitur**
 
-Another possibility to achieve a nonlinear effect is to discretize the feature; turn it into a categorical feature.
-For example, you could cut the temperature feature into 20 intervals with the levels [-10, -5), [-5, 0), ... and so on.
-When you use the categorized temperature instead of the continuous temperature, the linear model would estimate a step function because each level gets its own estimate.
-The problem with this approach is that it needs more data, it is more likely to overfit and it is unclear how to discretize the feature meaningfully (equidistant intervals or quantiles? how many intervals?).
-I would only use discretization if there is a very strong case for it.
-For example, to make the model comparable to another study.
+Kemungkinan lain untuk mencapai efek nonlinier adalah dengan mendiskritisasi fitur; mengubahnya menjadi fitur kategoris.
+Misalnya, Anda dapat memotong fitur suhu menjadi 20 interval dengan level [-10, -5), [-5, 0), ... dan seterusnya.
+Saat Anda menggunakan suhu yang dikategorikan dan bukan suhu kontinu, model linier akan memperkirakan fungsi langkah karena setiap tingkat mendapatkan perkiraannya sendiri.
+Masalah dengan pendekatan ini adalah bahwa ia membutuhkan lebih banyak data, lebih mungkin untuk overfit dan tidak jelas bagaimana mendiskritkan fitur secara bermakna (interval atau kuantil yang sama? berapa banyak interval?).
+Saya hanya akan menggunakan diskritisasi jika ada kasus yang sangat kuat untuk itu.
+Misalnya, untuk membuat model yang sebanding dengan penelitian lain.
 
-**Generalized Additive Models (GAMs)**
-
-Why not 'simply' allow the (generalized) linear model to learn nonlinear relationships?
-That is the motivation behind GAMs. 
-GAMs relax the restriction that the relationship must be a simple weighted sum, and instead assume that the outcome can be modeled by  a sum of arbitrary functions of each feature.
-Mathematically, the relationship in a GAM looks like this:
+**Generalized Additive Models (GAM)**
+Mengapa tidak 'hanya' mengizinkan model linier (umum) untuk mempelajari hubungan nonlinier?
+Itulah motivasi di balik GAM.
+GAM melonggarkan batasan bahwa hubungan harus berupa penjumlahan berbobot sederhana, dan sebaliknya berasumsi bahwa hasilnya dapat dimodelkan dengan jumlah fungsi arbitrer dari setiap fitur.
+Secara matematis, hubungan dalam GAM terlihat seperti ini:
 
 $$g(E_Y(y|x))=\beta_0+f_1(x_{1})+f_2(x_{2})+\ldots+f_p(x_{p})$$
 
-The formula is similar to the GLM formula with the difference that the linear term $\beta_j{}x_{j}$ is replaced by a more flexible function $f_j(x_{j})$.
-The core of a GAM is still a sum of feature effects, but you have the option to allow nonlinear relationships between some features and the output.
-Linear effects are also covered by the framework, because for features to be handled linearly, you can limit their $f_j(x_{j})$ only to take the form of $x_{j}\beta_j$.
+Rumusnya mirip dengan rumus GLM dengan perbedaan bahwa suku linier $\beta_j{}x_{j}$ diganti dengan fungsi yang lebih fleksibel $f_j(x_{j})$.
+Inti dari GAM masih merupakan gabungan dari efek fitur, tetapi Anda memiliki opsi untuk mengizinkan hubungan nonlinier antara beberapa fitur dan output.
+Efek linier juga dicakup oleh kerangka kerja, karena agar fitur ditangani secara linier, Anda dapat membatasi $f_j(x_{j})$ hanya untuk mengambil bentuk $x_{j}\beta_j$.
 
-The big question is how to learn nonlinear functions.
-The answer is called "splines" or "spline functions".
-Splines are functions that can be combined in order to approximate arbitrary functions.
-A bit like stacking Lego bricks to build something more complex.
-There is a confusing number of ways to define these spline functions.
-If you are interested in learning more about all the ways to define splines, I wish you good luck on your journey.
-I am not going to go into details here, I am just going to build an intuition.
-What personally helped me the most for understanding splines was to visualize the individual spline functions and to look into how the data matrix is modified.
-For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 4 columns, each representing a spline function.
-Usually you would have more spline functions, I only reduced the number for illustration purposes.
-The value for each instance of these new spline features depends on the instances' temperature values.
-Together with all linear effects, the GAM then also estimates these spline weights.
-GAMs also introduce a penalty term for the weights to keep them close to zero. 
-This effectively reduces the flexibility of the splines and reduces overfitting. 
-A smoothness parameter that is commonly used to control the flexibility of the curve is then tuned via cross-validation.
-Ignoring the penalty term, nonlinear modeling with splines is fancy feature engineering.
+Pertanyaan besarnya adalah bagaimana mempelajari fungsi nonlinier.
+Jawabannya disebut "splines" atau "fungsi spline".
+Splines adalah fungsi yang dapat digabungkan untuk mendekati fungsi arbitrer.
+Sedikit seperti menumpuk batu bata Lego untuk membangun sesuatu yang lebih kompleks.
+Ada sejumlah cara yang membingungkan untuk mendefinisikan fungsi spline ini.
+Jika Anda tertarik untuk mempelajari lebih lanjut tentang semua cara untuk mendefinisikan splines, semoga Anda beruntung dalam perjalanan Anda.
+Saya tidak akan membahas detailnya di sini, saya hanya akan membangun intuisi.
+Apa yang secara pribadi paling membantu saya untuk memahami splines adalah memvisualisasikan masing-masing fungsi spline dan melihat bagaimana matriks data dimodifikasi.
+Misalnya, untuk memodelkan suhu dengan splines, kami menghapus fitur suhu dari data dan menggantinya dengan, katakanlah, 4 kolom, masing-masing mewakili fungsi spline.
+Biasanya Anda akan memiliki lebih banyak fungsi spline, saya hanya mengurangi jumlahnya untuk tujuan ilustrasi.
+Nilai untuk setiap instans fitur spline baru ini bergantung pada nilai suhu instans.
+Bersama dengan semua efek linier, GAM kemudian juga memperkirakan bobot spline ini.
+GAM juga memperkenalkan istilah penalty untuk bobot agar tetap mendekati nol.
+Ini secara efektif mengurangi fleksibilitas splines dan mengurangi overfitting.
+Parameter kelancaran yang biasanya digunakan untuk mengontrol fleksibilitas kurva kemudian disetel melalui validasi silang.
+Mengabaikan istilah penalti, pemodelan nonlinier dengan splines adalah rekayasa fitur mewah.
 
-In the example where we are predicting the number of bicycles with a GAM using only the temperature, the model feature matrix looks like this:
+Dalam contoh di mana kami memprediksi jumlah sepeda dengan GAM hanya menggunakan suhu, matriks fitur model terlihat seperti ini:
 
 ```{r splines-df}
 # fit GAM again with less splines
@@ -507,9 +503,9 @@ mod.gam = gam(cnt ~ s(temp, k = 5), data = bike)
 kable(head(model.matrix(mod.gam)), digits = 2)
 ```
 
-Each row represents an individual instance from the data (one day).
-Each spline column contains the value of the spline function at the particular temperature values. 
-The following figure shows how these spline functions look like:
+Setiap baris mewakili contoh individual dari data (satu hari).
+Setiap kolom spline berisi nilai fungsi spline pada nilai suhu tertentu.
+Gambar berikut menunjukkan bagaimana fungsi spline ini terlihat:
 
 ```{r splines, fig.cap = "To smoothly model the temperature effect, we use 4 spline functions. Each temperature value is mapped to (here) 4 spline values. If an instance has a temperature of 30 °C, the value for the first spline feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7."}
 
@@ -522,115 +518,115 @@ ggplot(mm2) + geom_line(aes(x = rep(bike$temp, times = 4), y = value)) + facet_w
   scale_y_continuous("Value of spline feature")
 ```
 
-The GAM assigns weights to each temperature spline feature:
+GAM memberikan bobot untuk setiap fitur spline suhu:
 
 ```{r splines-weights}
 kable(coef(mod.gam), digits = 2, col.names = "weight")
 ```
 
-And the actual curve, which results from the sum of the spline functions weighted with the estimated weights, looks like this:
+Dan kurva sebenarnya, yang dihasilkan dari penjumlahan fungsi spline yang dibobot dengan bobot yang diperkirakan, terlihat seperti ini:
 
 ```{r splines-curve, fig.cap = "GAM feature effect of the temperature for predicting the number of rented bikes (temperature used as the only feature)."}
 plot(mod.gam)
 ```
 
 
-The interpretation of smooth effects requires a visual check of the fitted curve.
-Splines are usually centered around the mean prediction, so a point on the curve is the difference to the mean prediction.
-For example, at 0 degrees Celsius, the predicted number of bicycles is 3000 lower than the average prediction.
+Interpretasi efek halus memerlukan pemeriksaan visual dari kurva yang dipasang.
+Splines biasanya berpusat di sekitar prediksi rata-rata, jadi titik pada kurva adalah perbedaan dengan prediksi rata-rata.
+Misalnya, pada 0 derajat Celcius, jumlah sepeda yang diprediksi 3000 lebih rendah dari prediksi rata-rata.
 
 
 ### Advantages
 
-All these extensions of the linear model are a bit of a universe in themselves. 
-Whatever problems you face with linear models, **you will probably find an extension that fixes it**.
+Semua perluasan model linier ini adalah bagian dari alam semesta itu sendiri.
+Masalah apa pun yang Anda hadapi dengan model linier, **Anda mungkin akan menemukan ekstensi yang memperbaikinya**.
 
-Most methods have been used for decades.
-For example, GAMs are almost 30 years old. 
-Many researchers and practitioners from industry are very **experienced** with linear models and the methods are **accepted in many communities as status quo for modeling**.
+Sebagian besar metode telah digunakan selama beberapa dekade.
+Misalnya, usia GAM hampir 30 tahun.
+Banyak peneliti dan praktisi dari industri sangat **berpengalaman** dengan model linier dan metodenya **diterima di banyak komunitas sebagai status quo untuk pemodelan**.
 
-In addition to making predictions, you can use the models to **do inference**, draw conclusions about the data -- given the model assumptions are not violated.
-You get confidence intervals for weights, significance tests, prediction intervals and much more.
+Selain membuat prediksi, Anda dapat menggunakan model untuk **melakukan inferensi**, menarik kesimpulan tentang data -- mengingat asumsi model tidak dilanggar.
+Anda mendapatkan confidence intervals untuk bobot, uji signifikansi, interval prediksi, dan banyak lagi.
 
-Statistical software usually has really good interfaces to fit GLMs, GAMs and more special linear models.
+Perangkat lunak statistik biasanya memiliki antarmuka yang sangat bagus agar sesuai dengan GLM, GAM, dan model linier yang lebih khusus.
 
-The opacity of many machine learning models comes from 1) a lack of sparseness, which means that many features are used, 2) features that are treated in a nonlinear fashion, which means you need more than a single weight to describe the effect, and 3) the modeling of interactions between the features.
-Assuming that linear models are highly interpretable but often underfit reality, the extensions described in this chapter offer a good way to achieve a **smooth transition to more flexible models**, while preserving some of the interpretability.
+Opacity dari banyak model machine learning berasal dari 1) kurangnya sparseness, yang berarti banyak fitur yang digunakan, 2) fitur yang diperlakukan secara nonlinier, yang berarti Anda memerlukan lebih dari satu bobot untuk menggambarkan efeknya, dan 3) pemodelan interaksi antar fitur.
+Dengan asumsi bahwa model linier sangat dapat diinterpretasikan tetapi seringkali tidak sesuai dengan kenyataan, ekstensi yang dijelaskan dalam bab ini menawarkan cara yang baik untuk mencapai **transisi mulus ke model yang lebih fleksibel**, sambil mempertahankan beberapa interpretasi.
 
 ### Disadvantages
 
-As advantage I have said that linear models live in their own universe.
-The sheer **number of ways you can extend the simple linear model is overwhelming**, not just for beginners.
-Actually, there are multiple parallel universes, because many communities of researchers and practitioners have their own names for methods that do more or less the same thing, which can be very confusing.
+Sebagai keuntungan saya telah mengatakan bahwa model linier hidup di alam semesta mereka sendiri.
+**Banyaknya cara Anda dapat memperluas model linier sederhana sangat banyak**, tidak hanya untuk pemula.
+Sebenarnya, ada beberapa alam semesta paralel, karena banyak komunitas peneliti dan praktisi memiliki nama mereka sendiri untuk metode yang melakukan hal yang kurang lebih sama, yang bisa sangat membingungkan.
 
-Most modifications of the linear model make the model **less interpretable**.
-Any link function (in a GLM) that is not the identity function complicates the interpretation;
-interactions also complicate the interpretation;
-nonlinear feature effects are either less intuitive (like the log transformation) or can no longer be summarized by a single number (e.g. spline functions).
+Sebagian besar modifikasi model linier membuat model **kurang dapat diinterpretasikan**.
+Setiap fungsi tautan (dalam GLM) yang bukan merupakan fungsi identitas memperumit interpretasi;
+interaksi juga memperumit interpretasi;
+efek fitur nonlinier kurang intuitif (seperti transformasi log) atau tidak lagi dapat diringkas dengan satu angka (misalnya fungsi spline).
 
-GLMs, GAMs and so on **rely on assumptions** about the data generating process.
-If those are violated, the interpretation of the weights is no longer valid.
+GLM, GAM, dan sebagainya **bergantung pada asumsi** tentang proses pembuatan data.
+Jika itu dilanggar, interpretasi bobot tidak berlaku lagi.
 
-The performance of tree-based ensembles like the random forest or gradient tree boosting is in many cases better than the most sophisticated linear models.
-This is partly my own experience and partly observations from the winning models on platforms like kaggle.com.
+Kinerja ansambel berbasis pohon seperti random forest atau gradient tree boosting dalam banyak kasus lebih baik daripada model linier paling canggih.
+Ini sebagian adalah pengalaman saya sendiri dan sebagian pengamatan dari model pemenang di platform seperti kaggle.com.
 
 
 ### Software
 
-All examples in this chapter were created using the R language.
-For GAMs, the `gam` package was used, but there are many others.
-R has an incredible number of packages to extend linear regression models.
-Unsurpassed by any other analytics language, R is home to every conceivable extension of the linear regression model extension.
-You will find implementations of e.g. GAMs in Python (such as [pyGAM](https://github.com/dswah/pyGAM)), but these implementations are not as mature.
+Semua contoh dalam bab ini dibuat menggunakan bahasa R.
+Untuk GAM, paket `gam` digunakan, tetapi masih banyak lagi.
+R memiliki jumlah paket yang luar biasa untuk memperluas model linear regression.
+Tak tertandingi oleh bahasa analitik lainnya, R adalah rumah bagi setiap ekstensi yang mungkin dari ekstensi model linear regression.
+Anda akan menemukan implementasi mis. GAM dengan Python (seperti [pyGAM](https://github.com/dswah/pyGAM)), tetapi implementasi ini belum matang.
 
 
 ### Further Extensions {#more-lm-extension}
 
-As promised, here is a list of problems you might encounter with linear models, along with the name of a solution for this problem that you can copy and paste into your favorite search engine.
+Seperti yang dijanjikan, berikut adalah daftar masalah yang mungkin Anda temui dengan model linier, bersama dengan nama solusi untuk masalah ini yang dapat Anda salin dan tempel ke mesin pencari favorit Anda.
 
-My data violates the assumption of being independent and identically distributed (iid).  
-For example, repeated measurements on the same patient.  
-Search for **mixed models** or **generalized estimating equations**.
+Data saya melanggar asumsi independen dan terdistribusi secara identik (iid).
+Misalnya, pengukuran berulang pada pasien yang sama.
+Telusuri **mixed models** atau **generalized estimating equations**.
 
-My model has heteroscedastic errors.  
-For example, when predicting the value of a house, the model errors are usually higher in expensive houses, which violates the homoscedasticity of the linear model.  
-Search for **robust regression**.
+Model saya memiliki kesalahan heteroskedastis.
+Misalnya, ketika memprediksi nilai rumah, kesalahan model biasanya lebih tinggi di rumah mahal, yang melanggar homoskedastisitas model linier.
+Telusuri **robust regression**.
 
-I have outliers that strongly influence my model.  
-Search for **robust regression**.
+Saya memiliki outlier yang sangat mempengaruhi model saya.
+Telusuri **robust regression**.
 
-I want to predict the time until an event occurs.  
-Time-to-event data usually comes with censored measurements, which means that for some instances there was not enough time to observe the event.
-For example, a company wants to predict the failure of its ice machines, but only has data for two years.
-Some machines are still intact after two years, but might fail later.  
-Search for **parametric survival models**, **cox regression**, **survival analysis**.
+Saya ingin memprediksi waktu sampai suatu peristiwa terjadi.
+Data waktu-ke-peristiwa biasanya dilengkapi dengan pengukuran yang disensor, yang berarti bahwa untuk beberapa kasus tidak ada cukup waktu untuk mengamati peristiwa tersebut.
+Misalnya, sebuah perusahaan ingin memprediksi kegagalan mesin esnya, tetapi hanya memiliki data selama dua tahun.
+Beberapa mesin masih utuh setelah dua tahun, tetapi mungkin gagal nanti.
+Telusuri **parametric survival models**, **cox regression**, **survival analysis**.
 
-My outcome to predict is a category.   
-If the outcome has two categories use a [logistic regression model](#logistic), which models the probability for the categories.  
-If you have more categories, search for **multinomial regression**.  
-Logistic regression and multinomial regression are both GLMs.
+Hasil prediksi saya adalah sebuah kategori.
+Jika hasilnya memiliki dua kategori, gunakan [logistic regression model](#logistic), yang memodelkan probabilitas untuk kategori tersebut.
+Jika Anda memiliki lebih banyak kategori, telusuri **multinomial regression**.
+logistic regression dan multinomial regression keduanya merupakan GLM.
 
-I want to predict ordered categories.  
-For example school grades.  
-Search for **proportional odds model**.
+Saya ingin memprediksi kategori yang dipesan.
+Misalnya nilai sekolah.
+Telusuri **proportional odds model**.
 
-My outcome is a count (like number of children in a family).  
-Search for **Poisson regression**.  
-The Poisson model is also a GLM.
-You might also have the problem that the count value of 0 is very frequent.  
-Search for **zero-inflated Poisson regression**, **hurdle model**.
+Hasil saya adalah hitungan (seperti jumlah anak dalam keluarga).
+Telusuri **Poisson regression**.
+Model Poisson juga merupakan GLM.
+Anda mungkin juga memiliki masalah bahwa nilai hitungan 0 sangat sering.
+Telusuri **zero-inflated Poisson regression**, **hurdle model**.
 
-I am not sure what features need to be included in the model to draw correct causal conclusions.  
-For example, I want to know the effect of a drug on the blood pressure.
-The drug has a direct effect on some blood value and this blood value affects the outcome. 
-Should I include the blood value into the regression model?  
-Search for **causal inference**, **mediation analysis**.
+Saya tidak yakin fitur apa yang perlu dimasukkan dalam model untuk menarik kesimpulan kausal yang benar.
+Misalnya, saya ingin mengetahui pengaruh obat terhadap tekanan darah.
+Obat memiliki efek langsung pada beberapa nilai darah dan nilai darah ini mempengaruhi hasilnya.
+Haruskah saya memasukkan nilai darah ke dalam regression models?
+Telusuri **causal inference**, **mediation analysis**.
 
-I have missing data.  
-Search for **multiple imputation**.
+Saya memiliki data yang hilang.
+Telusuri **multiple imputation**.
 
-I want to integrate prior knowledge into my models.  
-Search for **Bayesian inference**.
+Saya ingin mengintegrasikan pengetahuan sebelumnya ke dalam model saya.
+Telusuri **Bayesian inference**.
 
-I am feeling a bit down lately.  
-Search for **"Amazon Alexa Gone Wild!!! Full version from beginning to end"**.
+Saya merasa agak down akhir-akhir ini.
+Cari **"Amazon Alexa Gone Wild!!! Versi lengkap dari awal hingga akhir"**.

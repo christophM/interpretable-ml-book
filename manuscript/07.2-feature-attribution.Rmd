@@ -9,100 +9,98 @@ set.seed(42)
 
 `r if(is.html){only.in.html}`
 
-<!-- short summary -->
-Pixel attribution methods highlight the pixels that were relevant for a certain image classification by a neural network.
-The following image is an example of an explanation:
+
+Metode pixel attribution menyoroti piksel yang relevan untuk klasifikasi gambar tertentu oleh jaringan saraf.
+Gambar berikut adalah contoh penjelasannya:
 
 ```{r, out.width = "80%"}
 knitr::include_graphics("images/vanilla.png")
 ```
 
-<!-- Other names -->
-You will see later in this chapter what is going on in this particular image.
-Pixel attribution methods can be found under various names: sensitivity map, saliency map, pixel attribution map, gradient-based attribution methods, feature relevance, feature attribution, and feature contribution.
 
-<!-- General idea and distinction -->
-Pixel attribution is a special case of feature attribution, but for images.
-Feature attribution explains individual predictions by attributing each input feature according to how much it changed the prediction (negatively or positively).
-The features can be input pixels, tabular data or words.
-[SHAP](#shap), [Shapley Values](#shapley) and [LIME](#lime) are examples of general feature attribution methods.
+Anda akan melihat nanti di bab ini apa yang terjadi dalam gambar khusus ini.
+Metode pixel attribution dapat ditemukan dengan berbagai nama: sensitivity map, saliency map, pixel attribution map, metode gradient-based attribution, feature relevance, feature attribution, dan feature contribution.
 
-We consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
-The output of the neural network for image I is called $S(I)=[S_1(I),\ldots,S_C(I)]$.
-All these methods take as input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) with p features and output as explanation a relevance value for each of the p input features: $R^c=[R_1^c,\ldots,R_p^c]$.
-The c indicates the relevance for the c-th output $S_C(I)$.
+pixel attribution adalah kasus khusus dari feature attribution, tetapi untuk gambar.
+Feature attribution menjelaskan prediksi individu dengan menghubungkan setiap fitur input sesuai dengan seberapa besar perubahan prediksi (negatif atau positif).
+Fitur tersebut dapat berupa piksel masukan, data tabular atau kata-kata.
+[SHAP](#shap), [Shapley Values](#shapley) dan [LIME](#lime) adalah contoh metode feature attribution umum.
 
-<!-- Distinction -->
-There is a confusing amount of pixel attribution approaches.
-It helps to understand that there are two different types of attribution methods:
+Kami menganggap jaringan saraf yang menghasilkan prediksi sebagai vektor dengan panjang $C$, yang mencakup regresi di mana $C=1$.
+Keluaran jaringan saraf untuk gambar I disebut $S(I)=[S_1(I),\ldots,S_C(I)]$.
+Semua metode ini mengambil sebagai input $x\in\mathbb{R}^p$ (bisa berupa piksel gambar, data tabular, kata, ...) dengan fitur p dan output sebagai penjelasan nilai relevansi untuk setiap fitur input p : $R^c=[R_1^c,\ldots,R_p^c]$.
+C menunjukkan relevansi untuk keluaran ke-c $S_C(I)$.
 
-**Occlusion- or perturbation-based**: Methods like [SHAP](#shap}) and [LIME](#lime) manipulate parts of the image to generate explanations (model-agnostic).
+Ada sejumlah pendekatan pixel attribution yang membingungkan.
+Ini membantu untuk memahami bahwa ada dua jenis metode atribusi yang berbeda:
 
-**Gradient-based**: Many methods compute the gradient of the prediction (or classification score) with respect to the input features. The gradient-based methods (of which there are many) mostly differ in how the gradient is computed.
+**Berbasis oklusi atau perturbations**: Metode seperti [SHAP](#shap}) dan [LIME](#lime) memanipulasi bagian gambar untuk menghasilkan penjelasan (model-agnostic).
 
-Both approaches have in common that the explanation has the same size as the input image (or at least can be meaningfully projected onto it) and they assign each pixel a value that can be interpreted as the relevance of the pixel to the prediction or classification of that image.
+**Berbasis gradien**: Banyak metode menghitung gradien prediksi (atau skor klasifikasi) sehubungan dengan fitur input. Metode berbasis gradien (yang ada banyak) sebagian besar berbeda dalam cara menghitung gradien.
 
-Another useful categorization for pixel attribution methods is the baseline question:
+Kedua pendekatan memiliki kesamaan bahwa penjelasan memiliki ukuran yang sama dengan gambar input (atau setidaknya dapat diproyeksikan secara bermakna ke dalamnya) dan mereka menetapkan setiap piksel nilai yang dapat ditafsirkan sebagai relevansi piksel dengan prediksi atau klasifikasi gambar itu.
 
-**Gradient-only methods** tell us whether a change in a pixel would change the prediction. Examples are Vanilla Gradient and Grad-CAM.
-The interpretation of the gradient-only attribution is:
-If I were to change this pixel, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
-The larger the absolute value of the gradient, the stronger the effect of a change at this pixel.
+Kategorisasi lain yang berguna untuk metode pixel attribution adalah pertanyaan dasar:
 
-**Path-attribution methods** compare the current image to a reference image, which can be an artificial "zero" image such as a completely grey image.
-The difference in actual and baseline prediction is divided  among the pixels.
-The baseline image can also be multiple images: a distribution of images.
-This category includes model-specific gradient-based methods such as Deep Taylor and Integrated Gradients, as well as model-agnostic methods such as LIME and SHAP.
-Some path attribution methods are "complete", meaning that the sum of the relevance values for all input features is the difference between the prediction of the image minus the prediction of a reference image.
-Examples are SHAP and Integrated Gradients.
-For path-attribution methods, the interpretation is always done with respect to the baseline:
-The difference between classification scores of the actual image and the baseline image are attributed to the pixels.
-The choice of the reference image (distribution) has a big effect on the explanation.
-The usual assumption is to use a "neutral" image (distribution).
-Of course, it is perfectly possible to use your favorite selfie, but you should ask yourself if it makes sense in an application.
-It would certainly assert dominance among the other project members.
+**Metode khusus gradien** memberi tahu kami apakah perubahan piksel akan mengubah prediksi. Contohnya adalah Vanilla Gradient dan Grad-CAM.
+Interpretasi dari atribusi hanya gradien adalah:
+Jika saya mengubah piksel ini, probabilitas kelas yang diprediksi akan naik (untuk gradien positif) atau turun (untuk gradien negatif).
+Semakin besar nilai absolut dari gradien, semakin kuat efek perubahan pada piksel ini.
 
-Add this point I would normally give an intuition about how these methods work, but I think it is best if we just start with the Vanilla Gradient method, because it shows very nicely the general recipe that many other methods follow.
+**Metode atribusi jalur** membandingkan gambar saat ini dengan gambar referensi, yang dapat berupa gambar "nol" buatan seperti gambar yang benar-benar abu-abu.
+Perbedaan dalam prediksi aktual dan baseline dibagi di antara piksel.
+Gambar dasar juga dapat berupa banyak gambar: distribusi gambar.
+Kategori ini mencakup metode berbasis gradien model khusus seperti Deep Taylor dan Integrated Gradients, serta metode model-agnostic seperti LIME dan SHAP.
+Beberapa metode atribusi jalur bersifat "lengkap", artinya jumlah nilai relevansi untuk semua fitur masukan adalah selisih antara prediksi citra dikurangi prediksi citra referensi.
+Contohnya adalah SHAP dan Integrated Gradients.
+Untuk metode atribusi jalur, interpretasi selalu dilakukan sehubungan dengan garis dasar:
+Perbedaan antara skor klasifikasi gambar sebenarnya dan gambar dasar dikaitkan dengan piksel.
+Pilihan gambar referensi (distribusi) memiliki pengaruh besar pada penjelasan.
+Asumsi yang biasa digunakan adalah menggunakan citra “netral” (distribusi).
+Tentu saja, sangat mungkin untuk menggunakan selfie favorit Anda, tetapi Anda harus bertanya pada diri sendiri apakah itu masuk akal dalam sebuah aplikasi.
+Itu pasti akan menegaskan dominasi di antara anggota proyek lainnya.
+
+Tambahkan poin ini Saya biasanya akan memberikan intuisi tentang bagaimana metode ini bekerja, tetapi saya pikir yang terbaik adalah jika kita mulai dengan metode Vanilla Gradient, karena ini menunjukkan dengan sangat baik resep umum yang diikuti oleh banyak metode lain.
 
 
 ### Vanilla Gradient (Saliency Maps)
 
-The idea of Vanilla Gradient, introduced by [^saliency] as one of the first pixel attribution approaches is quite simple if you already know backpropagation.
-(They called their approach "Image-Specific Class Saliency", but I like Vanilla Gradient better).
-We calculate the gradient of the loss function for the class we are interested in with respect to the input pixels.
-This gives us a map of the size of the input features with negative to positive values.
+Ide Vanilla Gradient, yang diperkenalkan oleh [^saliency] sebagai salah satu pendekatan pixel attribution pertama cukup sederhana jika Anda sudah mengetahui backpropagation.
+(Mereka menyebut pendekatan mereka "Image-Specific Class Saliency", tapi saya lebih suka Vanilla Gradient).
+Kami menghitung gradien loss function untuk kelas yang kami minati sehubungan dengan piksel input.
+Ini memberi kita peta ukuran fitur input dengan nilai negatif ke positif.
 
-The recipe for this approach is:
+Resep untuk pendekatan ini adalah:
 
-1. Perform a forward pass of the image of interest.
-1. Compute the gradient of class score of interest with respect to the input pixels:
+1. Lakukan forward pass dari gambar yang diinginkan.
+1. Hitung gradien skor kelas yang diminati sehubungan dengan piksel input:
    $$E_{grad}(I_0)=\frac{\delta{}S_c}{\delta{}I}|_{I=I_0}$$
-   Here we set all other classes to zero.
-1. Visualize the gradients. You can either show the absolute values or highlight negative and positive contributions separately.
+   Di sini kita mengatur semua kelas lain ke nol.
+1. Visualisasikan gradien. Anda dapat menunjukkan nilai absolut atau menyoroti kontribusi negatif dan positif secara terpisah.
 
-More formally, we have an image I and the convolutional neural network gives it a score $S_c(I)$ for class c.
-The score is a highly non-linear function of our image.
-The idea behind using the gradient is that we can approximate that score by applying a first-order Taylor expansion
+Lebih formal, kami memiliki gambar I dan convolutional neural networks memberinya skor $S_c(I)$ untuk kelas c.
+Skor adalah fungsi yang sangat non-linear dari gambar kita.
+Gagasan di balik penggunaan gradien adalah bahwa kita dapat memperkirakan skor itu dengan menerapkan ekspansi Taylor orde pertama
 
 $$S_c(I)\approx{}w^T{}I+b$$
 
-where w is the derivate of our score:
+di mana w adalah turunan dari skor kami:
 
 $$w = \frac{\delta S_C}{\delta I}|_{I_0}$$
 
-Now, there is some ambiguity how to perform a backward pass of the gradients, since non-linear units such as ReLU (Rectifying Linear Unit) "remove" the sign.
-So when we do a backpass, we do not know whether to assign a positive or negative activation.
-Using my incredible ASCII art skill, the ReLU function looks like this: _/ and is defined as $X_{n+1}(x)=max(0,X_n)$ from layer $X_n$ to layer $X_{n-1}$.
-This means that when the activation of a neuron is 0, we do not know which value to backpropagate.
-In the case of Vanilla Gradient, the ambiguity is resolved as follows:
+Sekarang, ada beberapa ambiguitas bagaimana melakukan lintasan mundur dari gradien, karena unit non-linear seperti ReLU (Rectifying Linear Unit) "menghapus" tanda.
+Jadi ketika kita melakukan backpass, kita tidak tahu apakah akan menetapkan aktivasi positif atau negatif.
+Menggunakan keterampilan seni ASCII saya yang luar biasa, fungsi ReLU terlihat seperti ini: _/ dan didefinisikan sebagai $X_{n+1}(x)=max(0,X_n)$ dari lapisan $X_n$ ke lapisan $X_{n- 1}$.
+Artinya ketika aktivasi sebuah neuron adalah 0, kita tidak tahu nilai mana yang akan di backpropagate.
+Dalam kasus Vanilla Gradient, ambiguitas diselesaikan sebagai berikut:
 
 $$\frac{\delta f}{\delta X_n} = \frac{\delta f}{\delta X_{n+1}} \cdot \mathbf{I}(X_n > 0)$$
 
-Here, $\mathbf{I}$ is the element-wise indicator function, which is 0 where the activation at the lower layer was negative, and 1 where it is positive or zero.
-Vanilla Gradient takes the gradient we have back-propagated so far up to layer n+1, and then simply sets the gradients to zero where the activation at the layer below is negative.
+Di sini, $\mathbf{I}$ adalah fungsi indikator elemen-bijaksana, yaitu 0 di mana aktivasi di lapisan bawah negatif, dan 1 di mana itu positif atau nol.
+Vanilla Gradient mengambil gradien yang telah kita perbanyak kembali sejauh ini ke lapisan n+1, dan kemudian cukup setel gradien ke nol di mana aktivasi pada lapisan di bawahnya negatif.
 
-Let us look at an example where we have layers $X_n$ and $X_{n+1}=ReLU(X_{n+1})$. 
-Our fictive activation at $X_n$ is:
+Mari kita lihat contoh di mana kita memiliki lapisan $X_n$ dan $X_{n+1}=ReLU(X_{n+1})$.
+Aktivasi fiktif kami di $X_n$ adalah:
 
 $$
 \begin{pmatrix}
@@ -111,7 +109,7 @@ $$
 \end{pmatrix}
 $$
 
-And these are our gradients at $X_{(n+1)}$:
+Dan ini adalah gradien kami di $X_{(n+1)}$:
 
 $$
 \begin{pmatrix}
@@ -120,7 +118,7 @@ $$
 \end{pmatrix}
 $$
 
-Then our gradients at $X_n$ are:
+Maka gradien kami di $X_n$ adalah:
 
 $$
 \begin{pmatrix}
@@ -133,30 +131,30 @@ $$
 
 #### Problems with Vanilla Gradient
 
-Vanilla Gradient has a saturation problem (explained in Avanti et. al, 2017 [^deeplift]):
-When ReLU is used, and when the activation goes below zero, then the activation is capped at zero and does not change any more.
-The activation is saturated.
-For example: The input to the layer is two neurons with weights $-1$ and $-1$ and a bias of $1$.
-When passing through the ReLU layer, the activation will be neuron1 + neuron2 if the sum of both neurons is less than 1.
-If the sum of both is greater than 1, the activation will remain saturated at an activation of 1.
-Also the gradient at this point will be zero, and Vanilla Gradient will say that this neuron is not important.
+Vanilla Gradient memiliki masalah saturasi (dijelaskan dalam Avanti et. al, 2017 [^deeplift]):
+Ketika ReLU digunakan, dan ketika aktivasi berjalan di bawah nol, maka aktivasi dibatasi pada nol dan tidak berubah lagi.
+Aktivasi sudah jenuh.
+Contoh: Input ke layer adalah dua neuron dengan bobot $-1$ dan $-1$ dan bias $1$.
+Saat melewati lapisan ReLU, aktivasi akan menjadi neuron1 + neuron2 jika jumlah kedua neuron kurang dari 1.
+Jika jumlah keduanya lebih besar dari 1, aktivasi akan tetap jenuh pada aktivasi 1.
+Juga gradien pada titik ini akan menjadi nol, dan Gradien Vanilla akan mengatakan bahwa neuron ini tidak penting.
 
-And now, my dear readers, learn another method, more or less for free: DeconvNet
+Dan sekarang, para pembaca yang budiman, pelajari metode lain, kurang lebih gratis: DeconvNet
 
 ### DeconvNet
 
-DeconvNet by Zeiler an Fergus (2014) [^deconvnet] is almost identical to Vanilla Gradient.
-The goal of DeconvNet is to reverse a neural network and the paper proposes operations that are reversals of the filtering, pooling and activation layers.
-If you take a look into the paper, it looks very different to Vanilla Gradient, but apart from the reversal of the ReLU layer, DeconvNet is equivalent to the Vanilla Gradient approach.
-Vanilla Gradient can be seen as a generalization of DeconvNet.
-DeconvNet makes a different choice for backpropagating the gradient through ReLU:
+DeconvNet oleh Zeiler an Fergus (2014) [^deconvnet] hampir identik dengan Vanilla Gradient.
+Tujuan DeconvNet adalah untuk membalikkan jaringan saraf dan makalah ini mengusulkan operasi yang merupakan kebalikan dari lapisan penyaringan, penyatuan, dan aktivasi.
+Jika Anda melihat ke dalam kertas, terlihat sangat berbeda dengan Vanilla Gradient, tetapi selain kebalikan dari lapisan ReLU, DeconvNet setara dengan pendekatan Vanilla Gradient.
+Vanilla Gradient dapat dilihat sebagai generalisasi dari DeconvNet.
+DeconvNet membuat pilihan yang berbeda untuk backpropagating gradien melalui ReLU:
 
 $R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$$,
 
-where $R_n$ and $R_{n+1}$ are the layer reconstructions.
-When backpassing from layer n to layer n-1, DeconvNet "remembers" which of the activations in layer n were set to zero in the forward pass and sets them to 0 in layer n-1.
-Activations with a negative value in layer x are set to zero in layer n-1.
-The gradient $X_n$ for the example from earlier becomes:
+di mana $R_n$ dan $R_{n+1}$ adalah rekonstruksi lapisan.
+Saat melakukan backpass dari layer n ke layer n-1, DeconvNet "mengingat" aktivasi mana di layer n yang disetel ke nol di forward pass dan disetel ke 0 di layer n-1.
+Aktivasi dengan nilai negatif di lapisan x disetel ke nol di lapisan n-1.
+Gradien $X_n$ untuk contoh sebelumnya menjadi:
 
 $$
 \begin{pmatrix}
@@ -169,188 +167,184 @@ $$
 
 ### Grad-CAM
 
-Grad-CAM provides visual explanations for CNN decisions.
-Unlike other methods, the gradient is not backpropagated all the way back to the image, but (usually) to the last convolutional layer to produce a coarse localization map that highlights important regions of the image.
+Grad-CAM memberikan penjelasan visual untuk keputusan CNN.
+Tidak seperti metode lain, gradien tidak dipropagasi mundur sepanjang jalan kembali ke gambar, tetapi (biasanya) ke lapisan konvolusi terakhir untuk menghasilkan localization map kasar yang menyoroti wilayah penting gambar.
 
-Grad-CAM stands for Gradient-weighted Class Activation Map.
-And, as the name suggests, it is based on the gradient of the neural networks.
-Grad-CAM, like other techniques, assigns each neuron a relevance score for the decision of interest.
-This decision of interest can be the class prediction (which we find in the output layer), but can theoretically be any other layer in the neural network.
-Grad-CAM backpropagates this information to the last convolutional layer.
-Grad-CAM can be used with different CNNs: with fully-connected layers, for structured output such as captioning and in multi-task outputs, and for reinforcement learning.
+Grad-CAM adalah singkatan dari Gradient-weighted Class Activation Map.
+Dan, seperti namanya, ini didasarkan pada gradien jaringan saraf.
+Grad-CAM, seperti teknik lainnya, memberikan setiap neuron skor relevansi untuk keputusan yang menarik.
+Keputusan yang menarik ini dapat berupa prediksi kelas (yang kita temukan di lapisan keluaran), tetapi secara teoritis dapat berupa lapisan lain dalam jaringan saraf.
+Grad-CAM menyebarkan kembali informasi ini ke lapisan konvolusi terakhir.
+Grad-CAM dapat digunakan dengan CNN yang berbeda: dengan lapisan yang sepenuhnya terhubung, untuk keluaran terstruktur seperti teks dan dalam keluaran multi-tugas, dan untuk reinforcement learning.
 
-<!-- An intuitive explanation -->
-Let us start with an intuitive consideration of Grad-CAM.
-The goal of Grad-CAM is to understand at which parts of an image a convolutional layer "looks" for a certain classification.
-As a reminder, the first convolutional layer of a CNN takes as input the images and outputs feature maps that encode learned features (see the chapter on [Learned Features](#cnn-features)).
-The higher-level convolutional layers do the same, but take as input the feature maps of the previous convolutional layers.
-To understand how the CNN makes decisions, Grad-CAM analyzes which regions are activated in the feature maps of the last convolutional layers.
-There are k feature maps in the last convolutional layer, and I will call them $A_1, A_2, \ldots, A_k$.
-How can we "see" from the feature maps how the convolutional neural network has made a certain classification?
-In the first approach, we could simply visualize the raw values of each feature map, average over the feature maps and overlay this over our image.
-This would not be helpful since the feature maps encode information for **all classes**, but we are interested in a particular class.
-Grad-CAM has to decide how important each of the k feature map was to our class c that we are interested in.
-We have to weight each pixel of each feature map with the gradient before we average over the feature maps.
-This give us a heatmap which highlights regions that positively or negatively affect the class of interest.
-This heatmap is send through the ReLU function, which is a fancy way of saying that we set all negative values to zero.
-Grad-CAM removes all negative values by using a ReLU function, with the argument that we are only interested in the parts that contribute to the selected class c and not to other classes.
-The word pixel might be misleading here as the feature map is smaller than the image (because of the pooling units) but is mapped back to the original image.
-We then scale the Grad-CAM map to the interval [0,1] for visualization purposes and overlay it over the original image.
+Mari kita mulai dengan pertimbangan intuitif Grad-CAM.
+Tujuan Grad-CAM adalah untuk memahami di bagian mana dari suatu gambar lapisan konvolusi "terlihat" untuk klasifikasi tertentu.
+Sebagai pengingat, lapisan konvolusi pertama dari CNN mengambil sebagai input gambar dan menampilkan peta fitur yang mengkodekan fitur yang dipelajari (lihat bab tentang [Fitur yang Dipelajari](#cnn-features)).
+Lapisan konvolusi tingkat yang lebih tinggi melakukan hal yang sama, tetapi mengambil peta fitur dari lapisan konvolusi sebelumnya sebagai masukan.
+Untuk memahami bagaimana CNN membuat keputusan, Grad-CAM menganalisis wilayah mana yang diaktifkan di peta fitur lapisan konvolusi terakhir.
+Ada k peta fitur di lapisan konvolusi terakhir, dan saya akan menyebutnya $A_1, A_2, \ldots, A_k$.
+Bagaimana kita bisa "melihat" dari peta fitur bagaimana convolutional neural networks telah membuat klasifikasi tertentu?
+Pada pendekatan pertama, kita cukup memvisualisasikan nilai mentah dari setiap peta fitur, rata-rata di atas peta fitur dan melapisinya di atas gambar kita.
+Ini tidak akan membantu karena peta fitur menyandikan informasi untuk **semua kelas**, tetapi kami tertarik pada kelas tertentu.
+Grad-CAM harus memutuskan seberapa penting setiap peta fitur k bagi kelas c yang kami minati.
+Kami harus menimbang setiap piksel dari setiap peta fitur dengan gradien sebelum kami membuat rata-rata di atas peta fitur.
+Ini memberi kami peta panas yang menyoroti wilayah yang secara positif atau negatif memengaruhi kelas minat.
+Peta panas ini dikirim melalui fungsi ReLU, yang merupakan cara bagus untuk mengatakan bahwa kami menetapkan semua nilai negatif ke nol.
+Grad-CAM menghapus semua nilai negatif dengan menggunakan fungsi ReLU, dengan argumen bahwa kita hanya tertarik pada bagian yang berkontribusi pada kelas c yang dipilih dan bukan pada kelas lain.
+Kata piksel mungkin menyesatkan di sini karena peta fitur lebih kecil dari gambar (karena unit penyatuan) tetapi dipetakan kembali ke gambar aslinya.
+Kami kemudian menskalakan peta Grad-CAM ke interval [0,1] untuk tujuan visualisasi dan melapisinya di atas gambar asli.
 
-
-<!-- Pseudo code-->
-Let us look at the recipe for Grad-CAM
-Our goal is to find the localization map, which is defined as:
+Mari kita lihat resep untuk Grad-CAM
+Tujuan kami adalah menemukan localization map, yang didefinisikan sebagai:
 
 $$L^c_{Grad-CAM} \in \mathbb{R}^{u\times v} = \underbrace{ReLU}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
 
+Di sini, u adalah lebarnya, v tinggi penjelasannya dan c kelas yang diinginkan.
 
-Here, u is the width, v the height of the explanation and c the class of interest.
-
-1. Forward propagate the input image through the convolutional neural network.
-1. Obtain the raw score for the class of interest, meaning the activation of the neuron before the softmax layer.
-1. Set all other class activations to zero.
-1. Backpropagate the gradient of the class of interest to the last convolutional layer before the fully connected layers: $\frac{\delta{}y^c}{\delta{}A^k}$.
-1. Weight each feature map "pixel" by the gradient for the class. Indices i and j refer to the width and height dimensions:
+1. Teruskan menyebarkan gambar input melalui convolutional neural networks.
+1. Mendapatkan nilai mentah untuk kelas minat, artinya aktivasi neuron sebelum lapisan softmax.
+1. Setel semua aktivasi kelas lainnya ke nol.
+1. Menyebarkan kembali gradien kelas yang diinginkan ke lapisan konvolusi terakhir sebelum lapisan yang terhubung sepenuhnya: $\frac{\delta{}y^c}{\delta{}A^k}$.
+1. Bobot setiap fitur peta "piksel" dengan gradien untuk kelas. Indeks i dan j mengacu pada dimensi lebar dan tinggi:
    $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{\text{global average pooling}} \underbrace{\frac{\delta y^c}{\delta A_{ij}^k}}_{\text{gradients via backprop}}$$
-This means that the gradients are globally pooled.
-1. Calculate an average of the feature maps, weighted per pixel by the gradient.
-1. Apply ReLU to the averaged feature map.
-1. For visualization: Scale values to the interval between 0 and 1. Upscale the image and overlay it over the original image.
-1. Additional step for Guided Grad-CAM: Multiply heatmap with guided backpropagation.
+Ini berarti bahwa gradien dikumpulkan secara global.
+1. Hitung rata-rata peta fitur, yang diberi bobot per piksel berdasarkan gradien.
+1. Terapkan ReLU ke peta fitur rata-rata.
+1. Untuk visualisasi: Skalakan nilai ke interval antara 0 dan 1. Tingkatkan gambar dan overlay di atas gambar asli.
+1. Langkah tambahan untuk Grad-CAM Terpandu: Kalikan peta panas dengan guided backpropagation.
 
 
 
 ### Guided Grad-CAM
 
-From the description of Grad-CAM you can guess that the localization is very coarse since the last convolutional feature maps have a much coarser resolution compared to the input image.
-In contrast, other attribution techniques backpropagate all the way to the input pixels.
-They are therefore much more detailed and can show you individual edges or spots that contributed most to a prediction.
-A fusion of both methods is called Guided Grad-CAM.
-And it is super simple.
-You compute for an image both the Grad-CAM explanation and the explanation from another attribution method, such as Vanilla Gradient.
-The Grad-CAM output is then upsampled with bilinear interpolation, then both maps are multiplied element-wise.
-Grad-CAM works like a lense that focuses on specific parts of the pixel-wise attribution map.
+Dari deskripsi Grad-CAM Anda dapat menebak bahwa lokalisasi sangat kasar karena peta fitur konvolusi terakhir memiliki resolusi yang jauh lebih kasar dibandingkan dengan gambar input.
+Sebaliknya, teknik atribusi lainnya melakukan backpropagate sampai ke piksel input.
+Oleh karena itu, mereka jauh lebih detail dan dapat menunjukkan tepi atau titik individual yang berkontribusi paling besar pada prediksi.
+Penggabungan kedua metode ini disebut Guided Grad-CAM.
+Dan itu sangat sederhana.
+Anda menghitung untuk gambar baik penjelasan Grad-CAM maupun penjelasan dari metode atribusi lain, seperti Vanilla Gradient.
+Output Grad-CAM kemudian di-upsampling dengan interpolasi bilinear, kemudian kedua peta dikalikan dengan elemen.
+Grad-CAM bekerja seperti lensa yang berfokus pada bagian tertentu dari pixel attribution map.
 
 ### SmoothGrad
 
-The idea of SmoothGrad by Smilkov et. al 2017 [^smoothgrad] is to make gradient-based explanations less noisy by adding noise and averaging over these artificially noisy gradients.
-SmoothGrad is not an standalone explanation method, but an extension to any gradient-based explanation method.
+Ide SmoothGrad oleh Smilkov et. al 2017 [^smoothgrad] adalah untuk membuat penjelasan berbasis gradien kurang noisy dengan menambahkan noise dan rata-rata atas artificially noisy gradients ini.
+SmoothGrad bukanlah metode penjelasan yang berdiri sendiri, tetapi merupakan perluasan dari metode penjelasan berbasis gradien.
 
-SmoothGrad works in the following way:
+SmoothGrad bekerja dengan cara berikut:
 
-1. Generate multiple versions of the image of interest by adding noise to it.
-1. Create pixel attribution maps for all images.
-1. Average the pixel attribution maps.
+1. Buat beberapa versi gambar yang diinginkan dengan menambahkan noise ke dalamnya.
+1. Buat pixel attribution map untuk semua gambar.
+1. Rata-rata pixel attribution map.
 
-Yes, it is that simple.
-Why should this work?
-The theory is that the derivative fluctuates greatly at small scales.
-Neural networks have no incentive during training to keep the gradients smooth, their goal is to classify images correctly.
-Averaging over multiple maps "smooths out" these fluctuations:
+Ya, sesederhana itu.
+Mengapa ini harus berhasil?
+Teorinya adalah bahwa turunan sangat berfluktuasi pada skala kecil.
+Jaringan saraf tidak memiliki insentif selama pelatihan untuk menjaga gradien tetap halus, tujuannya adalah untuk mengklasifikasikan gambar dengan benar.
+Rata-rata pada beberapa peta "memperhalus" fluktuasi ini:
 
 $$R_{sg}(x)=\frac{1}{N}\sum_{i=1}^n{}R(x+g_i),$$
 
-Here, $g_i\sim{}N(0,\sigma^2)$ are noise vectors sampled from the Gaussian distribution.
-The "ideal" noise level depends on the input image and the network.
-The authors suggest a noise level of 10%-20%, which means that $\frac{\sigma}{x_{max} - x_{min}}$ should be between 0.1 and 0.2.
-The limits $x_{max}$ and $x_{min}$ refer to minimum and maximum pixel values of the image.
-The other parameter is the number of samples n, for which was suggested to use n = 50, since there are diminishing returns above that.
+Di sini, $g_i\sim{}N(0,\sigma^2)$ adalah vektor noise yang disampel dari distribusi Gaussian.
+Tingkat noise "ideal" tergantung pada gambar input dan jaringan.
+Penulis menyarankan tingkat noise 10%-20%, yang berarti $\frac{\sigma}{x_{max} - x_{min}}$ harus antara 0,1 dan 0,2.
+Batas $x_{max}$ dan $x_{min}$ mengacu pada p-valueiksel minimum dan maksimum gambar.
+Parameter lainnya adalah jumlah sampel n, yang disarankan untuk menggunakan n = 50, karena ada hasil yang semakin berkurang di atas itu.
 
 
 ### Examples
 
-Let us see some examples of what these maps look like and how the methods compare qualitatively.
-The network under examination is VGG-16 (Simonyan et. al 2014 [^vgg16]) which was trained on ImageNet and can therefore distinguish more than 20,000 classes.
-For the following images we will create explanations for the class with the highest classification score.
+Mari kita lihat beberapa contoh seperti apa peta ini dan bagaimana metode ini dibandingkan secara kualitatif.
+Jaringan yang diperiksa adalah VGG-16 (Simonyan et. al 2014 [^vgg16]) yang dilatih di ImageNet dan karenanya dapat membedakan lebih dari 20.000 kelas.
+Untuk gambar berikut akan kami buatkan penjelasan untuk kelas dengan skor klasifikasi tertinggi.
 
-These are the images and their classification by the neural network:
+Ini adalah gambar dan klasifikasinya oleh jaringan saraf:
 
 ```{r, out.width = "80%", fig.show}
 knitr::include_graphics("images/original-images-classification.png")
 ```
 
-The image on the left with the honorable dog guarding the Interpretable Machine Learning book was classified as "Greyhound" with a probability of 35\% (seems like "Interpretable Machine Learning book" was not one of the 20k classes).
-The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with a probability of 50\%.
-The third image shows an octopus on the ocean floor, which is incorrectly classified as "Eel" with a high probability of 70%.
+Gambar di sebelah kiri dengan anjing terhormat yang menjaga buku Interpretable Machine Learning diklasifikasikan sebagai "Greyhound" dengan probabilitas 35\% (sepertinya "buku Interpretable Machine Learning" bukan salah satu dari kelas 20k).
+Gambar di tengah menunjukkan semangkuk sup ramen lezat dan diklasifikasikan dengan benar sebagai "Mangkuk Sup" dengan probabilitas 50\%.
+Gambar ketiga menunjukkan gurita di dasar laut, yang salah diklasifikasikan sebagai "Belut" dengan probabilitas tinggi 70%.
 
-And these are the pixel attributions that aim to explain the classification:
+Dan ini adalah pixel attribution yang bertujuan untuk menjelaskan klasifikasi:
 
 ```{r, out.width = "80%"}
 knitr::include_graphics("images/smoothgrad.png")
 ```
 
-Unfortunately, it is a bit of a mess.
-But let us look at the individual explanations, starting with the dog.
-Vanilla Gradient and Vanilla Gradient + SmoothGrad both highlight the dog, which makes sense.
-But they also highlight some areas around the book, which is odd.
-Grad-CAM highlights only the book area, which makes no sense at all.
-And from here on, it gets a bit messier.
-The Vanilla Gradient method seems to fail for both the soup bowl and the octopus (or, as the network thinks, eel).
-Both images look like afterimages from looking into the sun for too long.
-(Please do not look at the sun directly).
-SmoothGrad helps a lot, at least the areas are more defined.
-In the soup example, some of the ingredients are highlighted, such as the eggs and the meat, but also the area around the chop sticks.
-In the octopus image, mostly the animal itself is highlighted.
+Sayangnya, agak berantakan.
+Tapi mari kita lihat penjelasan individu, dimulai dengan anjing.
+Vanilla Gradient dan Vanilla Gradient + SmoothGrad keduanya menyoroti anjing, yang masuk akal.
+Tetapi mereka juga menyoroti beberapa area di sekitar buku, yang aneh.
+Grad-CAM hanya menyoroti area buku, yang sama sekali tidak masuk akal.
+Dan mulai sekarang, itu menjadi sedikit lebih berantakan.
+Metode Vanilla Gradient tampaknya gagal untuk mangkuk sup dan gurita (atau, seperti yang dipikirkan jaringan, belut).
+Kedua gambar terlihat seperti bayangan setelah melihat matahari terlalu lama.
+(Tolong jangan melihat matahari secara langsung).
+SmoothGrad banyak membantu, setidaknya areanya lebih jelas.
+Dalam contoh sup, beberapa bahan disorot, seperti telur dan daging, tetapi juga area di sekitar chop stick.
+Dalam gambar gurita, sebagian besar hewan itu sendiri disorot.
 
-For the soup bowl, Grad-CAM highlights the egg part and, for some reason, the upper part of the bowl.
-The octopus explanations by Grad-CAM are even messier.
+Untuk mangkuk sup, Grad-CAM menyoroti bagian telur dan, untuk beberapa alasan, bagian atas mangkuk.
+Penjelasan gurita oleh Grad-CAM bahkan lebih berantakan.
 
-You can already see here the difficulties in assessing whether we trust the explanations.
-As a first step, we need to consider which parts of the image contain information that is relevant to the images classification.
-But then we also need to think about what the neural network might have used for the classification.
-Perhaps the soup bowl was correctly classified based on the combination of eggs and chopstick, as SmoothGrad implies?
-Or maybe the neural network recognized the shape of the bow plus some ingredients, as Grad-CAM suggests?
-We just do not know.
+Anda sudah bisa melihat di sini kesulitan dalam menilai apakah kami mempercayai penjelasannya.
+Sebagai langkah pertama, kita perlu mempertimbangkan bagian mana dari citra yang mengandung informasi yang relevan dengan klasifikasi citra.
+Tapi kemudian kita juga perlu memikirkan apa yang mungkin digunakan jaringan saraf untuk klasifikasi.
+Mungkin mangkuk sup diklasifikasikan dengan benar berdasarkan kombinasi telur dan sumpit, seperti yang disiratkan SmoothGrad?
+Atau mungkin jaringan saraf mengenali bentuk busur ditambah beberapa bahan, seperti yang disarankan Grad-CAM?
+Kami hanya tidak tahu.
 
-And that is the big issue with all of these methods.
-We do not have a ground truth for the explanations.
-We can only, in a first step, reject explanations that obviously make no sense (and even in this step we don't have strong confidence. The prediction process in the neural network is very complicated).
+Dan itulah masalah besar dengan semua metode ini.
+Kami tidak memiliki kebenaran dasar untuk penjelasannya.
+Kita hanya dapat, pada langkah pertama, menolak penjelasan yang jelas-jelas tidak masuk akal (dan bahkan dalam langkah ini kita tidak memiliki keyakinan yang kuat. Proses prediksi dalam jaringan saraf sangat rumit).
 
 ### Advantages
-The explanations are **visual** and we are quick to recognize images.
-In particular, when methods only highlight important pixels, it is easy to immediately recognize the important regions of the image.
+Penjelasannya **visual** dan kami cepat mengenali gambar.
+Khususnya, ketika metode hanya menyorot piksel penting, mudah untuk segera mengenali bagian penting dari gambar.
 
-Gradient-based methods are usually **faster to compute than model-agnostic methods**.
-For example, [LIME](#lime) and [SHAP](#shap) can also be used to explain image classifications, but are more expensive to compute.
+Metode berbasis gradien biasanya **lebih cepat dihitung daripada metode model-agnostic**.
+Misalnya, [LIME](#lime) dan [SHAP](#shap) juga dapat digunakan untuk menjelaskan klasifikasi gambar, tetapi lebih mahal untuk dihitung.
 
-There are **many methods to choose from**.
+Ada **banyak metode untuk dipilih**.
 
 ### Disadvantages
-As with most interpretation methods, it is **difficult to know whether an explanation is correct**, and a huge part of the evaluation is only qualitative ("These explanations look about right, let's publish the paper already.").
+Seperti kebanyakan metode interpretasi, **sulit untuk mengetahui apakah suatu penjelasan itu benar**, dan sebagian besar evaluasi hanya bersifat kualitatif ("Penjelasan ini terlihat benar, ayo publikasikan makalahnya." ).
 
-Pixel attribution methods can be very **fragile**.
-Ghorbani et. al (2019)[^fragile-saliency] showed that introducing small (adversarial) perturbations to an image, that still lead to the same prediction, can lead to very different pixels being highlighted as explanations.
+Metode pixel attribution bisa sangat **rapuh**.
+Ghorbani et. al (2019)[^fragile-saliency] menunjukkan bahwa memperkenalkan perturbations kecil (adversarial) pada gambar, yang masih mengarah pada prediksi yang sama, dapat menyebabkan piksel yang sangat berbeda disorot sebagai penjelasan.
 
-Kindermanns et. al (2019) [^unreliable-saliency] also showed that these pixel attribution methods **can be highly unreliable**.
-They added a constant shift to the input data, meaning they added the same pixel changes to all images.
-They compared two networks, the original network and "shifted" network where the bias of the first layer is changed to adapt for the constant pixel shift.
-Both networks produce the same predictions.
-Also the gradient is the same for both.
-But the explanations changed, which is an undesirable property.
-They looked at DeepLift, Vanilla Gradient and Integrated Gradients.
+Kindermann et. al (2019) [^unreliable-saliency] juga menunjukkan bahwa metode pixel attribution ini **bisa sangat tidak dapat diandalkan**.
+Mereka menambahkan pergeseran konstan ke data input, yang berarti mereka menambahkan perubahan piksel yang sama ke semua gambar.
+Mereka membandingkan dua jaringan, jaringan asli dan jaringan "bergeser" di mana bias lapisan pertama diubah untuk beradaptasi dengan pergeseran piksel yang konstan.
+Kedua jaringan menghasilkan prediksi yang sama.
+Juga gradiennya sama untuk keduanya.
+Tetapi penjelasannya berubah, yang merupakan properti yang tidak diinginkan.
+Mereka melihat DeepLift, Vanilla Gradient dan Integrated Gradients.
 
-The paper "Sanity Checks for Saliency Maps" [^sanity-checks] investigated whether saliency methods are **insensitive to model and data**.
-Insensitivity is highly undesirable because it would mean that the "explanation" is unrelated to model and data.
-Methods that are insensitive to model and training data are similar to edge detectors.
-Edge detectors simply highlight strong pixel color changes in images and are unrelated to a prediction model or abstract features of the image, and require not training.
-The methods tested were  Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with vanilla gradient).
-Vanilla gradients and Grad-CAM passed the insensitivity check, while Guided Backpropagation and Guided GradCAM fail.
-However, the sanity checks paper itself has found some criticism from Tomsett et. al (2020) [^sanity-metrics] with a paper called "Sanity Checks for Saliency Metrics" (of course).
-They found that there is a lack of consistency for evaluation metrics (I know, it is getting pretty meta now).
-So we are back to where we started ... It remains difficult to evaluate the visual explanations.
-This makes it very difficult for a practitioner.
+Makalah "Sanity Checks for Saliency Maps" [^sanity-checks] menyelidiki apakah metode saliency **tidak sensitif terhadap model dan data**.
+Ketidakpekaan sangat tidak diinginkan karena itu berarti "penjelasan" tidak terkait dengan model dan data.
+Metode yang tidak sensitif terhadap model dan data pelatihan mirip dengan detektor tepi.
+Detektor tepi hanya menyoroti perubahan warna piksel yang kuat dalam gambar dan tidak terkait dengan model prediksi atau fitur abstrak gambar, dan tidak memerlukan pelatihan.
+Metode yang diuji adalah Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM dan SmoothGrad (dengan vanilla gradient).
+Gradasi vanila dan Grad-CAM lolos pemeriksaan ketidakpekaan, sedangkan Backpropagation Terpandu dan GradCAM Terpandu gagal.
+Namun, kertas pemeriksaan kewarasan itu sendiri telah menemukan beberapa kritik dari Tomsett et. al (2020) [^sanity-metrics] dengan makalah berjudul "Sanity Checks for Saliency Metrics" (tentu saja).
+Mereka menemukan bahwa ada ketidakkonsistenan untuk metrik evaluasi (saya tahu, ini menjadi sangat meta sekarang).
+Jadi kita kembali ke tempat kita mulai ... Masih sulit untuk mengevaluasi penjelasan visual.
+Hal ini membuat sangat sulit bagi seorang praktisi.
 
-All in all, this is a **very unsatisfactory state of affairs**.
-We have to wait a little bit for more research on this topic.
-And please, no more invention of new methods, but more scrutiny of how to evaluate these methods.
+Secara keseluruhan, ini adalah **keadaan yang sangat tidak memuaskan**.
+Kita harus menunggu sedikit untuk penelitian lebih lanjut tentang topik ini.
+Dan tolong, tidak ada lagi penemuan metode baru, tetapi lebih banyak pengawasan tentang bagaimana mengevaluasi metode ini.
 
 ### Software
 
-There are several software implementations of pixel attribution methods.
-For the example, I used [tf-keras-vis](https://pypi.org/project/tf-keras-vis/).
-One of the most comprehensive libraries is [iNNvestigate](https://github.com/albermax/innvestigate), which implements Vanilla gradient, Smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP and more.
-A lot of the methods are implemented in the [DeepExplain Toolbox](https://github.com/marcoancona/DeepExplain).
+Ada beberapa implementasi perangkat lunak dari metode pixel attribution.
+Sebagai contoh, saya menggunakan [tf-keras-vis](https://pypi.org/project/tf-keras-vis/).
+Salah satu library paling komprehensif adalah [iNNvestigate](https://github.com/albermax/innvestigate), yang mengimplementasikan gradien Vanilla, Smoothgrad, Deconvnet, Guided Backpropagation, PatternNet, LRP, dan lainnya.
+Banyak metode diimplementasikan di [DeepExplain Toolbox](https://github.com/marcoancona/DeepExplain).
 
 
 [^deeplift]: Shrikumar, Avanti, Peyton Greenside, and Anshul Kundaje. "Learning important features through propagating activation differences." Proceedings of the 34th International Conference on Machine Learning-Volume 70. JMLR. org, (2017).

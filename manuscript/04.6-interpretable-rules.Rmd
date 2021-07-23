@@ -9,128 +9,121 @@ if(!require("sbrl")) install.packages("../pkg/sbrl_1.2.tar.gz", repos = NULL, ty
 
 ## Decision Rules {#rules}
 
-A decision rule is a simple IF-THEN statement consisting of a condition (also called antecedent) and a prediction.
-For example: 
-IF it rains today AND if it is April (condition), THEN it will rain tomorrow (prediction). 
-A single decision rule or a combination of several rules can be used to make predictions.
+Decision rules adalah pernyataan IF-THEN sederhana yang terdiri dari kondisi (juga disebut antecedent) dan prediksi.
+Sebagai contoh:
+JIKA hari ini hujan DAN jika April (kondisi), MAKA besok akan hujan (prediksi).
+decision rules tunggal atau kombinasi dari beberapa aturan dapat digunakan untuk membuat prediksi.
 
-<!-- *Keywords: decision rules, decision sets, decision lists, association rules, IF-THEN rules* -->
+decision rules mengikuti struktur umum:
+JIKA kondisi terpenuhi MAKA buat prediksi tertentu.
+decision rules mungkin merupakan model prediksi yang paling dapat ditafsirkan.
+Struktur IF-THEN mereka secara semantik menyerupai bahasa alami dan cara kita berpikir, asalkan kondisinya dibangun dari fitur yang dapat dipahami, panjang kondisinya pendek (sejumlah kecil pasangan `feature=value` dikombinasikan dengan AND) dan ada tidak terlalu banyak aturan.
+Dalam pemrograman, sangat wajar untuk menulis aturan IF-THEN.
+Yang baru dalam machine learning adalah bahwa decision rules dipelajari melalui suatu algoritma.
 
-Decision rules follow a general structure:
-IF the conditions are met THEN make a certain prediction.
-Decision rules are probably the most interpretable prediction models.
-Their IF-THEN structure semantically resembles natural language and the way we think, provided that the condition is built from intelligible features, the length of the condition is short (small number of `feature=value` pairs combined with an AND) and there are not too many rules.
-In programming, it is very natural to write IF-THEN rules.
-New in machine learning is that the decision rules are learned through an algorithm.
-
-Imagine using an algorithm to learn decision rules for predicting the value of a house (`low`, `medium` or `high`).
-One decision rule learned by this model could be:
-If a house is bigger than 100 square meters and has a garden, then its value is high.
-More formally:
+Bayangkan menggunakan algoritme untuk mempelajari decision rules untuk memprediksi nilai rumah (`low`, `medium` atau `high`).
+Satu decision rules yang dipelajari oleh model ini dapat berupa:
+Jika sebuah rumah berukuran lebih dari 100 meter persegi dan memiliki taman, maka nilainya tinggi.
+Lebih formal:
 IF `size>100 AND garden=1` THEN `value=high`.
 
-Let us break down the decision rule:
+Mari kita uraikan decision rules:
 
-- `size>100` is the first condition in the IF-part.
-- `garden=1` is the second condition in the IF-part.
-- The two conditions are connected with an 'AND' to create a new condition. 
-Both must be true for the rule to apply.
-- The predicted outcome (THEN-part) is `value=high`.
+- `size>100` adalah kondisi pertama di bagian IF.
+- `garden=1` adalah kondisi kedua di bagian IF.
+- Kedua kondisi dihubungkan dengan 'AND' untuk membuat kondisi baru.
+Keduanya harus benar agar aturan dapat diterapkan.
+- Hasil yang diprediksi (bagian ELSE) adalah `value=high`.
 
+Decision rules menggunakan setidaknya satu pernyataan `feature=value` dalam ketentuan, tanpa batas atas berapa banyak lagi yang dapat ditambahkan dengan 'AND'.
+Pengecualian adalah aturan default yang tidak memiliki bagian IF eksplisit dan yang berlaku saat tidak ada aturan lain yang berlaku, tetapi lebih lanjut tentang ini nanti.
 
-A decision rule uses at least one `feature=value` statement in the condition, with no upper limit on how many more can be added with an 'AND'.
-An exception is the default rule that has no explicit IF-part and that applies when no other rule applies, but more about this later.
+Kegunaan decision rules biasanya diringkas dalam dua angka: support dan akurasi.
 
-The usefulness of a decision rule is usually summarized in two numbers: Support and accuracy.
+**Support atau coverage of a rule**:
+Persentase instance yang menerapkan kondisi aturan disebut support.
+Ambil contoh aturan `size=big AND location=good THEN value=high` untuk memprediksi nilai rumah.
+Misalkan 100 dari 1000 rumah besar dan berada di lokasi yang baik, maka support aturannya adalah 10%.
+Prediksi (bagian THEN) tidak penting untuk perhitungan support.
 
+**Akurasi atau confidence of a rule**:
+Keakuratan aturan adalah ukuran seberapa akurat aturan dalam memprediksi kelas yang benar untuk kasus di mana kondisi aturan berlaku.
+Sebagai contoh:
+Katakanlah dari 100 rumah, di mana aturan `size=big AND location=good THEN value=high` berlaku, 85 memiliki `value=high`, 14 memiliki `value=medium` dan 1 memiliki `value=low`, maka akurasi aturan adalah 85%.
 
-**Support or coverage of a rule**:
-The percentage of instances to which the condition of a rule applies is called the support.
-Take for example the rule `size=big AND location=good THEN value=high` for predicting house values.
-Suppose 100 of 1000 houses are big and in a good location, then the support of the rule is 10%.
-The prediction (THEN-part) is not important for the calculation of support.
+Biasanya ada trade-off antara akurasi dan support:
+Dengan menambahkan lebih banyak fitur ke kondisi, kami dapat mencapai akurasi yang lebih tinggi, tetapi kehilangan support.
 
-**Accuracy or confidence of a rule**: 
-The accuracy of a rule is a measure of how accurate the rule is in predicting the correct class for the instances to which the condition of the rule applies. 
-For example: 
-Let us say of the 100 houses, where the rule `size=big AND location=good THEN value=high` applies, 85 have `value=high`, 14 have `value=medium` and 1 has `value=low`, then the accuracy of the rule is 85%.
+Untuk membuat pengklasifikasi yang baik untuk memprediksi nilai rumah, Anda mungkin perlu mempelajari tidak hanya satu aturan, tetapi mungkin 10 atau 20.
+Kemudian segalanya bisa menjadi lebih rumit dan Anda dapat mengalami salah satu masalah berikut:
 
+- Aturan dapat tumpang tindih:
+Bagaimana jika saya ingin memprediksi nilai sebuah rumah dan dua atau lebih aturan berlaku dan mereka memberi saya prediksi yang bertentangan?
+- Tidak ada aturan yang berlaku:
+Bagaimana jika saya ingin memprediksi nilai sebuah rumah dan tidak ada aturan yang berlaku?
 
-Usually there is a trade-off between accuracy and support:
-By adding more features to the condition, we can achieve higher accuracy, but lose support.
+Ada dua strategi utama untuk menggabungkan beberapa aturan:
+decision list (terurut) dan kumpulan keputusan (tidak berurutan).
+Kedua strategi menyiratkan solusi yang berbeda untuk masalah aturan yang tumpang tindih.
 
-To create a good classifier for predicting the value of a house you might need to learn not only one rule, but maybe 10 or 20.
-Then things can get more complicated and you can run into one of the following problems:
+Sebuah **decision list** memperkenalkan perintah ke decision rules.
+Jika kondisi aturan pertama benar untuk sebuah instance, kami menggunakan prediksi aturan pertama.
+Jika tidak, kami pergi ke aturan berikutnya dan memeriksa apakah itu berlaku dan seterusnya.
+decision list memecahkan masalah tumpang tindih aturan dengan hanya mengembalikan prediksi aturan pertama dalam daftar yang berlaku.
 
-- Rules can overlap: 
-What if I want to predict the value of a house and two or more rules apply and they give me contradictory predictions?
-- No rule applies:
-What if I want to predict the value of a house and none of the rules apply?
+Sebuah **decision set** menyerupai demokrasi aturan, kecuali bahwa beberapa aturan mungkin memiliki kekuatan suara yang lebih tinggi.
+Dalam satu set, aturannya saling eksklusif, atau ada strategi untuk menyelesaikan konflik, seperti pemungutan suara mayoritas, yang mungkin ditimbang oleh akurasi aturan individu atau ukuran kualitas lainnya.
+Interpretabilitas berpotensi menderita ketika beberapa aturan berlaku.
 
-There are two main strategies for combining multiple rules:
-Decision lists (ordered) and decision sets (unordered). 
-Both strategies imply different solutions to the problem of overlapping rules. 
+Baik decision list dan set dapat mengalami masalah bahwa tidak ada aturan yang berlaku untuk sebuah instance.
+Ini dapat diselesaikan dengan memperkenalkan aturan default.
+Aturan default adalah aturan yang berlaku ketika tidak ada aturan lain yang berlaku.
+Prediksi aturan default sering kali merupakan kelas yang paling sering dari titik data yang tidak tercakup oleh aturan lain.
+Jika satu set atau daftar aturan mencakup seluruh ruang fitur, kami menyebutnya lengkap.
+Dengan menambahkan aturan default, satu set atau daftar secara otomatis menjadi lengkap.
 
-A **decision list** introduces an order to the decision rules.
-If the condition of the first rule is true for an instance, we use the prediction of the first rule. 
-If not, we go to the next rule and check if it applies and so on.
-Decision lists solve the problem of overlapping rules by only returning the prediction of the first rule in the list that applies.
+Ada banyak cara untuk mempelajari aturan dari data dan buku ini masih jauh dari mencakup semuanya.
+Bab ini menunjukkan tiga dari mereka.
+Algoritme dipilih untuk mencakup berbagai ide umum untuk learning rules, sehingga ketiganya mewakili pendekatan yang sangat berbeda.
 
-A **decision set** resembles a democracy of the rules, except that some rules might have a higher voting power.
-In a set, the rules are either mutually exclusive, or there is a strategy for resolving conflicts, such as majority voting, which may be weighted by the individual rule accuracies or other quality measures.
-Interpretability suffers potentially when several rules apply.
+1. **OneR** mempelajari aturan dari satu fitur.
+OneR dicirikan oleh kesederhanaan, interpretasi, dan penggunaannya sebagai tolok ukur.
+1. **Sequential covering** adalah prosedur umum yang mempelajari aturan secara iteratif dan menghapus titik data yang dicakup oleh aturan baru.
+Prosedur ini digunakan oleh banyak algoritma rule learning.
+1. **Bayesian Rule Lists** menggabungkan pola frequent yang telah ditambang sebelumnya ke dalam decision list menggunakan statistik Bayesian.
+Menggunakan pola pra-tambang adalah pendekatan umum yang digunakan oleh banyak algoritma rule learning.
 
-
-Both decision lists and sets can suffer from the problem that no rule applies to an instance. 
-This can be resolved by introducing a default rule. 
-The default rule is the rule that applies when no other rule applies.
-The prediction of the default rule is often the most frequent class of the data points which are not covered by other rules.
-If a set or list of rules covers the entire feature space, we call it exhaustive. 
-By adding a default rule, a set or list automatically becomes exhaustive.
-
-
-There are many ways to learn rules from data and this book is far from covering them all.
-This chapter shows you three of them.
-The algorithms are chosen to cover a wide range of general ideas for learning rules, so all three of them represent very different approaches.
-
-1. **OneR** learns rules from a single feature.
-OneR is characterized by its simplicity, interpretability and its use as a benchmark.
-1. **Sequential covering** is a general procedure that iteratively learns rules and removes the data points that are covered by the new rule. 
-This procedure is used by many rule learning algorithms.
-1. **Bayesian Rule Lists** combine pre-mined frequent patterns into a decision list using Bayesian statistics. 
-Using pre-mined patterns is a common approach used by many rule learning algorithms.
-
-Let's start with the simplest approach: Using the single best feature to learn rules.
+Mari kita mulai dengan pendekatan paling sederhana: Menggunakan satu fitur terbaik untuk mempelajari aturan.
 
 ### Learn Rules from a Single Feature (OneR)
 
-The OneR algorithm suggested by Holte (1993)[^oner] is one of the simplest rule induction algorithms.
-From all the features, OneR selects the one that carries the most information about the outcome of interest and creates decision rules from this feature.
+Algoritma OneR yang disarankan oleh Holte (1993)[^oner] adalah salah satu algoritma induksi aturan yang paling sederhana.
+Dari semua fitur, OneR memilih salah satu yang membawa informasi paling banyak tentang hasil yang diinginkan dan membuat decision rules dari fitur ini.
 
-Despite the name OneR, which stands for "One Rule", the algorithm generates more than one rule:
-It is actually one rule per unique feature value of the selected best feature. 
-A better name would be OneFeatureRules.
+Terlepas dari nama OneR, yang merupakan singkatan dari "One Rule", algoritme menghasilkan lebih dari satu aturan:
+Ini sebenarnya adalah satu aturan per nilai fitur unik dari fitur terbaik yang dipilih.
+Nama yang lebih baik adalah OneFeatureRules.
 
-The algorithm is simple and fast:
+Algoritmanya sederhana dan cepat:
 
-1. Discretize the continuous features by choosing appropriate intervals.
-1. For each feature:
-    - Create a cross table between the feature values and the (categorical) outcome. 
-    - For each value of the feature, create a rule which predicts the most frequent class of the instances that have this particular feature value (can be read from the cross table).
-    - Calculate the total error of the rules for the feature.
-1. Select the feature with the smallest total error.
+1. Diskretisasi fitur kontinu dengan memilih interval yang sesuai.
+1. Untuk setiap fitur:
+    - Buat tabel silang antara nilai fitur dan hasil (kategoris).
+    - Untuk setiap nilai fitur, buat aturan yang memprediksi kelas paling sering dari instance yang memiliki nilai fitur khusus ini (dapat dibaca dari tabel silang).
+    - Hitung total kesalahan aturan untuk fitur tersebut.
+1. Pilih fitur dengan total error terkecil.
 
-OneR always covers all instances of the dataset, since it uses all levels of the selected feature.
-Missing values can be either treated as an additional feature value or be imputed beforehand.
-
-
-A OneR model is a decision tree with only one split.
-The split is not necessarily binary as in CART, but depends on the number of unique feature values.
+OneR selalu mencakup semua contoh kumpulan data, karena menggunakan semua tingkat fitur yang dipilih.
+Nilai yang hilang dapat diperlakukan sebagai nilai fitur tambahan atau diperhitungkan sebelumnya.
 
 
-Let us look at an example how the best feature is chosen by OneR.
-The following table shows an artificial dataset about houses with information about its value, location, size and whether pets are allowed. 
-We are interested in learning a simple model to predict the value of a house.
+Model OneR adalah decision trees dengan hanya satu split.
+Pemisahan tidak harus biner seperti pada CART, tetapi tergantung pada jumlah nilai fitur unik.
+
+
+Mari kita lihat contoh bagaimana fitur terbaik dipilih oleh OneR.
+Tabel berikut menunjukkan kumpulan data buatan tentang rumah dengan informasi tentang nilai, lokasi, ukuran, dan apakah hewan peliharaan diperbolehkan.
+Kami tertarik untuk mempelajari model sederhana untuk memprediksi nilai sebuah rumah.
 
 ```{r OneR-freq-table1}
 value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
@@ -146,7 +139,7 @@ kable(df)
 ```
 
 
-OneR creates the cross tables between each feature and the outcome:
+OneR membuat tabel silang antara setiap fitur dan hasilnya:
 
 ```{r OneR-freq-table2}
 kable(table(paste0("location=", df[,"location"]), value.f))
@@ -154,37 +147,37 @@ kable(table(paste0("size=", df[,"size"]), value.f))
 kable(table(paste0("pets=", df[,"pets"]), value.f))
 ```
 
-For each feature, we go through the table row by row: 
-Each feature value is the IF-part of a rule;
-the most common class for instances with this feature value is the prediction, the THEN-part of the rule.
-For example, the size feature with the levels `small`, `medium` and `big` results in three rules.
-For each feature we calculate the total error rate of the generated rules, which is the sum of the errors.
-The location feature has the possible values `bad` and `good`. 
-The most frequent value for houses in bad locations is `low` and when we use `low` as a prediction, we make two mistakes, because two houses have a `medium` value.
-The predicted value of houses in good locations is `high` and again we make two mistakes, because two houses have a `medium` value.
-The error we make by using the location feature is 4/10, for the size feature it is 3/10  and for the pet feature it is 4/10 . 
-The size feature produces the rules with the lowest error and will be used for the final OneR model:
+Untuk setiap fitur, kita menelusuri tabel baris demi baris:
+Setiap nilai fitur adalah bagian IF dari sebuah aturan;
+kelas yang paling umum untuk instance dengan nilai fitur ini adalah prediksi, bagian THEN dari aturan.
+Misalnya, fitur ukuran dengan level `small`, `medium`, dan `big` menghasilkan tiga aturan.
+Untuk setiap fitur, kami menghitung tingkat kesalahan total dari aturan yang dihasilkan, yang merupakan jumlah kesalahan.
+Fitur lokasi memiliki kemungkinan nilai `buruk` dan `baik`.
+Nilai yang paling sering untuk rumah di lokasi yang buruk adalah `rendah` dan ketika kita menggunakan `rendah` sebagai prediksi, kita membuat dua kesalahan, karena dua rumah memiliki nilai `sedang`.
+p-valuerediksi rumah di lokasi yang baik adalah `tinggi` dan sekali lagi kami membuat dua kesalahan, karena dua rumah memiliki nilai `sedang`.
+Kesalahan yang kami buat dengan menggunakan fitur lokasi adalah 4/10, untuk fitur ukuran adalah 3/10 dan untuk fitur hewan peliharaan adalah 4/10.
+Fitur ukuran menghasilkan aturan dengan kesalahan terendah dan akan digunakan untuk model OneR akhir:
 
 IF `size=small` THEN  `value=low`  
 IF `size=medium` THEN  `value=medium`  
 IF `size=big` THEN  `value=high`
 
-OneR prefers features with many possible levels, because those features can overfit the target more easily.
-Imagine a dataset that contains only noise and no signal, which means that all features take on random values and have no predictive value for the target.
-Some features have more levels than others. 
-The features with more levels can now more easily overfit. 
-A feature that has a separate level for each instance from the data would perfectly predict the entire training dataset.
-A solution would be to split the data into training and validation sets, learn the rules on the training data and evaluate the total error for choosing the feature on the validation set.
+OneR lebih menyukai fitur dengan banyak kemungkinan level, karena fitur tersebut dapat menyesuaikan target dengan lebih mudah.
+Bayangkan sebuah kumpulan data yang hanya berisi noise dan tanpa sinyal, yang berarti bahwa semua fitur mengambil nilai acak dan tidak memiliki p-valuerediksi untuk target.
+Beberapa fitur memiliki level lebih dari yang lain.
+Fitur dengan lebih banyak level sekarang dapat lebih mudah dipasangkan.
+Fitur yang memiliki level terpisah untuk setiap instance dari data akan memprediksi dengan sempurna seluruh set data pelatihan.
+Solusinya adalah dengan membagi data menjadi set pelatihan dan validasi, mempelajari aturan pada data pelatihan dan mengevaluasi kesalahan total untuk memilih fitur pada set validasi.
 
-Ties are another issue, i.e. when two features result in the same total error.
-OneR solves ties by either taking the first feature with the lowest error or the one with the lowest p-value of a chi-squared test.
+Ikatan adalah masalah lain, yaitu ketika dua fitur menghasilkan kesalahan total yang sama.
+OneR memecahkan ikatan dengan mengambil fitur pertama dengan kesalahan terendah atau fitur dengan p-value terendah dari uji chi-squared.
 
-**Example**
+**Contoh**
 
-Let us try OneR with real data.
-We use the [cervical cancer classification task](#cervical) to test the OneR algorithm. 
-All continuous input features were discretized into their 5 quantiles.
-The following rules are created:
+Mari kita coba OneR dengan data nyata.
+Kami menggunakan [tugas klasifikasi kanker serviks](#cervical) untuk menguji algoritma OneR.
+Semua fitur input kontinu didiskritisasi menjadi 5 kuantilnya.
+Aturan berikut dibuat:
 ```{r oner-cervical}
 library("OneR")
 data("cervical")
@@ -199,10 +192,10 @@ rule.to.table = function(rule){
 kable(rule.to.table(rule), row.names = FALSE)
 ```
 
-The age feature was chosen by OneR as the best predictive feature. 
-Since cancer is rare, for each rule the majority class and therefore the predicted label is always Healthy, which is rather unhelpful.
-It does not make sense to use the label prediction in this unbalanced case.
-The cross table between the 'Age' intervals and Cancer/Healthy together with the percentage of women with cancer is more informative:
+Fitur usia dipilih oleh OneR sebagai fitur prediksi terbaik.
+Karena kanker jarang terjadi, untuk setiap aturan kelas mayoritas dan oleh karena itu label yang diprediksi selalu Sehat, yang agak tidak membantu.
+Tidak masuk akal untuk menggunakan prediksi label dalam kasus yang tidak seimbang ini.
+Tabel silang antara interval 'Usia' dan Kanker/Sehat bersama dengan persentase wanita dengan kanker lebih informatif:
 
 ```{r oner-cervical-confusion}
 tt = table(paste0("Age=", bin(cervical$Age)), cervical$Biopsy)
@@ -213,14 +206,14 @@ tt$p.cancer = round(tt[,"Cancer"]/(tt[,"Cancer"] + tt[,"Healthy"]), 2)
 kable(tt[c("Cancer", "Healthy", "p.cancer")], col.names = c("# Cancer", "# Healthy", "P(Cancer)"))
 ```
 
-But before you start interpreting anything:
-Since the prediction for every feature and every value is Healthy, the total error rate is the same for all features.
-The ties in the total error are, by default, resolved by using the first feature from the ones with the lowest error rates (here, all features have 55/858), which happens to be the Age feature.
+Tapi sebelum Anda mulai menafsirkan apa pun:
+Karena prediksi untuk setiap fitur dan setiap nilai adalah Sehat, tingkat kesalahan total adalah sama untuk semua fitur.
+Ikatan dalam kesalahan total, secara default, diselesaikan dengan menggunakan fitur pertama dari yang memiliki tingkat kesalahan terendah (di sini, semua fitur memiliki 55/858), yang kebetulan merupakan fitur Usia.
 
-OneR does not support regression tasks.
-But we can turn a regression task into a classification task by cutting the continuous outcome into intervals.
-We use this trick to predict the number of [rented bikes](#bike-data) with OneR by cutting the number of bikes into its four quartiles (0-25%, 25-50%, 50-75% and 75-100%).
-The following table shows the selected feature after fitting the OneR model:
+OneR tidak mendukung tugas regresi.
+Tetapi kita dapat mengubah tugas regresi menjadi tugas klasifikasi dengan memotong hasil kontinu ke dalam interval.
+Kami menggunakan trik ini untuk memprediksi jumlah [sepeda sewaan](#bike-data) dengan OneR dengan memotong jumlah sepeda menjadi empat kuartil (0-25%, 25-50%, 50-75%, dan 75-100 %).
+Tabel berikut menunjukkan fitur yang dipilih setelah menyesuaikan model OneR:
 
 ```{r oner-bike}
 data("bike")
@@ -232,38 +225,37 @@ rule = OneR::OneR(cnt ~ ., data = bike2)
 kable(rule.to.table(rule), row.names = FALSE)
 ```
 
-The selected feature is the month.
-The month feature has (surprise!) 12 feature levels, which is more than most other features have.
-So there is a danger of overfitting. 
-On the more optimistic side: the month feature can handle the seasonal trend (e.g. less rented bikes in winter) and the predictions seem sensible.
+Fitur yang dipilih adalah bulan.
+Fitur bulan memiliki (kejutan!) 12 tingkat fitur, yang lebih banyak daripada kebanyakan fitur lainnya.
+Jadi ada bahaya overfitting.
+Di sisi yang lebih optimis: fitur bulan dapat menangani tren musiman (misalnya sepeda yang lebih jarang disewa di musim dingin) dan prediksinya tampak masuk akal.
 
-Now we move from the simple OneR algorithm to a more complex procedure using rules with more complex conditions consisting of several features: Sequential Covering.
+Sekarang kita beralih dari algoritma OneR sederhana ke prosedur yang lebih kompleks menggunakan aturan dengan kondisi yang lebih kompleks yang terdiri dari beberapa fitur: Sequential Covering.
 
 ### Sequential Covering
 
-Sequential covering is a general procedure that repeatedly learns a single rule to create a decision list (or set) that covers the entire dataset rule by rule.
-Many rule-learning algorithms are variants of the sequential covering algorithm.
-This chapter introduces the main recipe and uses RIPPER, a variant of the sequential covering algorithm for the examples.
+Sequential covering adalah prosedur umum yang berulang kali mempelajari satu aturan untuk membuat decision list (atau kumpulan) yang mencakup seluruh kumpulan data aturan demi aturan.
+Banyak algoritma rule learning adalah varian dari algoritma sequential covering.
+Bab ini memperkenalkan resep utama dan menggunakan RIPPER, varian dari algoritma Sequential covering untuk contoh.
 
-The idea is simple:
-First, find a good rule that applies to some of the data points.
-Remove all data points which are covered by the rule.
-A data point is covered when the conditions apply, regardless of whether the points are classified correctly or not. 
-Repeat the rule-learning and removal of covered points with the remaining points until no more points are left or another stop condition is met.
-The result is a decision list. 
-This approach of repeated rule-learning and removal of covered data points is called "separate-and-conquer".
+Idenya sederhana:
+Pertama, temukan aturan bagus yang berlaku untuk beberapa titik data.
+Hapus semua titik data yang dicakup oleh aturan.
+Titik data tercakup ketika kondisi berlaku, terlepas dari apakah titik diklasifikasikan dengan benar atau tidak.
+Ulangi rule learning dan penghapusan poin tertutup dengan poin yang tersisa sampai tidak ada lagi poin yang tersisa atau kondisi berhenti lainnya terpenuhi.
+Hasilnya adalah decision list.
+Pendekatan rule learning berulang dan penghapusan titik data tertutup ini disebut "separate-and-conquer".
 
+Misalkan kita sudah memiliki algoritme yang dapat membuat satu aturan yang mencakup sebagian data.
+Algoritma Sequential covering untuk dua kelas (satu positif, satu negatif) bekerja seperti ini:
 
-Suppose we already have an algorithm that can create a single rule that covers part of the data. 
-The sequential covering algorithm for two classes (one positive, one negative) works like this:
-
-- Start with an empty list of rules (rlist).
-- Learn a rule r.
-- While the list of rules is below a certain quality threshold (or positive examples are not yet covered):
-    - Add rule r to rlist.
-    - Remove all data points covered by rule r.
-    - Learn another rule on the remaining data.
-- Return the decision list.
+- Mulailah dengan daftar aturan kosong (rlist).
+- Pelajari aturan r.
+- Sementara daftar aturan di bawah ambang batas kualitas tertentu (atau contoh positif belum tercakup):
+    - Tambahkan aturan r ke rlist.
+    - Hapus semua titik data yang dicakup oleh aturan r.
+    - Pelajari aturan lain pada data yang tersisa.
+- Kembalikan decision list.
 
 ```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. For visualization purposes, the features x1 and x2 are continuous, but most rule learning algorithms require categorical features."}
 set.seed(42)
@@ -305,54 +297,53 @@ gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
 
 ```
 
-For example: 
-We have a task and dataset for predicting the values of houses from size, location and whether pets are allowed.
-We learn the first rule, which turns out to be: 
-If `size=big` and `location=good`, then `value=high`.
-Then we remove all big houses in good locations from the dataset.
-With the remaining data we learn the next rule.
-Maybe: If `location=good`, then `value=medium`.
-Note that this rule is learned on data without big houses in good locations, leaving only medium and small houses in good locations.
+Misalnya:
+Kami memiliki tugas dan kumpulan data untuk memprediksi nilai rumah dari ukuran, lokasi, dan apakah hewan peliharaan diperbolehkan.
+Kami mempelajari aturan pertama, yang ternyata adalah:
+Jika `size=big` dan `location=good`, maka `value=high`.
+Kemudian kami menghapus semua rumah besar di lokasi yang baik dari dataset.
+Dengan data yang tersisa, kita mempelajari aturan berikutnya.
+Mungkin: Jika `lokasi=baik`, maka `nilai=sedang`.
+Perhatikan bahwa aturan ini dipelajari pada data tanpa rumah besar di lokasi yang baik, hanya menyisakan rumah sedang dan kecil di lokasi yang baik.
 
-For multi-class settings, the approach must be modified.
-First, the classes are ordered by increasing prevalence.
-The sequential covering algorithm starts with the least common class, learns a rule for it, removes all covered instances, then moves on to the second least common class and so on. 
-The current class is always treated as the positive class and all classes with a higher prevalence are combined in the negative class.
-The last class is the default rule.
-This is also referred to as one-versus-all strategy in classification.
+Untuk pengaturan multi-kelas, pendekatannya harus dimodifikasi.
+Pertama, kelas-kelas diurutkan berdasarkan peningkatan prevalensi.
+Algoritme sequential covering dimulai dengan kelas yang paling tidak umum, mempelajari aturan untuk itu, menghapus semua instance yang tercakup, kemudian pindah ke kelas paling tidak umum kedua dan seterusnya.
+Kelas saat ini selalu diperlakukan sebagai kelas positif dan semua kelas dengan prevalensi lebih tinggi digabungkan dalam kelas negatif.
+Kelas terakhir adalah aturan default.
+Ini juga disebut sebagai strategi satu lawan semua dalam klasifikasi.
 
 
-How do we learn a single rule? 
-The OneR algorithm would be useless here, since it would always cover the whole feature space.
-But there are many other possibilities. 
-One possibility is to learn a single rule from a decision tree with beam search:
+Bagaimana kita mempelajari satu aturan?
+Algoritma OneR tidak akan berguna di sini, karena akan selalu mencakup seluruh ruang fitur.
+Tapi ada banyak kemungkinan lain.
+Salah satu kemungkinannya adalah mempelajari satu aturan dari decision trees dengan beam search:
 
-- Learn a decision tree (with CART or another tree learning algorithm).
-- Start at the root node and recursively select the purest node (e.g. with the lowest misclassification rate).
-- The majority class of the terminal node is used as the rule prediction; 
-the path leading to that node is used as the rule condition.
+- Pelajari decision trees (dengan CART atau algoritma pembelajaran pohon lainnya).
+- Mulai dari simpul akar dan pilih simpul paling murni secara rekursif (misalnya dengan tingkat kesalahan klasifikasi terendah).
+- Kelas mayoritas dari simpul terminal digunakan sebagai prediksi aturan;
+jalur yang menuju ke simpul tersebut digunakan sebagai kondisi aturan.
 
-The following figure illustrates the beam search in a tree:
+Gambar berikut mengilustrasikan beam search di pohon:
 
 ```{r learn-one-rule, fig.cap = "Learning a rule by searching a path through a decision tree. A decision tree is grown to predict the target of interest. We start at the root node, greedily and iteratively follow the path which locally produces the purest subset (e.g. highest accuracy) and add all the split values to the rule condition. We end up with: If `location=good` and `size=big`, then `value=high`.", out.width=700}
 knitr::include_graphics("images/learn-one-rule.png")
 ```
 
-Learning a single rule is a search problem, where the search space is the space of all possible rules. 
-The goal of the search is to find the best rule according to some criteria.
-There are many different search strategies: 
+Mempelajari satu aturan adalah masalah pencarian, di mana ruang pencarian adalah ruang dari semua aturan yang mungkin.
+Tujuan dari pencarian adalah untuk menemukan aturan terbaik menurut beberapa kriteria.
+Ada banyak strategi pencarian yang berbeda:
 hill-climbing, beam search, exhaustive search, best-first search, ordered search, stochastic search, top-down search, bottom-up search, ...
 
+RIPPER (Repeated Incremental Pruning to Produce Error Reduction) oleh Cohen (1995)[^ripper] adalah varian dari algoritma Sequential Covering.
+RIPPER sedikit lebih canggih dan menggunakan fase pasca-pemrosesan (pemangkasan aturan) untuk mengoptimalkan decision list (atau set).
+RIPPER dapat berjalan dalam mode berurutan atau tidak berurutan dan menghasilkan decision list atau kumpulan keputusan.
 
-RIPPER (Repeated Incremental Pruning to Produce Error Reduction) by Cohen (1995)[^ripper] is a variant of the Sequential Covering algorithm.
-RIPPER is a bit more sophisticated and uses a post-processing phase (rule pruning) to optimize the decision list (or set).
-RIPPER can run in ordered or unordered mode and generate either a decision list or decision set.
+**Contoh**
 
-**Examples**
+Kami akan menggunakan RIPPER untuk contoh.
 
-We will use RIPPER for the examples.
-
-The RIPPER algorithm does not find any rule in the classification task for [cervical cancer](#cervical).
+Algoritme RIPPER tidak menemukan aturan apa pun dalam tugas klasifikasi untuk [kanker serviks](#cervical).
 ```{r jrip-cervical, include = FALSE}
 library("RWeka")
 library(rJava)
@@ -375,11 +366,11 @@ rule = JRip(Biopsy ~ ., data = cervical)
 extract.rules.jrip(rule)
 ```
 
-When we use RIPPER on the regression task to predict [bike counts](#bike-data) some rules are found. 
-Since RIPPER only works for classification, the bike counts must be turned into a categorical outcome. 
-I achieved this by cutting the bike counts into the quartiles.
-For example (4548, 5956) is the interval covering predicted bike counts between 4548 and 5956.
-The following table shows the decision list of learned rules. 
+Saat kita menggunakan RIPPER pada tugas regresi untuk memprediksi [jumlah sepeda](#bike-data) beberapa aturan ditemukan.
+Karena RIPPER hanya berfungsi untuk klasifikasi, jumlah sepeda harus diubah menjadi hasil kategoris.
+Saya mencapai ini dengan memotong jumlah sepeda menjadi kuartil.
+Misalnya (4548, 5956) adalah interval yang mencakup perkiraan jumlah sepeda antara 4548 dan 5956.
+Tabel berikut menunjukkan decision list aturan yang dipelajari.
 
 ```{r jrip-bike}
 bike2 = bike
@@ -393,155 +384,149 @@ rule = JRip(cnt  ~ ., data = bike2)
 extract.rules.jrip(rule)
 ```
 
-The interpretation is simple:
-If the conditions apply, we predict the interval on the right hand side for the number of bikes.
-The last rule is the default rule that applies when none of the other rules apply to an instance. 
-To predict a new instance, start at the top of the list and check whether a rule applies.
-When a condition matches, then the right hand side of the rule is the prediction for this instance. 
-The default rule ensures that there is always a prediction.
+Interpretasinya sederhana:
+Jika kondisi berlaku, kami memprediksi interval di sisi kanan untuk jumlah sepeda.
+Aturan terakhir adalah aturan default yang berlaku ketika tidak ada aturan lain yang berlaku untuk sebuah instance.
+Untuk memprediksi instance baru, mulai dari bagian atas daftar dan periksa apakah aturan berlaku.
+Ketika suatu kondisi cocok, maka sisi kanan aturan adalah prediksi untuk instance ini.
+Aturan default memastikan bahwa selalu ada prediksi.
 
 ### Bayesian Rule Lists
 
-In this section, I will show you another approach to learning a decision list, which follows this rough recipe:
+Di bagian ini, saya akan menunjukkan pendekatan lain untuk mempelajari decision list, yang mengikuti resep kasar ini:
 
-1. Pre-mine frequent patterns from the data that can be used as conditions for the decision rules.
-1. Learn a decision list from a selection of the pre-mined rules.
+1. Pra-tambang pola yang sering dari data yang dapat digunakan sebagai kondisi untuk decision rules.
+1. Pelajari decision list dari pilihan aturan yang sudah ditentukan sebelumnya.
 
-A specific approach using this recipe is called Bayesian Rule Lists (Letham et. al, 2015)[^brl] or BRL for short.
-BRL uses Bayesian statistics to learn decision lists from frequent patterns which are pre-mined with the FP-tree algorithm (Borgelt 2005)[^fp-tree]
+Pendekatan khusus menggunakan resep ini disebut Bayesian Rule Lists (Letham et. al, 2015)[^brl] atau disingkat BRL.
+BRL menggunakan statistik Bayesian untuk mempelajari decision list dari pola yang sering ditambang dengan algoritma pohon FP (Borgelt 2005)[^fp-tree]
 
-But let us start slowly with the first step of BRL.
+Tapi mari kita mulai perlahan dengan langkah pertama BRL.
 
-**Pre-mining of frequent patterns**
+**Pra-penambangan pola yang sering**
 
-A frequent pattern is the frequent (co-)occurrence of feature values.
-As a pre-processing step for the BRL algorithm, we use the features (we do not need the target outcome in this step) and extract frequently occurring patterns from them.
-A pattern can be a single feature value such as `size=medium` or a combination of feature values such as `size=medium AND location=bad`.
+Pola yang sering adalah seringnya (bersama) terjadinya nilai fitur.
+Sebagai langkah pra-pemrosesan untuk algoritma BRL, kami menggunakan fitur (kami tidak memerlukan hasil target dalam langkah ini) dan mengekstrak pola yang sering muncul darinya.
+Pola dapat berupa nilai fitur tunggal seperti `size=medium` atau kombinasi nilai fitur seperti `size=medium AND location=bad`.
 
-The frequency of a pattern is measured with its support in the dataset:
+Frekuensi suatu pola diukur dengan supportnya dalam kumpulan data:
 
 $$Support(x_j=A)=\frac{1}n{}\sum_{i=1}^nI(x^{(i)}_{j}=A)$$
 
-where A is the feature value, n the number of data points in the dataset and I the indicator function that returns 1 if the feature $x_j$ of the instance i has level A otherwise 0.
-In a dataset of house values, if 20% of houses have no balcony and 80% have one or more, then the support for the pattern `balcony=0` is 20%.
-Support can also be measured for combinations of feature values, for example for `balcony=0 AND pets=allowed`.
+di mana A adalah nilai fitur, n jumlah titik data dalam kumpulan data dan I fungsi indikator yang mengembalikan 1 jika fitur $x_j$ dari instance i memiliki level A jika tidak 0.
+Dalam kumpulan data nilai rumah, jika 20% rumah tidak memiliki balkon dan 80% memiliki satu atau lebih, maka support untuk pola `balcony=0` adalah 20%.
+support juga dapat diukur untuk kombinasi nilai fitur, misalnya untuk `balcony=0 AND pets=allowed`.
 
-There are many algorithms to find such frequent patterns, for example Apriori or FP-Growth. 
-Which you use does not matter much, only the speed at which the patterns are found is different, but the resulting patterns are always the same.
+Ada banyak algoritma untuk menemukan pola yang sering seperti itu, misalnya Apriori atau FP-Growth.
+Yang Anda gunakan tidak terlalu penting, hanya kecepatan ditemukannya pola yang berbeda, tetapi pola yang dihasilkan selalu sama.
 
-I will give you a rough idea of how the Apriori algorithm works to find frequent patterns.
-Actually the Apriori algorithm consists of two parts, where the first part finds frequent patterns and the second part builds association rules from them.
-For the BRL algorithm, we are only interested in the frequent patterns that are generated in the first part of Apriori.
+Saya akan memberi Anda gambaran kasar tentang bagaimana algoritma Apriori bekerja untuk menemukan pola yang sering.
+Sebenarnya algoritma Apriori terdiri dari dua bagian, dimana bagian pertama menemukan pola frequent dan bagian kedua membangun aturan asosiasi darinya.
+Untuk algoritma BRL, kami hanya tertarik pada pola frequent yang dibangkitkan di bagian pertama Apriori.
 
-In the first step, the Apriori algorithm starts with all feature values that have a support greater than the minimum support defined by the user. 
-If the user says that the minimum support should be 10% and only 5% of the houses have `size=big`, we would remove that feature value and keep only `size=medium` and `size=small` as patterns. 
-This does not mean that the houses are removed from the data, it just means that `size=big` is not returned as frequent pattern.
-Based on frequent patterns with a single feature value, the Apriori algorithm iteratively tries to find combinations of feature values of increasingly higher order.
-Patterns are constructed by combining `feature=value` statements with a logical AND, e.g. `size=medium AND location=bad`.
-Generated patterns with a support below the minimum support are removed.
-In the end we have all the frequent patterns.
-Any subset of a frequent pattern's clauses is frequent again, which is called the Apriori property. 
-It makes sense intuitively: 
-By removing a condition from a pattern, the reduced pattern can only cover more or the same number of data points, but not less. 
-For example, if 20% of the houses are `size=medium and location=good`, then the support of houses that are only `size=medium` is 20% or greater.
-The Apriori property is used to reduce the number of patterns to be inspected.
-Only in the case of frequent patterns we have to check patterns of higher order.
+Pada langkah pertama, algoritma Apriori dimulai dengan semua nilai fitur yang memiliki support lebih besar dari support minimum yang ditentukan oleh pengguna.
+Jika pengguna mengatakan bahwa support minimum harus 10% dan hanya 5% rumah yang memiliki `size=big`, kami akan menghapus nilai fitur tersebut dan hanya mempertahankan `size=medium` dan `size=small` sebagai pola.
+Ini tidak berarti bahwa rumah dihapus dari data, itu hanya berarti bahwa `size=big` tidak dikembalikan sebagai pola yang sering.
+Berdasarkan pola frequent dengan nilai fitur tunggal, algoritma Apriori secara iteratif mencoba mencari kombinasi nilai fitur dengan urutan yang semakin tinggi.
+Pola dibangun dengan menggabungkan pernyataan `feature=value` dengan logika AND, mis. `size=medium AND location=bad`.
+Pola yang dihasilkan dengan support di bawah support minimum dihapus.
+Pada akhirnya kita memiliki semua pola yang sering.
+Setiap subset dari klausa pola frequent menjadi frequent lagi, yang disebut properti Apriori.
+Masuk akal secara intuitif:
+Dengan menghapus suatu kondisi dari suatu pola, pola yang direduksi hanya dapat mencakup lebih banyak atau jumlah titik data yang sama, tetapi tidak kurang.
+Misalnya, jika 20% rumah `size=medium and location=good`, maka daya dukung rumah yang hanya `size=medium` adalah 20% atau lebih besar.
+Properti Apriori digunakan untuk mengurangi jumlah pola yang akan diperiksa.
+Hanya dalam kasus pola yang sering kita harus memeriksa pola urutan yang lebih tinggi.
 
-Now we are done with pre-mining conditions for the Bayesian Rule List algorithm.
-But before we move on to the second step of BRL, I would like to hint at another way for rule-learning based on pre-mined patterns. 
-Other approaches suggest including the outcome of interest into the frequent pattern mining process and also executing the second part of the Apriori algorithm that builds IF-THEN rules. 
-Since the algorithm is unsupervised, the THEN-part also contains feature values we are not interested in. 
-But we can filter by rules that have only the outcome of interest in the THEN-part.
-These rules already form a decision set, but it would also be possible to arrange, prune, delete or recombine the rules.
+Sekarang kita selesai dengan kondisi pra-penambangan untuk algoritma Bayesian Rule Lists.
+Tetapi sebelum kita melanjutkan ke langkah kedua BRL, saya ingin memberi petunjuk tentang cara lain untuk rule learning berdasarkan pola yang sudah ditambang sebelumnya.
+Pendekatan lain menyarankan untuk memasukkan hasil yang diinginkan ke dalam proses penambangan pola yang sering dan juga mengeksekusi bagian kedua dari algoritma Apriori yang membangun aturan IF-THEN.
+Karena algoritme tidak supervised, bagian THEN juga berisi nilai fitur yang tidak kami minati.
+Tetapi kita dapat memfilter menurut aturan yang hanya memiliki hasil yang menarik di bagian THEN.
+Aturan-aturan ini sudah membentuk seperangkat keputusan, tetapi juga memungkinkan untuk mengatur, memangkas, menghapus, atau menggabungkan kembali aturan.
 
-In the BRL approach however, we work with the frequent patterns and learn the THEN-part and how to arrange the patterns into a decision list using Bayesian statistics.
+Namun dalam pendekatan BRL, kami bekerja dengan pola frequent dan mempelajari bagian THEN dan bagaimana mengatur pola ke dalam decision list menggunakan statistik Bayesian.
 
+**Mempelajari Bayesian Rule Lists**
 
-**Learning Bayesian Rule Lists**
+Tujuan dari algoritma BRL adalah untuk mempelajari decision list yang akurat menggunakan pilihan kondisi yang telah ditambang sebelumnya, sambil memprioritaskan daftar dengan sedikit aturan dan kondisi yang singkat.
+BRL membahas tujuan ini dengan mendefinisikan distribusi decision list dengan distribusi sebelumnya untuk panjang kondisi (lebih disukai aturan yang lebih pendek) dan jumlah aturan (lebih disukai daftar yang lebih pendek).
 
-The goal of the BRL algorithm is to learn an accurate decision list using a selection of the pre-mined conditions, while prioritizing lists with few rules and short conditions.
-BRL addresses this goal by defining a distribution of decision lists with prior distributions for the length of conditions (preferably shorter rules) and the number of rules (preferably a shorter list). 
+Distribusi probabilitas posteriori dari daftar memungkinkan untuk mengatakan seberapa besar kemungkinan decision list, mengingat asumsi singkat dan seberapa baik daftar tersebut cocok dengan data.
+Tujuan kami adalah menemukan daftar yang memaksimalkan probabilitas posterior ini.
+Karena tidak mungkin menemukan daftar terbaik yang tepat langsung dari distribusi daftar, BRL menyarankan resep berikut:
+1) Menghasilkan decision list awal, yang diambil secara acak dari distribusi apriori.
+2) Memodifikasi daftar secara iteratif dengan menambahkan, mengganti atau menghapus aturan, memastikan bahwa daftar yang dihasilkan mengikuti distribusi posterior daftar.
+3) Pilih decision list dari daftar sampel dengan probabilitas tertinggi menurut distribusi posteriori.
 
-The posteriori probability distribution of lists makes it possible to say how likely a decision list is, given assumptions of shortness and how well the list fits the data.
-Our goal is to find the list that maximizes this posterior probability.
-Since it is not possible to find the exact best list directly from the distributions of lists, BRL suggests the following recipe:  
-1) Generate an initial decision list, which is randomly drawn from the priori distribution.  
-2) Iteratively modify the list by adding, switching or removing rules, ensuring that the resulting lists follow the posterior distribution of lists.  
-3) Select the decision list from the sampled lists with the highest probability according to the posteriori distribution.
+Mari kita membahas algoritma lebih dekat:
+Algoritma dimulai dengan pola nilai fitur pra-penambangan dengan algoritma FP-Growth.
+BRL membuat sejumlah asumsi tentang distribusi target dan distribusi parameter yang menentukan distribusi target.
+(Itu statistik Bayesian.)
+Jika Anda tidak terbiasa dengan statistik Bayesian, jangan terlalu terpaku pada penjelasan berikut.
+Penting untuk diketahui bahwa pendekatan Bayesian adalah cara untuk menggabungkan pengetahuan atau persyaratan yang ada (disebut distribusi apriori) sekaligus menyesuaikan dengan data.
+Dalam kasus decision list, pendekatan Bayesian masuk akal, karena asumsi sebelumnya mendorong decision list menjadi pendek dengan aturan pendek.
 
-Let us go over the algorithm more closely:
-The algorithm starts with pre-mining feature value patterns with the FP-Growth algorithm.
-BRL makes a number of assumptions about the distribution of the target and the distribution of the parameters that define the distribution of the target.
-(That's Bayesian statistic.)
-If you are unfamiliar with Bayesian statistics, do not get too caught up in the following explanations. 
-It is important to know that the Bayesian approach is a way to combine existing knowledge or requirements (so-called priori distributions) while also fitting to the data.
-In the case of decision lists, the Bayesian approach makes sense, since the prior assumptions nudges the decision lists to be short with short rules.
-
-The goal is to sample decision lists d from the posteriori distribution: 
+Tujuannya adalah untuk mengambil sampel decision list d dari distribusi posteriori:
 
 $$\underbrace{p(d|x,y,A,\alpha,\lambda,\eta)}_{posteriori}\propto\underbrace{p(y|x,d,\alpha)}_{likelihood}\cdot\underbrace{p(d|A,\lambda,\eta)}_{priori}$$
 
-where d is a decision list, x are the features, y is the target, A the set of pre-mined conditions, $\lambda$ the prior expected length of the decision lists, $\eta$ the prior expected number of conditions in a rule, $\alpha$ the prior pseudo-count for the positive and negative classes which is best fixed at (1,1).
-
+di mana d adalah decision list, x adalah fitur, y adalah target, A kumpulan kondisi pra-tambang, $\lambda$ panjang perkiraan sebelumnya dari decision list, $\eta$ jumlah kondisi yang diharapkan sebelumnya dalam aturan, $\alpha$ pseudo-count sebelumnya untuk kelas positif dan negatif yang paling baik ditetapkan pada (1,1).
 
 $$p(d|x,y,A,\alpha,\lambda,\eta)$$
 
-quantifies how probable a decision list is, given the observed data and the priori assumptions. 
-This is proportional to the likelihood of the outcome y given the decision list and the data times the probability of the list given prior assumptions and the pre-mined conditions.
+mengkuantifikasi seberapa besar kemungkinan decision list, mengingat data yang diamati dan asumsi apriori.
+Ini sebanding dengan kemungkinan hasil y yang diberikan decision list dan data kali probabilitas daftar yang diberikan asumsi sebelumnya dan kondisi pra-tambang.
 
 $$p(y|x,d,\alpha)$$
 
-is the likelihood of the observed y, given the decision list and the data. 
-BRL assumes that y is generated by a Dirichlet-Multinomial distribution.
-The better the decision list d explains the data, the higher the likelihood.
+adalah kemungkinan y yang diamati, mengingat decision list dan data.
+BRL mengasumsikan bahwa y dihasilkan oleh distribusi Dirichlet-Multinomial.
+Semakin baik decision list d menjelaskan data, semakin tinggi kemungkinannya.
 
 $$p(d|A,\lambda,\eta)$$
 
-is the prior distribution of the decision lists. 
-It multiplicatively combines a truncated Poisson distribution (parameter $\lambda$) for the number of rules in the list and a truncated Poisson distribution (parameter $\eta$) for the number of feature values in the conditions of the rules.
+adalah distribusi sebelumnya dari decision list.
+Ini secara perkalian menggabungkan distribusi Poisson terpotong (parameter $\lambda$) untuk jumlah aturan dalam daftar dan distribusi Poisson terpotong (parameter $\eta$) untuk jumlah nilai fitur dalam ketentuan aturan.
 
-A decision list has a high posterior probability if it explains the outcome y well and is also likely according to the prior assumptions.
+decision list memiliki probabilitas posterior yang tinggi jika menjelaskan hasil y dengan baik dan juga kemungkinan sesuai dengan asumsi sebelumnya.
 
+Estimasi dalam statistik Bayesian selalu sedikit rumit, karena kita biasanya tidak dapat langsung menghitung jawaban yang benar, tetapi kita harus menggambar kandidat, mengevaluasinya, dan memperbarui estimasi posteriori kita menggunakan metode rantai Markov Monte Carlo.
+Untuk decision list, ini bahkan lebih rumit, karena kita harus menggambar dari distribusi decision list.
+Penulis BRL mengusulkan untuk terlebih dahulu menggambar decision list awal dan kemudian memodifikasinya secara iteratif untuk menghasilkan sampel decision list dari distribusi posterior daftar (rantai Markov decision list).
+Hasilnya berpotensi tergantung pada decision list awal, jadi disarankan untuk mengulangi prosedur ini untuk memastikan banyaknya variasi daftar.
+Default dalam implementasi perangkat lunak adalah 10 kali.
+Resep berikut memberi tahu kita cara menggambar decision list awal:
 
-Estimations in Bayesian statistics are always a bit tricky, because we usually cannot directly calculate the correct answer, but we have to draw candidates, evaluate them and update our posteriori estimates using the Markov chain Monte Carlo method.
-For decision lists, this is even more tricky, because we have to draw from the distribution of decision lists. 
-The BRL authors propose to first draw an initial decision list and then iteratively modify it to generate samples of decision lists from the posterior distribution of the lists (a Markov chain of decision lists).
-The results are potentially dependent on the initial decision list, so it is advisable to repeat this procedure to ensure a great variety of lists.
-The default in the software implementation is 10 times.
-The following recipe tells us how to draw an initial decision list:
+- Pola pra-tambang dengan FP-Growth.
+- Contoh parameter panjang daftar m dari distribusi Poisson terpotong.
+- Untuk aturan default: Contoh parameter distribusi Dirichlet-Multinomial $\theta_0$ dari nilai target (yaitu aturan yang berlaku saat tidak ada lagi yang berlaku).
+- Untuk aturan decision list j=1,...,m, lakukan:
+    - Contoh parameter panjang aturan l (jumlah kondisi) untuk aturan j.
+    - Contoh kondisi panjang $l_j$ dari kondisi pra-tambang.
+    - Contoh parameter distribusi Dirichlet-Multinomial untuk bagian THEN (yaitu untuk distribusi hasil target yang diberikan aturan)
+- Untuk setiap observasi dalam dataset:
+    - Temukan aturan dari decision list yang berlaku terlebih dahulu
 
-- Pre-mine patterns with FP-Growth.
-- Sample the list length parameter m from a truncated Poisson distribution.
-- For the default rule: Sample the Dirichlet-Multinomial distribution parameter $\theta_0$ of the target value (i.e. the rule that applies when nothing else applies).
-- For decision list rule j=1,...,m, do:
-    - Sample the rule length parameter l (number of conditions) for rule j.
-    - Sample a condition of length $l_j$ from the pre-mined conditions.
-    - Sample the Dirichlet-Multinomial distribution parameter for the THEN-part (i.e. for the distribution of the target outcome given the rule)
-- For each observation in the dataset:
-    - Find the rule from the decision list that applies first (top to bottom).
-    - Draw the predicted outcome from the probability distribution (Binomial) suggested by the rule that applies.
+Langkah selanjutnya adalah menghasilkan banyak daftar baru mulai dari sampel awal ini untuk mendapatkan banyak sampel dari distribusi posterior decision list.
 
-The next step is to generate many new lists starting from this initial sample to obtain many samples from the posterior distribution of decision lists.
+decision list baru diambil sampelnya dengan memulai dari daftar awal dan kemudian secara acak memindahkan aturan ke posisi berbeda dalam daftar atau menambahkan aturan ke decision list saat ini dari kondisi yang telah ditentukan sebelumnya atau menghapus aturan dari decision list.
+Aturan mana yang diubah, ditambahkan, atau dihapus dipilih secara acak.
+Pada setiap langkah, algoritma mengevaluasi probabilitas posteriori dari decision list (campuran akurasi dan kependekan).
+Algoritma Metropolis Hastings memastikan bahwa kami mengambil sampel decision list yang memiliki probabilitas posterior tinggi.
+Prosedur ini memberi kita banyak sampel dari distribusi decision list.
+Algoritma BRL memilih decision list sampel dengan probabilitas posterior tertinggi.
 
-The new decision lists are sampled by starting from the initial list and then randomly either moving a rule to a different position in the list or adding a rule to the current decision list from the pre-mined conditions or removing a rule from the decision list. 
-Which of the rules is switched, added or deleted is chosen at random.
-At each step, the algorithm evaluates the posteriori probability of the decision list (mixture of accuracy and shortness).
-The Metropolis Hastings algorithm ensures that we sample decision lists that have a high posterior probability.
-This procedure provides us with many samples from the distribution of decision lists.
-The BRL algorithm selects the decision list of the samples with the highest posterior probability.
+**Contoh**
 
+Itu saja dengan teorinya, sekarang mari kita lihat metode BRL beraksi.
+Contoh menggunakan varian BRL yang lebih cepat yang disebut Scalable Bayesian Rule Lists (SBRL) oleh Yang et. al (2017) [^sbrl].
+Kami menggunakan algoritma SBRL untuk memprediksi [risiko kanker serviks](#cervical).
+Saya pertama-tama harus mendiskritisasi semua fitur input agar algoritma SBRL berfungsi.
+Untuk tujuan ini saya menggabungkan fitur kontinu berdasarkan frekuensi nilai dengan kuantil.
 
-**Examples**
+Kami mendapatkan aturan berikut:
 
-That is it with the theory, now let's see the BRL method in action.
-The examples use a faster variant of BRL called Scalable Bayesian Rule Lists (SBRL) by Yang et. al (2017) [^sbrl].
-We use the SBRL algorithm to predict the [risk for cervical cancer](#cervical).
-I first had to discretize all input features for the SBRL algorithm to work. 
-For this purpose I binned the continuous features based on the frequency of the values by quantiles.
-
-We get the following rules:
-
-<!-- Set eval = TRUE to recompute the rules -->
 ```{r sbrl-cervical, results = "hide", eval = FALSE}
 library("sbrl")
 library("arules")
@@ -585,12 +570,12 @@ rules = readRDS("../data/cached-sbrl-cervical.RDS")
 kable(rules$rules)
 ```
 
-Note that we get sensible rules, since the prediction on the THEN-part is not the class outcome, but the predicted probability for cancer.
+Perhatikan bahwa kita mendapatkan aturan yang masuk akal, karena prediksi pada bagian THEN bukanlah hasil kelas, tetapi probabilitas prediksi untuk kanker.
 
-The conditions were selected from patterns that were pre-mined with the FP-Growth algorithm. 
-The following table displays the pool of conditions the SBRL algorithm could choose from for building a decision list.
-The maximum number of feature values in a condition I allowed as a user was two.
-Here is a sample of ten patterns:
+Kondisi dipilih dari pola yang telah ditambang sebelumnya dengan algoritma FP-Growth.
+Tabel berikut menampilkan kumpulan kondisi yang dapat dipilih oleh algoritme SBRL untuk membuat decision list.
+Jumlah maksimum nilai fitur dalam kondisi yang saya izinkan sebagai pengguna adalah dua.
+Berikut adalah contoh dari sepuluh pola:
 
 ```{r sbrl-cervical-premined}
 set.seed(1)
@@ -598,13 +583,12 @@ conditions = sample(rules$rulenames, size = 10)
 kable(gsub("\\{|\\}", "", conditions), col.names = "pre-mined conditions")
 ```
 
-Next, we apply the SBRL algorithm to the [bike rental prediction task](#bike-data).
-This only works if the regression problem of predicting bike counts is converted into a binary classification task. 
-I have arbitrarily created a classification task by creating a label that is 1 if the number of bikes exceeds 4000 bikes on a day, else 0.
+Selanjutnya, kami menerapkan algoritme SBRL ke [tugas prediksi rental sepeda](#bike-data).
+Ini hanya berfungsi jika masalah regresi dalam memprediksi jumlah sepeda diubah menjadi tugas klasifikasi biner.
+Saya telah secara sewenang-wenang membuat tugas klasifikasi dengan membuat label yaitu 1 jika jumlah sepeda melebihi 4000 sepeda dalam sehari, jika tidak 0.
 
-The following list was learned by SBRL:
+Daftar berikut dipelajari oleh SBRL:
 
-<!-- Set eval = TRUE to recompute the rules -->
 ```{r sbrl-bike, results = "hide", eval = FALSE}
 library("sbrl")
 library("arules")
@@ -631,58 +615,58 @@ rules = readRDS("../data/cached-sbrl-bike.RDS")
 kable(rules)
 ```
 
-Let us predict the probability that the number of bikes will exceed 4000 for a day in 2012 with a temperature of 17 degrees Celsius. 
-The first rule does not apply, since it only applies for days in 2011. 
-The second rule applies, because the day is in 2012 and 17 degrees lies in the interval `[7.35,19.9)`. 
-Our prediction for the probability is that more than 4000 bikes are rented is 88%.
+Mari kita perkirakan probabilitas jumlah sepeda akan melebihi 4000 untuk satu hari di tahun 2012 dengan suhu 17 derajat Celcius.
+Aturan pertama tidak berlaku, karena hanya berlaku selama berhari-hari di tahun 2011.
+Aturan kedua berlaku, karena hari pada tahun 2012 dan 17 derajat terletak pada interval `[7.35,19.9)`.
+Prediksi kami untuk probabilitas lebih dari 4000 sepeda yang disewa adalah 88%.
 
 ### Advantages
 
-This section discusses the benefits of IF-THEN rules in general.
+Bagian ini membahas manfaat aturan IF-THEN secara umum.
 
-IF-THEN rules are **easy to interpret**.
-They are probably the most interpretable of the interpretable models.
-This statement only applies if the number of rules is small, the conditions of the rules are short (maximum 3 I would say) and if the rules are organized in a decision list or a non-overlapping decision set.
+Aturan IF-THEN **mudah ditafsirkan**.
+Mereka mungkin adalah model yang paling dapat diinterpretasikan dari yang dapat diinterpretasikan.
+Pernyataan ini hanya berlaku jika jumlah aturannya kecil, kondisi aturannya pendek (maksimal 3 saya katakan) dan jika aturan diatur dalam decision list atau decision set yang tidak tumpang tindih.
 
-Decision rules can be **as expressive as decision trees, while being more compact**. 
-Decision trees often also suffer from replicated sub-trees, that is, when the splits in a left and a right child node have the same structure.
+decision rules bisa **seekspresif seperti decision trees, sekaligus lebih ringkas**.
+decision trees sering juga menderita dari subpohon yang direplikasi, yaitu, ketika pemisahan di simpul anak kiri dan kanan memiliki struktur yang sama.
 
-The **prediction with IF-THEN rules is fast**, since only a few binary statements need to be checked to determine which rules apply.
+**Prediksi dengan aturan IF-THEN cepat**, karena hanya beberapa pernyataan biner yang perlu diperiksa untuk menentukan aturan mana yang berlaku.
 
-Decision rules are **robust** against monotonic transformations of the input features, because only the threshold in the conditions changes.
-They are also robust against outliers, since it only matters if a condition applies or not.
+decision rules **kuat** terhadap transformasi monoton dari fitur input, karena hanya ambang batas dalam kondisi yang berubah.
+Mereka juga kuat terhadap outlier, karena hanya penting jika suatu kondisi berlaku atau tidak.
 
-IF-THEN rules usually generate sparse models, which means that not many features are included.
-They **select only the relevant features** for the model.
-For example, a linear model assigns a weight to every input feature by default.
-Features that are irrelevant can simply be ignored by IF-THEN rules.
+Aturan IF-THEN biasanya menghasilkan model yang jarang, yang berarti tidak banyak fitur yang disertakan.
+Mereka **hanya memilih fitur yang relevan** untuk model tersebut.
+Misalnya, model linier memberikan bobot untuk setiap fitur input secara default.
+Fitur yang tidak relevan dapat diabaikan begitu saja oleh aturan IF-THEN.
 
-Simple rules like from OneR **can be used as baseline** for more complex algorithms.
+Aturan sederhana seperti dari OneR **dapat digunakan sebagai dasar** untuk algoritme yang lebih kompleks.
 
 ### Disadvantages 
 
-This section deals with the disadvantages of IF-THEN rules in general.
+Bagian ini membahas kelemahan aturan IF-THEN secara umum.
 
-The research and literature for IF-THEN rules focuses on classification and almost **completely neglects regression**.
-While you can always divide a continuous target into intervals and turn it into a classification problem, you always lose information.
-In general, approaches are more attractive if they can be used for both regression and classification.
+Penelitian dan literatur untuk aturan IF-THEN berfokus pada klasifikasi dan hampir **mengabaikan regresi**.
+Meskipun Anda selalu dapat membagi target berkelanjutan menjadi interval dan mengubahnya menjadi masalah klasifikasi, Anda selalu kehilangan informasi.
+Secara umum, pendekatan lebih menarik jika dapat digunakan baik untuk regresi maupun klasifikasi.
 
-Often the **features also have to be categorical**.
-That means numeric features  must be categorized if you want to use them. 
-There are many ways to cut a continuous feature into intervals, but this is not trivial and comes with many questions without clear answers.
-How many intervals should the feature be divided into? 
-What is the splitting criteria: Fixed interval lengths, quantiles or something else?
-Categorizing continuous features is a non-trivial issue that is often neglected and people just use the next best method (like I did in the examples).
+Seringkali **fitur juga harus kategoris**.
+Itu berarti fitur numerik harus dikategorikan jika Anda ingin menggunakannya.
+Ada banyak cara untuk memotong fitur kontinu menjadi interval, tetapi ini tidak sepele dan disertai dengan banyak pertanyaan tanpa jawaban yang jelas.
+Berapa banyak interval yang harus dibagi menjadi fitur?
+Apa kriteria pemisahan: Panjang interval tetap, kuantil atau yang lainnya?
+Mengkategorikan fitur berkelanjutan adalah masalah non-sepele yang sering diabaikan dan orang-orang hanya menggunakan metode terbaik berikutnya (seperti yang saya lakukan dalam contoh).
 
-Many of the older rule-learning algorithms are prone to overfitting. 
-The algorithms presented here all have at least some safeguards to prevent overfitting:
-OneR is limited because it can only use one feature (only problematic if the feature has too many levels or if there are many features, which equates to the multiple testing problem), RIPPER does pruning and Bayesian Rule Lists impose a prior distribution on the decision lists.
+Banyak dari algoritma rule learning yang lebih tua rentan terhadap overfitting.
+Algoritme yang disajikan di sini semuanya memiliki setidaknya beberapa perlindungan untuk mencegah overfitting:
+OneR terbatas karena hanya dapat menggunakan satu fitur (hanya bermasalah jika fitur memiliki terlalu banyak level atau jika ada banyak fitur, yang setara dengan masalah pengujian ganda), RIPPER melakukan pemangkasan dan Bayesian Rule Lists memberlakukan distribusi sebelumnya pada keputusan daftar.
 
-Decision rules are **bad in describing linear relationships** between features and output.
-That is a problem they share with the decision trees. 
-Decision trees and rules can only produce step-like prediction functions, where changes in the prediction are always discrete steps and never smooth curves.
-This is related to the issue that the inputs have to be categorical.
-In decision trees, they are implicitly categorized by splitting them.
+decision rules **buruk dalam menggambarkan hubungan linier** antara fitur dan output.
+Itu adalah masalah yang mereka bagikan dengan decision trees.
+decision trees dan aturan hanya dapat menghasilkan fungsi prediksi seperti langkah, di mana perubahan prediksi selalu langkah diskrit dan tidak pernah kurva mulus.
+Hal ini terkait dengan isu bahwa input harus kategoris.
+Dalam decision trees, mereka secara implisit dikategorikan dengan memisahkannya.
 
 
 
@@ -690,17 +674,17 @@ In decision trees, they are implicitly categorized by splitting them.
 
 
 
-OneR is implemented in the [R package OneR](https://cran.r-project.org/web/packages/OneR/), which was used for the examples in this book. 
-OneR is also implemented in the [Weka machine learning library](https://www.eecs.yorku.ca/tdb/_doc.php/userg/sw/weka/doc/weka/classifiers/rules/package-summary.html) and as such available in Java, R and Python.
-RIPPER is also implemented in Weka. For the examples, I used the R implementation of JRIP in the [RWeka package](https://cran.r-project.org/web/packages/RWeka/index.html). 
-SBRL is available as [R package](https://cran.r-project.org/web/packages/sbrl/index.html) (which I used for the examples), in [Python](https://github.com/datascienceinc/Skater) or as [C implementation](https://github.com/Hongyuy/sbrlmod).
+OneR diimplementasikan dalam [paket R OneR](https://cran.r-project.org/web/packages/OneR/), yang digunakan untuk contoh dalam buku ini.
+OneR juga diimplementasikan di [library machine learning Weka](https://www.eecs.yorku.ca/tdb/_doc.php/userg/sw/weka/doc/weka/classifiers/rules/package-summary.html ) dan dengan demikian tersedia di Java, R dan Python.
+RIPPER juga diterapkan di Weka. Sebagai contoh, saya menggunakan implementasi R dari JRIP di [paket RWeka](https://cran.r-project.org/web/packages/RWeka/index.html).
+SBRL tersedia sebagai [paket R](https://cran.r-project.org/web/packages/sbrl/index.html) (yang saya gunakan untuk contoh), di [Python](https://github.com/datascienceinc/Skater) atau sebagai [implementasi C](https://github.com/Hongyuy/sbrlmod).
 
-I will not even try to list all alternatives for learning decision rule sets and lists, but will point to some summarizing work.
-I recommend the book "Foundations of Rule Learning" by Fuernkranz et. al (2012)[^fuernkranz]. 
-It is an extensive work on learning rules, for those who want to delve deeper into the topic.
-It provides a holistic framework for thinking about learning rules and presents many rule learning algorithms.
-I also recommend to checkout the [Weka rule learners](http://weka.sourceforge.net/doc.dev/weka/classifiers/rules/package-summary.html), which implement RIPPER, M5Rules, OneR, PART and many more.
-IF-THEN rules can be used in linear models as described in this book in the chapter about the [RuleFit algorithm](#rulefit).
+Saya bahkan tidak akan mencoba membuat daftar semua alternatif untuk mempelajari kumpulan dan daftar decision rules, tetapi akan menunjukkan beberapa pekerjaan meringkas.
+Saya merekomendasikan buku "Foundations of Rule Learning" oleh Fuernkranz et. al (2012)[^fuernkranz].
+Ini adalah pekerjaan ekstensif tentang learning rules, bagi mereka yang ingin mempelajari topik lebih dalam.
+Ini menyediakan kerangka kerja holistik untuk berpikir tentang learning rules dan menyajikan banyak algoritma rule learning.
+Saya juga merekomendasikan untuk memeriksa [peserta didik aturan Weka](http://weka.sourceforge.net/doc.dev/weka/classifiers/rules/package-summary.html), yang mengimplementasikan RIPPER, M5Rules, OneR, PART dan banyak lagi lebih.
+Aturan IF-THEN dapat digunakan dalam model linier seperti yang dijelaskan dalam buku ini dalam bab tentang [algoritma RuleFit](#rulefit).
 
 
 

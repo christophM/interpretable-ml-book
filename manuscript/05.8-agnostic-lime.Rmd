@@ -7,64 +7,64 @@ set.seed(42)
 
 ## Local Surrogate (LIME) {#lime}
 
-Local surrogate models are interpretable models that are used to explain individual predictions of black box machine learning models.
-Local interpretable model-agnostic explanations (LIME)[^Ribeiro2016lime] is a paper in which the authors propose a concrete implementation of local surrogate models.
-Surrogate models are trained to approximate the predictions of the underlying black box model.
-Instead of training a global surrogate model, LIME focuses on training local surrogate models to explain individual predictions.
+Local surrogate models adalah model yang dapat ditafsirkan yang digunakan untuk menjelaskan prediksi individu dari model machine learning black box.
+Penjelasan local interpretable model-agnostic explanations (LIME)[^Ribeiro2016lime] adalah makalah di mana penulis mengusulkan implementasi konkret local surrogate models.
+Surrogate models dilatih untuk memperkirakan prediksi model black box yang mendasarinya.
+Alih-alih melatih surrogate models global, LIME berfokus pada pelatihan local surrogate models untuk menjelaskan prediksi individu.
 
-The idea is quite intuitive.
-First, forget about the training data and imagine you only have the black box model where you can input data points and get the predictions of the model.
-You can probe the box as often as you want.
-Your goal is to understand why the machine learning model made a certain prediction.
-LIME tests what happens to the predictions when you give variations of your data into the machine learning model.
-LIME generates a new dataset consisting of perturbed samples and the corresponding predictions of the black box model.
-On this new dataset LIME then trains an interpretable model, which is weighted by the proximity of the sampled instances to the instance of interest. 
-The interpretable model can be anything from the [interpretable models chapter](#simple), for example [Lasso](#lasso) or a [decision tree](#tree).
-The learned model should be a good approximation of the machine learning model predictions locally, but it does not have to be a good global approximation.
-This kind of accuracy is also called local fidelity.
+Idenya cukup intuitif.
+Pertama, lupakan data pelatihan dan bayangkan Anda hanya memiliki model black box di mana Anda dapat memasukkan titik data dan mendapatkan prediksi model.
+Anda dapat memeriksa kotak sesering yang Anda inginkan.
+Tujuan Anda adalah untuk memahami mengapa model machine learning membuat prediksi tertentu.
+LIME menguji apa yang terjadi pada prediksi saat Anda memberikan variasi data ke dalam model machine learning.
+LIME menghasilkan kumpulan data baru yang terdiri dari sampel yang terganggu dan prediksi yang sesuai dari model black box.
+Pada kumpulan data baru ini, LIME kemudian melatih interpretable models, yang diberi bobot berdasarkan kedekatan instance sampel dengan instance yang diinginkan.
+interpretable models dapat berupa apa saja dari [bab interpretable models](#simple), misalnya [Lasso](#lasso) atau [decision trees](#tree).
+Model yang dipelajari harus merupakan perkiraan yang baik dari prediksi model machine learning secara lokal, tetapi tidak harus menjadi pendekatan global yang baik.
+Jenis akurasi ini juga disebut local fidelity.
 
-Mathematically, local surrogate models with interpretability constraint can be expressed as follows:
+Secara matematis, local surrogate models dengan kendala interpretability dapat dinyatakan sebagai berikut:
 
 $$\text{explanation}(x)=\arg\min_{g\in{}G}L(f,g,\pi_x)+\Omega(g)$$
 
-The explanation model for instance x is the model g (e.g. linear regression model) that minimizes loss L (e.g. mean squared error), which measures how close the explanation is to the prediction of the original model f (e.g. an xgboost model), while the model complexity $\Omega(g)$ is kept low (e.g. prefer fewer features).
-G is the family of possible explanations, for example all possible linear regression models.
-The proximity measure $\pi_x$ defines how large the neighborhood around instance x is that we consider for the explanation.
-In practice, LIME only optimizes the loss part.
-The user has to determine the complexity, e.g. by selecting the maximum number of features that the linear regression model may use.
+explanation model misalnya x adalah model g (misalnya model linear regression) yang meminimalkan loss L (misalnya kesalahan kuadrat rata-rata), yang mengukur seberapa dekat penjelasannya dengan prediksi model asli f (misalnya model xgboost), sedangkan kompleksitas model $\Omega(g)$ dijaga tetap rendah (misalnya lebih memilih fitur yang lebih sedikit).
+G adalah keluarga penjelasan yang mungkin, misalnya semua model linear regression yang mungkin.
+Ukuran kedekatan $\pi_x$ mendefinisikan seberapa besar lingkungan di sekitar instance x yang kami pertimbangkan untuk penjelasannya.
+Dalam praktiknya, LIME hanya mengoptimalkan bagian yang hilang.
+Pengguna harus menentukan kerumitannya, mis. dengan memilih jumlah fitur maksimum yang dapat digunakan model linear regression.
 
-The recipe for training local surrogate models:
+Resep untuk melatih local surrogate models:
 
-- Select your instance of interest for which you want to have an explanation of its black box prediction.
-- Perturb your dataset and  get the black box predictions for these new points.
-- Weight the new samples according to their proximity to the instance of interest.
-- Train a weighted, interpretable model on the dataset with the variations.
-- Explain the prediction by interpreting the local model.
+- Pilih instance yang Anda minati yang ingin Anda beri penjelasan tentang prediksi black boxnya.
+- Ganggu dataset Anda dan dapatkan prediksi black box untuk poin-poin baru ini.
+- Bobot sampel baru sesuai dengan kedekatannya dengan instance yang diinginkan.
+- Latih model yang tertimbang dan dapat diinterpretasikan pada dataset dengan variasi.
+- Menjelaskan prediksi dengan menginterpretasikan model lokal.
 
-In the current implementations in [R](https://github.com/thomasp85/lime) and [Python](https://github.com/marcotcr/lime), for example, linear regression can be chosen as interpretable surrogate model.
-In advance, you have to select K, the number of features you want to have in your interpretable model.
-The lower K, the easier it is to interpret the model.
-A higher K potentially produces models with higher fidelity.
-There are several methods for training models with exactly K features.
-A good choice is [Lasso](#lasso).
-A Lasso model with a high regularization parameter $\lambda$ yields a model without any feature.
-By retraining the Lasso models with slowly decreasing $\lambda$, one after the other, the features get weight estimates that differ from zero.
-If there are K features in the model, you have reached the desired number of features. 
-Other strategies are forward or backward selection of features.
-This means you either start with the full model (= containing all features) or with a model with only the intercept and then test which feature would bring the biggest improvement when added or removed, until a model with K features is reached.
+Dalam implementasi saat ini di [R](https://github.com/thomasp85/lime) dan [Python](https://github.com/marcotcr/lime), misalnya, linear regression dapat dipilih sebagai interpretable surrogate model.
+Sebelumnya, Anda harus memilih K, jumlah fitur yang ingin Anda miliki dalam model interpretable Anda.
+Semakin rendah K, semakin mudah untuk menginterpretasikan model.
+K yang lebih tinggi berpotensi menghasilkan model dengan fidelitas yang lebih tinggi.
+Ada beberapa metode untuk model pelatihan dengan fitur K persis.
+Pilihan yang bagus adalah [Lasso](#lasso).
+Model Lasso dengan parameter regularisasi tinggi $\lambda$ menghasilkan model tanpa fitur apa pun.
+Dengan melatih kembali model Lasso dengan penurunan $\lambda$ secara perlahan, satu demi satu, fitur mendapatkan perkiraan bobot yang berbeda dari nol.
+Jika ada K fitur dalam model, Anda telah mencapai jumlah fitur yang diinginkan.
+Strategi lainnya adalah pemilihan fitur ke depan atau ke belakang.
+Ini berarti Anda memulai dengan model lengkap (= berisi semua fitur) atau dengan model hanya dengan intersep dan kemudian menguji fitur mana yang akan memberikan peningkatan terbesar saat ditambahkan atau dihapus, hingga model dengan fitur K tercapai.
 
-How do you get the variations of the data?
-This depends on the type of data, which can be either text, image or tabular data. 
-For text and images, the solution is to turn single words or super-pixels on or off.
-In the case of tabular data, LIME creates new samples by perturbing each feature individually, drawing from a normal distribution with mean and standard deviation taken from the feature.
+Bagaimana Anda mendapatkan variasi data?
+Hal ini tergantung pada jenis data, yang dapat berupa teks, gambar atau data tabular.
+Untuk teks dan gambar, solusinya adalah mengaktifkan atau menonaktifkan satu kata atau piksel super.
+Dalam kasus data tabular, LIME membuat sampel baru dengan mengganggu setiap fitur secara individual, menggambar dari distribusi normal dengan mean dan standar deviasi yang diambil dari fitur tersebut.
 
 ### LIME for Tabular Data
 
-Tabular data is data that comes in tables, with each row representing an instance and each column a feature.
-LIME samples are not taken around the instance of interest, but from the training data's mass center, which is problematic.
-But it increases the probability that the result for some of the sample points predictions differ from the data point of interest and that LIME can learn at least some explanation.
+Data tabular adalah data yang datang dalam tabel, dengan setiap baris mewakili sebuah instance dan setiap kolom merupakan fitur.
+Sampel LIME tidak diambil di sekitar instance yang diinginkan, tetapi dari pusat massa data pelatihan, yang bermasalah.
+Tetapi ini meningkatkan kemungkinan bahwa hasil untuk beberapa prediksi titik sampel berbeda dari titik data yang diinginkan dan bahwa LIME dapat mempelajari setidaknya beberapa penjelasan.
 
-It is best to visually explain how sampling and local model training works:
+Yang terbaik adalah menjelaskan secara visual cara kerja pengambilan sampel dan pelatihan model lokal:
 
 ```{r lime-fitting, fig.cap='LIME algorithm for tabular data. A) Random forest predictions given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and data sampled from a normal distribution (small dots). C) Assign higher weight to points near the instance of interest. D) Signs of the grid show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(class=1) = 0.5).', fig.height=9, fig.width=9}
 ## Creating dataset ###########################################################
@@ -208,17 +208,17 @@ gridExtra::grid.arrange(p_boundaries, p_explain, p_weighted, p_boundaries_lime, 
 
 ```
 
-As always, the devil is in the detail.
-Defining a meaningful neighborhood around a point is difficult.
-LIME currently uses an exponential smoothing kernel to define the neighborhood.
-A smoothing kernel is a function that takes two data instances and returns a proximity measure.
-The kernel width determines how large the neighborhood is: 
-A small kernel width means that an instance must be very close to influence the local model, a larger kernel width means that instances that are farther away also influence the model.
-If you look at [LIME's Python implementation (file lime/lime_tabular.py)](https://github.com/marcotcr/lime/tree/ce2db6f20f47c3330beb107bb17fd25840ca4606) you will see that it uses an exponential smoothing kernel (on the normalized data) and the kernel width is 0.75 times the square root of the number of columns of the training data.
-It looks like an innocent line of code, but it is like an elephant sitting in your living room next to the good porcelain you got from your grandparents.
-The big problem is that we do not have a good way to find the best kernel or width.
-And where does the 0.75 even come from?
-In certain scenarios, you can easily turn your explanation around by changing the kernel width, as shown in the following figure:
+Seperti biasa, iblis ada dalam detailnya.
+Mendefinisikan lingkungan yang berarti di sekitar titik itu sulit.
+LIME saat ini menggunakan smoothing kernel eksponensial untuk mendefinisikan lingkungan.
+Smoothing kernel adalah fungsi yang mengambil dua contoh data dan mengembalikan ukuran kedekatan.
+Lebar kernel menentukan seberapa besar lingkungan:
+Lebar kernel yang kecil berarti instance harus sangat dekat untuk mempengaruhi model lokal, lebar kernel yang lebih besar berarti instance yang lebih jauh juga mempengaruhi model.
+Jika Anda melihat [implementasi Python LIME (file lime/lime_tabular.py)](https://github.com/marcotcr/lime/tree/ce2db6f20f47c3330beb107bb17fd25840ca4606) Anda akan melihat bahwa ia menggunakan smoothing kernel eksponensial (pada data yang dinormalisasi) dan lebar kernel adalah 0,75 kali akar kuadrat dari jumlah kolom data pelatihan.
+Kelihatannya seperti garis kode yang tidak bersalah, tetapi itu seperti gajah yang duduk di ruang tamu Anda di sebelah porselen bagus yang Anda dapatkan dari kakek-nenek Anda.
+Masalah besarnya adalah kita tidak memiliki cara yang baik untuk menemukan kernel atau lebar terbaik.
+Dan dari mana 0,75 itu berasal?
+Dalam skenario tertentu, Anda dapat dengan mudah membalikkan penjelasan Anda dengan mengubah lebar kernel, seperti yang ditunjukkan pada gambar berikut:
 
 
 ```{r lime-fail, fig.cap = "Explanation of the prediction of instance x = 1.6. The predictions of the black box model depending on a single feature is shown as a thick line and the distribution of the data is shown with rugs. Three local surrogate models with different kernel widths are computed. The resulting linear regression model depends on the kernel width: Does the feature have a negative, positive or no effect for x = 1.6?"}
@@ -254,19 +254,19 @@ ggplot(df.all, aes(x = x, y = y)) +
 
 ```
 
-The example shows only one feature.
-It gets worse in high-dimensional feature spaces.
-It is also very unclear whether the distance measure should treat all features equally.
-Is a distance unit for feature x1 identical to one unit for feature x2?
-Distance measures are quite arbitrary and distances in different dimensions (aka features) might not be comparable at all.
+Contoh hanya menunjukkan satu fitur.
+Ini menjadi lebih buruk di ruang fitur dimensi tinggi.
+Juga sangat tidak jelas apakah ukuran jarak harus memperlakukan semua fitur secara setara.
+Apakah satuan jarak untuk fitur x1 identik dengan satu unit untuk fitur x2?
+Ukuran jarak cukup sewenang-wenang dan jarak dalam dimensi yang berbeda (alias fitur) mungkin tidak sebanding sama sekali.
 
 
 #### Example
 
-Let us look at a concrete example.
-We go back to the [bike rental data](#bike-data) and turn the prediction problem into a classification:
-After taking into account the trend that the bicycle rental has become more popular over time, we want to know on a certain day whether the number of bicycles rented will be above or below the trend line.
-You can also interpret "above" as being above the average number of bicycles, but adjusted for the trend.
+Mari kita lihat contoh konkretnya.
+Kami kembali ke [data sewa sepeda](#bike-data) dan mengubah masalah prediksi menjadi klasifikasi:
+Setelah memperhitungkan tren persewaan sepeda yang semakin populer dari waktu ke waktu, kami ingin mengetahui pada hari tertentu apakah jumlah sepeda yang disewa akan berada di atas atau di bawah garis tren.
+Anda juga dapat mengartikan "above" sebagai jumlah sepeda di atas rata-rata, tetapi disesuaikan dengan tren.
 
 ```{r lime-tabular-example-train-black-box, cache = TRUE}
 data("bike")
@@ -280,11 +280,11 @@ model <- caret::train(bike.train.x,
 n_features_lime = 2
 ```
 
-First we train a random forest with `r ntree` trees on the classification task.
-On what day will the number of rental bikes be above the trend-free average, based on weather and calendar information?
+Pertama kita melatih random forest dengan pohon `r ntree` pada tugas klasifikasi.
+Pada hari berapa jumlah sepeda sewaan akan berada di atas rata-rata bebas tren, berdasarkan informasi cuaca dan kalender?
 
-The explanations are created with `r n_features_lime` features.
-The results of the sparse local linear models trained for two instances with different predicted classes:
+Penjelasan dibuat dengan fitur `r n_features_lime`.
+Hasil dari sparse local linear model yang dilatih untuk dua instance dengan prediksi kelas yang berbeda:
 
 ```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset. Warmer temperature and good weather situation have a positive effect on the prediction. The x-axis shows the feature effect: The weight times the actual feature value.') }
 library("iml")
@@ -309,27 +309,27 @@ b = plot(lim2) +
 grid.arrange(a, b, ncol = 1)
 ```
 
-From the figure it becomes clear that it is easier to interpret categorical features than numerical features.
-One solution is to categorize the numerical features into bins.
+Dari gambar menjadi jelas bahwa lebih mudah untuk menafsirkan fitur kategoris daripada fitur numerik.
+Salah satu solusinya adalah dengan mengkategorikan fitur numerik ke dalam bin.
 
 
 ### LIME for Text
 
-LIME for text differs from LIME for tabular data.
-Variations of the data are generated differently:
-Starting from the original text, new texts are created by randomly removing words from the original text.
-The dataset is represented with binary features for each word.
-A feature is 1 if the corresponding word is included and 0 if it has been removed.
+LIME untuk teks berbeda dengan LIME untuk data tabular.
+Variasi data dihasilkan secara berbeda:
+Mulai dari teks asli, teks baru dibuat dengan menghapus kata-kata secara acak dari teks asli.
+Dataset diwakili dengan fitur biner untuk setiap kata.
+Fitur adalah 1 jika kata yang sesuai disertakan dan 0 jika telah dihapus.
 
 #### Example
 
-In this example we classify [YouTube comments](#spam-data) as spam or normal.
+Dalam contoh ini kami mengklasifikasikan [komentar YouTube](#spam-data) sebagai spam atau normal.
 
-The black box model is a deep decision tree trained on the document word matrix.
-Each comment is one document (= one row) and each column is the number of occurrences of a given word.
-Short decision trees are easy to understand, but in this case the tree is very deep.
-Also in place of this tree there could have been a recurrent neural network or a support vector machine trained on word embeddings (abstract vectors).
-Let us look at the two comments of this dataset and the corresponding classes (1 for spam, 0 for normal comment):
+Model black box adalah decision trees dalam yang dilatih pada matriks kata dokumen.
+Setiap komentar adalah satu dokumen (= satu baris) dan setiap kolom adalah jumlah kemunculan kata tertentu.
+Short decision trees mudah dimengerti, tetapi dalam kasus ini pohonnya sangat dalam.
+Juga di tempat pohon ini mungkin ada recurrent neural networks atau support vector machine yang dilatih pada penyisipan kata (vektor abstrak).
+Mari kita lihat dua komentar dari dataset ini dan kelas yang sesuai (1 untuk spam, 0 untuk komentar normal):
 
 ```{r load-text-classification-lime}
 data("ycomments")
@@ -341,8 +341,8 @@ texts = ycomments$CONTENT[example_indices]
 kable(ycomments[example_indices, c('CONTENT', 'CLASS')])
 ```
 
-The next step is to create some variations of the datasets used in a local model.
-For example, some variations of one of the comments:
+Langkah selanjutnya adalah membuat beberapa variasi dari kumpulan data yang digunakan dalam model lokal.
+Misalnya, beberapa variasi dari salah satu komentar:
 
 ```{r lime-text-variations}
 library("tm")
@@ -364,16 +364,13 @@ example_sentence = paste(colnames(variations)[variations[2, ] == 1], collapse = 
 kable(variations)
 ```
 
-Each column corresponds to one word in the sentence.
-Each row is a variation, 1 means that the word is part of this variation and 0 means that the word has been removed.
-The corresponding sentence for one of the variations is "```r example_sentence```".
-The "prob" column shows the predicted probability of spam for each of the sentence variations.
-The "weight" column shows the proximity of the variation to the original sentence, calculated as 1 minus the proportion of words that were removed, for example if 1 out of 7 words was removed, the proximity is 1 - 1/7 = 0.86.
+Setiap kolom sesuai dengan satu kata dalam kalimat.
+Setiap baris adalah variasi, 1 berarti kata tersebut adalah bagian dari variasi ini dan 0 berarti kata tersebut telah dihapus.
+Kalimat yang sesuai untuk salah satu variasi adalah "```r example_sentence```".
+Kolom "prob" menunjukkan prediksi probabilitas spam untuk setiap variasi kalimat.
+Kolom "weight" menunjukkan kedekatan variasi dengan kalimat asli, dihitung sebagai 1 dikurangi proporsi kata yang dihilangkan, misalnya jika 1 dari 7 kata dihilangkan, kedekatannya adalah 1 - 1/7 = 0,86.
 
-
-
-
-Here are the two sentences (one spam, one no spam) with their estimated local weights found by the LIME algorithm:
+Berikut adalah dua kalimat (satu spam, satu tanpa spam) dengan perkiraan bobot lokal yang ditemukan oleh algoritme LIME:
 
 ```{r lime-text-explanations, fig.cap = "LIME explanations for text classification."}
 set.seed(42)
@@ -386,90 +383,90 @@ explanations = data.frame(explanations)
 kable(explanations[c("case", "label_prob", "feature", "feature_weight")])
 ```
 
-The word "channel" indicates a high probability of spam.
-For the non-spam comment no non-zero weight was estimated, because no matter which word is removed, the predicted class remains the same.
+Kata "channel" menunjukkan kemungkinan spam yang tinggi.
+Untuk komentar non-spam tidak ada bobot bukan nol yang diperkirakan, karena tidak peduli kata mana yang dihapus, kelas yang diprediksi tetap sama.
 
 ### LIME for Images {#images-lime}
 
-*This section was written by Verena Haunschmid.*
+*Bagian ini ditulis oleh Verena Haunschmid.*
 
-LIME for images works differently than LIME for tabular data and text. 
-Intuitively, it would not make much sense to perturb individual pixels, since many more than one pixel contribute to one class. 
-Randomly changing individual pixels would probably not change the predictions by much.
-Therefore, variations of the images are created by segmenting the image into "superpixels" and turning superpixels off or on. 
-Superpixels are interconnected pixels with similar colors and can be turned off by replacing each pixel with a user-defined color such as gray.
-The user can also specify a probability for turning off a superpixel in each permutation.
+LIME untuk gambar bekerja secara berbeda dari LIME untuk data dan teks tabular.
+Secara intuitif, tidak masuk akal untuk mengganggu piksel individu, karena lebih dari satu piksel berkontribusi pada satu kelas.
+Mengubah piksel individu secara acak mungkin tidak akan banyak mengubah prediksi.
+Oleh karena itu, variasi gambar dibuat dengan mengelompokkan gambar menjadi "superpiksel" dan mematikan atau menghidupkan superpiksel.
+Superpiksel adalah piksel yang saling berhubungan dengan warna yang sama dan dapat dimatikan dengan mengganti setiap piksel dengan warna yang ditentukan pengguna seperti abu-abu.
+Pengguna juga dapat menentukan probabilitas untuk mematikan superpiksel di setiap permutasi.
 
 #### Example
 
-In this example we look at a classification made by the Inception V3 neural network.
-The image used shows some bread I baked which are in a bowl.
-Since we can have several predicted labels per image (sorted by probability), we can explain the top labels.
-The top prediction is "Bagel" with a probability of 77%, followed by "Strawberry" with a probability of 4%.
-The following images show for "Bagel" and "Strawberry" the LIME explanations.
-The explanations can be displayed directly on the image samples.
-Green means that this part of the image increases the probability for the label and red means a decrease.
+Dalam contoh ini kita melihat klasifikasi yang dibuat oleh jaringan saraf Inception V3.
+Gambar yang digunakan menunjukkan beberapa roti yang saya panggang dalam mangkuk.
+Karena kami dapat memiliki beberapa prediksi label per gambar (diurutkan berdasarkan probabilitas), kami dapat menjelaskan label teratas.
+Prediksi teratas adalah "Bagel" dengan probabilitas 77%, diikuti oleh "Strawberry" dengan probabilitas 4%.
+Gambar berikut menunjukkan untuk "Bagel" dan "Strawberry" penjelasan LIME.
+Penjelasan dapat ditampilkan langsung pada sampel gambar.
+Hijau berarti bagian gambar ini meningkatkan kemungkinan label dan merah berarti penurunan.
 
 ```{r lime-images-package-example-include, fig.cap="Left: Image of a bowl of bread. Middle and right: LIME explanations for the top 2 classes (bagel, strawberry) for image classification made by Google's Inception V3 neural network.", out.width=500}
 knitr::include_graphics("images/lime-images-package-example-1.png")
 ```
-The prediction and explanation for "Bagel" are very reasonable, even if the prediction is wrong -- these are clearly no bagels since the hole in the middle is missing.
+Prediksi dan penjelasan untuk "Bagel" sangat masuk akal, bahkan jika prediksinya salah -- ini jelas bukan bagel karena lubang di tengahnya tidak ada.
 
 
 ### Advantages
 
-Even if you **replace the underlying machine learning model**, you can still use the same local, interpretable model for explanation.
-Suppose the people looking at the explanations understand decision trees best.
-Because you use local surrogate models, you use decision trees as explanations without actually having to use a decision tree to make the predictions.
-For example, you can use a SVM.
-And if it turns out that an xgboost model works better, you can replace the SVM and still use as decision tree to explain the predictions.
+Meskipun Anda **mengganti model pembelajaran mesin yang mendasarinya**, Anda masih dapat menggunakan model lokal yang dapat diinterpretasikan untuk penjelasan.
+Misalkan orang yang melihat penjelasan memahami decision tree dengan baik.
+Karena Anda menggunakan model local surrogate, Anda menggunakan decision tree sebagai penjelasan tanpa benar-benar harus menggunakan decision tree untuk membuat prediksi.
+Misalnya, Anda dapat menggunakan SVM.
+Dan jika ternyata model xgboost bekerja lebih baik, Anda dapat mengganti SVM dan tetap menggunakan sebagai decision tree untuk menjelaskan prediksi.
 
-Local surrogate models benefit from the literature and experience of training and interpreting interpretable models.
+Model local surrogate mendapat manfaat dari literatur dan pengalaman pelatihan dan menafsirkan model yang dapat ditafsirkan.
 
-When using Lasso or short trees, the resulting **explanations are short (= selective) and possibly contrastive**. 
-Therefore, they make [human-friendly explanations](#explanation).
-This is why I see LIME more in applications where the recipient of the explanation is a lay person or someone with very little time.
-It is not sufficient for complete attributions, so I do not see LIME in compliance scenarios where you might be legally required to fully explain a prediction.
-Also for debugging machine learning models, it is useful to have all the reasons instead of a few.
+Saat menggunakan Lasso atau short trees, **penjelasan yang dihasilkan pendek (= selektif) dan mungkin kontras**.
+Oleh karena itu, mereka membuat [penjelasan yang ramah manusia](#explanation).
+Inilah mengapa saya lebih banyak melihat LIME di aplikasi yang penerima penjelasannya adalah orang awam atau orang yang hanya punya sedikit waktu.
+Itu tidak cukup untuk atribusi lengkap, jadi saya tidak melihat LIME dalam skenario compliance di mana Anda mungkin diwajibkan secara hukum untuk menjelaskan prediksi sepenuhnya.
+Juga untuk men-debug model pembelajaran mesin, akan berguna untuk memiliki semua alasan, bukan beberapa.
 
-LIME is one of the few methods that **works for tabular data, text and images**.
+LIME adalah salah satu dari sedikit metode yang **berfungsi untuk data tabular, teks, dan gambar**.
 
-The **fidelity measure** (how well the interpretable model approximates the black box predictions) gives us a good idea of how reliable the interpretable model is in explaining the black box predictions in the neighborhood of the data instance of interest.
+**Ukuran fidelitas** (seberapa baik model yang dapat diinterpretasikan mendekati prediksi kotak hitam) memberi kita gambaran yang baik tentang seberapa andal model yang dapat diinterpretasikan dalam menjelaskan prediksi kotak hitam di sekitar instance data yang diinginkan.
 
-LIME is implemented in Python ([lime](https://github.com/marcotcr/lime) library) and R ([lime package](https://cran.r-project.org/web/packages/lime/index.html) and [iml package](https://cran.r-project.org/web/packages/iml/index.html)) and is **very easy to use**.
+LIME diimplementasikan dalam Python ([lime](https://github.com/marcotcr/lime) library) dan R ([lime package](https://cran.r-project.org/web/packages/lime/index.html) dan [iml package](https://cran.r-project.org/web/packages/iml/index.html)) dan **sangat mudah digunakan**.
 
-The explanations created with local surrogate models **can use other (interpretable) features than the original model was trained on.**.
-Of course, these interpretable features must be derived from the data instances.
-A text classifier can rely on abstract word embeddings as features, but the explanation can be based on the presence or absence of words in a sentence.
-A regression model can rely on a non-interpretable transformation of some attributes, but the explanations can be created with the original attributes.
-For example, the regression model could be trained on components of a principal component analysis (PCA) of answers to a survey, but LIME might be trained on the original survey questions.
-Using interpretable features for LIME can be a big advantage over other methods, especially when the model was trained with non-interpretable features.
+Penjelasan yang dibuat dengan model local surrogate **dapat menggunakan fitur lain (yang dapat ditafsirkan) selain model asli yang dilatih.**.
+Tentu saja, fitur yang dapat diinterpretasikan ini harus diturunkan dari instance data.
+Pengklasifikasi teks dapat mengandalkan penyisipan kata abstrak sebagai fitur, tetapi penjelasannya dapat didasarkan pada ada atau tidak adanya kata dalam sebuah kalimat.
+Sebuah model regresi dapat mengandalkan transformasi non-interpretable dari beberapa atribut, tetapi penjelasan dapat dibuat dengan atribut asli.
+Misalnya, model regresi dapat dilatih pada komponen principal component analysis (PCA) dari jawaban survei, tetapi LIME mungkin dilatih pada pertanyaan survei asli.
+Menggunakan fitur yang dapat diinterpretasikan untuk LIME dapat menjadi keuntungan besar dibandingkan metode lain, terutama ketika model dilatih dengan fitur yang tidak dapat diinterpretasikan.
 
 ### Disadvantages
 
-The correct definition of the neighborhood is a very big, unsolved problem when using LIME with tabular data.
-In my opinion it is the biggest problem with LIME and the reason why I would recommend to use LIME only with great care.
-For each application you have to try different kernel settings and see for yourself if the explanations make sense.
-Unfortunately, this is the best advice I can give to find good kernel widths.
+Definisi neighborhood yang benar adalah masalah yang sangat besar dan belum terpecahkan saat menggunakan LIME dengan data tabular.
+Menurut pendapat saya itu adalah masalah terbesar dengan LIME dan alasan mengapa saya akan merekomendasikan untuk menggunakan LIME hanya dengan sangat hati-hati.
+Untuk setiap aplikasi Anda harus mencoba pengaturan kernel yang berbeda dan lihat sendiri apakah penjelasannya masuk akal.
+Sayangnya, ini adalah saran terbaik yang dapat saya berikan untuk menemukan lebar kernel yang baik.
 
-Sampling could be improved in the current implementation of LIME. 
-Data points are sampled from a Gaussian distribution, ignoring the correlation between features.
-This can lead to unlikely data points which can then be used to learn local explanation models.
+Pengambilan sampel dapat ditingkatkan dalam penerapan LIME saat ini.
+Titik data diambil sampelnya dari distribusi Gaussian, mengabaikan korelasi antar fitur.
+Hal ini dapat menyebabkan titik data yang tidak mungkin yang kemudian dapat digunakan untuk mempelajari model local explanation.
 
-The complexity of the explanation model has to be defined in advance.
-This is just a small complaint, because in the end the user always has to define the compromise between fidelity and sparsity.
+Kompleksitas explanation model harus didefinisikan terlebih dahulu.
+Ini hanya keluhan kecil, karena pada akhirnya pengguna selalu harus menentukan kompromi antara fidelity dan sparsity.
 
-Another really big problem is the instability of the explanations.
-In an article [^limerobustness] the authors showed that the explanations of two very close points varied greatly in a simulated setting.
-Also, in my experience, if you repeat the sampling process, then the explantions that come out can be different.
-Instability means that it is difficult to trust the explanations, and you should be very critical.
+Masalah besar lainnya adalah ketidakstabilan penjelasan.
+Dalam sebuah artikel [^limerobustness] penulis menunjukkan bahwa penjelasan dari dua titik yang sangat dekat sangat bervariasi dalam pengaturan simulasi.
+Juga, pengalaman saya, jika Anda mengulangi proses sampling, maka eksplanasi yang keluar bisa berbeda.
+Ketidakstabilan berarti sulit untuk mempercayai penjelasannya, dan Anda harus sangat kritis.
 
-LIME explanations can be manipulated by the data scientist to hide biases [^fool].
-The possibility of manipulation makes it more difficult to trust explanations generated with LIME.
+Penjelasan LIME dapat dimanipulasi oleh ilmuwan data untuk menyembunyikan bias [^fool].
+Kemungkinan manipulasi membuat lebih sulit untuk mempercayai penjelasan yang dihasilkan dengan LIME.
 
-Conclusion:
-Local surrogate models, with LIME as a concrete implementation, are very promising.
-But the method is still in development phase and many problems need to be solved before it can be safely applied.
+Kesimpulan:
+Local surrogate models, dengan LIME sebagai implementasi konkret, sangat menjanjikan.
+Tetapi metode ini masih dalam tahap pengembangan dan banyak masalah yang perlu dipecahkan sebelum dapat diterapkan dengan aman.
 
 
 [^Ribeiro2016lime]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Why should I trust you?: Explaining the predictions of any classifier." Proceedings of the 22nd ACM SIGKDD international conference on knowledge discovery and data mining. ACM (2016).

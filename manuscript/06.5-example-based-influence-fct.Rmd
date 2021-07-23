@@ -11,39 +11,34 @@ influence.matrix.filename = "../data/influence-df.RData"
 data("cervical")
 ```
 
-<!-- Intro text -->
-Machine learning models are ultimately a product of training data and deleting one of the training instances can affect the resulting model.
-We call a training instance "influential" when its deletion from the training data considerably changes the parameters or predictions of the model.
-By identifying influential training instances, we can "debug" machine learning models and better explain their behaviors and predictions.
+Model machine learning pada akhirnya merupakan produk dari data pelatihan dan menghapus salah satu contoh pelatihan dapat memengaruhi model yang dihasilkan.
+Kami menyebut instance pelatihan "berpengaruh" ketika penghapusannya dari data pelatihan sangat mengubah parameter atau prediksi model.
+Dengan mengidentifikasi contoh pelatihan yang berpengaruh, kami dapat "men-debug" model machine learning dan menjelaskan perilaku dan prediksinya dengan lebih baik.
 
+Bab ini menunjukkan kepada Anda dua pendekatan untuk mengidentifikasi instance yang berpengaruh, yaitu deletion diagnostics dan influence functions.
+Kedua pendekatan didasarkan pada statistik yang kuat, yang menyediakan metode statistik yang kurang terpengaruh oleh outlier atau pelanggaran asumsi model.
+Statistik yang kuat juga menyediakan metode untuk mengukur seberapa kuat perkiraan dari data (seperti perkiraan rata-rata atau bobot model prediksi).
 
-<!-- *Keywords: Influential instances, influence function, leave-one-out analysis, Cook's distance, deletion diagnostics, robust statistics* -->
+Bayangkan Anda ingin memperkirakan pendapatan rata-rata orang-orang di kota Anda dan bertanya kepada sepuluh orang secara acak di jalan berapa penghasilan mereka.
+Terlepas dari kenyataan bahwa sampel Anda mungkin sangat buruk, seberapa besar perkiraan pendapatan rata-rata Anda dapat dipengaruhi oleh satu orang?
+Untuk menjawab pertanyaan ini, Anda dapat menghitung ulang nilai rata-rata dengan menghilangkan jawaban individual atau menurunkan secara matematis melalui "influence functions" bagaimana nilai rata-rata dapat dipengaruhi.
+Dengan pendekatan penghapusan, kami menghitung ulang nilai rata-rata sepuluh kali, menghilangkan salah satu laporan laba rugi setiap kali, dan mengukur seberapa banyak estimasi rata-rata berubah.
+Sebuah perubahan besar berarti bahwa sebuah instance sangat berpengaruh.
+Pendekatan kedua menaikkan bobot salah satu orang dengan bobot yang sangat kecil, yang sesuai dengan perhitungan turunan pertama dari statistik atau model.
+Pendekatan ini juga dikenal sebagai "pendekatan tak terhingga" atau "influence functions".
+Jawabannya adalah, perkiraan rata-rata Anda dapat sangat dipengaruhi oleh satu jawaban, karena skala rata-rata secara linier dengan nilai tunggal.
+Pilihan yang lebih kuat adalah median (nilai di mana satu setengah orang berpenghasilan lebih banyak dan setengah lainnya lebih sedikit), karena bahkan jika orang dengan pendapatan tertinggi dalam sampel Anda akan menghasilkan sepuluh kali lebih banyak, median yang dihasilkan tidak akan berubah.
 
+deletion diagnostics dan influence functions juga dapat diterapkan pada parameter atau prediksi model machine learning untuk memahami perilakunya dengan lebih baik atau untuk menjelaskan prediksi individu.
+Sebelum kita melihat dua pendekatan ini untuk menemukan instance yang berpengaruh, kita akan memeriksa perbedaan antara outlier dan instance yang berpengaruh.
 
-This chapter shows you two approaches for identifying influential instances, namely deletion diagnostics and influence functions.
-Both approaches are based on robust statistics, which provides statistical methods that are less affected by outliers or violations of model assumptions.
-Robust statistics also provides methods to measure how robust estimates from data are (such as a mean estimate or the weights of a prediction model).
+**outlier**
 
-Imagine you want to estimate the average income of the people in your city and ask ten random people on the street how much they earn.
-Apart from the fact that your sample is probably really bad, how much can your average income estimate be influenced by a single person?
-To answer this question, you can recalculate the mean value by omitting individual answers or derive mathematically via "influence functions" how the mean value can be influenced.
-With the deletion approach, we recalculate the mean value ten times, omitting one of the income statements each time, and measure how much the mean estimate changes.
-A big change means that an instance was very influential.
-The second approach upweights one of the persons by an infinitesimally small weight, which corresponds to the calculation of the first derivative of a statistic or model.
-This approach is also known as "infinitesimal approach" or "influence function".
-The answer is, by the way, that your mean estimate can be very strongly influenced by a single answer, since the mean scales linearly with single values.
-A more robust choice is the median (the value at which one half of people earn more and the other half less), because even if the person with the highest income in your sample would earn ten times more, the resulting median would not change.
-
-Deletion diagnostics and influence functions can also be applied to the parameters or predictions of machine learning models to understand their behavior better or to explain individual predictions.
-Before we look at these two approaches for finding influential instances, we will examine the difference between an outlier and an influential instance.
-
-**Outlier**
-
-An outlier is an instance that is far away from the other instances in the dataset.
-"Far away" means that the distance, for example the Euclidean distance, to all the other instances is very large.
-In a dataset of newborns, a newborn weighting 6 kg would be considered an outlier.
-In a dataset of bank accounts with mostly checking accounts, a dedicated loan account (large negative balance, few transactions) would be considered an outlier.
-The following figure shows an outlier for a 1-dimensional distribution.
+Outlier adalah instance yang jauh dari instance lain dalam dataset.
+"Jauh" berarti bahwa jarak, misalnya jarak Euclidean, ke semua contoh lainnya sangat besar.
+Dalam kumpulan data bayi baru lahir, bayi baru lahir dengan berat 6 kg akan dianggap sebagai outlier.
+Dalam kumpulan data rekening bank dengan sebagian besar rekening giro, rekening pinjaman khusus (saldo negatif besar, beberapa transaksi) akan dianggap sebagai outlier.
+Gambar berikut menunjukkan outlier untuk distribusi 1 dimensi.
 
 ```{r outlier, fig.cap = "Feature x follows a Gaussian distribution with an outlier at x=8."}
 set.seed(42)
@@ -59,14 +54,14 @@ ggplot(df) + geom_histogram(aes(x = x)) + my_theme() +
 ```
 
 
-Outliers can be interesting data points (e.g. [criticisms](#proto)).
-When an outlier influences the model it is also an influential instance.
+Outlier dapat menjadi titik data yang menarik (mis. [kritik](#proto)).
+Ketika outlier mempengaruhi model, itu juga merupakan contoh yang berpengaruh.
 
-**Influential instance**
+**influential instances**
 
-An influential instance is a data instance whose removal has a strong effect on the trained model.
-The more the model parameters or predictions change when the model is retrained with a particular instance removed from the training data, the more influential that instance is. Whether an instance is influential for a trained model also depends on its value for the target y.
-The following figure shows an influential instance for a linear regression model.
+Influential instances adalah instance data yang penghapusannya memiliki efek kuat pada model yang dilatih.
+Semakin banyak parameter model atau prediksi berubah ketika model dilatih ulang dengan instance tertentu dihapus dari data pelatihan, semakin berpengaruh instance tersebut. Apakah sebuah influential instances untuk model terlatih juga bergantung pada nilainya untuk target y.
+Gambar berikut menunjukkan influential instances untuk model linear regression.
 
 
 ```{r influential-point, fig.cap = "A linear model with one feature. Trained once on the full data and once without the influential instance. Removing the influential instance changes the fitted slope (weight/coefficient) drastically."}
@@ -93,90 +88,88 @@ ggplot(df.all, mapping = aes(x = x, y = y, group = regression_model, linetype = 
 
 ```
 
-**Why do influential instances help to understand the model?**
+**Mengapa influential instances membantu memahami model?**
 
-The key idea behind influential instances for interpretability is to trace model parameters and predictions back to where it all began: the training data.
-A learner, that is, the algorithm that generates the machine learning model, is a function that takes training data consisting of features X and target y and generates a machine learning model.
-For example, the learner of a decision tree is an algorithm that selects the split features and the values at which to split. 
-A learner for a neural network uses backpropagation to find the best weights.
+Ide kunci di balik influential instances untuk interpretabilitas adalah untuk melacak parameter model dan prediksi kembali ke tempat semuanya dimulai: data pelatihan.
+Seorang pembelajar, yaitu algoritma yang menghasilkan model machine learning, adalah fungsi yang mengambil data pelatihan yang terdiri dari fitur X dan target y dan menghasilkan model machine learning.
+Misalnya, pelajar dari decision trees adalah algoritme yang memilih fitur split dan nilai yang akan dibagi.
+Seorang pelajar untuk jaringan saraf menggunakan backpropagation untuk menemukan bobot terbaik.
 
 
 ```{r learner, fig.cap = "A learner learns a model from training data (features plus target). The model makes predictions for new data.", out.width=600}
 knitr::include_graphics("images/learner.png")
 ```
 
-We ask how the model parameters or the predictions would change if we removed instances from the training data in the training process.
-This is in contrast to other interpretability approaches that analyze how the prediction changes when we manipulate the features of the instances to be predicted, such as [partial dependence plots](#pdp) or [feature importance](#feature-importance).
-With influential instances, we do not treat the model as fixed, but as a function of the training data.
-Influential instances help us answer questions about global model behavior and about individual predictions.
-Which were the most influential instances for the model parameters or the predictions overall?
-Which were the most influential instances for a particular prediction?
-Influential instances tell us for which instances the model could have problems, which training instances should be checked for errors and give an impression of the robustness of the model.
-We might not trust a model if a single instance has a strong influence on the model predictions and parameters.
-At least that would make us investigate further.
+Kami menanyakan bagaimana parameter model atau prediksi akan berubah jika kami menghapus instance dari data pelatihan dalam proses pelatihan.
+Ini berbeda dengan pendekatan interpretabilitas lain yang menganalisis bagaimana prediksi berubah ketika kita memanipulasi fitur dari instance yang akan diprediksi, seperti [partial dependency plots](#pdp) atau [feature important](#feature-importance).
+Dengan instance yang berpengaruh, kami tidak memperlakukan model sebagai tetap, tetapi sebagai fungsi dari data pelatihan.
+Influential instances membantu kami menjawab pertanyaan tentang perilaku model global dan tentang prediksi individu.
+Manakah contoh yang paling berpengaruh untuk parameter model atau prediksi secara keseluruhan?
+Manakah contoh yang paling berpengaruh untuk prediksi tertentu?
+Influential instances memberi tahu kita untuk instance model mana yang mungkin bermasalah, instance pelatihan mana yang harus diperiksa kesalahannya dan memberikan kesan kekokohan model.
+Kami mungkin tidak mempercayai model jika satu instance memiliki pengaruh kuat pada prediksi dan parameter model.
+Setidaknya itu akan membuat kita menyelidiki lebih lanjut.
 
-How can we find influential instances?
-We have two ways of measuring influence:
-Our first option is to delete the instance from the training data, retrain the model on the reduced training dataset and observe the difference in the model parameters or predictions (either individually or over the complete dataset).
-The second option is to upweight a data instance by approximating the parameter changes based on the gradients of the model parameters.
-The deletion approach is easier to understand and motivates the upweighting approach, so we start with the former.
+Bagaimana kita bisa menemukan contoh yang berpengaruh?
+Kami memiliki dua cara untuk mengukur pengaruh:
+Opsi pertama kami adalah menghapus instance dari data pelatihan, melatih kembali model pada set data pelatihan yang dikurangi dan mengamati perbedaan dalam parameter model atau prediksi (baik secara individual atau melalui set data lengkap).
+Opsi kedua adalah menaikkan bobot instance data dengan memperkirakan perubahan parameter berdasarkan gradien parameter model.
+Pendekatan penghapusan lebih mudah dipahami dan memotivasi pendekatan peningkatan bobot, jadi kita mulai dengan yang pertama.
 
 ### Deletion Diagnostics
 
-Statisticians have already done a lot of research in the area of influential instances, especially for (generalized) linear regression models.
-When you search for "influential observations", the first search results are about measures like DFBETA and Cook's distance.
-**DFBETA** measures the effect of deleting an instance on the model parameters.
-**Cook's distance**  (Cook, 1977[^cook]) measures the effect of deleting an instance on model predictions.
-For both measures we have to retrain the model repeatedly, omitting individual instances each time.
-The parameters or predictions of the model with all instances is compared with the parameters or predictions of the model with one of the instances deleted from the training data.
+Ahli statistik telah melakukan banyak penelitian di bidang influential instances, terutama untuk model linear regression (generalized).
+Saat Anda mencari "influential observations", hasil pencarian pertama adalah tentang ukuran seperti DFBETA dan jarak Cook.
+**DFBETA** mengukur efek penghapusan instance pada parameter model.
+**Cook's distance** (Cook, 1977[^cook]) mengukur efek penghapusan instance pada prediksi model.
+Untuk kedua ukuran, kita harus melatih ulang model berulang kali, menghilangkan setiap contoh setiap kali.
+Parameter atau prediksi model dengan semua instance dibandingkan dengan parameter atau prediksi model dengan salah satu instance dihapus dari data pelatihan.
 
-DFBETA is defined as:
+DFBETA didefinisikan sebagai:
 
 $$DFBETA_{i}=\beta-\beta^{(-i)}$$
 
-where $\beta$ is the weight vector when the model is trained on all data instances, and $\beta^{(-i)}$ the weight vector when the model is trained without instance i.
-Quite intuitive I would say.
-DFBETA works only for models with weight parameters, such as logistic regression or neural networks, but not for models such as decision trees, tree ensembles, some support vector machines and so on.
+di mana $\beta$ adalah vektor bobot saat model dilatih pada semua instance data, dan $\beta^{(-i)}$ vektor bobot saat model dilatih tanpa instance i.
+Cukup intuitif menurut saya.
+DFBETA hanya berfungsi untuk model dengan parameter bobot, seperti logistic regression atau jaringan saraf, tetapi tidak untuk model seperti decision trees, tree ensemble, beberapa support vector machine, dan sebagainya.
 
-Cook's distance was invented for linear regression models and approximations for generalized linear regression models exist.
-Cook's distance for a training instance is defined as the (scaled) sum of the squared differences in the predicted outcome when the i-th instance is removed from the model training.
+Jarak Cook ditemukan untuk model linear regression dan ada pendekatan untuk model linear regression umum.
+Jarak Cook untuk instance pelatihan didefinisikan sebagai jumlah (skala) dari perbedaan kuadrat dalam hasil yang diprediksi ketika instance ke-i dihapus dari pelatihan model.
 
 $$D_i=\frac{\sum_{j=1}^n(\hat{y}_j-\hat{y}_{j}^{(-i)})^2}{p\cdot{}MSE}$$
 
-where the numerator is the squared difference between prediction of the model with and without the i-th instance, summed over the dataset.
-The denominator is the number of features p times the mean squared error.
-The denominator is the same for all instances no matter which instance i is removed.
-Cook's distance tells us how much the predicted output of a linear model changes when we remove the i-th instance from the training.
+di mana pembilangnya adalah selisih kuadrat antara prediksi model dengan dan tanpa instance ke-i, dijumlahkan pada kumpulan data.
+Penyebutnya adalah jumlah fitur p kali kesalahan kuadrat rata-rata.
+Penyebutnya sama untuk semua instance, tidak peduli instance i mana yang dihapus.
+Jarak Cook memberi tahu kita seberapa banyak output yang diprediksi dari model linier berubah ketika kita menghapus instance ke-i dari pelatihan.
 
+Bisakah kita menggunakan jarak Cook dan DFBETA untuk model machine learning apa pun?
+DFBETA membutuhkan parameter model, jadi ukuran ini hanya berfungsi untuk model yang diparameterisasi.
+Jarak Cook tidak memerlukan parameter model apa pun.
+Menariknya, jarak Cook biasanya tidak terlihat di luar konteks model linier dan Generalized Linear Models, tetapi gagasan untuk mengambil perbedaan antara prediksi model sebelum dan setelah penghapusan contoh tertentu sangat umum.
+Masalah dengan definisi jarak Cook adalah MSE, yang tidak berarti untuk semua jenis model prediksi (misalnya klasifikasi).
 
-Can we use Cook's distance and DFBETA for any machine learning model?
-DFBETA requires model parameters, so this measure works only for parameterized models.
-Cook's distance does not require any model parameters.
-Interestingly, Cook's distance is usually not seen outside the context of linear models and generalized linear models, but the idea of taking the difference between model predictions before and after removal of a particular instance is very general.
-A problem with the definition of Cook's distance is the MSE, which is not meaningful for all types of prediction models (e.g. classification).
-
-The simplest influence measure for the effect on the model predictions can be written as follows: 
+Ukuran pengaruh paling sederhana untuk efek pada prediksi model dapat ditulis sebagai berikut:
 
 $$\text{Influence}^{(-i)}=\frac{1}{n}\sum_{j=1}^{n}\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
-This expression is basically the numerator of Cook's distance, with the difference that the absolute difference is added up instead of the squared differences.
-This was a choice I made, because it makes sense for the examples later.
-The general form of deletion diagnostic measures consists of choosing a measure (such as the predicted outcome) and calculating the difference of the measure for the model trained on all instances and when the instance is deleted.
+Ungkapan ini pada dasarnya adalah pembilang jarak Cook, dengan selisih bahwa selisih mutlak dijumlahkan, bukan selisih kuadrat.
+Ini adalah pilihan yang saya buat, karena masuk akal untuk contoh nanti.
+Bentuk umum tindakan deletion diagnostics terdiri dari memilih ukuran (seperti hasil yang diprediksi) dan menghitung perbedaan ukuran untuk model yang dilatih pada semua instance dan ketika instance dihapus.
 
-
-We can easily break the influence down to explain for the prediction of instance j what the influence of the i-th training instance was:
+Kita dapat dengan mudah memecah pengaruh untuk menjelaskan prediksi instance j apa pengaruh instance pelatihan ke-i itu:
 
 $$\text{Influence}_{j}^{(-i)}=\left|\hat{y}_j-\hat{y}_{j}^{(-i)}\right|$$
 
-This would also work for the difference in model parameters or the difference in the loss.
-In the following example we will use these simple influence measures.
+Ini juga akan bekerja untuk perbedaan parameter model atau perbedaan loss.
+Dalam contoh berikut kita akan menggunakan ukuran pengaruh sederhana ini.
 
-**Deletion diagnostics example**
+**Contoh deletion diagnostics**
 
-In the following example, we train a support vector machine to predict [cervical cancer](#cervical) given risk factors and measure which training instances were most influential overall and for a particular prediction.
-Since the prediction of cancer is a classification problem, we measure the influence as the difference in predicted probability for cancer.
-An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
-The measurement of the influence for all `r nrow(cervical)` training instances requires to train the model once on all data and retrain it `r nrow(cervical)` times (= size of training data) with one of the instances removed each time.
+Dalam contoh berikut, kami melatih support vector machine untuk memprediksi [kanker serviks](#cervical) yang diberikan faktor risiko dan mengukur contoh pelatihan mana yang paling berpengaruh secara keseluruhan dan untuk prediksi tertentu.
+Karena prediksi kanker adalah masalah klasifikasi, kami mengukur pengaruhnya sebagai perbedaan dalam prediksi probabilitas untuk kanker.
+Sebuah influential instances jika probabilitas yang diprediksi sangat meningkat atau menurun secara rata-rata dalam kumpulan data ketika instance dihapus dari pelatihan model.
+Pengukuran pengaruh untuk semua instance pelatihan `r nrow(cervical)` memerlukan untuk melatih model sekali pada semua data dan melatihnya kembali `r nrow(cervical)` kali (= ukuran data pelatihan) dengan salah satu instance dihapus setiap waktu.
 
 ```{r influence, eval = !file.exists(influence.matrix.filename)}
 #'@param predicted The predicted outcome of a model
@@ -210,29 +203,29 @@ df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nr
 df = df[order(df$influence, decreasing = TRUE),]
 ```
 
-The most influential instance has an influence measure of about `r sprintf("%.2f", abs(df[1,"influence"]))`.
-An influence of `r sprintf('%.2f', abs(df[1,"influence"]))` means that if we remove the `r df$id[1]`-th instance, the predicted probability changes by `r sprintf('%.0f', 100 * df[1,"influence"])` percentage point on average.
-This is quite substantial considering the average predicted probability for cancer is `r sprintf('%.1f', 100 *mean(predicted.orig))`%.
-The mean value of influence measures over all possible deletions is `r sprintf('%.1f', 100 * mean(abs(df$influence)))` percentage points.
-Now we know which of the data instances were most influential for the model.
-This is already useful to know for debugging the data.
-Is there a problematic instance?
-Are there measurement errors?
-The influential instances are the first ones that should be checked for errors, because each error in them strongly influences the model predictions.
+Instance yang paling berpengaruh memiliki ukuran pengaruh sekitar `r sprintf("%.2f", abs(df[1,"influence"]))`.
+Pengaruh dari `r sprintf('%.2f', abs(df[1,"influence"]))` berarti bahwa jika kita menghapus instance ke-`r df$id[1]``, probabilitas yang diprediksi berubah sebesar `r sprintf('%.0f', 100 * df[1,"influence"])` poin persentase rata-rata.
+Ini cukup substansial mengingat probabilitas prediksi rata-rata untuk kanker adalah `r sprintf('%.1f', 100 *mean(predicted.orig))`%.
+Nilai rata-rata dari ukuran pengaruh atas semua kemungkinan penghapusan adalah `r sprintf('%.1f', 100 * mean(abs(df$influence)))` poin persentase.
+Sekarang kita tahu contoh data mana yang paling berpengaruh untuk model tersebut.
+Ini sudah berguna untuk diketahui untuk men-debug data.
+Apakah ada contoh yang bermasalah?
+Apakah ada kesalahan pengukuran?
+Influential instances adalah yang pertama yang harus diperiksa kesalahannya, karena setiap kesalahan di dalamnya sangat mempengaruhi prediksi model.
 
-Apart from model debugging, can we learn something to better understand the model?
-Just printing out the top 10 most influential instances is not very useful, because it is just a table of instances with many features.
-All methods that return instances as output only make sense if we have a good way of representing them.
-But we can better understand what kind of instances are influential when we ask:
-What distinguishes an influential instance from a non-influential instance?
-We can turn this question into a regression problem and model the influence of an instance as a function of its feature values. 
-We are free to choose any model from the chapter on [Interpretable Machine Learning Models](#simple).
-For this example I chose a decision tree (following figure) that shows that data from women of age 35 and older were the most influential for the support vector machine.
-Of all the women in the dataset  `r sum(cervical$Age >= 35)` out of `r nrow(cervical)` were older than 35.
-In the chapter on [Partial Dependence Plots](#pdp) we have seen that after 40 there is a sharp increase in the predicted probability of cancer and the [Feature Importance](#feature-importance) has also detected age as one of the most important features.
-The influence analysis tells us that the model becomes increasingly unstable when predicting cancer for higher ages.
-This in itself is valuable information. 
-This means that errors in these instances can have a strong effect on the model.
+Terlepas dari debugging model, dapatkah kita mempelajari sesuatu untuk lebih memahami model?
+Mencetak 10 instans paling berpengaruh saja tidak terlalu berguna, karena itu hanya tabel instans dengan banyak fitur.
+Semua metode yang mengembalikan instance sebagai output hanya masuk akal jika kita memiliki cara yang baik untuk merepresentasikannya.
+Tetapi kita dapat lebih memahami contoh seperti apa yang berpengaruh ketika kita bertanya:
+Apa yang membedakan influential instances dari contoh tidak berpengaruh?
+Kita dapat mengubah pertanyaan ini menjadi masalah regresi dan memodelkan pengaruh sebuah instance sebagai fungsi dari nilai fiturnya.
+Kami bebas memilih model apa pun dari bab [Model machine learning yang Dapat Diinterpretasikan](#simple).
+Untuk contoh ini saya memilih decision trees (gambar berikut) yang menunjukkan bahwa data dari wanita berusia 35 tahun ke atas adalah yang paling berpengaruh untuk support vector machine.
+Dari semua wanita dalam kumpulan data `r sum(cervical$Usia >= 35)` dari `r nrow(cervical)` berusia lebih dari 35 tahun.
+Dalam bab tentang [partial dependence plot](#pdp) kita telah melihat bahwa setelah 40 ada peningkatan tajam dalam prediksi kemungkinan kanker dan [feature importance](#feature-importance) juga telah mendeteksi usia sebagai salah satu fitur yang paling penting.
+Analisis pengaruh memberi tahu kita bahwa model menjadi semakin tidak stabil ketika memprediksi kanker untuk usia yang lebih tinggi.
+Ini sendiri adalah informasi yang berharga.
+Ini berarti bahwa kesalahan dalam contoh ini dapat memiliki efek yang kuat pada model.
 
 ```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2.", eval = FALSE}
 # This code snippet causes problems on TravisCI.
@@ -261,18 +254,18 @@ worst.case.index = which(abs(cervical.200$influence) == max(abs(cervical.200$inf
 ```
 
 
-This first influence analysis revealed the *overall* most influential instance.
-Now we select one of the instances, namely the `r i`-th instance, for which we want to explain the prediction by finding the most influential training data instances.
-It is like a counterfactual question:
-How would the prediction for instance `r i` change if we omit instance i from the training process?
-We repeat this removal for all instances.
-Then we select the training instances that result in the biggest change in the prediction of instance `r i` when they are omitted from the training and use them to explain the prediction of the model for that instance.
-I chose to explain the prediction for instance `r i` because it is the instance with the highest predicted probability of cancer (`r sprintf('%.2f', 100 * predicted.orig[i])`%), which I thought was an interesting case to analyze more deeply.
-We could return the, say, top 10 most influential instances for predicting the `r i`-th instance printed as a table.
-Not very useful, because we could not see much.
-Again, it makes more sense to find out what distinguishes the influential instances from the non-influential instances by analyzing their features.
-We use a decision tree trained to predict the influence given the features, but in reality we misuse it only to find a structure and not to actually predict something.
-The following decision tree shows which kind of training instances were most influential for predicting the `r i`-th instance. 
+Analisis pengaruh pertama ini mengungkapkan contoh paling berpengaruh *secara keseluruhan*.
+Sekarang kita memilih salah satu instance, yaitu instance `r i`-th, yang ingin kita jelaskan prediksinya dengan mencari instance data pelatihan yang paling berpengaruh.
+Ini seperti pertanyaan kontrafaktual:
+Bagaimana prediksi untuk instance `r i` berubah jika kita menghilangkan instance i dari proses pelatihan?
+Kami mengulangi penghapusan ini untuk semua contoh.
+Kemudian kami memilih instance pelatihan yang menghasilkan perubahan terbesar dalam prediksi instance `r i` ketika mereka dihilangkan dari pelatihan dan menggunakannya untuk menjelaskan prediksi model untuk instance tersebut.
+Saya memilih untuk menjelaskan prediksi misalnya `r i` karena itu adalah contoh dengan probabilitas prediksi tertinggi kanker (`r sprintf('%.2f', 100 * predicted.orig[i])`%), yang saya pikir merupakan kasus yang menarik untuk dianalisa lebih dalam.
+Kita dapat mengembalikan, katakanlah, 10 instans paling berpengaruh teratas untuk memprediksi instans ke-`r i` yang dicetak sebagai tabel.
+Tidak terlalu berguna, karena kami tidak bisa melihat banyak.
+Sekali lagi, lebih masuk akal untuk mengetahui apa yang membedakan influential instances dari contoh tidak berpengaruh dengan menganalisis fitur-fiturnya.
+Kami menggunakan decision trees yang dilatih untuk memprediksi pengaruh yang diberikan fitur, tetapi pada kenyataannya kami menyalahgunakannya hanya untuk menemukan struktur dan tidak benar-benar memprediksi sesuatu.
+decision trees berikut menunjukkan jenis instance pelatihan mana yang paling berpengaruh untuk memprediksi instance ke-`r i`.
 
 
 ```{r influence-single, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from women who smoked for 18.5 years or longer had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability.", i, i), eval = FALSE}
@@ -288,101 +281,100 @@ knitr::include_graphics("images/influence-single-1.png")
 ```
 
 
-Data instances of women who smoked or have been smoking for 18.5 years or longer have a high influence on the prediction of the `r i`-th instance.
-The woman behind the `r i`-th instance smoked for `r cervical$Smokes..years.[i]` years.
-In the data, `r sum(cervical$Smokes..years >= 18.5)` women (`r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 18.5))`%) smoked 18.5 years or longer.
-Any mistake made in collecting the number of years of smoking of one of these women will have a huge impact on the predicted outcome for the `r i`-th instance.
+Contoh data wanita yang merokok atau telah merokok selama 18,5 tahun atau lebih memiliki pengaruh yang tinggi terhadap prediksi kejadian ke-`r i`.
+Wanita di balik kejadian ke-`r i` merokok selama `r cervical$Smokes..years.[i]` tahun.
+Dalam data, `r sum(cervical$Smokes..years >= 18.5)` wanita (`r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 18.5))`%) merokok 18,5 tahun atau lebih.
+Kesalahan apa pun yang dibuat dalam mengumpulkan jumlah tahun merokok salah satu wanita ini akan berdampak besar pada hasil yang diprediksi untuk contoh ke-`r i`.
 
-The most extreme change in the prediction happens when we remove instance number `r worst.case.index`.
-The patient allegedly smoked for `r cervical$Smokes..years.[worst.case.index]` years, aligned with the results from the decision tree.
-The predicted probability for the `r i`-th instance changes from `r sprintf('%.2f', 100 * predicted.orig[i])`% to `r sprintf('%.2f', 100 * (predicted.orig[i]  - cervical.200$influence[worst.case.index]))`% if we remove the instance `r worst.case.index`!
+Perubahan paling ekstrim dalam prediksi terjadi ketika kita menghapus nomor instance `r worst.case.index`.
+Pasien diduga merokok selama `r cervical$Smokes..years.[worst.case.index]` tahun, selaras dengan hasil dari decision trees.
+Probabilitas yang diprediksi untuk instance `r i`-th berubah dari `r sprintf('%.2f', 100 * predicted.orig[i])`% menjadi `r sprintf('%.2f', 100 * (predicted.orig[i]  - cervical.200$influence[worst.case.index]))`% jika kita menghapus instance `r worst.case.index`!
 
+Jika kita melihat lebih dekat pada fitur dari instance yang paling berpengaruh, kita dapat melihat kemungkinan masalah lain.
+Data menyebutkan bahwa wanita tersebut berusia 28 tahun dan telah merokok selama 22 tahun.
+Entah itu kasus yang sangat ekstrim dan dia benar-benar mulai merokok pada usia 6 tahun, atau ini adalah kesalahan data.
+Saya cenderung percaya yang terakhir.
+Ini tentu situasi di mana kita harus mempertanyakan keakuratan data.
 
-If we take a closer look at the features of the most influential instance, we can see another possible problem.
-The data say that the woman is 28 years old and has been smoking for 22 years. 
-Either it is a really extreme case and she really started smoking at 6, or this is a data error. 
-I tend to believe the latter.
-This is certainly a situation in which we must question the accuracy of the data.
-
-These examples showed how useful it is to identify influential instances to debug models.
-One problem with the proposed approach is that the model needs to be retrained for each training instance.
-The whole retraining can be quite slow, because if you have thousands of training instances, you will have to retrain your model thousands of times.
-Assuming the model takes one day to train and you have 1000 training instances, then the computation of influential instances -- without parallelization -- will take almost 3 years.
-Nobody has time for this.
-In the rest of this chapter, I will show you a method that does not require retraining the model.
+Contoh-contoh ini menunjukkan betapa bergunanya mengidentifikasi influential instances untuk men-debug model.
+Satu masalah dengan pendekatan yang diusulkan adalah bahwa model perlu dilatih ulang untuk setiap contoh pelatihan.
+Seluruh pelatihan ulang bisa sangat lambat, karena jika Anda memiliki ribuan instance pelatihan, Anda harus melatih ulang model Anda ribuan kali.
+Dengan asumsi model membutuhkan satu hari untuk dilatih dan Anda memiliki 1000 instance pelatihan, maka penghitungan instance yang berpengaruh -- tanpa paralelisasi -- akan memakan waktu hampir 3 tahun.
+Tidak ada yang punya waktu untuk ini.
+Di sisa bab ini, saya akan menunjukkan metode yang tidak memerlukan pelatihan ulang model.
 
 
 ### Influence Functions
 
-*You*: I want to know the influence a training instance has on a particular prediction.  
-*Research*: You can delete the training instance, retrain the model, and measure the difference in the prediction.  
-*You*: Great! But do you have a method for me that works without retraining? It takes so much time.  
-*Research*: Do you have a model with a loss function that is twice differentiable with respect to its parameters?  
-*You*: I trained a neural network with the logistic loss. So yes.  
-*Research*: Then you can approximate the influence of the instance on the model parameters and on the prediction with **influence functions**. 
-The influence function is a measure of how strongly the model parameters or predictions depend on a training instance. 
-Instead of deleting the instance, the method upweights the instance in the loss by a very small step. 
-This method involves approximating the loss around the current model parameters using the gradient and Hessian matrix.
-Loss upweighting is similar to deleting the instance.  
-*You*: Great, that's what I'm looking for!  
+*Anda*: Saya ingin tahu pengaruh instance pelatihan terhadap prediksi tertentu.
+*Penelitian*: Anda dapat menghapus instance pelatihan, melatih kembali model, dan mengukur perbedaan dalam prediksi.
+*Kamu*: Hebat! Tetapi apakah Anda memiliki metode untuk saya yang berfungsi tanpa pelatihan ulang? Dibutuhkan begitu banyak waktu.
+*Penelitian*: Apakah Anda memiliki model dengan loss function yang terdiferensiasi dua kali sehubungan dengan parameternya?
+*Anda*: Saya melatih jaringan saraf dengan logistic loss. Jadi iya.
+*Penelitian*: Kemudian Anda dapat memperkirakan pengaruh instance pada parameter model dan prediksi dengan **influence functions**.
+influence functions adalah ukuran seberapa kuat parameter model atau prediksi bergantung pada instance pelatihan.
+Alih-alih menghapus instance, metode ini meningkatkan instance dalam loss dengan langkah yang sangat kecil.
+Metode ini melibatkan pendekatan loss di sekitar parameter model saat ini menggunakan gradien dan matriks Hessian.
+Peningkatan bobot loss mirip dengan menghapus instans.
+*Kamu*: Hebat, itu yang aku cari!
 
-Koh and Liang (2017)[^koh] suggested using influence functions, a method of robust statistics, to measure how an instance influences model parameters or predictions.
-As with deletion diagnostics, the influence functions trace the model parameters and predictions back to the responsible training instance.
-However, instead of deleting training instances, the method approximates how much the model changes when the instance is upweighted in the empirical risk (sum of the loss over the training data).
+Koh dan Liang (2017)[^koh] menyarankan penggunaan influence functions, metode statistik yang kuat, untuk mengukur bagaimana sebuah instance memengaruhi parameter atau prediksi model.
+Seperti deletion diagnostics, influence functions melacak parameter model dan prediksi kembali ke instance pelatihan yang bertanggung jawab.
+Namun, alih-alih menghapus instance pelatihan, metode ini memperkirakan seberapa banyak model berubah ketika instance ditingkatkan bobotnya dalam risiko empiris (jumlah loss atas data pelatihan).
 
-The method of influence functions requires access to the loss gradient with respect to the model parameters, which only works for a subset of machine learning models.
-Logistic regression, neural networks and support vector machines qualify, tree-based methods like random forests do not.
-Influence functions help to understand the model behavior, debug the model and detect errors in the dataset.
+Metode influence functions memerlukan akses ke gradien loss sehubungan dengan parameter model, yang hanya berfungsi untuk sebagian model machine learning.
+logistic regression, jaringan saraf, dan support vector machine memenuhi syarat, metode berbasis pohon seperti random forest tidak memenuhi syarat.
+influence functions membantu memahami perilaku model, men-debug model, dan mendeteksi kesalahan dalam kumpulan data.
 
-The following section explains the intuition and math behind influence functions.
+Bagian berikut menjelaskan intuisi dan matematika di balik influence functions.
 
-**Math behind influence functions**
+**Matematika di balik influence functions**
 
-The key idea behind influence functions is to upweight the loss of a training instance by an infinitesimally small step $\epsilon$, which results in new model parameters:
+Ide utama di balik influence functions adalah untuk meningkatkan hilangnya instance pelatihan dengan langkah yang sangat kecil $\epsilon$, yang menghasilkan parameter model baru:
 
 $$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
 
-where $\theta$ is the model parameter vector and $\hat{\theta}_{\epsilon,z}$ is the parameter vector after upweighting z by a very small number $\epsilon$.
-L is the loss function with which the model was trained, $z_i$ is the training data and z is the training instance which we want to upweight to simulate its removal.
-The intuition behind this formula is:
-How much will the loss change if we upweight a particular instance $z_i$ from the training data by a little ($\epsilon$) and downweight the other data instances accordingly?
-What would the parameter vector look like to optimize this new combined loss?
-The influence function of the parameters, i.e. the influence of upweighting training instance z on the parameters, can be calculated as follows.
+di mana $\theta$ adalah vektor parameter model dan $\hat{\theta}_{\epsilon,z}$ adalah vektor parameter setelah menaikkan bobot z dengan jumlah yang sangat kecil $\epsilon$.
+L adalah loss function dengan mana model dilatih, $z_i$ adalah data pelatihan dan z adalah contoh pelatihan yang ingin kita tingkatkan untuk mensimulasikan penghapusannya.
+Intuisi di balik rumus ini adalah:
+Berapa loss yang akan berubah jika kita menaikkan sedikit instance $z_i$ dari data pelatihan ($\epsilon$) dan menurunkan bobot instance data lainnya?
+Seperti apa vektor parameter untuk mengoptimalkan loss gabungan baru ini?
+Influence functions parameter, yaitu pengaruh upweighting training instance z terhadap parameter, dapat dihitung sebagai berikut.
 
 $$I_{\text{up,params}}(z)=\left.\frac{d{}\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}=-H_{\hat{\theta}}^{-1}\nabla_{\theta}L(z,\hat{\theta})$$
 
-The last expression $\nabla_{\theta}L(z,\hat{\theta})$ is the loss gradient with respect to the parameters for the upweighted training instance.
-The gradient is the rate of change of the loss of the training instance.
-It tells us how much the loss changes when we change the model parameters $\hat{\theta}$ by a bit.
-A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss, a negative entry means that the increase of the parameter reduces the loss.
-The first part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second derivative of the loss with respect to the model parameters).
-The Hessian matrix is the rate of change of the gradient, or expressed as loss, it is the rate of change of the rate of change of the loss.
-It can be estimated using: 
+Ekspresi terakhir $\nabla_{\theta}L(z,\hat{\theta})$ adalah gradien loss sehubungan dengan parameter untuk instance pelatihan yang ditingkatkan.
+Gradien adalah tingkat perubahan hilangnya instance pelatihan.
+Ini memberitahu kita berapa banyak loss yang berubah ketika kita mengubah parameter model $\hat{\theta}$ sedikit.
+Entri positif dalam vektor gradien berarti bahwa peningkatan kecil pada parameter model yang sesuai meningkatkan loss, entri negatif berarti peningkatan parameter mengurangi loss.
+Bagian pertama $H^{-1}_{\hat{\theta}}$ adalah matriks Hessian terbalik (turunan kedua dari loss sehubungan dengan parameter model).
+Matriks Hessian adalah laju perubahan gradien, atau dinyatakan sebagai loss, itu adalah laju perubahan laju perubahan loss.
+Dapat diperkirakan dengan menggunakan:
 
 $$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
 
-More informally: 
-The Hessian matrix records how curved the loss is at a certain point. 
-The Hessian is a matrix and not just a vector, because it describes the curvature of the loss and the curvature depends on the direction in which we look.
-The actual calculation of the Hessian matrix is time-consuming if you have many parameters.
-Koh and Liang suggested some tricks to calculate it efficiently, which goes beyond the scope of this chapter.
-Updating the model parameters, as described by the above formula, is equivalent to taking a single Newton step after forming a quadratic expansion around the estimated model parameters.
+Lebih informal:
+Matriks Hessian mencatat seberapa melengkung loss pada titik tertentu.
+Hessian adalah matriks dan bukan hanya vektor, karena itu menggambarkan kelengkungan yang hilang dan kelengkungan tergantung pada arah yang kita lihat.
+Perhitungan sebenarnya dari matriks Hessian memakan waktu jika Anda memiliki banyak parameter.
+Koh dan Liang menyarankan beberapa trik untuk menghitungnya secara efisien, yang melampaui coverage bab ini.
+Memperbarui parameter model, seperti yang dijelaskan oleh rumus di atas, sama dengan mengambil satu langkah Newton setelah membentuk ekspansi kuadrat di sekitar parameter model yang diperkirakan.
 
-What intuition is behind this influence function formula?
-The formula comes from forming a quadratic expansion around the parameters $\hat{\theta}$.
-That means we do not actually know, or it is too complex to calculate how exactly the loss of instance z will change when it is removed/upweighted.
-We approximate the function locally by using information about the steepness (= gradient) and the curvature (= Hessian matrix) at the current model parameter setting.
-With this loss approximation, we can calculate what the new parameters would approximately look like if we upweighted instance z:
+Intuisi apa yang ada di balik rumus influence functions ini?
+Rumusnya berasal dari pembentukan ekspansi kuadrat di sekitar parameter $\hat{\theta}$.
+Itu berarti kita tidak benar-benar tahu, atau terlalu rumit untuk menghitung bagaimana tepatnya hilangnya instance z akan berubah ketika dihapus/ditingkatkan.
+Kami memperkirakan fungsi secara lokal dengan menggunakan informasi tentang kecuraman (= gradien) dan kelengkungan (= matriks Hessian) pada pengaturan parameter model saat ini.
+Dengan perkiraan loss ini, kita dapat menghitung seperti apa kira-kira parameter baru jika kita menaikkan bobot instance z:
 
 $$\hat{\theta}_{-z}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(z)$$
 
-The approximate parameter vector is basically the original parameter minus the gradient of the loss of z (because we want to decrease the loss) scaled by the curvature (= multiplied by the inverse Hessian matrix) and scaled by 1 over n, because that is the weight of a single training instance.
+Vektor parameter perkiraan pada dasarnya adalah parameter asli dikurangi gradien hilangnya z (karena kami ingin mengurangi loss) yang diskalakan dengan kelengkungan (= dikalikan dengan matriks Hessian terbalik) dan diskalakan dengan 1 di atas n, karena itulah bobot instance pelatihan tunggal.
 
-The following figure shows how the upweighting works.
-The x-axis shows the value of the $\theta$ parameter and the y-axis the corresponding value of the loss with upweighted instance z.
-The model parameter here is 1-dimensional for demonstration purposes, but in reality it is usually high-dimensional.
-We move only 1 over n into the direction of improvement of the loss for instance z.
-We do not know how the loss would really change when we delete z, but with the first and second derivative of the loss, we create this quadratic approximation around our current model parameter and pretend that this is how the real loss would behave.
+Gambar berikut menunjukkan cara kerja upweighting.
+Sumbu x menunjukkan nilai parameter $\theta$ dan sumbu y menunjukkan nilai loss yang sesuai dengan instance z yang ditingkatkan.
+Parameter model di sini adalah 1-dimensi untuk tujuan demonstrasi, tetapi pada kenyataannya biasanya berdimensi tinggi.
+Kami hanya bergerak 1 di atas n ke arah peningkatan loss misalnya z.
+Kami tidak tahu bagaimana loss akan benar-benar berubah ketika kami menghapus z, tetapi dengan turunan pertama dan kedua dari loss, kami membuat pendekatan kuadrat ini di sekitar parameter model kami saat ini dan berpura-pura bahwa ini adalah bagaimana loss sebenarnya akan berperilaku.
 
 ```{r quadratic-expansion, fig.cap="Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and moving 1/n into the direction in which the loss with upweighted instance z (y-axis) improves most. This upweighting of instance z in the loss approximates the parameter changes if we delete z and train the model on the reduced data."}
 x = seq(from = -1.2, to = 1.2, length.out = 100)
@@ -422,137 +414,137 @@ ggplot(dat3) +
 ```
 
 
-We do not actually need to calculate the new parameters, but we can use the influence function as a measure of the influence of z on the parameters.
+Kita sebenarnya tidak perlu menghitung parameter baru, tetapi kita dapat menggunakan influence functions sebagai ukuran pengaruh z pada parameter.
 
-How do the *predictions* change when we upweight training instance z?
-We can either calculate the new parameters and then make predictions using the newly parameterized model, or we can also calculate the influence  of instance z on the predictions directly, since we can calculate the influence by using the chain rule:
+Bagaimana *prediksi* berubah saat kita meningkatkan instance pelatihan z?
+Kita dapat menghitung parameter baru dan kemudian membuat prediksi menggunakan model parameter yang baru, atau kita juga dapat menghitung pengaruh instance z pada prediksi secara langsung, karena kita dapat menghitung pengaruh dengan menggunakan aturan rantai:
 
 $$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
 
-The first line of this equation means that we measure the influence of a training instance on a certain prediction $z_{test}$ as a change in loss of the test instance when we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
-For the second line of the equation, we have applied the chain rule of derivatives and get the derivative of the loss of the test instance with respect to the parameters times the influence of z on the parameters.
-In the third line, we replace the expression with the influence function for the parameters.
-The first term in the third line $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance with respect to the model parameters.
+Baris pertama persamaan ini berarti bahwa kita mengukur pengaruh instance pelatihan pada prediksi tertentu $z_{test}$ sebagai perubahan hilangnya instance pengujian ketika kita menaikkan bobot instance z dan mendapatkan parameter baru $\hat{\ theta}_{\epsilon,z}$.
+Untuk baris kedua persamaan, kami telah menerapkan aturan rantai turunan dan mendapatkan turunan dari hilangnya contoh uji sehubungan dengan parameter dikalikan pengaruh z pada parameter.
+Di baris ketiga, kami mengganti ekspresi dengan influence functions untuk parameter.
+Istilah pertama di baris ketiga $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ adalah gradien dari instance pengujian sehubungan dengan parameter model.
 
-Having a formula is great and the scientific and accurate way of showing things.
-But I think it is very important to get some intuition about what the formula means.
-The formula for $I_{\text{up,loss}}$ states that the influence function of the training instance z on the prediction of an instance $z_{test}$ is "how strongly the instance reacts to a change of the model parameters" multiplied by "how much the parameters change when we upweight the instance z".
-Another way to read the formula:
-The influence is proportional to how large the gradients for the training and test loss are.
-The higher the gradient of the training loss, the higher its influence on the parameters and the higher the influence on the test prediction.
-The higher the gradient of the test prediction, the more influenceable the test instance.
-The entire construct can also be seen as a measure of the similarity (as learned by the model) between the training and the test instance.
+Memiliki formula itu hebat dan cara yang ilmiah dan akurat untuk menunjukkan sesuatu.
+Tetapi saya pikir sangat penting untuk mendapatkan beberapa intuisi tentang apa arti rumus itu.
+Rumus untuk $I_{\text{up,loss}}$ menyatakan bahwa influence functions instance pelatihan z pada prediksi instance $z_{test}$ adalah "seberapa kuat instance bereaksi terhadap perubahan model parameter" dikalikan dengan "berapa banyak parameter berubah ketika kita menaikkan bobot instance z".
+Cara lain untuk membaca rumus:
+Pengaruhnya sebanding dengan seberapa besar gradien untuk pelatihan dan loss pengujian.
+Semakin tinggi gradien loss pelatihan, semakin tinggi pengaruhnya terhadap parameter dan semakin tinggi pengaruhnya terhadap prediksi pengujian.
+Semakin tinggi gradien prediksi pengujian, semakin dapat dipengaruhi instance pengujian.
+Seluruh konstruk juga dapat dilihat sebagai ukuran kesamaan (seperti yang dipelajari oleh model) antara pelatihan dan contoh pengujian.
 
-That is it with theory and intuition.
-The next section explains how influence functions can be applied.
+Itu saja dengan teori dan intuisi.
+Bagian selanjutnya menjelaskan bagaimana influence functions dapat diterapkan.
 
-**Application of Influence Functions**
+**Penerapan influence functions**
 
-Influence functions have many applications, some of which have already been presented in this chapter.
+Influence functions memiliki banyak aplikasi, beberapa di antaranya telah disajikan dalam bab ini.
 
-**Understanding model behavior**
+**Memahami perilaku model**
 
-Different machine learning models have different ways of making predictions.
-Even if two models have the same performance, the way they make predictions from the features can be very different and therefore fail in different scenarios.
-Understanding the particular weaknesses of a model by identifying influential instances helps to form a "mental model" of the machine learning model behavior in your mind.
+Model machine learning yang berbeda memiliki cara yang berbeda untuk membuat prediksi.
+Bahkan jika dua model memiliki kinerja yang sama, cara mereka membuat prediksi dari fitur bisa sangat berbeda dan karena itu gagal dalam skenario yang berbeda.
+Memahami kelemahan model tertentu dengan mengidentifikasi influential instances membantu membentuk "model mental" dari perilaku model machine learning dalam pikiran Anda.
 
-**Handling domain mismatches / Debugging model errors**
+**Menangani ketidakcocokan domain / kesalahan model Debugging**
 
-Handling domain mismatch is closely related to better understand the model behavior.
-Domain mismatch means that the distribution of training and test data is different, which can cause the model to perform poorly on the test data.
-Influence functions can identify training instances that caused the error.
-Suppose you have trained a prediction model for the outcome of patients who have undergone surgery. 
-All these patients come from the same hospital. 
-Now you use the model in another hospital and see that it does not work well for many patients.
-Of course, you assume that the two hospitals have different patients, and if you look at their data, you can see that they differ in many features. 
-But what are the features or instances that have "broken" the model?
-Here too, influential instances are a good way to answer this question.
-You take one of the new patients, for whom the model has made a false prediction, find and analyze the most influential instances.
-For example, this could show that the second hospital has older patients on average and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict this subgroup well.
-The conclusion would be that the model needs to be trained on more patients who are older in order to work well in the second hospital.
+Penanganan domain mismatch berkaitan erat dengan pemahaman yang lebih baik terhadap perilaku model.
+Ketidakcocokan domain berarti bahwa distribusi data pelatihan dan pengujian berbeda, yang dapat menyebabkan model berkinerja buruk pada data pengujian.
+Influence functions dapat mengidentifikasi contoh pelatihan yang menyebabkan kesalahan.
+Misalkan Anda telah melatih model prediksi untuk hasil pasien yang telah menjalani operasi.
+Semua pasien ini berasal dari rumah sakit yang sama.
+Sekarang Anda menggunakan model di rumah sakit lain dan melihat bahwa itu tidak bekerja dengan baik untuk banyak pasien.
+Tentu saja, Anda berasumsi bahwa kedua rumah sakit memiliki pasien yang berbeda, dan jika Anda melihat data mereka, Anda dapat melihat bahwa mereka berbeda dalam banyak fitur.
+Tapi apa saja fitur atau contoh yang telah "merusak" model?
+Di sini juga, influential instances adalah cara yang baik untuk menjawab pertanyaan ini.
+Anda mengambil salah satu pasien baru, yang modelnya telah membuat prediksi palsu, menemukan dan menganalisis contoh yang paling berpengaruh.
+Misalnya, ini dapat menunjukkan bahwa rumah sakit kedua memiliki rata-rata pasien yang lebih tua dan contoh yang paling berpengaruh dari data pelatihan adalah beberapa pasien yang lebih tua dari rumah sakit pertama dan model hanya kekurangan data untuk belajar memprediksi subkelompok ini dengan baik.
+Kesimpulannya adalah bahwa model perlu dilatih pada lebih banyak pasien yang lebih tua agar dapat bekerja dengan baik di rumah sakit kedua.
 
-**Fixing training data**
+**Memperbaiki data pelatihan**
 
-If you have a limit on how many training instances you can check for correctness, how do you make an efficient selection?
-The best way is to select the most influential instances, because -- by definition -- they have the most influence on the model.
-Even if you would have an instance with obviously incorrect values, if the instance is not influential and you only need the data for the prediction model, it is a better choice to check the influential instances.
-For example, you train a model for predicting whether a patient should remain in hospital or be discharged early.
-You really want to make sure that the model is robust and makes correct predictions, because a wrong release of a patient can have bad consequences.
-Patient records can be very messy, so you do not have perfect confidence in the quality of the data.
-But checking patient information and correcting it can be very time-consuming, because once you have reported which patients you need to check, the hospital actually needs to send someone to look at the records of the selected patients more closely, which might be handwritten and lying in some archive.
-Checking data for a patient could take an hour or more.
-In view of theses costs, it makes sense to check only a few important data instances.
-The best way is to select patients who have had a high influence on the prediction model.
-Koh and Liang (2017) showed that this type of selection works much better than random selection or the selection of those with the highest loss or wrong classification.
+Jika Anda memiliki batasan berapa banyak contoh pelatihan yang dapat Anda periksa kebenarannya, bagaimana Anda membuat pilihan yang efisien?
+Cara terbaik adalah memilih contoh yang paling berpengaruh, karena -- menurut definisi -- mereka memiliki pengaruh paling besar pada model.
+Bahkan jika Anda memiliki instance dengan nilai yang jelas salah, jika instance tidak berpengaruh dan Anda hanya memerlukan data untuk model prediksi, itu adalah pilihan yang lebih baik untuk memeriksa instance yang berpengaruh.
+Misalnya, Anda melatih model untuk memprediksi apakah pasien harus tetap di rumah sakit atau dipulangkan lebih awal.
+Anda benar-benar ingin memastikan bahwa modelnya kuat dan membuat prediksi yang benar, karena pelepasan pasien yang salah dapat berakibat buruk.
+Catatan pasien bisa sangat berantakan, sehingga Anda tidak yakin akan kualitas datanya.
+Tetapi memeriksa informasi pasien dan mengoreksinya bisa sangat memakan waktu, karena setelah Anda melaporkan pasien mana yang perlu Anda periksa, rumah sakit sebenarnya perlu mengirim seseorang untuk melihat catatan pasien yang dipilih lebih dekat, yang mungkin berupa tulisan tangan dan berbaring di beberapa arsip.
+Memeriksa data untuk pasien bisa memakan waktu satu jam atau lebih.
+Mengingat biaya ini, masuk akal untuk memeriksa hanya beberapa contoh data penting.
+Cara terbaik adalah memilih pasien yang memiliki pengaruh tinggi pada model prediksi.
+Koh dan Liang (2017) menunjukkan bahwa jenis seleksi ini bekerja jauh lebih baik daripada seleksi acak atau seleksi dengan loss tertinggi atau klasifikasi yang salah.
 
 
 ### Advantages of Identifying Influential Instances
 
-The approaches of deletion diagnostics and influence functions are very different from the mostly feature-perturbation based approaches presented in the [Model-Agnostic chapter](#agnostic). 
-A look at influential instances emphasizes the role of training data in the learning process.
-This makes influence functions and deletion diagnostics **one of the best debugging tools for machine learning models**.
-Of the techniques presented in this book, they are the only ones that directly help to identify the instances which should be checked for errors.
+Pendekatan deletion diagnostics dan influence functions sangat berbeda dari kebanyakan pendekatan perturbation-based fitur yang disajikan dalam [bab model-agnostic](#agnostic).
+Sebuah melihat influential instances menekankan peran data pelatihan dalam proses pembelajaran.
+Hal ini menjadikan influence functions dan deletion diagnostics **salah satu alat debug terbaik untuk model machine learning**.
+Dari teknik-teknik yang disajikan dalam buku ini, hanya teknik-teknik tersebut yang secara langsung membantu mengidentifikasi contoh-contoh yang harus diperiksa kesalahannya.
 
-**Deletion diagnostics are model-agnostic**, meaning the approach can be applied to any model. 
-Also influence functions based on the derivatives can be applied to a broad class of models. 
+**deletion diagnostics bersifat model-agnostic**, artinya pendekatan ini dapat diterapkan ke model apa pun.
+Juga influence functions berdasarkan turunan dapat diterapkan pada kelas model yang luas.
 
-We can use these methods to **compare different machine learning models** and better understand their different behaviors, going beyond comparing only the predictive performance.
+Kita dapat menggunakan metode ini untuk **membandingkan model machine learning yang berbeda** dan lebih memahami perilaku mereka yang berbeda, lebih dari sekadar membandingkan kinerja prediktif.
 
-We have not talked about this topic in this chapter, but **influence functions via derivatives can also be used to create adversarial training data**. 
-These are instances that are manipulated in such a way that the model cannot predict certain test instances correctly when the model is trained on those manipulated instances.
-The difference to the methods in the [Adversarial Examples chapter](#adversarial) is that the attack takes place during training time, also known as poisoning attacks.
-If you are interested, read the paper by Koh and Liang (2017).
+Kami belum membicarakan topik ini dalam bab ini, tetapi **influence functions melalui turunan juga dapat digunakan untuk membuat data adversarial training**.
+Ini adalah contoh yang dimanipulasi sedemikian rupa sehingga model tidak dapat memprediksi contoh uji tertentu dengan benar ketika model dilatih pada contoh yang dimanipulasi tersebut.
+Perbedaan metode dalam [bab Contoh Perlawanan](#adversarial) adalah bahwa serangan terjadi selama waktu pelatihan, juga dikenal sebagai serangan keracunan.
+Jika Anda tertarik, bacalah makalah Koh dan Liang (2017).
 
-For deletion diagnostics and influence functions, we considered the difference in the prediction and for the influence function the increase of the loss. 
-But, really, **the approach is generalizable** to any question of the form:
-"What happens to ... when we delete or upweight instance z?", where you can fill "..." with any function of your model of your desire. 
-You can analyze how much a training instance influences the overall loss of the model.
-You can analyze how much a training instance influences the feature importance.
-You can analyze how much a training instance influences which feature is selected for the first split when training a [decision tree](#tree).
+Untuk diagnosa penghapusan dan influence functions, kami menganggap perbedaan dalam prediksi dan untuk influence functions peningkatan loss.
+Tapi, sungguh, **pendekatannya dapat digeneralisasi** untuk pertanyaan apa pun dalam bentuk:
+"Apa yang terjadi dengan ... ketika kami menghapus atau meningkatkan instance z?", di mana Anda dapat mengisi "..." dengan fungsi apa pun dari model yang Anda inginkan.
+Anda dapat menganalisis seberapa besar instance pelatihan memengaruhi hilangnya model secara keseluruhan.
+Anda dapat menganalisis seberapa besar instance pelatihan memengaruhi feature importance.
+Anda dapat menganalisis seberapa besar pengaruh instans pelatihan terhadap fitur mana yang dipilih untuk pemisahan pertama saat melatih [decision trees](#tree).
 
 ### Disadvantages of Identifying Influential Instances
 
-Deletion diagnostics are very **expensive to calculate** because they require retraining.
-But history has shown that computer resources are constantly increasing.
-A calculation that 20 years ago was unthinkable in terms of resources can easily be performed with your smartphone.
-You can train models with thousands of training instances and hundreds of parameters on a laptop in seconds/minutes. 
-It is therefore not a big leap to assume that deletion diagnostics will work without problems even with large neural networks in 10 years.
+Deletion diagnostics sangat **mahal untuk dihitung** karena memerlukan pelatihan ulang.
+Tetapi sejarah telah menunjukkan bahwa sumber daya komputer terus meningkat.
+Sebuah perhitungan yang 20 tahun yang lalu tidak terpikirkan dalam hal sumber daya dapat dengan mudah dilakukan dengan smartphone Anda.
+Anda dapat melatih model dengan ribuan instance pelatihan dan ratusan parameter di laptop dalam hitungan detik/menit.
+Oleh karena itu, bukan lompatan besar untuk berasumsi bahwa deletion diagnostics akan bekerja tanpa masalah bahkan dengan jaringan saraf besar dalam 10 tahun.
 
-**Influence functions are a good alternative to deletion diagnostics, but only for models with differentiable parameters**, such as neural networks.
-They do not work for tree-based methods like random forests, boosted trees or decision trees.
-Even if you have models with parameters and a loss function, the loss may not be differentiable.
-But for the last problem, there is a trick:
-Use a differentiable loss as substitute for calculating the influence when, for example, the underlying model uses the Hinge loss instead of some differentiable loss.
-The loss is replaced by a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
+**Influence functions adalah alternatif yang baik untuk deletion diagnostics, tetapi hanya untuk model dengan parameter yang dapat dibedakan**, seperti jaringan saraf.
+Mereka tidak bekerja untuk metode berbasis pohon seperti random forest, pohon yang didorong atau decision trees.
+Bahkan jika Anda memiliki model dengan parameter dan loss function, loss mungkin tidak dapat dibedakan.
+Tapi untuk masalah terakhir, ada triknya:
+Gunakan loss yang dapat dibedakan sebagai pengganti untuk menghitung pengaruh ketika, misalnya, model yang mendasarinya menggunakan loss Engsel alih-alih beberapa loss yang dapat dibedakan.
+Loss tersebut digantikan oleh versi yang dihaluskan dari loss bermasalah untuk influence functions, tetapi modelnya masih dapat dilatih dengan loss yang tidak mulus.
 
-**Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
-The approximation can be wrong and the influence of an instance is actually higher or lower when removed.
-Koh and Liang (2017) showed for some examples that the influence calculated by the influence function was close to the influence measure obtained when the model was actually retrained after the instance was deleted.
-But there is no guarantee that the approximation will always be so close.
+**Influence functions hanya perkiraan**, karena pendekatan membentuk ekspansi kuadrat di sekitar parameter.
+Perkiraannya bisa salah dan pengaruh sebuah instance sebenarnya lebih tinggi atau lebih rendah saat dihapus.
+Koh dan Liang (2017) menunjukkan untuk beberapa contoh bahwa pengaruh yang dihitung oleh influence functions mendekati ukuran pengaruh yang diperoleh ketika model benar-benar dilatih ulang setelah instance dihapus.
+Tetapi tidak ada jaminan bahwa perkiraan akan selalu begitu dekat.
 
-There is **no clear cutoff of the influence measure at which we call an instance influential or non-influential**.
-It is useful to sort the instances by influence, but it would be great to have the means not only to sort the instances, but actually to distinguish between influential and non-influential.
-For example, if you identify the top 10 most influential training instances for a test instance, some of them may not be influential because, for example, only the top 3 were really influential.
+**Tidak ada batas yang jelas dari ukuran pengaruh yang kami sebut sebagai instans berpengaruh atau tidak berpengaruh**.
+Hal ini berguna untuk mengurutkan contoh berdasarkan pengaruh, tetapi akan sangat bagus untuk memiliki sarana tidak hanya untuk mengurutkan contoh, tetapi sebenarnya untuk membedakan antara berpengaruh dan tidak berpengaruh.
+Misalnya, jika Anda mengidentifikasi 10 contoh pelatihan paling berpengaruh teratas untuk contoh pengujian, beberapa di antaranya mungkin tidak berpengaruh karena, misalnya, hanya 3 teratas yang benar-benar berpengaruh.
 
-The influence measures **only take into account the deletion of individual instances** and not the deletion of several instances at once.
-Larger groups of data instances may have some interactions  that strongly influence model training and prediction.
-But the problem lies in combinatorics:
-There are n possibilities to delete an individual instance from the data. 
-There are n times (n-1) possibilities to delete two instances from the training data. 
-There are n times (n-1) times (n-2) possibilities to delete three ...
-I guess you can see where this is going, there are just too many combinations.
+Tindakan pengaruh **hanya memperhitungkan penghapusan instance individual** dan bukan penghapusan beberapa instance sekaligus.
+Grup instance data yang lebih besar mungkin memiliki beberapa interaksi yang sangat memengaruhi pelatihan dan prediksi model.
+Tapi masalahnya terletak pada kombinatorik:
+Ada n kemungkinan untuk menghapus instance individual dari data.
+Ada n kali (n-1) kemungkinan untuk menghapus dua contoh dari data pelatihan.
+Ada n kali (n-1) kali (n-2) kemungkinan untuk menghapus tiga ...
+Saya kira Anda dapat melihat ke mana arahnya, ada terlalu banyak kombinasi.
 
 ### Software and Alternatives
 
-Deletion diagnostics are very simple to implement. 
-Take a look at [the code](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) I wrote for the examples in this chapter.
+Deletion diagnostics sangat mudah diterapkan.
+Lihatlah [kodenya](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) Saya menulis untuk contoh di sini bab.
 
-For linear models and generalized linear models many influence measures like Cook's distance are implemented in R in the `stats` package.
+Untuk model linier dan Generalized Linear Models, banyak ukuran pengaruh seperti jarak Cook diimplementasikan dalam R dalam paket `stats`.
 
-Koh and Liang published the Python code for influence functions from their paper [in a repository](https://github.com/kohpangwei/influence-release).
-That is great!
-Unfortunately it is "only" the code of the paper and not a maintained and documented Python module.
-The code is focused on the Tensorflow library, so you cannot use it directly for black box models using other frameworks, like sci-kit learn.
+Koh dan Liang menerbitkan kode Python untuk influence functions dari makalah mereka [dalam repositori](https://github.com/kohpangwei/influence-release).
+Itu hebat!
+Sayangnya itu "hanya" kode kertas dan bukan modul Python yang dipelihara dan didokumentasikan.
+Kode difokuskan pada library Tensorflow, sehingga Anda tidak dapat menggunakannya secara langsung untuk model black box menggunakan kerangka kerja lain, seperti sci-kit learn.
 
 
 [^cook]: Cook, R. Dennis. "Detection of influential observation in linear regression." Technometrics 19.1 (1977): 15-18.

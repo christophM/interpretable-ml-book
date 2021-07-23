@@ -9,65 +9,64 @@ set.seed(42)
 
 `r if(is.html){only.in.html}`
 
-SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)[^lundberg2016] is a method to explain individual predictions.
-SHAP is based on the game theoretically optimal [Shapley Values](#shapley).
+SHAP (SHapley Additive exPlanations) oleh Lundberg and Lee (2016)[^lundberg2016] adalah metode untuk menjelaskan prediksi individu.
+SHAP didasarkan pada game yang secara teoritis optimal [Nilai Shapley](#shapley).
 
-There are two reasons why SHAP got its own chapter and is not a subchapter of [Shapley values](#shapley).
-First, the SHAP authors proposed KernelSHAP, an alternative, kernel-based estimation approach for Shapley values inspired by [local surrogate models](#lime).
-And they proposed TreeSHAP, an efficient estimation approach for tree-based models.
-Second, SHAP comes with many global interpretation methods based on aggregations of Shapley values.
-This chapter explains both the new estimation approaches and the global interpretation methods.
+Ada dua alasan mengapa SHAP mendapatkan babnya sendiri dan bukan merupakan subbab dari [nilai Shapley](#shapley).
+Pertama, penulis SHAP mengusulkan KernelSHAP, pendekatan estimasi alternatif berbasis kernel untuk nilai Shapley yang terinspirasi oleh [local surrogate models](#lime).
+Dan mereka mengusulkan TreeSHAP, pendekatan estimasi yang efisien untuk model berbasis pohon.
+Kedua, SHAP hadir dengan banyak metode interpretasi global berdasarkan agregasi nilai Shapley.
+Bab ini menjelaskan pendekatan estimasi baru dan metode interpretasi global.
 
 ```{block2, type = "rmdnote", echo = TRUE}
 Interested in an in-depth, hands-on course on SHAP and Shapley values?
 Head over to [the Shapley course page](https://leanpub.com/c/shapley-xai) and get notified once the course is available.
 ```
-I recommend reading the chapters on [Shapley values](#shapley) and [local models (LIME)](#lime) first.
+Saya sarankan membaca bab tentang [Nilai Shapley](#shapley) dan [model lokal (LIME)](#lime) terlebih dahulu.
 
 ### Definition
 
-The goal of SHAP is to explain the prediction of an instance x by computing the contribution of each feature to the prediction.
-The SHAP explanation method computes Shapley values from coalitional game theory.
-The feature values of a data instance act as players in a coalition.
-Shapley values tell us how to fairly distribute the "payout" (= the prediction) among the features.
-A player can be an individual feature value, e.g. for tabular data.
-A player can also be a group of feature values.
-For example to explain an image, pixels can be grouped to super pixels and the prediction distributed among them.
-One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feature attribution method, a linear model.
-That view connects LIME and Shapley Values.
-SHAP specifies the explanation as:
+Tujuan dari SHAP adalah untuk menjelaskan prediksi dari sebuah instance x dengan menghitung kontribusi dari setiap fitur untuk prediksi.
+Metode penjelasan SHAP menghitung nilai Shapley dari coalitional game theory.
+Nilai fitur dari instance data bertindak sebagai players dalam koalisi.
+Nilai Shapley memberi tahu kami cara mendistribusikan "payout" (= prediksi) secara adil di antara fitur.
+Seorang players dapat menjadi nilai fitur individu, mis. untuk data tabel.
+Seorang players juga bisa menjadi sekelompok nilai fitur.
+Misalnya untuk menjelaskan suatu gambar, piksel dapat dikelompokkan menjadi piksel super dan prediksi didistribusikan di antara mereka.
+Salah satu inovasi yang dibawa SHAP ke meja adalah bahwa penjelasan nilai Shapley direpresentasikan sebagai metode feature attribution aditif, model linier.
+Pandangan itu menghubungkan LIME dan Nilai Shapley.
+SHAP menetapkan penjelasannya sebagai:
 
 $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
-where g is the explanation model, $z'\in\{0,1\}^M$ is the coalition vector, M is the maximum coalition size and $\phi_j\in\mathbb{R}$ is the feature attribution for a feature j, the Shapley values.
-What I call "coalition vector" is called "simplified features" in the SHAP paper.
-I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to super pixels.
-I believe it is helpful to think about the z's as describing coalitions:
-In the coalition vector, an entry of 1 means that the corresponding feature value is "present" and 0 that it is "absent".
-This should sound familiar to you if you know about Shapley values.
-To compute Shapley values, we simulate that only some features values are playing ("present") and some are not ("absent").
-The representation as a linear model of coalitions is a trick for the computation of the $\phi$'s.
-For x, the instance of interest, the coalition vector x' is a vector of all 1's, i.e., all feature values are "present".
-The formula simplifies to:
+di mana g adalah explanation model, $z'\in\{0,1\}^M$ adalah vektor koalisi, M adalah ukuran koalisi maksimum dan $\phi_j\in\mathbb{R}$ adalah feature attribution untuk fitur j, nilai-nilai Shapley.
+Apa yang saya sebut "vektor koalisi" disebut "fitur yang disederhanakan" dalam makalah SHAP.
+Saya pikir nama ini dipilih, karena misalnya. data gambar, gambar tidak direpresentasikan pada tingkat piksel, tetapi dikumpulkan ke piksel super.
+Saya percaya akan sangat membantu untuk memikirkan z sebagai menggambarkan koalisi:
+Dalam vektor koalisi, entri 1 berarti bahwa nilai fitur yang sesuai adalah "ada" dan 0 berarti "tidak ada".
+Ini seharusnya terdengar akrab bagi Anda jika Anda tahu tentang nilai-nilai Shapley.
+Untuk menghitung nilai Shapley, kami mensimulasikan bahwa hanya beberapa nilai fitur yang diputar ("hadir") dan beberapa tidak ("tidak ada").
+Representasi sebagai model koalisi linier adalah trik untuk menghitung $\phi$.
+Untuk x, instance yang diinginkan, vektor koalisi x' adalah vektor dari semua 1, yaitu, semua nilai fitur "ada".
+Rumus disederhanakan menjadi:
 
 $$g(x')=\phi_0+\sum_{j=1}^M\phi_j$$
 
-You can find this formula in similar notation in the [Shapley value](#shapley) chapter.
-More about the actual estimation comes later.
-Let us first talk about the properties of the $\phi$'s before we go into the details of their estimation.
+Anda dapat menemukan rumus ini dalam notasi serupa di bab [Nilai Shapley](#shapley).
+Lebih lanjut tentang estimasi aktual datang kemudian.
+Mari kita bicara dulu tentang properti $\phi$ sebelum kita masuk ke detail estimasinya.
 
-<!-- Desirable properties -->
-Shapley values are the only solution that satisfies properties of Efficiency, Symmetry, Dummy and Additivity.
-SHAP also satisfies these, since it computes Shapley values.
-In the SHAP paper, you will find discrepancies between SHAP properties and Shapley properties.
-SHAP describes the following three desirable properties:
+Nilai Shapley adalah satu-satunya solusi yang memenuhi sifat Efficiency, Symmetry, Dummy dan Additivity.
+SHAP juga memenuhi ini, karena menghitung nilai Shapley.
+Dalam makalah SHAP, Anda akan menemukan perbedaan antara properti SHAP dan properti Shapley.
+SHAP menjelaskan tiga sifat yang diinginkan berikut ini:
 
 **1) Local accuracy**
 
 $$f(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
 
-If you define $\phi_0=E_X(\hat{f}(x))$ and set all $x_j'$ to 1, this is the Shapley efficiency property.
-Only with a different name and using the coalition vector.
+Jika Anda mendefinisikan $\phi_0=E_X(\hat{f}(x))$ dan menyetel semua $x_j'$ ke 1, ini adalah properti efisiensi Shapley.
+Hanya dengan nama yang berbeda dan menggunakan vektor koalisi.
 
 $$f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
 
@@ -75,278 +74,270 @@ $$f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
 
 $$x_j'=0\Rightarrow\phi_j=0$$
 
-Missingness says that a missing feature gets an attribution of zero.
-Note that $x_j'$ refers to the coalitions, where a value of 0 represents the absence of a feature value.
-In coalition notation, all feature values $x_j'$ of the instance to be explained should be '1'.
-The presence of a 0 would mean that the feature value is missing for the instance of interest.
-This property is not among the properties of the "normal" Shapley values.
-So why do we need it for SHAP?
-Lundberg calls it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
-A missing feature could -- in theory -- have an arbitrary Shapley value without hurting the local accuracy property, since it is multiplied with $x_j'=0$.
-The Missingness property enforces that missing features get a Shapley value of 0.
-In practice this is only relevant for features that are constant.
+Missingness mengatakan bahwa fitur yang hilang mendapat atribusi nol.
+Perhatikan bahwa $x_j'$ mengacu pada koalisi, di mana nilai 0 menunjukkan tidak adanya nilai fitur.
+Dalam notasi koalisi, semua nilai fitur $x_j'$ dari instance yang akan dijelaskan harus '1'.
+Kehadiran 0 akan berarti bahwa nilai fitur hilang untuk contoh yang menarik.
+Properti ini bukan salah satu properti dari nilai Shapley "normal".
+Jadi mengapa kita membutuhkannya untuk SHAP?
+Lundberg menyebutnya ["properti pembukuan kecil"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
+Fitur yang hilang dapat -- secara teori -- memiliki nilai Shapley yang berubah-ubah tanpa merusak properti local accuracy, karena dikalikan dengan $x_j'=0$.
+Properti Missingness memberlakukan bahwa fitur yang hilang mendapatkan nilai Shapley 0.
+Dalam praktiknya, ini hanya relevan untuk fitur yang konstan.
 
-**3)  Consistency**
+**3) Konsistensi**
 
-Let $f_x(z')=f(h_x(z'))$ and $z_{\setminus{}j}'$ indicate that $z_j'=0$.
-For any two models f and f' that satisfy:
+Misalkan $f_x(z')=f(h_x(z'))$ dan $z_{\setminus{}j}'$ menunjukkan bahwa $z_j'=0$.
+Untuk setiap dua model f dan f' yang memenuhi:
 
 $$f_x'(z')-f_x'(z_{\setminus{}j}')\geq{}f_x(z')-f_x(z_{\setminus{}j}')$$
 
-for all inputs $z'\in\{0,1\}^M$, then:
+untuk semua input $z'\in\{0,1\}^M$, maka:
 
 $$\phi_j(f',x)\geq\phi_j(f,x)$$
 
-The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same.
-From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee.
+Properti konsistensi mengatakan bahwa jika model berubah sehingga kontribusi marjinal dari nilai fitur meningkat atau tetap sama (terlepas dari fitur lainnya), nilai Shapley juga meningkat atau tetap sama.
+Dari Konsistensi, properti Shapley mengikuti Linearitas, Dummy, dan Simetri, seperti yang dijelaskan dalam Lampiran Lundberg dan Lee.
 
 ### KernelSHAP
 
-<!-- The general Idea of linear model -->
-KernelSHAP estimates for an instance x the contributions of each feature value to the prediction.
-KernelSHAP consists of 5 steps:
 
-- Sample coalitions $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
-- Get prediction for each $z_k'$ by first converting $z_k'$ to the original feature space and then applying model f: $f(h_x(z_k'))$
-- Compute the weight for each $z_k'$ with the SHAP kernel.
-- Fit weighted linear model.
-- Return Shapley values $\phi_k$, the coefficients from the linear model.
+KernelSHAP memperkirakan untuk sebuah instance x kontribusi dari setiap nilai fitur pada prediksi.
+KernelSHAP terdiri dari 5 langkah:
 
-We can create a random coalition by repeated coin flips until we have a chain of 0's and 1's.
-For example, the vector of (1,0,1,0) means that we have a coalition of the first and third features.
-The K sampled coalitions become the dataset for the regression model.
-The target for the regression model is the prediction for a coalition.
-("Hold on!," you say, "The model has not been trained on these binary coalition data and can't make predictions for them.")
-To get from coalitions of feature values to valid data instances, we need a function $h_x(z')=z$ where $h_x:\{0,1\}^M\rightarrow\mathbb{R}^p$.
-The function $h_x$ maps 1's to the corresponding value from the instance x that we want to explain.
-For tabular data, it maps 0's to the values of another instance that we sample from the data.
-This means that we equate "feature value is absent" with "feature value is replaced by random feature value from data".
-For tabular data, the following figure visualizes the mapping from coalitions to feature values:
+- Contoh koalisi $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = fitur ada dalam koalisi, 0 = fitur tidak ada).
+- Dapatkan prediksi untuk setiap $z_k'$ dengan terlebih dahulu mengonversi $z_k'$ ke ruang fitur asli dan kemudian menerapkan model f: $f(h_x(z_k'))$
+- Hitung bobot untuk setiap $z_k'$ dengan kernel SHAP.
+- Sesuaikan model linier berbobot.
+- Mengembalikan nilai Shapley $\phi_k$, koefisien dari model linier.
+
+Kita dapat membuat koalisi acak dengan membalik koin berulang kali sampai kita memiliki rantai 0 dan 1.
+Misalnya, vektor (1,0,1,0) berarti kita memiliki koalisi fitur pertama dan ketiga.
+Koalisi sampel K menjadi dataset untuk regression models.
+Target regression models adalah prediksi koalisi.
+("Tunggu!," Anda berkata, "Model belum dilatih pada data koalisi biner ini dan tidak dapat membuat prediksi untuk mereka.")
+Untuk mendapatkan dari koalisi nilai fitur ke instance data yang valid, kita memerlukan fungsi $h_x(z')=z$ di mana $h_x:\{0,1\}^M\rightarrow\mathbb{R}^p$.
+Fungsi $h_x$ memetakan 1 ke nilai yang sesuai dari instance x yang ingin kita jelaskan.
+Untuk data tabular, ini memetakan 0 ke nilai instance lain yang kami sampel dari data.
+Artinya kita menyamakan "nilai fitur tidak ada" dengan "nilai fitur diganti dengan nilai fitur acak dari data".
+Untuk data tabular, gambar berikut memvisualisasikan pemetaan dari koalisi ke nilai fitur:
 
 ```{r shap-simplified-feature, fig.cap = "Function $h_x$ maps a coalition to a valid instance. For present features (1), $h_x$ maps to the feature values of x. For absent features (0), $h_x$ maps to the values of a randomly sampled data instance.", out.width=800}
 knitr::include_graphics("images/shap-simplified-features.jpg")
 ```
 
-$h_x$ for tabular data treats $X_C$ and $X_S$ as independent and integrates over the marginal distribution:
+$h_x$ untuk data tabular memperlakukan $X_C$ dan $X_S$ sebagai independen dan terintegrasi pada distribusi marginal:
 
 $$f(h_x(z'))=E_{X_C}[f(x)]$$
 
-Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
-KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
-The estimation puts too much weight on unlikely instances.
-Results can become unreliable.
-But it is necessary to sample from the marginal distribution.
-The solution would be to sample from the conditional distribution, which changes the value function, and therefore the game to which Shapley values are the solution.
-As a result, the Shapley values have a different interpretation:
-For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
-For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom.
+Pengambilan sampel dari distribusi marjinal berarti mengabaikan struktur ketergantungan antara fitur yang ada dan yang tidak ada.
+KernelSHAP karena itu menderita masalah yang sama seperti semua metode interpretasi berbasis permutasi.
+Estimasi memberi terlalu banyak bobot pada contoh yang tidak mungkin.
+Hasil bisa menjadi tidak dapat diandalkan.
+Tetapi perlu untuk mengambil sampel dari distribusi marjinal.
+Solusinya adalah mengambil sampel dari distribusi bersyarat, yang mengubah fungsi nilai, dan oleh karena itu game yang nilai Shapley adalah solusinya.
+Akibatnya, nilai-nilai Shapley memiliki interpretasi yang berbeda:
+Misalnya, fitur yang mungkin tidak digunakan oleh model sama sekali dapat memiliki nilai Shapley bukan nol saat pengambilan sampel bersyarat digunakan.
+Untuk game marginal, nilai fitur ini akan selalu mendapatkan nilai Shapley 0, karena jika tidak maka akan melanggar aksioma Dummy.
 
-For images, the following figure describes a possible mapping function:
+Untuk gambar, gambar berikut menjelaskan fungsi pemetaan yang mungkin:
 
 ```{r fig.cap = "Function $h_x$ maps coalitions of super pixels (sp) to images. Super-pixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option.", out.width=800}
 knitr::include_graphics("images/shap-superpixel.jpg")
 ```
-<!-- Kernel -->
-The big difference to LIME is the weighting of the instances in the regression model.
-LIME weights the instances according to how close they are to the original instance.
-The more 0's in the coalition vector, the smaller the weight in LIME.
-SHAP weights the sampled instances according to the weight the coalition would get in the Shapley value estimation.
-Small coalitions (few 1's) and large coalitions (i.e. many 1's) get the largest weights.
-The intuition behind it is:
-We learn most about individual features if we can study their effects in isolation.
-If a coalition consists of a single feature, we can learn about the features' isolated main effect on the prediction.
-If a coalition consists of all but one feature, we can learn about this features' total effect (main effect plus feature interactions).
-If a coalition consists of half the features, we learn little about an individual features contribution, as there are many possible coalitions with half of the features.
-To achieve Shapley compliant weighting, Lundberg et. al propose the SHAP kernel:
+
+Perbedaan besar pada LIME adalah bobot instance dalam regression models.
+LIME memberi bobot pada instance sesuai dengan seberapa dekat mereka dengan instance aslinya.
+Semakin banyak 0 dalam vektor koalisi, semakin kecil bobot dalam LIME.
+SHAP menimbang contoh sampel sesuai dengan bobot yang akan didapat koalisi dalam estimasi nilai Shapley.
+Koalisi kecil (sedikit 1) dan koalisi besar (yaitu banyak 1) mendapatkan bobot terbesar.
+Intuisi di baliknya adalah:
+Kami belajar paling banyak tentang fitur individual jika kami dapat mempelajari efeknya secara terpisah.
+Jika koalisi terdiri dari satu fitur, kita dapat mempelajari tentang efek utama terisolasi fitur pada prediksi.
+Jika koalisi terdiri dari semua kecuali satu fitur, kita dapat mempelajari efek total fitur ini (efek utama plus feature interactions).
+Jika sebuah koalisi terdiri dari setengah fitur, kita hanya belajar sedikit tentang feature contribution individual, karena ada banyak kemungkinan koalisi dengan setengah fitur.
+Untuk mencapai pembobotan yang sesuai dengan Shapley, Lundberg et. al mengusulkan kernel SHAP:
 
 $$\pi_{x}(z')=\frac{(M-1)}{\binom{M}{|z'|}|z'|(M-|z'|)}$$
 
-Here, M is the maximum coalition size and $|z'|$ the number of present features in instance z'.
-Lundberg and Lee show that linear regression with this kernel weight yields Shapley values.
-If you would use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!
+Di sini, M adalah ukuran koalisi maksimum dan $|z'|$ jumlah fitur yang ada dalam instance z'.
+Lundberg dan Lee menunjukkan bahwa linear regression dengan bobot kernel ini menghasilkan nilai Shapley.
+Jika Anda akan menggunakan kernel SHAP dengan LIME pada data koalisi, LIME juga akan memperkirakan nilai Shapley!
 
-<!-- Sampling trick -->
-We can be a bit smarter about the sampling of coalitions:
-The smallest and largest coalitions take up most of the weight.
-We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly.
-We start with all possible coalitions with 1 and M-1 features, which makes 2 times M coalitions in total.
-When we have enough budget left (current budget is K - 2M), we can include coalitions with two features and with M-2 features and so on.
-From the remaining coalition sizes, we sample with readjusted weights.
+Kita bisa sedikit lebih pintar tentang pengambilan sampel koalisi:
+Koalisi terkecil dan terbesar mengambil sebagian besar beban.
+Kami mendapatkan estimasi nilai Shapley yang lebih baik dengan menggunakan beberapa anggaran pengambilan sampel K untuk memasukkan koalisi berbobot tinggi ini daripada mengambil sampel secara membabi buta.
+Kami mulai dengan semua kemungkinan koalisi dengan fitur 1 dan M-1, yang menghasilkan total 2 kali koalisi M.
+Ketika kami memiliki sisa anggaran yang cukup (anggaran saat ini adalah K - 2M), kami dapat menyertakan koalisi dengan dua fitur dan dengan fitur M-2 dan seterusnya.
+Dari ukuran koalisi yang tersisa, kami mengambil sampel dengan bobot yang disesuaikan.
 
-
-<!-- Linear Model -->
-We have the data, the target and the weights.
-Everything to build our weighted linear regression model:
+Kami memiliki data, target dan bobot.
+Semuanya untuk membangun model weighted linear regression kami:
 
 $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
-We train the linear model g by optimizing the following loss function L:
+Kami melatih model linier g dengan mengoptimalkan loss function L berikut:
 
 $$L(f,g,\pi_{x})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x}(z')$$
 
-where Z is the training data.
-This is the good old boring sum of squared errors that we usually optimize for linear models.
-The estimated coefficients of the model, the $\phi_j$'s are the Shapley values.
+di mana Z adalah data pelatihan.
+Ini adalah jumlah kesalahan kuadrat lama yang membosankan yang biasanya kami optimalkan untuk model linier.
+Koefisien estimasi model, $\phi_j$ adalah nilai Shapley.
 
-
-Since we are in a linear regression setting, we can also make use of the standard tools for regression.
-For example, we can add regularization terms to make the model sparse.
-If we add an L1 penalty to the loss L, we can create sparse explanations.
-(I am not so sure whether the resulting coefficients would still be valid Shapley values though)
+Karena kita berada dalam pengaturan linear regression, kita juga dapat menggunakan alat standar untuk regresi.
+Misalnya, kita dapat menambahkan istilah regularisasi untuk membuat model sparse.
+Jika kita menambahkan penalti L1 pada loss L, kita dapat membuat penjelasan yang jarang.
+(Saya tidak begitu yakin apakah koefisien yang dihasilkan masih akan menjadi nilai Shapley yang valid)
 
 ### TreeSHAP
 
-Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
-TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
+Lundberg dkk. al (2018)[^tree-shap] mengusulkan TreeSHAP, varian SHAP untuk model machine learning berbasis pohon seperti decision trees, random forest, dan gradient boosted trees.
+TreeSHAP diperkenalkan sebagai alternatif model-specific yang cepat untuk KernelSHAP, tetapi ternyata ia dapat menghasilkan feature attribution yang tidak intuitif.
 
-TreeSHAP defines the value function using the conditional expectation $E_{X_S|X_C}(f(x)|x_S)$ instead of the marginal expectation.
-The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.[^dummy1][^dummy2]
-The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
+TreeSHAP mendefinisikan fungsi nilai menggunakan ekspektasi kondisional $E_{X_S|X_C}(f(x)|x_S)$ alih-alih ekspektasi marginal.
+Masalah dengan ekspektasi bersyarat adalah bahwa fitur yang tidak memiliki pengaruh pada fungsi prediksi f bisa mendapatkan estimasi TreeSHAP yang berbeda dari nol.[^dummy1][^dummy2]
+Estimasi bukan nol dapat terjadi ketika fitur tersebut dikorelasikan dengan fitur lain yang sebenarnya memiliki pengaruh terhadap prediksi.
 
-How much faster is TreeSHAP?
-Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
+Seberapa cepat TreeSHAP?
+Dibandingkan dengan KernelSHAP yang tepat, ini mengurangi kompleksitas komputasi dari $O(TL2^M)$ menjadi $O(TLD^2)$, di mana T adalah jumlah pohon, L adalah jumlah maksimum daun di setiap pohon dan D kedalaman maksimum pohon apa pun.
 
-<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
-TreeSHAP uses the conditional expectation $E_{X_S|X_C}(f(x)|x_S)$ to estimate effects.
-I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
-If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
-If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
-If S contains some, but not all, features, we ignore predictions of unreachable nodes.
-Unreachable means that the decision path that leads to this node contradicts values in $x_S$.
-From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node).
-The mean of the remaining terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S.
-The problem is that we have to apply this procedure for each possible subset S of the feature values.
-<!--
-This means $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$ times.
-Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
--->
-TreeSHAP computes in polynomial time instead of exponential.
-The basic idea is to push all possible subsets S down the tree at the same time.
-For each decision node we have to keep track of the number of subsets.
-This depends on the subsets in the parent node and the split feature.
-For example, when the first split in a tree is on feature x3, then all the subsets that contain feature x3 will go to one node (the one where x goes).
-Subsets that do not contain feature x3 go to both nodes with reduced weight.
-Unfortunately, subsets of different sizes have different weights.
-The algorithm has to keep track of the overall weight of the subsets in each node.
-This complicates the algorithm.
-I refer to the original paper for details of TreeSHAP.
-The computation can be expanded to more trees:
-Thanks to the Additivity property of Shapley values, the Shapley values of a tree ensemble is the (weighted) average of the Shapley values of the individual trees.
+TreeSHAP menggunakan ekspektasi bersyarat $E_{X_S|X_C}(f(x)|x_S)$ untuk memperkirakan efek.
+Saya akan memberi Anda beberapa intuisi tentang bagaimana kita dapat menghitung prediksi yang diharapkan untuk satu pohon, sebuah instance x dan subset fitur S.
+Jika kita mengkondisikan semua fitur -- jika S adalah himpunan semua fitur -- maka prediksi dari simpul di mana instance x jatuh akan menjadi prediksi yang diharapkan.
+Jika kami tidak melakukan kondisi pada fitur apa pun -- jika S kosong -- kami akan menggunakan rata-rata tertimbang dari prediksi semua simpul terminal.
+Jika S berisi beberapa, tetapi tidak semua, fitur, kami mengabaikan prediksi node yang tidak dapat dijangkau.
+Unreachable berarti jalur keputusan yang mengarah ke node ini bertentangan dengan nilai dalam $x_S$.
+Dari node terminal yang tersisa, kami membuat rata-rata prediksi yang diberi bobot berdasarkan ukuran node (yaitu jumlah sampel pelatihan di node tersebut).
+Rata-rata dari node terminal yang tersisa, dibobot dengan jumlah instance per node, adalah prediksi yang diharapkan untuk x yang diberikan S.
+Masalahnya adalah kita harus menerapkan prosedur ini untuk setiap kemungkinan subset S dari nilai fitur.
 
-Next, we will look at SHAP explanations in action.
+TreeSHAP menghitung dalam waktu polinomial, bukan eksponensial.
+Ide dasarnya adalah mendorong semua himpunan bagian S yang mungkin ke bawah pohon secara bersamaan.
+Untuk setiap simpul keputusan, kita harus melacak jumlah himpunan bagian.
+Ini tergantung pada himpunan bagian di simpul induk dan fitur split.
+Sebagai contoh, ketika pemisahan pertama dalam sebuah pohon adalah pada fitur x3, maka semua subset yang berisi fitur x3 akan menuju ke satu simpul (yang menjadi tujuan x).
+Subset yang tidak mengandung fitur x3 pergi ke kedua node dengan bobot yang dikurangi.
+Sayangnya, himpunan bagian dengan ukuran yang berbeda memiliki bobot yang berbeda.
+Algoritme harus melacak bobot keseluruhan himpunan bagian di setiap simpul.
+Ini mempersulit algoritma.
+Saya merujuk ke kertas asli untuk rincian TreeSHAP.
+Perhitungan dapat diperluas ke lebih banyak pohon:
+Berkat properti Additivity dari nilai Shapley, nilai Shapley dari tree ensemble adalah rata-rata (tertimbang) dari nilai Shapley dari masing-masing pohon.
+
+Selanjutnya, kita akan melihat penjelasan SHAP dalam aksi.
 
 ### Examples
 
-I trained a random forest classifier with 100 trees to predict the [risk for cervical cancer](#cervical).
-We will use SHAP to explain individual predictions.
-We can use the fast TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees.
-But instead of relying on the conditional distribution, this example uses the marginal distribution.
-This is described in the package, but not in the original paper.
-The Python TreeSHAP function is slower with the marginal distribution, but still faster than KernelSHAP, since it scales linearly with the rows in the data.
+Saya melatih pengklasifikasi random forest dengan 100 pohon untuk memprediksi [risiko kanker serviks](#cervical).
+Kami akan menggunakan SHAP untuk menjelaskan prediksi individu.
+Kita dapat menggunakan metode estimasi TreeSHAP yang cepat daripada metode KernelSHAP yang lebih lambat, karena random forest adalah kumpulan pohon.
+Namun alih-alih mengandalkan distribusi bersyarat, contoh ini menggunakan distribusi marginal.
+Ini dijelaskan dalam paket, tetapi tidak di kertas aslinya.
+Fungsi Python TreeSHAP lebih lambat dengan distribusi marjinal, tetapi masih lebih cepat daripada KernelSHAP, karena skalanya linier dengan baris dalam data.
 
-Because we use the marginal distribution here, the interpretation is the same as in the [Shapley value chapter](#shapley).
-But with the Python shap package comes a different visualization:
-You can visualize feature attributions such as Shapley values as "forces".
-Each feature value is a force that either increases or decreases the prediction.
-The prediction starts from the baseline.
-The baseline for Shapley values is the average of all predictions.
-In the plot, each Shapley value is an arrow that pushes to increase (positive value) or decrease (negative value) the prediction.
-These forces balance each other out at the actual prediction of the data instance.
+Karena kita menggunakan distribusi marginal di sini, interpretasinya sama seperti pada [bab nilai Shapley](#shapley).
+Tetapi dengan paket shap Python hadir visualisasi yang berbeda:
+Anda dapat memvisualisasikan feature attribution seperti nilai Shapley sebagai "forces".
+Setiap nilai fitur adalah forces yang meningkatkan atau menurunkan prediksi.
+Prediksi dimulai dari baseline.
+Garis dasar untuk nilai Shapley adalah rata-rata dari semua prediksi.
+Dalam plot, setiap nilai Shapley adalah panah yang mendorong untuk meningkatkan (nilai positif) atau menurunkan (nilai negatif) prediksi.
+Forces ini menyeimbangkan satu sama lain pada prediksi aktual dari instance data.
 
-The following figure shows SHAP explanation force plots for two women from the cervical cancer dataset:
+Gambar berikut menunjukkan plot SHAP explanation force untuk dua wanita dari dataset kanker serviks:
 
 ```{r, fig.cap = "SHAP values to explain the predicted cancer probabilities of two individuals. The baseline -- the average predicted probability -- is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are offset by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase her predicted cancer risk.", out.width = 800}
 img1 <-  rasterGrob(as.raster(png::readPNG("images/shap-explain-1.png")), interpolate = FALSE)
 img2 <-  rasterGrob(as.raster(png::readPNG("images/shap-explain-2.png")), interpolate = FALSE)
 grid.arrange(img1, img2, ncol = 1)
 ```
-These were explanations for individual predictions.
+Ini adalah penjelasan untuk prediksi individu.
 
-Shapley values can be combined into global explanations.
-If we run SHAP for every instance, we get a matrix of Shapley values.
-This matrix has one row per data instance and one column per feature.
-We can interpret the entire model by analyzing the Shapley values in this matrix.
+Nilai Shapley dapat digabungkan menjadi penjelasan global.
+Jika kita menjalankan SHAP untuk setiap instance, kita mendapatkan matriks nilai Shapley.
+Matriks ini memiliki satu baris per instance data dan satu kolom per fitur.
+Kita dapat menginterpretasikan seluruh model dengan menganalisis nilai-nilai Shapley dalam matriks ini.
 
-We start with SHAP feature importance.
+Kami mulai dengan feature importance SHAP.
 
 ### SHAP Feature Importance
 
-The idea behind SHAP feature importance is simple:
-Features with large absolute Shapley values are important.
-Since we want the global importance, we sum the absolute Shapley values per feature across the data:
+Ide di balik feature importance SHAP sederhana saja:
+Fitur dengan nilai Shapley absolut yang besar adalah penting.
+Karena kami menginginkan kepentingan global, kami menjumlahkan nilai Shapley absolut per fitur di seluruh data:
 
 $$I_j=\sum_{i=1}^n{}|\phi_j^{(i)}|$$
 
-Next, we sort the features by decreasing importance and plot them.
-The following figure shows the SHAP feature importance for the random forest trained before for predicting cervical cancer.
+Selanjutnya, kami mengurutkan fitur dengan mengurangi kepentingan dan memplotnya.
+Gambar berikut menunjukkan feature importance SHAP untuk random forest yang dilatih sebelumnya untuk memprediksi kanker serviks.
 
 ```{r fig.cap="SHAP feature importance measured as the mean absolute Shapley values. The number of years with hormonal contraceptives was the most important feature, changing the predicted absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis).", out.width=800}
 knitr::include_graphics("images/shap-importance.png")
 ```
 
-SHAP feature importance is an alternative to [permutation feature importance](#feature-importance).
-There is a big difference between both importance measures:
-Permutation feature importance is based on the decrease in model performance.
-SHAP is based on magnitude of feature attributions.
+Feature importance SHAP adalah alternatif dari [permutation feature importance](#feature-importance).
+Ada perbedaan besar antara kedua ukuran kepentingan:
+Permutation feature importance didasarkan pada penurunan performa model.
+SHAP didasarkan pada besarnya feature attribution.
 
-
-The feature importance plot is useful, but contains no information beyond the importances.
-For a more informative plot, we will next look at the summary plot.
+Plot feature importance berguna, tetapi tidak berisi informasi di luar kepentingannya.
+Untuk plot yang lebih informatif, selanjutnya kita akan melihat summary plot.
 
 ### SHAP Summary Plot
 
-The summary plot combines feature importance with feature effects.
-Each point on the summary plot is a Shapley value for a feature and an instance.
-The position on the y-axis is determined by the feature and on the x-axis by the Shapley value.
-The color represents the value of the feature from low to high.
-Overlapping points are jittered in y-axis direction, so we get a sense of the distribution of the Shapley values per feature.
-The features are ordered according to their importance.
+Summary plot menggabungkan feature importance dengan efek fitur.
+Setiap titik pada summary plot adalah nilai Shapley untuk fitur dan instance.
+Posisi pada sumbu y ditentukan oleh fitur dan pada sumbu x oleh nilai Shapley.
+Warna mewakili nilai fitur dari rendah ke tinggi.
+Titik-titik yang tumpang-tindih bergoyang ke arah sumbu y, jadi kami mendapatkan gambaran tentang distribusi nilai Shapley per fitur.
+Fitur-fitur tersebut diurutkan sesuai dengan kepentingannya.
 
 ```{r fig.cap = "SHAP summary plot. Low number of years on hormonal contraceptives reduce the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model and are not necessarily causal in the real world.",  out.width=800}
 knitr::include_graphics("images/shap-importance-extended.png")
 ```
 
-In the summary plot, we see first indications of the relationship between the value of a feature and the impact on the prediction.
-But to see the exact form of the relationship, we have to look at SHAP dependence plots.
+Dalam summary plot, kita melihat indikasi pertama dari hubungan antara nilai fitur dan dampaknya pada prediksi.
+Tetapi untuk melihat bentuk hubungan yang tepat, kita harus melihat plot SHAP dependence.
+372
 
 ### SHAP Dependence Plot
 
-SHAP feature dependence might be the simplest global interpretation plot:
-1) Pick a feature.
-2) For each data instance, plot a point with the feature value on the x-axis and the corresponding Shapley value on the y-axis.
-3) Done.
+SHAP dependence mungkin merupakan plot interpretasi global yang paling sederhana:
+1) Pilih fitur.
+2) Untuk setiap instance data, plot titik dengan nilai fitur pada sumbu x dan nilai Shapley yang sesuai pada sumbu y.
+3) Selesai.
 
-Mathematically, the plot contains the following points: $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
+Secara matematis, plot berisi poin-poin berikut: $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
 
-The following figure shows the SHAP feature dependence for years on hormonal contraceptives:
+Gambar berikut menunjukkan SHAP dependence selama bertahun-tahun pada kontrasepsi hormonal:
 
 ```{r fig.cap="SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increases the predicted cancer probability.", out.width=800}
 knitr::include_graphics("images/shap-dependence.png")
 ```
 
-SHAP dependence plots are an alternative to [partial dependence plots](#pdp) and [accumulated local effects](#ale).
-While PDP and ALE plot show average effects, SHAP dependence also shows the variance on the y-axis.
-Especially in case of interactions, the SHAP dependence plot will be much more dispersed in the y-axis.
-The dependence plot can be improved by highlighting these feature interactions.
+Plot SHAP dependence adalah alternatif untuk [partial dependence plot](#pdp) dan [accumulated local effects](#ale).
+Sementara plot PDP dan ALE menunjukkan efek rata-rata, SHAP dependence juga menunjukkan varians pada sumbu y.
+Khususnya dalam hal interaksi, plot SHAP dependence akan jauh lebih tersebar di sumbu y.
+Plot ketergantungan dapat ditingkatkan dengan menyoroti feature interactions ini.
 
 
 ### SHAP Interaction Values
 
-The interaction effect is the additional combined feature effect after accounting for the individual feature effects.
-The Shapley interaction index from game theory is defined as:
+Efek interaksi adalah efek fitur gabungan tambahan setelah memperhitungkan efek fitur individual.
+Indeks interaksi Shapley dari game theory didefinisikan sebagai:
 
 $$\phi_{i,j}=\sum_{S\subseteq\setminus\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)$$
 
-when $i\neq{}j$ and:
+ketika $i\neq{}j$ dan:
 
 $$\delta_{ij}(S)=f_x(S\cup\{i,j\})-f_x(S\cup\{i\})-f_x(S\cup\{j\})+f_x(S)$$
 
-This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects.
-We average the values over all possible feature coalitions S, as in the Shapley value computation.
-When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions M x M, where M is the number of features.
+Rumus ini mengurangi efek utama dari fitur sehingga kita mendapatkan efek interaksi murni setelah memperhitungkan efek individu.
+Kami rata-rata nilai atas semua kemungkinan koalisi fitur S, seperti dalam perhitungan nilai Shapley.
+Ketika kami menghitung nilai interaksi SHAP untuk semua fitur, kami mendapatkan satu matriks per instance dengan dimensi M x M, di mana M adalah jumlah fitur.
 
-How can we use the interaction index?
-For example, to automatically color the SHAP feature dependence plot with the strongest interaction:
+Bagaimana kita bisa menggunakan indeks interaksi?
+Misalnya, untuk secara otomatis mewarnai plot SHAP dependence dengan interaksi terkuat:
 
 ```{r fig.cap = "SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of an STD increases the predicted cancer risk. For more years on contraceptives, the occurence of an STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits).", out.width=800}
 knitr::include_graphics("images/shap-dependence-interaction.png")
@@ -354,76 +345,76 @@ knitr::include_graphics("images/shap-dependence-interaction.png")
 
 ### Clustering SHAP values
 
-You can cluster your data with the help of Shapley values.
-The goal of clustering is to find groups of similar instances.
-Normally, clustering is based on features.
-Features are often on different scales.
-For example, height might be measured in meters, color intensity from 0 to 100 and some sensor output between -1 and 1.
-The difficulty is to compute distances between instances with such different, non-comparable features.
+Anda dapat mengelompokkan data Anda dengan bantuan nilai Shapley.
+Tujuan dari clustering adalah untuk menemukan grup dari instance yang serupa.
+Biasanya, pengelompokan didasarkan pada fitur.
+Fitur sering pada skala yang berbeda.
+Misalnya, tinggi dapat diukur dalam meter, intensitas warna dari 0 hingga 100 dan beberapa keluaran sensor antara -1 dan 1.
+Kesulitannya adalah menghitung jarak antara instance dengan fitur yang berbeda dan tidak dapat dibandingkan.
 
-SHAP clustering works by clustering on Shapley values of each instance.
-This means that you cluster instances by explanation similarity.
-All SHAP values have the same unit -- the unit of the prediction space.
-You can use any clustering method.
-The following example uses hierarchical agglomerative clustering to order the instances.
+Pengelompokan SHAP bekerja dengan mengelompokkan nilai Shapley dari setiap instance.
+Ini berarti Anda mengelompokkan instance berdasarkan kesamaan penjelasan.
+Semua nilai SHAP memiliki unit yang sama -- unit dari ruang prediksi.
+Anda dapat menggunakan metode pengelompokan apa pun.
+Contoh berikut menggunakan pengelompokan aglomeratif hierarkis untuk mengurutkan instance.
 
-The plot consists of many force plots, each of which explains the prediction of an instance.
-We rotate the force plots vertically and place them side by side according to their clustering similarity.
+Plot terdiri dari banyak force plots, yang masing-masing menjelaskan prediksi sebuah instance.
+Kami memutar force plots secara vertikal dan menempatkannya berdampingan sesuai dengan kesamaan pengelompokannya.
 
 ```{r, fig.cap="Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. A cluster stands out: On the right is a group with a high predicted cancer risk.", out.width=800}
 knitr::include_graphics("images/shap-clustering.png")
 ```
 ### Advantages
 
-Since SHAP computes Shapley values, all the advantages of Shapley values apply:
-SHAP has a **solid theoretical foundation** in game theory.
-The prediction is **fairly distributed** among the feature values.
-We get **contrastive explanations** that compare the prediction with the average prediction.
+Karena SHAP menghitung nilai Shapley, semua keuntungan dari nilai Shapley berlaku:
+SHAP memiliki **dasar teori yang kuat** dalam game theory.
+Prediksi ini **tersebar adil** di antara nilai fitur.
+Kami mendapatkan **penjelasan kontrastif** yang membandingkan prediksi dengan prediksi rata-rata.
 
-SHAP **connects LIME and Shapley values**.
-This is very useful to better understand both methods.
-It also helps to unify the field of interpretable machine learning.
+SHAP **menghubungkan nilai LIME dan Shapley**.
+Ini sangat berguna untuk lebih memahami kedua metode.
+Ini juga membantu menyatukan bidang interpretable machine learning.
 
-SHAP has a **fast implementation for tree-based models**.
-I believe this was key to the popularity of SHAP, because the biggest barrier for adoption of Shapley values is the slow computation.
+SHAP memiliki **implementasi cepat untuk model berbasis pohon**.
+Saya percaya ini adalah kunci popularitas SHAP, karena hambatan terbesar untuk mengadopsi nilai-nilai Shapley adalah komputasi yang lambat.
 
-The fast computation makes it possible to compute the many Shapley values needed for the **global model interpretations**.
-The global interpretation methods include feature importance, feature dependence, interactions, clustering and summary plots.
-With SHAP, global interpretations are consistent with the local explanations, since the Shapley values are the "atomic unit" of the global interpretations.
-If you use LIME for local explanations and partial dependence plots plus permutation feature importance for global explanations, you lack a common foundation.
+Komputasi cepat memungkinkan untuk menghitung banyak nilai Shapley yang diperlukan untuk **interpretasi model global**.
+Metode interpretasi global mencakup feature importance, feature dependence, interaksi, pengelompokan dan summary plot.
+Dengan SHAP, interpretasi global konsisten dengan local explanation, karena nilai Shapley adalah "unit atom" interpretasi global.
+Jika Anda menggunakan LIME untuk local explanation dan partial dependence plot ditambah permutation feature importance untuk penjelasan global, Anda tidak memiliki dasar yang sama.
 
 ### Disadvantages
 
-**KernelSHAP is slow**.
-This makes KernelSHAP impractical to use when you want to compute Shapley values for many instances.
-Also all global SHAP methods such as SHAP feature importance require computing Shapley values for a lot of instances.
+**KernelSHAP lambat**.
+Ini membuat KernelSHAP tidak praktis untuk digunakan saat Anda ingin menghitung nilai Shapley untuk banyak instance.
+Juga semua metode SHAP global seperti feature importance SHAP memerlukan komputasi nilai Shapley untuk banyak instance.
 
-**KernelSHAP ignores feature dependence**.
-Most other permutation based interpretation methods have this problem.
-By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution.
-However, if features are dependent, e.g. correlated, this leads to putting too much weight on unlikely data points.
-TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.
+**KernelSHAP mengabaikan feature dependence**.
+Sebagian besar metode interpretasi berbasis permutasi lainnya memiliki masalah ini.
+Dengan mengganti nilai fitur dengan nilai dari contoh acak, biasanya lebih mudah untuk mengambil sampel secara acak dari distribusi marjinal.
+Namun, jika fitur bergantung, mis. berkorelasi, ini menyebabkan terlalu banyak bobot pada titik data yang tidak mungkin.
+TreeSHAP memecahkan masalah ini dengan secara eksplisit memodelkan prediksi yang diharapkan bersyarat.
 
-**TreeSHAP can produce unintuitive feature attributions**.
-While TreeSHAP solves the problem of extrapolating to unlikely data points, it does so by changing the value function and therefore slightly changes the game.
-TreeSHAP changes the value function by relying on the conditional expected prediction.
-With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.
+**TreeSHAP dapat menghasilkan feature attribution yang tidak intuitif**.
+Sementara TreeSHAP memecahkan masalah ekstrapolasi ke titik data yang tidak mungkin, ia melakukannya dengan mengubah fungsi nilai dan karenanya sedikit mengubah game.
+TreeSHAP mengubah fungsi nilai dengan mengandalkan prediksi kondisional yang diharapkan.
+Dengan perubahan nilai fungsi, fitur yang tidak berpengaruh pada prediksi bisa mendapatkan nilai TreeSHAP berbeda dari nol.
 
-The disadvantages of Shapley values also apply to SHAP:
-Shapley values **can be misinterpreted** and access to data is needed to compute them for new data (except for TreeSHAP).
+Kerugian dari nilai Shapley juga berlaku untuk SHAP:
+Nilai Shapley **dapat disalahartikan** dan akses ke data diperlukan untuk menghitungnya untuk data baru (kecuali untuk TreeSHAP).
 
-It is possible to create intentionally misleading interpretations with SHAP, which can hide biases [^fool].
-If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations).
-It is a disadvantage as the receiver of an explanation, as you can be less sure about their truthfulness.
+Dimungkinkan untuk membuat interpretasi yang sengaja menyesatkan dengan SHAP, yang dapat menyembunyikan bias [^fool].
+Jika Anda adalah ilmuwan data yang membuat penjelasan, ini bukan masalah sebenarnya (bahkan akan menjadi keuntungan jika Anda adalah ilmuwan data jahat yang ingin membuat penjelasan yang menyesatkan).
+Ini adalah kerugia sebagai penerima penjelasan, karena Anda bisa kurang yakin tentang kebenarannya.
 
 ### Software
 
-The authors implemented SHAP in the [shap](https://github.com/slundberg/shap) Python package.
-This implementation works for tree-based models in the [scikit-learn](https://scikit-learn.org/stable/) machine learning library for Python.
-The shap package was also used for the examples in this chapter.
-SHAP is integrated into the tree boosting frameworks [xgboost](https://github.com/dmlc/xgboost/tree/master/python-package) and [LightGBM](https://github.com/microsoft/LightGBM).
-In R, there is the [shapper](https://modeloriented.github.io/shapper/) and [fastshap](https://github.com/bgreenwell/fastshap) packages.
-SHAP is also included in the R [xgboost](https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html) package.
+Penulis mengimplementasikan SHAP dalam paket Python [shap](https://github.com/slundberg/shap).
+Implementasi ini berfungsi untuk model berbasis pohon di library machine learning [scikit-learn](https://scikit-learn.org/stable/) untuk Python.
+Paket SHAP juga digunakan untuk contoh dalam bab ini.
+SHAP terintegrasi ke dalam kerangka kerja peningkatan pohon [xgboost](https://github.com/dmlc/xgboost/tree/master/python-package) dan [LightGBM](https://github.com/microsoft/LightGBM).
+Di R, ada paket [shapper](https://modeloriented.github.io/shapper/) dan [fastshap](https://github.com/bgreenwell/fastshap).
+SHAP juga disertakan dalam paket R [xgboost](https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html).
 
 [^lundberg2016]: Lundberg, Scott M., and Su-In Lee. "A unified approach to interpreting model predictions." Advances in Neural Information Processing Systems. 2017.
 

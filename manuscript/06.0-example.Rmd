@@ -1,60 +1,57 @@
 # Example-Based Explanations {#example-based}
 
-Example-based explanation methods select particular instances of the dataset to explain the behavior of machine learning models or to explain the underlying data distribution.
+Metode penjelasan berbasis contoh memilih contoh tertentu dari kumpulan data untuk menjelaskan perilaku model machine learning atau untuk menjelaskan distribusi data yang mendasarinya.
 
-<!-- *Keywords: example-based explanations, case-based reasoning (CBR), solving by analogy* -->
+Penjelasan berbasis contoh sebagian besar model-agnostic, karena mereka membuat model machine learning lebih dapat ditafsirkan.
+Perbedaan metode model-agnostic adalah bahwa metode berbasis contoh menjelaskan model dengan memilih contoh dari kumpulan data dan bukan dengan membuat ringkasan fitur (seperti [feature importance](#feature-importance) atau [ketergantungan parsial](#pdp)).
+Penjelasan berbasis contoh hanya masuk akal jika kita dapat mewakili contoh data dengan cara yang dapat dipahami secara manusiawi.
+Ini bekerja dengan baik untuk gambar, karena kita dapat melihatnya secara langsung.
+Secara umum, metode berbasis contoh bekerja dengan baik jika nilai fitur dari sebuah instance membawa lebih banyak konteks, artinya data memiliki struktur, seperti gambar atau teks.
+Lebih menantang untuk merepresentasikan data tabular dengan cara yang berarti, karena sebuah instance dapat terdiri dari ratusan atau ribuan fitur (kurang terstruktur).
+Mencantumkan semua nilai fitur untuk mendeskripsikan sebuah instance biasanya tidak berguna.
+Ini berfungsi dengan baik jika hanya ada beberapa fitur atau jika kami memiliki cara untuk meringkas sebuah instance.
 
-Example-based explanations are mostly model-agnostic, because they make any machine learning model more interpretable.
-The difference to model-agnostic methods is that the example-based methods explain a model by selecting instances of the dataset and not by creating summaries of features (such as [feature importance](#feature-importance) or [partial dependence](#pdp)).
-Example-based explanations only make sense if we can represent an instance of the data in a humanly understandable way.
-This works well for images, because we can view them directly.
-In general, example-based methods work well if the feature values of an instance carry more context, meaning the data has a structure, like images or texts do.
-It is more challenging to represent tabular data in a meaningful way, because an instance can consist of hundreds or thousands of (less structured) features.
-Listing all feature values to describe an instance is usually not useful.
-It works well if there are only a handful of features or if we have a way to summarize an instance.
+Penjelasan berbasis contoh membantu manusia membangun model mental dari model machine learning dan data yang telah dilatih oleh model machine learning.
+Ini terutama membantu untuk memahami distribusi data yang kompleks.
+Tapi apa yang saya maksud dengan penjelasan berbasis contoh?
+Kita sering menggunakannya dalam pekerjaan dan kehidupan sehari-hari.
+Mari kita mulai dengan beberapa contoh[^cbr].
 
+Seorang dokter melihat pasien dengan batuk yang tidak biasa dan demam ringan.
+Gejala pasien mengingatkannya pada pasien lain yang dia alami bertahun-tahun lalu dengan gejala serupa.
+Dia menduga bahwa pasiennya saat ini bisa memiliki penyakit yang sama dan dia mengambil sampel darah untuk menguji penyakit spesifik ini.
 
-Example-based explanations help humans construct mental models of the machine learning model and the data the machine learning model has been trained on.
-It especially helps to understand complex data distributions.
-But what do I mean by example-based explanations?
-We often use them in our jobs and daily lives.
-Let us start with some examples[^cbr].
+Seorang ilmuwan data mengerjakan proyek baru untuk salah satu kliennya:
+Analisis faktor risiko yang menyebabkan kegagalan mesin produksi untuk keyboard.
+Ilmuwan data mengingat proyek serupa yang dia kerjakan dan menggunakan kembali bagian kode dari proyek lama karena menurutnya klien menginginkan analisis yang sama.
 
-A physician sees a patient with an unusual cough and a mild fever.
-The patient's symptoms remind her of another patient she had years ago with similar symptoms. 
-She suspects that her current patient could have the same disease and she takes a blood sample to test for this specific disease.
+Seekor anak kucing duduk di ambang jendela sebuah rumah yang terbakar dan tidak berpenghuni.
+Pemadam kebakaran telah tiba dan salah satu petugas pemadam kebakaran merenungkan sejenak apakah dia dapat mengambil risiko masuk ke gedung untuk menyelamatkan anak kucing itu.
+Dia ingat kasus serupa dalam hidupnya sebagai petugas pemadam kebakaran:
+Rumah-rumah kayu tua yang telah terbakar perlahan selama beberapa waktu seringkali tidak stabil dan akhirnya runtuh.
+Karena kesamaan kasus ini, dia memutuskan untuk tidak masuk, karena risiko rumah runtuh terlalu besar.
+Untungnya, kucing itu melompat keluar dari jendela, mendarat dengan selamat dan tidak ada yang terluka dalam kebakaran itu. Akhir yang bahagia.
 
-A data scientist works on a new project for one of his clients:
-Analysis of the risk factors that lead to the failure of production machines for keyboards.
-The data scientist remembers a similar project he worked on and reuses parts of the code from the old project because he thinks the client wants the same analysis.
+Kisah-kisah ini menggambarkan bagaimana kita manusia berpikir dalam contoh atau analogi.
+Cetak biru penjelasan berbasis contoh adalah:
+Hal B mirip dengan hal A dan A menyebabkan Y, jadi saya memprediksi bahwa B akan menyebabkan Y juga.
+Secara implisit, beberapa pendekatan machine learning bekerja berdasarkan contoh.
+[decision trees](#tree) mempartisi data menjadi node berdasarkan kesamaan titik data dalam fitur yang penting untuk memprediksi target.
+Sebuah decision trees mendapatkan prediksi untuk contoh data baru dengan menemukan contoh yang serupa (= dalam simpul terminal yang sama) dan mengembalikan rata-rata hasil dari contoh tersebut sebagai prediksi.
+Metode k-nearest neighbor (knn) bekerja secara eksplisit dengan prediksi berbasis contoh.
+Untuk contoh baru, model knn menempatkan k-neighbors terdekat (misalnya k=3 contoh terdekat) dan mengembalikan rata-rata hasil neighbors tersebut sebagai prediksi.
+Prediksi knn dapat dijelaskan dengan mengembalikan k neighbors, yang -- sekali lagi -- hanya bermakna jika kita memiliki cara yang baik untuk merepresentasikan satu instance.
 
-A kitten sits on the window ledge of a burning and uninhabited house. 
-The fire department has already arrived and one of the firefighters ponders for a second whether he can risk going into the building to save the kitten.
-He remembers similar cases in his life as a firefighter: 
-Old wooden houses that have been burning slowly for some time were often unstable and eventually collapsed.
-Because of the similarity of this case, he decides not to enter, because the risk of the house collapsing is too great. 
-Fortunately, the kitty jumps out of the window, lands safely and nobody is harmed in the fire. Happy end.
+Bab-bab di bagian ini mencakup metode interpretasi berbasis contoh berikut:
 
-These stories illustrate how we humans think in examples or analogies.
-The blueprint of example-based explanations is: 
-Thing B is similar to thing A and A caused Y, so I predict that B will cause Y as well.
-Implicitly, some machine learning approaches work example-based.
-[Decision trees](#tree) partition the data into nodes based on the similarities of the data points in the features that are important for predicting the target.
-A decision tree gets the prediction for a new data instance by finding the instances that are similar (= in the same terminal node) and returning the average of the outcomes of those instances as the prediction.
-The k-nearest neighbors (knn) method works explicitly with example-based predictions. 
-For a new instance, a knn model locates the k-nearest neighbors (e.g. the k=3 closest instances) and returns the average of the outcomes of those neighbors as a prediction.
-The prediction of a knn can be explained by returning the k neighbors, which -- again -- is only meaningful if we have a good way to represent a single instance.
-
-The chapters in this part cover the following example-based interpretation methods:
-
-- [Counterfactual explanations](#counterfactual) tell us how an instance has to change to significantly change its prediction. 
-By creating counterfactual instances, we learn  about how the model makes its predictions and can explain individual predictions.
-- [Adversarial examples](#adversarial) are counterfactuals used to fool machine learning models. 
-The emphasis is on flipping the prediction and not explaining it. 
-- [Prototypes](#proto) are a selection of representative instances from the data and criticisms are instances that are not well represented by those prototypes. [^critique]
-- [Influential instances](#influential) are the training data points that were the most influential for the parameters of a prediction model or the predictions themselves. 
-Identifying and analysing influential instances helps to find problems with the data, debug the model and understand the model's behavior better.
-- [k-nearest neighbors model](#other-interpretable): An (interpretable) machine learning model  based on examples.
+- [counterfactual explanations](#counterfactual) memberi tahu kami bagaimana sebuah instance harus berubah untuk mengubah prediksinya secara signifikan.
+Dengan membuat contoh kontrafaktual, kita belajar tentang bagaimana model membuat prediksinya dan dapat menjelaskan prediksi individu.
+- [adversarial examples](#adversarial) adalah kontrafaktual yang digunakan untuk mengelabui model machine learning.
+Penekanannya adalah membalik prediksi dan tidak menjelaskannya.
+- [prototypes](#proto) adalah pilihan contoh representatif dari data dan kritik adalah contoh yang tidak terwakili dengan baik oleh prototypes tersebut. [^critique]
+- [influential instances](#influential) adalah titik data pelatihan yang paling berpengaruh untuk parameter model prediksi atau prediksi itu sendiri.
+Mengidentifikasi dan menganalisis influential instances membantu menemukan masalah dengan data, men-debug model, dan memahami perilaku model dengan lebih baik.
+- [model k-nearest neighbor](#other-interpretable): Model machine learning (dapat ditafsirkan) berdasarkan contoh.
 
 
 [^cbr]: Aamodt, Agnar, and Enric Plaza. "Case-based reasoning: Foundational issues, methodological variations, and system approaches." AI communications 7.1 (1994): 39-59.

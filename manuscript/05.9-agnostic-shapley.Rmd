@@ -9,8 +9,8 @@ set.seed(42)
 
 ## Shapley Values {#shapley}
 
-A prediction can be explained by assuming that each feature value of the instance is a "player" in a game where the prediction is the payout.
-Shapley values -- a method from coalitional game theory -- tells us how to fairly distribute the "payout" among the features.
+Sebuah prediksi dapat dijelaskan dengan mengasumsikan bahwa setiap nilai fitur dari instance adalah "players" dalam game di mana prediksi adalah payout.
+Nilai Shapley -- sebuah metode dari coalitional game theory -- memberi tahu kita cara mendistribusikan "payout" secara adil di antara fitur-fiturnya.
 
 ```{block2, type = "rmdnote", echo = TRUE}
 Interested in an in-depth, hands-on course on SHAP and Shapley values?
@@ -20,73 +20,72 @@ Head over to [the Shapley course page](https://leanpub.com/c/shapley-xai) and ge
 
 ### General Idea
 
-Assume the following scenario:
+Asumsikan skenario berikut:
 
-You have trained a machine learning model to predict apartment prices.
-For a certain apartment it predicts €300,000 and you need to explain this prediction.
-The apartment has an area of 50 m^2^, is located on the 2nd floor, has a park nearby and cats are banned:
+Anda telah melatih model machine learning untuk memprediksi harga apartemen.
+Untuk apartemen tertentu, prediksinya €300.000 dan Anda perlu menjelaskan prediksi ini.
+Apartemen memiliki luas 50 m^2^, terletak di lantai 2, memiliki taman di dekatnya dan kucing dilarang:
 
 ```{r shapley-instance, fig.cap = "The predicted price for a 50 m^2^ 2nd floor apartment with a nearby park and cat ban is €300,000. Our goal is to explain how each of these feature values contributed to the prediction.", out.width=500}
 knitr::include_graphics("images/shapley-instance.png")
 ```
 
-The average prediction for all apartments is €310,000.
-How much has each feature value contributed to the prediction compared to the average prediction?
+Prediksi rata-rata untuk semua apartemen adalah €310.000.
+Seberapa besar kontribusi setiap nilai fitur terhadap prediksi dibandingkan dengan prediksi rata-rata?
 
-
-The answer is simple for linear regression models.
-The effect of each feature is the weight of the feature times the feature value.
-This only works because of the linearity of the model.
-For more complex models, we need a different solution.
-For example, [LIME](#lime) suggests local models to estimate effects.
-Another solution comes from cooperative game theory:
-The Shapley value, coined by Shapley (1953)[^shapley1953], is a method for assigning payouts to players depending on their contribution to the total payout.
-Players cooperate in a coalition and receive a certain profit from this cooperation.
+Jawabannya sederhana untuk model linear regression.
+Pengaruh masing-masing fitur adalah bobot fitur dikalikan nilai fitur.
+Ini hanya bekerja karena linearitas model.
+Untuk model yang lebih kompleks, kita membutuhkan solusi yang berbeda.
+Misalnya, [LIME](#lime) menyarankan model lokal untuk memperkirakan efek.
+Solusi lain datang dari cooperative game theory:
+Nilai Shapley, diciptakan oleh Shapley (1953)[^shapley1953], adalah metode untuk menetapkan payout kepada players tergantung pada kontribusi mereka terhadap total payout.
+players bekerja sama dalam koalisi dan menerima keuntungan tertentu dari kerja sama ini.
 
 Players?
 Game?
 Payout?
-What is the connection to machine learning predictions and interpretability?
-The "game" is the prediction task for a single instance of the dataset.
-The "gain" is the actual prediction for this instance minus the average prediction for all instances.
-The "players" are the feature values of the instance that collaborate to receive the gain (= predict a certain value).
-In our apartment example, the feature values `park-nearby`, `cat-banned`, `area-50` and `floor-2nd` worked together to achieve the prediction of €300,000.
-Our goal is to explain the difference between the actual prediction (€300,000) and the average prediction (€310,000): a difference of -€10,000.
+Apa hubungannya dengan prediksi dan kemampuan interpretasi machine learning?
+"game" adalah tugas prediksi untuk satu instance dari kumpulan data.
+"Keuntungan" adalah prediksi aktual untuk instance ini dikurangi prediksi rata-rata untuk semua instance.
+"players" adalah nilai fitur dari instance yang berkolaborasi untuk menerima keuntungan (= memprediksi nilai tertentu).
+Dalam contoh apartemen kami, nilai fitur `park-nearby`, `cat-banned`, `area-50` dan `floor-2nd` bekerja sama untuk mencapai prediksi €300.000.
+Tujuan kami adalah menjelaskan perbedaan antara prediksi aktual (€300.000) dan prediksi rata-rata (€310.000): selisih -€10.000.
 
-The answer could be:
-The `park-nearby` contributed €30,000; `area-50` contributed €10,000; `floor-2nd` contributed €0; `cat-banned` contributed -€50,000.
-The contributions add up to -€10,000, the final prediction minus the average predicted apartment price.
+Jawabannya bisa jadi:
+`park-nearby` menyumbang €30.000; `area-50` menyumbang €10.000; `lantai-2` menyumbang €0; kontribusi `cat-banned` - €50.000.
+Kontribusi bertambah hingga -€10.000, prediksi akhir dikurangi prediksi harga apartemen rata-rata.
 
-**How do we calculate the Shapley value for one feature?**
+**Bagaimana cara menghitung nilai Shapley untuk satu fitur?**
 
-The Shapley value is the average marginal contribution of a feature value across all possible coalitions.
-All clear now?
+Nilai Shapley adalah kontribusi marjinal rata-rata dari nilai fitur di semua kemungkinan koalisi.
+Semua jelas sekarang?
 
-In the following figure we evaluate the contribution of the `cat-banned` feature value when it is added to a coalition of `park-nearby` and `area-50`.
-We simulate that only `park-nearby`, `cat-banned` and `area-50` are in a coalition by randomly drawing another apartment from the data and using its value for the floor feature.
-The value `floor-2nd` was replaced by the randomly drawn `floor-1st`.
-Then we predict the price of the apartment with this combination (€310,000).
-In a second step, we remove `cat-banned` from the coalition by replacing it with a random value of the cat allowed/banned feature from the randomly drawn apartment.
-In the example it was `cat-allowed`, but it could have been `cat-banned` again.
-We predict the apartment price for the coalition of `park-nearby` and `area-50` (€320,000).
-The contribution of `cat-banned` was €310,000 - €320,000 = -€10,000.
-This estimate depends on the values of the randomly drawn apartment that served as a "donor" for the cat and floor feature values.
-We will get better estimates if we repeat this sampling step and average the contributions.
+Pada gambar berikut, kami mengevaluasi kontribusi nilai fitur `cat-banned` ketika ditambahkan ke koalisi `park-nearby` dan `area-50`.
+Kami mensimulasikan bahwa hanya `park-nearby`, `cat-banned` dan `area-50` yang berada dalam koalisi dengan menggambar apartemen lain secara acak dari data dan menggunakan nilainya untuk fitur lantai.
+Nilai `floor-2nd` digantikan oleh `floor-1st` yang diambil secara acak.
+Kemudian kami memprediksi harga apartemen dengan kombinasi ini (€310.000).
+Pada langkah kedua, kami menghapus `cat-banned` dari koalisi dengan menggantinya dengan nilai acak dari fitur cat diperbolehkan/dilarang dari apartemen yang diambil secara acak.
+Dalam contoh itu `cat-allowed`, tapi bisa saja `cat-banned` lagi.
+Kami memprediksi harga apartemen untuk koalisi `park-nearby` dan `area-50` (€320.000).
+Kontribusi `cat-banned` adalah €310.000 - €320.000 = -€10.000.
+Perkiraan ini tergantung pada nilai apartemen yang diambil secara acak yang berfungsi sebagai "donor" untuk nilai fitur cat dan lantai.
+Kami akan mendapatkan perkiraan yang lebih baik jika kami mengulangi langkah pengambilan sampel ini dan membuat rata-rata kontribusi.
 
 
 ```{r shapley-instance-intervened, fig.cap = "One sample repetition to estimate the contribution of `cat-banned` to the prediction when added to the coalition of `park-nearby` and `area-50`.", out.width=500}
 knitr::include_graphics("images/shapley-instance-intervention.png")
 ```
 
-We repeat this computation for all possible coalitions.
-The Shapley value is the average of all the marginal contributions to all possible coalitions.
-The computation time increases exponentially with the number of features.
-One solution to keep the computation time manageable is to compute contributions for only a few samples of the possible coalitions.
+Kami ulangi perhitungan ini untuk semua kemungkinan koalisi.
+Nilai Shapley adalah rata-rata dari semua kontribusi marjinal untuk semua kemungkinan koalisi.
+Waktu komputasi meningkat secara eksponensial dengan jumlah fitur.
+Salah satu solusi untuk menjaga agar waktu komputasi dapat dikelola adalah dengan menghitung kontribusi hanya untuk beberapa sampel dari kemungkinan koalisi.
 
-The following figure shows all coalitions of feature values that are needed to determine the Shapley value for `cat-banned`.
-The first row shows the coalition without any feature values.
-The second, third and fourth rows show different coalitions with increasing coalition size, separated by "|".
-All in all, the following coalitions are possible:
+Gambar berikut menunjukkan semua koalisi nilai fitur yang diperlukan untuk menentukan nilai Shapley untuk `cat-banned`.
+Baris pertama menunjukkan koalisi tanpa nilai fitur apa pun.
+Baris kedua, ketiga dan keempat menunjukkan koalisi yang berbeda dengan ukuran koalisi yang semakin besar, dipisahkan dengan tanda "|".
+Secara keseluruhan, koalisi berikut dimungkinkan:
 
 - `No feature values`
 - `park-nearby`
@@ -97,25 +96,25 @@ All in all, the following coalitions are possible:
 - `area-50`+`floor-2nd`
 - `park-nearby`+`area-50`+`floor-2nd`.
 
-For each of these coalitions we compute the predicted apartment price with and without the feature value `cat-banned` and take the difference to get the marginal contribution.
-The Shapley value is the (weighted) average of marginal contributions.
-We replace the feature values of features that are not in a coalition with random feature values from the apartment dataset to get a prediction from the machine learning model.
+Untuk setiap koalisi ini, kami menghitung prediksi harga apartemen dengan dan tanpa nilai fitur `cat-banned` dan mengambil selisihnya untuk mendapatkan kontribusi marjinal.
+Nilai Shapley adalah rata-rata (tertimbang) dari kontribusi marjinal.
+Kami mengganti nilai fitur dari fitur yang tidak berkoalisi dengan nilai fitur acak dari dataset apartemen untuk mendapatkan prediksi dari model machine learning.
 
 
 ```{r shapley-coalitions, fig.cap = "All 8 coalitions needed for computing the exact Shapley value of the `cat-banned` feature value.", out.width=500}
 knitr::include_graphics("images/shapley-coalitions.png")
 ```
 
-If we estimate the Shapley values for all feature values, we get the complete distribution of the prediction (minus the average) among the feature values.
+Jika kami memperkirakan nilai Shapley untuk semua nilai fitur, kami mendapatkan distribusi prediksi yang lengkap (dikurangi rata-rata) di antara nilai fitur.
 
 ### Examples and Interpretation
 
-The interpretation of the Shapley value for feature value j is:
-The value of the j-th feature contributed $\phi_j$ to the prediction of this particular instance compared to the average prediction for the dataset.
+Interpretasi nilai Shapley untuk nilai fitur j adalah:
+Nilai fitur ke-j berkontribusi $\phi_j$ pada prediksi instance khusus ini dibandingkan dengan prediksi rata-rata untuk kumpulan data.
 
-The Shapley value works for both classification (if we are dealing with probabilities) and regression.
+Nilai Shapley berfungsi untuk klasifikasi (jika kita berurusan dengan probabilitas) dan regresi.
 
-We use the Shapley value to analyze the predictions of a random forest model predicting [cervical cancer](#cervical):
+Kami menggunakan nilai Shapley untuk menganalisis prediksi model random forest yang memprediksi [kanker serviks](#cervical):
 
 ```{r shapley-cervical-prepare}
 data("cervical")
@@ -149,8 +148,8 @@ plot(shapley2) +
 ```
 
 
-For the [bike rental dataset](#bike-data), we also train a random forest to predict the number of rented bikes for a day, given weather and calendar information.
-The explanations created for the  random forest prediction of a particular day:
+Untuk [set data sewa sepeda](#bike-data), kami juga melatih random forest untuk memprediksi jumlah sepeda sewaan dalam sehari, berdasarkan informasi cuaca dan kalender.
+Penjelasan yang dibuat untuk prediksi random forest pada hari tertentu:
 
 ```{r shapley-bike-prepare}
 data("bike")
@@ -179,245 +178,245 @@ plot(shapley2) +  scale_y_continuous("Feature value contribution") +
 ```
 
 
-Be careful to interpret the Shapley value correctly:
-The Shapley value is the average contribution of a feature value to the prediction in different coalitions.
-The Shapley value is NOT the difference in prediction when we would remove the feature from the model.
+Berhati-hatilah untuk menginterpretasikan nilai Shapley dengan benar:
+Nilai Shapley adalah kontribusi rata-rata dari nilai fitur untuk prediksi dalam koalisi yang berbeda.
+Nilai Shapley BUKAN perbedaan dalam prediksi ketika kami akan menghapus fitur dari model.
 
 
 
 ### The Shapley Value in Detail
 
-This section goes deeper into the definition and computation of the Shapley value for the curious reader.
-Skip this section and go directly to "Advantages and Disadvantages" if you are not interested in the technical details.
+Bagian ini membahas lebih dalam definisi dan perhitungan nilai Shapley untuk pembaca yang penasaran.
+Lewati bagian ini dan langsung ke "Keuntungan dan Kerugian" jika Anda tidak tertarik dengan detail teknisnya.
 
-We are interested in how each feature affects the prediction of a data point.
-In a linear model it is easy to calculate the individual effects.
-Here is what a linear model prediction looks like for one data instance:
+Kami tertarik pada bagaimana setiap fitur memengaruhi prediksi titik data.
+Dalam model linier mudah untuk menghitung efek individu.
+Berikut adalah seperti apa prediksi model linier untuk satu contoh data:
 
 $$\hat{f}(x)=\beta_0+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}$$
 
-where x is the instance for which we want to compute the contributions.
-Each $x_j$ is a feature value, with j = 1,...,p.
-The $\beta_j$ is the weight corresponding to feature j.
+di mana x adalah contoh yang ingin kita hitung kontribusinya.
+Setiap $x_j$ adalah nilai fitur, dengan j = 1,...,p.
+$\beta_j$ adalah bobot yang sesuai dengan fitur j.
 
-The contribution $\phi_j$ of the j-th feature on the prediction $\hat{f}(x)$ is:
+Kontribusi $\phi_j$ dari fitur ke-j pada prediksi $\hat{f}(x)$ adalah:
 
 $$\phi_j(\hat{f})=\beta_{j}x_j-E(\beta_{j}X_{j})=\beta_{j}x_j-\beta_{j}E(X_{j})$$
 
-where $E(\beta_jX_{j})$ is the mean effect estimate for feature j.
-The contribution is the difference between the feature effect minus the average effect.
-Nice!
-Now we know how much each feature contributed to the prediction.
-If we sum all the feature contributions for one instance, the result is the following:
+di mana $E(\beta_jX_{j})$ adalah estimasi efek rata-rata untuk fitur j.
+Kontribusi adalah selisih antara efek fitur dikurangi efek rata-rata.
+Bagus!
+Sekarang kita tahu seberapa besar kontribusi setiap fitur terhadap prediksi.
+Jika kita menjumlahkan semua feature contribution untuk satu instance, hasilnya adalah sebagai berikut:
 
 $$\begin{align*}\sum_{j=1}^{p}\phi_j(\hat{f})=&\sum_{j=1}^p(\beta_{j}x_j-E(\beta_{j}X_{j}))\\=&(\beta_0+\sum_{j=1}^p\beta_{j}x_j)-(\beta_0+\sum_{j=1}^{p}E(\beta_{j}X_{j}))\\=&\hat{f}(x)-E(\hat{f}(X))\end{align*}$$
 
-This is the predicted value for the data point x minus the average predicted value.
-Feature contributions can be negative.
+Ini adalah nilai prediksi untuk titik data x dikurangi nilai prediksi rata-rata.
+feature contribution bisa negatif.
 
-Can we do the same for any type of model?
-It would be great to have this as a model-agnostic tool.
-Since we usually do not have similar weights in other model types, we need a different solution.
+Bisakah kita melakukan hal yang sama untuk semua jenis model?
+Akan sangat bagus untuk memiliki ini sebagai alat model-agnostic.
+Karena kami biasanya tidak memiliki bobot yang sama pada tipe model lain, kami membutuhkan solusi yang berbeda.
 
-Help comes from unexpected places: cooperative game theory.
-The Shapley value is a solution for computing feature contributions for single predictions for any machine learning model.
+Bantuan datang dari tempat yang tidak terduga: cooperative game theory.
+Nilai Shapley adalah solusi untuk menghitung feature contribution untuk prediksi tunggal untuk model machine learning apa pun.
 
 
 #### The Shapley Value
 
-The Shapley value is defined via a value function val of players in S.
+Nilai Shapley didefinisikan melalui nilai fungsi val players di S.
 
-The Shapley value of a feature value is its contribution to the payout, weighted and summed over all possible feature value combinations:
+Nilai Shapley dari nilai fitur adalah kontribusinya terhadap payout, dibobot dan dijumlahkan atas semua kemungkinan kombinasi nilai fitur:
 
 $$\phi_j(val)=\sum_{S\subseteq\{x_{1},\ldots,x_{p}\}\setminus\{x_j\}}\frac{|S|!\left(p-|S|-1\right)!}{p!}\left(val\left(S\cup\{x_j\}\right)-val(S)\right)$$
 
-where S is a subset of the features used in the model, x is the vector of feature values of the instance to be explained and p the number of features.
-$val_x(S)$ is the prediction for feature values in set S that are marginalized over features that are not included in set S:
+di mana S adalah subset dari fitur yang digunakan dalam model, x adalah vektor nilai fitur dari instance yang akan dijelaskan dan p jumlah fitur.
+$val_x(S)$ adalah prediksi untuk nilai fitur di set S yang terpinggirkan dari fitur yang tidak termasuk dalam set S:
 
 $$val_{x}(S)=\int\hat{f}(x_{1},\ldots,x_{p})d\mathbb{P}_{x\notin{}S}-E_X(\hat{f}(X))$$
 
-You actually perform multiple integrations for each feature that is not contained S.
-A concrete example:
-The machine learning model works with 4 features x1, x2, x3 and x4 and we evaluate the prediction for the coalition S consisting of feature values x1 and x3:
+Anda benar-benar melakukan beberapa integrasi untuk setiap fitur yang tidak mengandung S.
+Contoh konkrit:
+Model machine learning bekerja dengan 4 fitur x1, x2, x3 dan x4 dan kami mengevaluasi prediksi untuk koalisi S yang terdiri dari nilai fitur x1 dan x3:
 
 $$val_{x}(S)=val_{x}(\{x_{1},x_{3}\})=\int_{\mathbb{R}}\int_{\mathbb{R}}\hat{f}(x_{1},X_{2},x_{3},X_{4})d\mathbb{P}_{X_2X_4}-E_X(\hat{f}(X))$$
 
-This looks similar to the feature contributions in the linear model!
+Ini terlihat mirip dengan feature contribution dalam model linier!
 
-Do not get confused by the many uses of the word "value":
-The feature value is the numerical or categorical value of a feature and instance;
-the Shapley value is the feature contribution to the prediction;
-the value function is the payout function for coalitions of players (feature values).
+Jangan bingung dengan banyaknya penggunaan kata "nilai":
+Nilai fitur adalah nilai numerik atau kategoris dari fitur dan instance;
+nilai Shapley adalah feature contribution pada prediksi;
+fungsi nilai adalah fungsi payout untuk koalisi players (nilai fitur).
 
-The Shapley value is the only attribution method that satisfies the properties **Efficiency**, **Symmetry**, **Dummy** and **Additivity**,  which together can be considered a definition of a fair payout.
+Nilai Shapley adalah satu-satunya metode atribusi yang memenuhi properti **Efficiency**, **Symmetry**, **Dummy**, dan **Additivity**, yang bersama-sama dapat dianggap sebagai definisi payout yang adil.
 
-**Efficiency**
-The feature contributions must add up to the difference of prediction for x and the average.
+**Efisiensi**
+feature contribution harus menambahkan hingga perbedaan prediksi untuk x dan rata-rata.
 
 $$\sum\nolimits_{j=1}^p\phi_j=\hat{f}(x)-E_X(\hat{f}(X))$$
 
-**Symmetry**
-The contributions of two feature values j and k should be the same if they contribute equally to all possible coalitions.
-If
+**Simetri**
+Kontribusi dari dua nilai fitur j dan k harus sama jika mereka berkontribusi sama untuk semua kemungkinan koalisi.
+Jika
 
 $$val(S\cup\{x_j\})=val(S\cup\{x_k\})$$
 
-for all
+untuk semua
 
 $$S\subseteq\{x_{1},\ldots,x_{p}\}\setminus\{x_j,x_k\}$$
 
-then
+kemudian
 
 $$\phi_j=\phi_{k}$$
 
 **Dummy**
-A feature j that does not change the predicted value -- regardless of which coalition of feature values it is added to -- should have a Shapley value of 0.
-If
+Fitur j yang tidak mengubah p-valuerediksi -- terlepas dari gabungan nilai fitur mana yang ditambahkan -- harus memiliki nilai Shapley 0.
+Jika
 
 $$val(S\cup\{x_j\})=val(S)$$
 
-for all
+untuk semua
 
 $$S\subseteq\{x_{1},\ldots,x_{p}\}$$
 
-then
+kemudian
 
 $$\phi_j=0$$
 
-**Additivity**
-For a game with combined payouts val+val^+^ the respective Shapley values are as follows:
+**Kelebihan**
+Untuk game dengan payout gabungan val+val^+^ nilai Shapley masing-masing adalah sebagai berikut:
 
 $$\phi_j+\phi_j^{+}$$
 
-Suppose you trained a random forest, which means that the prediction is an average of many decision trees.
-The Additivity property guarantees that for a feature value, you can calculate the Shapley value for each tree individually, average them, and get the Shapley value for the feature value for the random forest.
+Misalkan Anda melatih random forest, yang berarti bahwa prediksi adalah rata-rata dari banyak decision trees.
+Properti Additivity menjamin bahwa untuk nilai fitur, Anda dapat menghitung nilai Shapley untuk setiap pohon secara individual, membuat rata-ratanya, dan mendapatkan nilai Shapley untuk nilai fitur untuk random forest.
 
 #### Intuition
 
-An intuitive way to understand the Shapley value is the following illustration:
-The feature values enter a room in random order.
-All feature values in the room participate in the game (= contribute to the prediction).
-The Shapley value of a feature value is the average change in the prediction that the coalition already in the room receives when the feature value joins them.
+Cara intuitif untuk memahami nilai Shapley adalah ilustrasi berikut:
+Nilai fitur memasuki ruangan dalam urutan acak.
+Semua nilai fitur di ruang berpartisipasi dalam game (= berkontribusi pada prediksi).
+Nilai Shapley dari nilai fitur adalah perubahan rata-rata dalam prediksi yang diterima koalisi yang sudah ada di ruangan saat nilai fitur bergabung dengan mereka.
 
 
 #### Estimating the Shapley Value
 
-All possible coalitions (sets) of feature values have to be evaluated with and without the j-th feature to calculate the exact Shapley value.
-For more than a few features, the exact solution to this problem becomes problematic as the number of possible coalitions exponentially increases as more features are added.
-Strumbelj et al. (2014)[^strumbelj2014] propose an approximation with Monte-Carlo sampling:
+Semua kemungkinan koalisi (set) nilai fitur harus dievaluasi dengan dan tanpa fitur ke-j untuk menghitung nilai Shapley yang tepat.
+Untuk lebih dari beberapa fitur, solusi yang tepat untuk masalah ini menjadi bermasalah karena jumlah kemungkinan koalisi meningkat secara eksponensial karena lebih banyak fitur ditambahkan.
+Strumbelj dkk. (2014)[^strumbelj2014] mengusulkan pendekatan dengan pengambilan sampel Monte-Carlo:
 
 $$\hat{\phi}_{j}=\frac{1}{M}\sum_{m=1}^M\left(\hat{f}(x^{m}_{+j})-\hat{f}(x^{m}_{-j})\right)$$
 
-where $\hat{f}(x^{m}_{+j})$ is the prediction for x, but with a random number of feature values replaced by feature values from a random data point z, except for the respective value of feature j.
-The x-vector $x^{m}_{-j}$ is almost identical to $x^{m}_{+j}$, but the value $x_j^{m}$ is also taken from the sampled z.
-Each of these M new instances is a kind of "Frankenstein Monster" assembled from two instances.
+di mana $\hat{f}(x^{m}_{+j})$ adalah prediksi untuk x, tetapi dengan sejumlah nilai fitur acak diganti dengan nilai fitur dari titik data acak z, kecuali untuk nilai masing-masing dari fitur j.
+Vektor-x $x^{m}_{-j}$ hampir identik dengan $x^{m}_{+j}$, tetapi nilai $x_j^{m}$ juga diambil dari z sampel .
+Masing-masing dari M instance baru ini adalah sejenis "Monster Frankenstein" yang dikumpulkan dari dua instance.
 
-**Approximate Shapley estimation for single feature value**:
+**Perkiraan estimasi Shapley untuk nilai fitur tunggal**:
 
-- Output: Shapley value for the value of the j-th feature
-- Required: Number of iterations M, instance of interest x, feature index j, data matrix X, and machine learning model f
-  - For all m = 1,...,M:
-    - Draw random instance z from the data matrix X
-    - Choose a random permutation o of the feature values
-    - Order instance x: $x_o=(x_{(1)},\ldots,x_{(j)},\ldots,x_{(p)})$
-    - Order instance z: $z_o=(z_{(1)},\ldots,z_{(j)},\ldots,z_{(p)})$
-    - Construct two new instances
-        - With feature j: $x_{+j}=(x_{(1)},\ldots,x_{(j-1)},x_{(j)},z_{(j+1)},\ldots,z_{(p)})$
-        - Without feature j: $x_{-j}=(x_{(1)},\ldots,x_{(j-1)},z_{(j)},z_{(j+1)},\ldots,z_{(p)})$
-    - Compute marginal contribution: $\phi_j^{m}=\hat{f}(x_{+j})-\hat{f}(x_{-j})$
-- Compute Shapley value as the average: $\phi_j(x)=\frac{1}{M}\sum_{m=1}^M\phi_j^{m}$
+- Output: Nilai Shapley untuk nilai fitur ke-j
+- Wajib: Jumlah iterasi M, instance of interest x, indeks fitur j, matriks data X, dan model machine learning f
+  - Untuk semua m = 1,...,M:
+    - Gambarkan instance acak z dari matriks data X
+    - Pilih permutasi acak dari nilai fitur
+    - Contoh pesanan x: $x_o=(x_{(1)},\ldots,x_{(j)},\ldots,x_{(p)})$
+    - Memesan instance z: $z_o=(z_{(1)},\ldots,z_{(j)},\ldots,z_{(p)})$
+    - Bangun dua instance baru
+        - Dengan fitur j: $x_{+j}=(x_{(1)},\ldots,x_{(j-1)},x_{(j)},z_{(j+1)},\ldots ,z_{(p)})$
+        - Tanpa fitur j: $x_{-j}=(x_{(1)},\ldots,x_{(j-1)},z_{(j)},z_{(j+1)},\ldots ,z_{(p)})$
+    - Hitung kontribusi marjinal: $\phi_j^{m}=\hat{f}(x_{+j})-\hat{f}(x_{-j})$
+- Hitung nilai Shapley sebagai rata-rata: $\phi_j(x)=\frac{1}{M}\sum_{m=1}^M\phi_j^{m}$
 
-First, select an instance of interest x, a feature j and the number of iterations M.
-For each iteration, a random instance z is selected from the data and a random order of the features is generated.
-Two new instances are created by combining values from the instance of interest x and the sample z.
-The instance $x_{+j}$ is the instance of interest, but all values in the order after feature j are replaced by feature values from the sample z.
-The instance $x_{-j}$ is the same as $x_{+j}$, but in addition has feature j replaced by the value for feature j from the sample z.
-The difference in the prediction from the black box is computed:
+Pertama, pilih instance yang menarik x, fitur j dan jumlah iterasi M.
+Untuk setiap iterasi, instance acak z dipilih dari data dan urutan fitur secara acak dihasilkan.
+Dua instance baru dibuat dengan menggabungkan nilai dari instance yang diinginkan x dan sampel z.
+Instance $x_{+j}$ adalah instance yang diinginkan, tetapi semua nilai dalam urutan setelah fitur j diganti dengan nilai fitur dari sampel z.
+Instance $x_{-j}$ sama dengan $x_{+j}$, tetapi selain itu fitur j diganti dengan nilai fitur j dari sampel z.
+Perbedaan prediksi dari black box dihitung:
 
 $$\phi_j^{m}=\hat{f}(x^m_{+j})-\hat{f}(x^m_{-j})$$
 
-All these differences are averaged and result in:
+Semua perbedaan ini dirata-ratakan dan menghasilkan:
 
 $$\phi_j(x)=\frac{1}{M}\sum_{m=1}^M\phi_j^{m}$$
 
-Averaging implicitly weighs samples by the probability distribution of X.
+Rata-rata secara implisit menimbang sampel dengan distribusi probabilitas X.
 
-The procedure has to be repeated for each of the features to get all Shapley values.
+Prosedur harus diulang untuk setiap fitur untuk mendapatkan semua nilai Shapley.
 
 ### Advantages
 
-The difference between the prediction and the average prediction is **fairly distributed** among the feature values of the instance -- the Efficiency property of Shapley values.
-This property distinguishes the Shapley value from other methods such as [LIME](#lime).
-LIME does not guarantee that the prediction is fairly distributed among the features.
-The Shapley value might be the only method to deliver a full explanation.
-In situations where the law requires explainability -- like EU's "right to explanations" -- the Shapley value might be the only legally compliant method, because it is based on a solid theory and distributes the effects fairly.
-I am not a lawyer, so this reflects only my intuition about the requirements.
+Perbedaan antara prediksi dan prediksi rata-rata **tersebar adil** di antara nilai fitur instance -- properti Efficiency dari nilai Shapley.
+Properti ini membedakan nilai Shapley dari metode lain seperti [LIME](#lime).
+LIME tidak menjamin bahwa prediksi didistribusikan secara adil di antara fitur-fitur.
+Nilai Shapley mungkin satu-satunya metode untuk memberikan penjelasan lengkap.
+Dalam situasi di mana hukum memerlukan penjelasan -- seperti "hak atas penjelasan" UE -- nilai Shapley mungkin merupakan satu-satunya metode yang sesuai secara hukum, karena didasarkan pada teori yang kuat dan mendistribusikan efeknya secara adil.
+Saya bukan pengacara, jadi ini hanya mencerminkan intuisi saya tentang persyaratan.
 
-The Shapley value allows **contrastive explanations**.
-Instead of comparing a prediction to the average prediction of the entire dataset, you could compare it to a subset or even to a single data point.
-This contrastiveness is also something that local models like LIME do not have.
+Nilai Shapley memungkinkan **penjelasan kontrastif**.
+Alih-alih membandingkan prediksi dengan prediksi rata-rata seluruh kumpulan data, Anda dapat membandingkannya dengan subset atau bahkan dengan satu titik data.
+Kontrastivitas ini juga sesuatu yang tidak dimiliki model lokal seperti LIME.
 
-The Shapley value is the only explanation method with a **solid theory**.
-The axioms -- efficiency, symmetry, dummy, additivity -- give the explanation a reasonable foundation.
-Methods like LIME assume linear behavior of the machine learning model locally, but there is no theory as to why this should work.
+Nilai Shapley adalah satu-satunya metode penjelasan dengan **teori yang solid**.
+Aksioma -- efisiensi, simetri, dummy, aditif -- memberikan penjelasan dasar yang masuk akal.
+Metode seperti LIME mengasumsikan perilaku linier model machine learning secara lokal, tetapi tidak ada teori mengapa ini harus berhasil.
 
-It is mind-blowing to **explain a prediction as a game** played by the feature values.
+Sangat menakjubkan untuk **menjelaskan prediksi sebagai game** yang dimainkan oleh nilai fitur.
 
 
 ### Disadvantages
 
-The Shapley value requires **a lot of computing time**.
-In 99.9% of real-world problems, only the approximate solution is feasible.
-An exact computation of the Shapley value is computationally expensive because there are 2^k^ possible coalitions of the feature values and the "absence" of a feature has to be simulated by drawing random instances, which increases the variance for the estimate of the Shapley values estimation.
-The exponential number of the coalitions is dealt with by sampling coalitions and limiting the number of iterations M.
-Decreasing M reduces computation time, but increases the variance of the Shapley value.
-There is no good rule of thumb for the number of iterations M.
-M should be large enough to accurately estimate the Shapley values, but small enough to complete the computation in a reasonable time.
-It should be possible to choose M based on Chernoff bounds, but I have not seen any paper on doing this for Shapley values for machine learning predictions.
+Nilai Shapley membutuhkan **banyak waktu komputasi**.
+Dalam 99,9% masalah dunia nyata, hanya solusi perkiraan yang layak.
+Perhitungan yang tepat dari nilai Shapley secara komputasi mahal karena ada 2^k^ kemungkinan koalisi nilai fitur dan "tidak adanya" fitur harus disimulasikan dengan menggambar instance acak, yang meningkatkan varians untuk estimasi Shapley estimasi nilai.
+Jumlah eksponensial koalisi ditangani dengan sampling koalisi dan membatasi jumlah iterasi M.
+Penurunan M mengurangi waktu komputasi, tetapi meningkatkan varians dari nilai Shapley.
+Tidak ada aturan praktis yang baik untuk jumlah iterasi M.
+M harus cukup besar untuk memperkirakan nilai Shapley secara akurat, tetapi cukup kecil untuk menyelesaikan perhitungan dalam waktu yang wajar.
+Seharusnya dimungkinkan untuk memilih M berdasarkan batas Chernoff, tetapi saya belum melihat makalah apa pun tentang melakukan ini untuk nilai Shapley untuk prediksi machine learning.
 
-The Shapley value **can be misinterpreted**.
-The Shapley value of a feature value is not the difference of the predicted value after removing the feature from the model training.
-The interpretation of the Shapley value is:
-Given the current set of feature values, the contribution of a feature value to the difference between the actual prediction and the mean prediction is the estimated Shapley value.
+Nilai Shapley **dapat disalahartikan**.
+Nilai Shapley dari sebuah nilai fitur bukanlah selisih dari nilai prediksi setelah fitur tersebut dikeluarkan dari pelatihan model.
+Interpretasi dari nilai Shapley adalah:
+Mengingat kumpulan nilai fitur saat ini, kontribusi nilai fitur terhadap perbedaan antara prediksi aktual dan prediksi rata-rata adalah nilai Shapley yang diperkirakan.
 
-The Shapley value is the wrong explanation method if you seek sparse explanations (explanations that contain few features).
-Explanations created with the Shapley value method **always use all the features**.
-Humans prefer selective explanations, such as those produced by LIME.
-LIME might be the better choice for explanations lay-persons have to deal with.
-Another solution is [SHAP](https://github.com/slundberg/shap) introduced by Lundberg and Lee (2016)[^lundberg2016], which is based on the Shapley value, but can also provide explanations with few features.
+Nilai Shapley adalah metode penjelasan yang salah jika Anda mencari penjelasan yang jarang (penjelasan yang mengandung sedikit fitur).
+Penjelasan dibuat dengan metode nilai Shapley **selalu gunakan semua fitur**.
+Manusia lebih menyukai penjelasan selektif, seperti yang dihasilkan oleh LIME.
+LIME mungkin merupakan pilihan yang lebih baik untuk penjelasan yang harus dihadapi orang awam.
+Solusi lain adalah [SHAP](https://github.com/slundberg/shap) yang diperkenalkan oleh Lundberg dan Lee (2016)[^lundberg2016], yang didasarkan pada nilai Shapley, tetapi juga dapat memberikan penjelasan dengan beberapa fitur.
 
-The Shapley value returns a simple value per feature, but **no prediction model** like LIME.
-This means it cannot be used to make statements about changes in prediction for changes in the input, such as:
-"If I were to earn €300 more a year, my credit score would increase by 5 points."
+Nilai Shapley mengembalikan nilai sederhana per fitur, tetapi **tidak ada model prediksi** seperti LIME.
+Ini berarti tidak dapat digunakan untuk membuat pernyataan tentang perubahan prediksi untuk perubahan input, seperti:
+"Jika saya mendapatkan €300 lebih setahun, skor kredit saya akan meningkat 5 poin."
 
-Another disadvantage is that **you need access to the data** if you want to calculate the Shapley value for a new data instance.
-It is not sufficient to access the prediction function because you need the data to replace parts of the instance of interest with values from randomly drawn instances of the data.
-This can only be avoided if you can create data instances that look like real data instances but are not actual instances from the training data.
+Kerugian lainnya adalah **Anda memerlukan akses ke data** jika Anda ingin menghitung nilai Shapley untuk instance data baru.
+Tidaklah cukup untuk mengakses fungsi prediksi karena Anda memerlukan data untuk mengganti bagian dari instance yang diinginkan dengan nilai dari instance data yang diambil secara acak.
+Ini hanya dapat dihindari jika Anda dapat membuat instans data yang terlihat seperti instans data nyata tetapi bukan instans aktual dari data pelatihan.
 
-Like many other permutation-based interpretation methods, the Shapley value method suffers from **inclusion of unrealistic data instances** when features are correlated.
-To simulate that a feature value is missing from a coalition, we marginalize the feature.
-This is achieved by sampling values from the feature's marginal distribution.
-This is fine as long as the features are independent.
-When features are dependent, then we might sample feature values that do not make sense for this instance.
-But we would use those to compute the feature's Shapley value.
-One solution might be to permute correlated features together and get one mutual Shapley value for them.
-Another adaptation is conditional sampling: Features are sampled conditional on the features that are already in the team.
-While conditional sampling fixes the issue of unrealistic data points, a new issue is introduced:
-The resulting values are no longer the Shapley values to our game, since they violate the symmetry axiom, as found out by Sundararajan et. al (2019)[^cond1] and further discussed by Janzing et. al (2020)[^cond2].
+Seperti banyak metode interpretasi berbasis permutasi lainnya, metode nilai Shapley mengalami **penyertaan instance data yang tidak realistis** ketika fitur dikorelasikan.
+Untuk mensimulasikan bahwa nilai fitur hilang dari koalisi, kami meminggirkan fitur tersebut.
+Ini dicapai dengan mengambil sampel nilai dari distribusi marjinal fitur.
+Ini baik-baik saja selama fitur-fiturnya independen.
+Ketika fitur bergantung, maka kami mungkin mengambil sampel nilai fitur yang tidak masuk akal untuk instance ini.
+Tapi kami akan menggunakannya untuk menghitung nilai fitur Shapley.
+Salah satu solusi mungkin untuk mengubah fitur yang berkorelasi bersama-sama dan mendapatkan satu nilai Shapley yang saling menguntungkan untuk mereka.
+Adaptasi lainnya adalah conditional sampling: Fitur disampel bersyarat pada fitur yang sudah ada dalam tim.
+Sementara pengambilan sampel bersyarat memperbaiki masalah titik data yang tidak realistis, masalah baru diperkenalkan:
+Nilai yang dihasilkan bukan lagi nilai Shapley untuk game kita, karena melanggar aksioma simetri, seperti yang ditemukan oleh Sundararajan et. al (2019)[^cond1] dan dibahas lebih lanjut oleh Janzing et. al (2020)[^cond2].
 
 
 ### Software and Alternatives
 
-Shapley values are implemented in both the `iml` and [fastshap](https://github.com/bgreenwell/fastshap) packages for R.
+Nilai Shapley diimplementasikan dalam paket `iml` dan [fastshap](https://github.com/bgreenwell/fastshap) untuk R.
 
-SHAP, an alternative estimation method for Shapley values, is presented in the [next chapter](#shap).
+SHAP, metode estimasi alternatif untuk nilai Shapley, disajikan di [bab berikutnya](#shap).
 
-Another approach is called breakDown, which is implemented in the `breakDown` R package[^breakdown].
-BreakDown also shows the contributions of each feature to the prediction, but computes them step by step.
-Let us reuse the game analogy:
-We start with an empty team, add the feature value that would contribute the most to the prediction and iterate until all feature values are added.
-How much each feature value contributes depends on the respective feature values that are already in the "team", which is the big drawback of the breakDown method.
-It is faster than the Shapley value method, and for models without interactions, the results are the same.
+Pendekatan lain disebut breakDown, yang diimplementasikan dalam paket `breakDown` R[^breakdown].
+BreakDown juga menunjukkan kontribusi setiap fitur pada prediksi, tetapi menghitungnya selangkah demi selangkah.
+Mari kita gunakan kembali analogi game:
+Kami mulai dengan tim kosong, menambahkan nilai fitur yang akan berkontribusi paling besar pada prediksi dan mengulangi hingga semua nilai fitur ditambahkan.
+Seberapa besar kontribusi setiap nilai fitur tergantung pada nilai fitur masing-masing yang sudah ada di "tim", yang merupakan kelemahan besar dari metode breakDown.
+Ini lebih cepat daripada metode nilai Shapley, dan untuk model tanpa interaksi, hasilnya sama.
 
 
 [^shapley1953]: Shapley, Lloyd S. "A value for n-person games." Contributions to the Theory of Games 2.28 (1953): 307-317.

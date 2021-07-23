@@ -7,28 +7,26 @@ set.seed(42)
 
 ## Accumulated Local Effects (ALE) Plot {#ale}
 
-Accumulated local effects[^ALE] describe how features influence the prediction of a machine learning model on average.
-ALE plots are a faster and unbiased alternative to partial dependence plots (PDPs).
+Accumulated local effects[^ALE] menjelaskan bagaimana fitur memengaruhi prediksi model machine learning secara rata-rata.
+Plot ALE adalah alternatif yang lebih cepat dan tidak bias untuk partial dependence plot (PDP).
 
-<!-- *Keywords: ALE plots, partial dependence plots, marginal means, predictive margins, marginal effects* -->
-
-I recommend reading the [chapter on partial dependence plots](#pdp) first, as they are easier to understand and both methods share the same goal:
-Both describe how a feature affects the prediction on average.
-In the following section, I want to convince you that partial dependence plots have a serious problem when the features are correlated.
+Saya sarankan membaca [bab tentang partial dependence plot](#pdp) terlebih dahulu, karena lebih mudah dipahami dan kedua metode memiliki tujuan yang sama:
+Keduanya menggambarkan bagaimana fitur mempengaruhi prediksi secara rata-rata.
+Di bagian berikut, saya ingin meyakinkan Anda bahwa partial dependence plot memiliki masalah serius ketika fitur-fiturnya dikorelasikan.
 
 
 ### Motivation and Intuition
 
-If features of a machine learning model are correlated, the partial dependence plot cannot be trusted.
-The computation of a partial dependence plot for a feature that is strongly correlated with other features involves averaging predictions of artificial data instances that are unlikely in reality.
-This can greatly bias the estimated feature effect.
-Imagine calculating partial dependence plots for a  machine learning model that predicts the value of a house depending on the number of rooms and the size of the living area.
-We are interested in the effect of the living area on the predicted value.
-As a reminder, the recipe for partial dependence plots is: 1) Select feature. 2) Define grid. 3) Per grid value: a) Replace feature with grid value and b) average predictions. 4) Draw curve.
-For the calculation of the first grid value of the PDP -- say 30 m^2^ -- we replace the living area for **all** instances by 30 m^2^, even for houses with 10 rooms.
-Sounds to me like a very unusual house.
-The partial dependence plot includes these unrealistic houses in the feature effect estimation and pretends that everything is fine.
-The following figure illustrates two correlated features and how it comes that the partial dependence plot method averages predictions of unlikely instances.
+Jika fitur model machine learning berkorelasi, partial dependence plot tidak dapat dipercaya.
+Perhitungan partial dependence plot untuk fitur yang sangat berkorelasi dengan fitur lain melibatkan prediksi rata-rata dari contoh data buatan yang tidak mungkin dalam kenyataan.
+Ini dapat sangat membiaskan perkiraan efek fitur.
+Bayangkan menghitung partial dependence plot untuk model machine learning yang memprediksi nilai sebuah rumah tergantung pada jumlah kamar dan ukuran ruang tamu.
+Kami tertarik pada efek ruang tamu pada p-valuerediksi.
+Sebagai pengingat, resep untuk partial dependence plot adalah: 1) Pilih fitur. 2) Tentukan kisi-kisi. 3) Per grid value: a) Ganti fitur dengan nilai grid dan b) prediksi rata-rata. 4) Menggambar kurva.
+Untuk penghitungan nilai grid pertama PDP -- katakanlah 30 m^2^ -- kami mengganti ruang tamu untuk **semua** instance dengan 30 m^2^, bahkan untuk rumah dengan 10 kamar.
+Kedengarannya bagi saya seperti rumah yang sangat tidak biasa.
+Partial dependence plot memasukkan rumah-rumah yang tidak realistis ini dalam estimasi efek fitur dan berpura-pura bahwa semuanya baik-baik saja.
+Gambar berikut mengilustrasikan dua fitur yang berkorelasi dan bagaimana metode partial dependence plot rata-rata memprediksi kejadian yang tidak mungkin terjadi.
 
 ```{r aleplot-motivation1, fig.cap = "Strongly correlated features x1 and x2. To calculate the feature effect of x1 at 0.75, the PDP replaces x1 of all instances with 0.75, falsely assuming that the distribution of x2 at x1 = 0.75 is the same as the marginal distribution of x2 (vertical line). This results in unlikely combinations of x1 and x2 (e.g. x2=0.2 at x1=0.75), which the PDP uses for the calculation of the average effect."}
 
@@ -57,16 +55,16 @@ p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) +
 p1
 ```
 
-What can we do to get a feature effect estimate that respects the correlation of the features?
-We could average over the conditional distribution of the feature, meaning at a grid value of x1, we average the predictions of instances with a similar x1 value.
-The solution for calculating feature effects using the conditional distribution is called Marginal Plots, or M-Plots (confusing name, since they are based on the conditional, not the marginal distribution).
-Wait, did I not promise you to talk about ALE plots?
-M-Plots are not the solution we are looking for.
-Why do M-Plots not solve our problem?
-If we average the predictions of all houses of about 30 m^2^, we estimate the **combined** effect of living area and of number of rooms, because of their correlation.
-Suppose that the living area has no effect on the predicted value of a house, only the number of rooms has.
-The M-Plot would still show that the size of the living area increases the predicted value, since the number of rooms increases with the living area.
-The following plot shows for two correlated features how M-Plots work.
+Apa yang bisa kita lakukan untuk mendapatkan perkiraan efek fitur yang menghormati korelasi fitur?
+Kami dapat merata-ratakan distribusi bersyarat dari fitur, yang berarti pada nilai kisi x1, kami merata-ratakan prediksi instance dengan nilai x1 yang serupa.
+Solusi untuk menghitung efek fitur menggunakan distribusi bersyarat disebut Marginal Plots, atau M-Plot (nama yang membingungkan, karena didasarkan pada distribusi bersyarat, bukan distribusi marjinal).
+Tunggu, bukankah aku berjanji untuk membicarakan plot ALE?
+M-Plots bukanlah solusi yang kami cari.
+Mengapa M-Plots tidak menyelesaikan masalah kita?
+Jika kita rata-ratakan prediksi semua rumah sekitar 30 m^2^, kita memperkirakan efek **gabungan** dari ruang tamu dan jumlah kamar, karena korelasinya.
+Misalkan ruang tamu tidak berpengaruh pada nilai prediksi sebuah rumah, hanya jumlah kamar yang berpengaruh.
+M-Plot masih akan menunjukkan bahwa ukuran ruang tamu meningkatkan nilai prediksi, karena jumlah kamar meningkat dengan ruang tamu.
+Plot berikut menunjukkan dua fitur berkorelasi bagaimana M-Plots bekerja.
 
 ```{r aleplot-motivation2, fig.cap = "Strongly correlated features x1 and x2. M-Plots average over the conditional distribution. Here the conditional distribution of x2 at x1 = 0.75. Averaging the local predictions leads to mixing the effects of both features."}
 
@@ -103,12 +101,12 @@ p2
 ```
 
 
-M-Plots avoid averaging predictions of unlikely data instances, but they mix the effect of a feature with the effects of all correlated features.
-ALE plots solve this problem by calculating -- also based on the conditional distribution of the features --  **differences in predictions instead of averages**.
-For the effect of living area at 30 m^2^, the ALE method uses all houses with about 30 m^2^, gets the model predictions pretending these houses were 31 m^2^ minus the prediction pretending they were 29 m^2^.
-This gives us the pure effect of the living area and is not mixing the effect with the effects of correlated features.
-The use of differences blocks the effect of other features.
-The following graphic provides intuition how ALE plots are calculated.
+M-Plots menghindari prediksi rata-rata dari instance data yang tidak mungkin, tetapi mereka menggabungkan efek fitur dengan efek dari semua fitur yang berkorelasi.
+Plot ALE memecahkan masalah ini dengan menghitung -- juga berdasarkan distribusi bersyarat dari fitur -- **perbedaan dalam prediksi dan bukan rata-rata**.
+Untuk pengaruh luas tempat tinggal pada 30 m^2^, metode ALE menggunakan semua rumah dengan sekitar 30 m^2^, mendapatkan prediksi model dengan menganggap rumah-rumah ini adalah 31 m^2^ dikurangi prediksi yang berpura-pura 29 m^2 ^.
+Ini memberi kita efek murni dari ruang tamu dan tidak mencampur efek dengan efek fitur yang berkorelasi.
+Penggunaan perbedaan menghalangi efek fitur lain.
+Grafik berikut memberikan intuisi bagaimana plot ALE dihitung.
 
 
 ```{r aleplot-computation, fig.cap = "Calculation of ALE for feature x1, which is correlated with x2. First, we divide the feature into intervals (vertical lines). For the data instances (points) in an interval, we calculate the difference in the prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). These differences are later accumulated and centered, resulting in the ALE curve."}
@@ -145,109 +143,106 @@ p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) +
 ```
 
 
-To summarize how each type of plot (PDP, M, ALE) calculates the effect of a feature at a certain grid value v:  
-**Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value v for that feature. 
-I ignore whether the value v makes sense for all data instances."  
-**M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to v for that feature. 
-The effect could be due to that feature, but also due to correlated features."  
-**ALE plots**: "Let me show you how the model predictions change in a small "window" of the feature around v for data instances in that window."
+Untuk meringkas bagaimana setiap jenis plot (PDP, M, ALE) menghitung efek fitur pada nilai grid tertentu v:
+**partial dependence plot**: "Biarkan saya menunjukkan kepada Anda apa yang diprediksi model secara rata-rata ketika setiap instance data memiliki nilai v untuk fitur itu.
+Saya mengabaikan apakah nilai v masuk akal untuk semua instance data."
+**M-Plots**: "Biarkan saya menunjukkan kepada Anda apa yang diprediksi model rata-rata untuk instance data yang memiliki nilai mendekati v untuk fitur tersebut.
+Efeknya bisa karena fitur itu, tetapi juga karena fitur yang berkorelasi."
+**ALE plot**: "Biarkan saya menunjukkan kepada Anda bagaimana prediksi model berubah di "jendela" kecil fitur di sekitar v untuk instance data di jendela itu."
 
 ### Theory
 
-How do PD, M and ALE plots differ mathematically?
-Common to all three methods is that they reduce the complex prediction function f to a function that depends on only one (or two) features.
-All three methods reduce the function by averaging the effects of the other features, but they differ in whether averages of predictions or of **differences in predictions** are calculated and whether averaging is done over the marginal or conditional distribution.
+Bagaimana plot PD, M dan ALE berbeda secara matematis?
+Umum untuk ketiga metode adalah bahwa mereka mengurangi fungsi prediksi kompleks f menjadi fungsi yang hanya bergantung pada satu (atau dua) fitur.
+Ketiga metode tersebut mengurangi fungsi dengan merata-ratakan efek fitur lainnya, tetapi mereka berbeda dalam apakah rata-rata prediksi atau **perbedaan prediksi** dihitung dan apakah rata-rata dilakukan pada distribusi marjinal atau bersyarat.
 
-Partial dependence plots average the predictions over the marginal distribution.
+Partial dependence plot rata-rata prediksi atas distribusi marjinal.
 
 $$\begin{align*}\hat{f}_{x_S,PDP}(x_S)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C)d{}x_C\end{align*}$$
 
-This is the value of the prediction function f, at feature value(s) $x_S$, averaged over all features in $x_C$.
-Averaging means calculating the marginal expectation E over the features in set C, which is the integral over the predictions weighted by the probability distribution.
-Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in set S, and average the predictions for this manipulated dataset.
-This procedure ensures that we average over the marginal distribution of the features.
+Ini adalah nilai fungsi prediksi f, pada nilai fitur $x_S$, dirata-ratakan untuk semua fitur di $x_C$.
+Rata-rata berarti menghitung ekspektasi marginal E atas fitur-fitur di himpunan C, yang merupakan integral dari prediksi yang dibobot oleh distribusi probabilitas.
+Kedengarannya bagus, tetapi untuk menghitung nilai yang diharapkan atas distribusi marjinal, kami hanya mengambil semua contoh data kami, memaksa mereka untuk memiliki nilai grid tertentu untuk fitur di set S, dan rata-rata prediksi untuk dataset yang dimanipulasi ini.
+Prosedur ini memastikan bahwa kita rata-rata atas distribusi marjinal fitur.
 
-M-plots average the predictions over the conditional distribution.
+M-plot rata-rata prediksi atas distribusi bersyarat.
 
 $$\begin{align*}\hat{f}_{x_S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C|x_S)d{}x_C\end{align*}$$
 
-The only thing that changes compared to PDPs is that we average the predictions conditional on each grid value of the feature of interest, instead of assuming the marginal distribution at each grid value. 
-In practice, this means that we have to define a neighborhood, for example for the calculation of the effect of 30 m^2^ on the predicted house value, we could average the predictions of all houses between 28 and 32 m^2^.
+Satu-satunya hal yang berubah dibandingkan dengan PDP adalah bahwa kami merata-ratakan prediksi bersyarat pada setiap nilai grid fitur yang diinginkan, daripada mengasumsikan distribusi marjinal pada setiap nilai grid.
+Dalam prakteknya, ini berarti bahwa kita harus mendefinisikan sebuah lingkungan, misalnya untuk perhitungan pengaruh 30 m^2^ pada nilai rumah yang diprediksi, kita bisa rata-rata prediksi semua rumah antara 28 dan 32 m^2^.
 
-ALE plots average the changes in the predictions and accumulate them over the grid (more on the calculation later).
+Plot ALE rata-rata perubahan prediksi dan mengakumulasikannya di atas grid (lebih lanjut tentang perhitungan nanti).
 
 $$\begin{align*}\hat{f}_{x_S,ALE}(x_S)=&\int_{z_{0,1}}^{x_S}E_{X_C|X_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\=&\int_{z_{0,1}}^{x_S}\int_{x_C}\hat{f}^S(z_s,x_c)\mathbb{P}(x_C|z_S)d{}x_C{}dz_S-\text{constant}\end{align*}$$
 
-The formula reveals three differences to M-Plots. 
-First, we average the changes of predictions, not the predictions itself.
-The change is defined as the gradient (but later, for the actual computation, replaced by the differences in the predictions over an interval).
-
+Rumus tersebut mengungkapkan tiga perbedaan pada M-Plots.
+Pertama, kita rata-ratakan perubahan prediksi, bukan prediksi itu sendiri.
+Perubahan didefinisikan sebagai gradien (tetapi kemudian, untuk perhitungan aktual, digantikan oleh perbedaan dalam prediksi selama interval).
 
 $$\hat{f}^S(x_s,x_c)=\frac{\delta\hat{f}(x_S,x_C)}{\delta{}x_S}$$
 
-The second difference is the additional integral over z.
-We accumulate the local gradients over the range of features in set S, which gives us the effect of the feature on the prediction.
-For the actual computation, the z's are replaced by a grid of intervals over which we compute the changes in the prediction.
-Instead of directly averaging the predictions, the ALE method calculates the prediction differences conditional on features S and integrates the derivative over features S to estimate the effect.
-Well, that sounds stupid. 
-Derivation and integration usually cancel each other out, like first subtracting, then adding the same number. 
-Why does it make sense here?
-The derivative (or interval difference) isolates the effect of the feature of interest and blocks the effect of correlated features.
+Perbedaan kedua adalah integral tambahan atas z.
+Kami mengumpulkan gradien lokal pada rentang fitur di set S, yang memberi kami efek fitur pada prediksi.
+Untuk perhitungan aktual, z digantikan oleh kisi interval di mana kita menghitung perubahan dalam prediksi.
+Alih-alih merata-ratakan prediksi secara langsung, metode ALE menghitung perbedaan prediksi yang bergantung pada fitur S dan mengintegrasikan turunan di atas fitur S untuk memperkirakan efeknya.
+Yah, itu terdengar bodoh.
+Turunan dan integrasi biasanya saling meniadakan, seperti mengurangkan dulu, lalu menjumlahkan bilangan yang sama.
+Mengapa masuk akal di sini?
+Turunan (atau perbedaan interval) mengisolasi efek dari fitur yang diinginkan dan memblokir efek dari fitur yang berkorelasi.
 
-The third difference of ALE plots to M-plots is that we subtract a constant from the results.
-This step centers the ALE plot so that the average effect over the data is zero.
+Perbedaan ketiga plot ALE dengan plot-M adalah bahwa kita mengurangi konstanta dari hasilnya.
+Langkah ini memusatkan plot ALE sehingga efek rata-rata terhadap data adalah nol.
 
-One problem remains: 
-Not all models come with a gradient, for example random forests have no gradient.
-But as you will see, the actual computation works without gradients and uses intervals.
-Let us delve a little deeper into the estimation of ALE plots.
+Satu masalah tetap:
+Tidak semua model datang dengan gradien, misalnya random forest tidak memiliki gradien.
+Tetapi seperti yang akan Anda lihat, perhitungan sebenarnya bekerja tanpa gradien dan menggunakan interval.
+Mari kita mempelajari lebih dalam estimasi plot ALE.
 
 
 ### Estimation
 
-First I will describe how ALE plots are estimated for a single numerical feature, later for two numerical features and for a single categorical feature.
-To estimate local effects, we divide the feature into many intervals and compute the differences in the predictions.
-This procedure approximates the gradients and also works for models without gradients.
+Pertama saya akan menjelaskan bagaimana plot ALE diperkirakan untuk fitur numerik tunggal, kemudian untuk dua fitur numerik dan untuk fitur kategoris tunggal.
+Untuk memperkirakan efek lokal, kami membagi fitur menjadi banyak interval dan menghitung perbedaan dalam prediksi.
+Prosedur ini mendekati gradien dan juga berfungsi untuk model tanpa gradien.
 
-First we estimate the uncentered effect: 
+Pertama kami memperkirakan efek tidak terpusat:
 
 $$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[f(z_{k,j},x^{(i)}_{\setminus{}j})-f(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]$$
 
-Let us break this formula down, starting from the right side. 
-The name **Accumulated Local Effects** nicely reflects all the individual components of this formula.
-At its core, the ALE method calculates the differences in predictions, whereby we replace the feature of interest with grid values z.
-The difference in prediction is the **Effect** the feature has for an individual instance in a certain interval.
-The sum on the right adds up the effects of all instances within an interval which appears in the formula as neighborhood $N_j(k)$.
-We divide this sum by the number of instances in this interval to obtain the average difference of the predictions for this interval.
-This average in the interval is covered by the term **Local** in the name ALE.
-The left sum symbol means that we accumulate the average effects across all intervals.
-The (uncentered) ALE of a feature value that lies, for example, in the third interval is the sum of the effects of the first, second and third intervals.
-The word **Accumulated** in ALE reflects this.
+Mari kita pecahkan rumus ini, mulai dari sisi kanan.
+Nama **Accumulated Local Effects** dengan baik mencerminkan semua komponen individual dari formula ini.
+Pada intinya, metode ALE menghitung perbedaan prediksi, dimana kita mengganti fitur yang diinginkan dengan nilai grid z.
+Perbedaan dalam prediksi adalah **Efek** yang dimiliki fitur untuk masing-masing instance dalam interval tertentu.
+Jumlah di sebelah kanan menjumlahkan efek dari semua kejadian dalam interval yang muncul dalam rumus sebagai lingkungan $N_j(k)$.
+Kami membagi jumlah ini dengan jumlah kejadian dalam interval ini untuk mendapatkan perbedaan rata-rata prediksi untuk interval ini.
+Rata-rata dalam interval ini dicakup oleh istilah **Local** dalam nama ALE.
+Simbol jumlah kiri berarti bahwa kita mengumpulkan efek rata-rata di semua interval.
+ALE (tidak terpusat) dari nilai fitur yang terletak, misalnya, pada interval ketiga adalah jumlah efek dari interval pertama, kedua, dan ketiga.
+Kata **Accumulated** dalam ALE mencerminkan hal ini.
 
-
-This effect is centered so that the mean effect is zero.
+Efek ini terpusat sehingga efek rata-rata adalah nol.
 
 $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x^{(i)}_{j})$$
 
-The value of the ALE can be interpreted as the main effect of the feature at a certain  value compared to the average prediction of the data. 
-For example, an ALE estimate of -2 at $x_j=3$ means that when the j-th feature has value 3, then the prediction is lower by 2 compared to the average prediction.
+Nilai ALE dapat diartikan sebagai efek utama dari fitur pada nilai tertentu dibandingkan dengan rata-rata prediksi data.
+Misalnya, perkiraan ALE -2 pada $x_j=3$ berarti ketika fitur ke-j memiliki nilai 3, maka prediksi lebih rendah 2 dibandingkan dengan prediksi rata-rata.
 
-The quantiles of the distribution of the feature are used as the grid that defines the intervals.
-Using the quantiles ensures that there is the same number of data instances in each of the intervals. 
-Quantiles have the disadvantage that the intervals can have very different lengths.
-This can lead to some weird ALE plots if the feature of interest is very skewed, for example many low values and only a few very high values.
+Kuantil dari distribusi fitur digunakan sebagai grid yang mendefinisikan interval.
+Menggunakan kuantil memastikan bahwa ada jumlah instance data yang sama di setiap interval.
+Kuantil memiliki kelemahan bahwa interval dapat memiliki panjang yang sangat berbeda.
+Hal ini dapat menyebabkan beberapa plot ALE yang aneh jika fitur yang diinginkan sangat miring, misalnya banyak nilai rendah dan hanya sedikit nilai yang sangat tinggi.
 
+**Plot ALE untuk interaksi dua fitur**
 
-**ALE plots for the interaction of two features**
-
-ALE plots can also show the interaction effect of two features.
-The calculation principles are the same as for a single feature, but we work with rectangular cells instead of intervals, because we have to accumulate the effects in two dimensions.
-In addition to adjusting for the overall mean effect, we also adjust for the main effects of both features.
-This means that ALE for two features estimate the second-order effect, which does not include the main effects of the features.
-In other words, ALE for two features only shows the additional interaction effect of the two features.
-I spare you the formulas for 2D ALE plots because they are long and unpleasant to read.
-If you are interested in the calculation, I refer you to the paper, formulas (13) -- (16).
-I will rely on visualizations to develop intuition about the second-order ALE calculation.
+Plot ALE juga dapat menunjukkan efek interaksi dari dua fitur.
+Prinsip perhitungannya sama seperti untuk fitur tunggal, tetapi kami bekerja dengan sel persegi, bukan interval, karena kami harus mengumpulkan efek dalam dua dimensi.
+Selain menyesuaikan untuk efek rata-rata keseluruhan, kami juga menyesuaikan untuk efek utama dari kedua fitur tersebut.
+Ini berarti bahwa ALE untuk dua fitur memperkirakan efek orde kedua, yang tidak termasuk efek utama dari fitur tersebut.
+Dengan kata lain, ALE untuk dua fitur hanya menunjukkan efek interaksi tambahan dari kedua fitur tersebut.
+Saya memberi Anda formula untuk plot ALE 2D karena panjang dan tidak enak dibaca.
+Jika Anda tertarik dengan perhitungannya, saya merujuk Anda ke makalah, rumus (13) -- (16).
+Saya akan mengandalkan visualisasi untuk mengembangkan intuisi tentang perhitungan ALE orde kedua.
 
 ```{r aleplot-computation-2d, fig.cap = 'Calculation of 2D-ALE. We place a grid over the two features. In each grid cell we calculate the 2nd-order differences for all instance within. We first replace values of x1 and x2 with the values from the cell corners. If a, b, c and d represent the "corner"-predictions of a manipulated instance (as labeled in the graphic), then the 2nd-order difference is (d - c) - (b - a). The mean 2nd-order difference in each cell is accumulated over the grid and centered.'}
 
@@ -274,54 +269,53 @@ p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) +
 
 ```
 
-In the previous figure, many cells are empty due to the correlation.
-In the ALE plot this can be visualized with a grayed out or darkened box. 
-Alternatively, you can replace the missing ALE estimate of an empty cell with the ALE estimate of the nearest non-empty cell.
+Pada gambar sebelumnya, banyak sel kosong karena korelasi.
+Dalam plot ALE ini dapat divisualisasikan dengan kotak abu-abu atau gelap.
+Atau, Anda dapat mengganti perkiraan ALE yang hilang dari sel kosong dengan perkiraan ALE dari sel tidak kosong terdekat.
 
-Since the ALE estimates for two features only show the second-order effect of the features, the interpretation requires special attention.
-The second-order effect is the additional interaction effect of the features after we have accounted for the main effects of the features.
-Suppose two features do not interact, but each has a linear effect on the predicted outcome. 
-In the 1D ALE plot for each feature, we would see a straight line as the estimated ALE curve.
-But when we plot the 2D ALE estimates, they should be close to zero, because the second-order effect is only the additional effect of the interaction.
-ALE plots and PD plots differ in this regard:
-PDPs always show the total effect, ALE plots show the first- or second-order effect.
-These are design decisions that do not depend on the underlying math.
-You can subtract the lower-order effects in a partial dependence plot to get the pure main or second-order effects or, you can get an estimate of the total ALE plots by refraining from subtracting the lower-order effects.
+Karena estimasi ALE untuk dua fitur hanya menunjukkan efek orde kedua dari fitur, interpretasi memerlukan perhatian khusus.
+Efek orde kedua adalah efek interaksi tambahan dari fitur setelah kami memperhitungkan efek utama dari fitur tersebut.
+Misalkan dua fitur tidak berinteraksi, tetapi masing-masing memiliki efek linier pada hasil yang diprediksi.
+Dalam plot ALE 1D untuk setiap fitur, kita akan melihat garis lurus sebagai kurva ALE yang diperkirakan.
+Tetapi ketika kita memplot perkiraan ALE 2D, mereka harus mendekati nol, karena efek orde kedua hanya efek tambahan dari interaksi.
+Plot ALE dan plot PD berbeda dalam hal ini:
+PDP selalu menunjukkan efek total, plot ALE menunjukkan efek orde pertama atau kedua.
+Ini adalah keputusan desain yang tidak bergantung pada matematika yang mendasarinya.
+Anda dapat mengurangi efek orde rendah dalam partial dependence plot untuk mendapatkan efek orde kedua atau utama murni atau, Anda bisa mendapatkan perkiraan total plot ALE dengan menahan diri dari mengurangi efek orde rendah.
 
-The accumulated local effects could also be calculated for arbitrarily higher orders (interactions of three or more features), but as argued in the [PDP chapter](#pdp), only up to two features makes sense, because higher interactions cannot be visualized or even interpreted meaningfully.
+Accumulated local effects juga dapat dihitung untuk urutan yang lebih tinggi secara sewenang-wenang (interaksi tiga fitur atau lebih), tetapi seperti yang dijelaskan dalam [bab PDP](#pdp), hanya hingga dua fitur yang masuk akal, karena interaksi yang lebih tinggi tidak dapat divisualisasikan atau bahkan dimaknai secara bermakna.
 
+**ALE untuk fitur kategoris**
 
-**ALE for categorical features**
+Metode accumulated local effects membutuhkan - menurut definisi - nilai fitur untuk memiliki urutan, karena metode ini mengakumulasi efek dalam arah tertentu.
+Fitur kategoris tidak memiliki tatanan alami.
+Untuk menghitung plot ALE untuk fitur kategoris, kita harus membuat atau menemukan pesanan.
+Urutan kategori mempengaruhi perhitungan dan interpretasi accumulated local effects.
 
-The accumulated local effects method needs -- by definition -- the feature values to have an order, because the method accumulates effects in a certain direction.
-Categorical features do not have any natural order.
-To compute an ALE plot for a categorical feature we have to somehow create or find an order.
-The order of the categories influences the calculation and interpretation of the accumulated local effects.
+Salah satu solusinya adalah mengurutkan kategori menurut kesamaannya berdasarkan fitur lainnya.
+Jarak antara dua kategori adalah jumlah jarak setiap fitur.
+Jarak fitur-bijaksana membandingkan distribusi kumulatif di kedua kategori, juga disebut jarak Kolmogorov-Smirnov (untuk fitur numerik) atau tabel frekuensi relatif (untuk fitur kategoris).
+Setelah kami memiliki jarak antara semua kategori, kami menggunakan penskalaan multi-dimensi untuk mengurangi matriks jarak menjadi ukuran jarak satu dimensi.
+Ini memberi kita urutan kategori berdasarkan kesamaan.
 
-One solution is to order the categories according to their similarity based on the other features.
-The distance between two categories is the sum over the distances of each feature.
-The feature-wise distance compares either the cumulative distribution in both categories, also called Kolmogorov-Smirnov distance (for numerical features) or the relative frequency tables (for categorical features).
-Once we have the distances between all categories, we use multi-dimensional scaling to reduce the distance matrix to a one-dimensional distance measure.
-This gives us a similarity-based order of the categories.
-
-To make this a little bit clearer, here is one example:
-Let us assume we have the two categorical features "season" and "weather" and a numerical feature "temperature".
-For the first categorical feature (season) we want to calculate the ALEs. 
-The feature has the categories "spring", "summer", "fall", "winter".
-We start to calculate the distance between categories "spring" and "summer". 
-The distance is the sum of distances over the features temperature and weather.
-For the temperature, we take all instances with season "spring", calculate the empirical cumulative distribution function and do the same for instances with season "summer" and measure their distance with the Kolmogorov-Smirnov statistic.
-For the weather feature we calculate for all "spring" instances the probabilities for each weather type, do the same for the "summer" instances and sum up the absolute distances in the probability distribution.
-If "spring" and "summer" have very different temperatures and weather, the total category-distance is large.
-We repeat the procedure with the other seasonal pairs and reduce the resulting distance matrix to a single dimension by multi-dimensional scaling.
+Untuk membuatnya sedikit lebih jelas, berikut adalah salah satu contohnya:
+Mari kita asumsikan kita memiliki dua fitur kategoris "musim" dan "cuaca" dan fitur numerik "suhu".
+Untuk fitur kategorikal pertama (musim) kami ingin menghitung ALE.
+Fitur ini memiliki kategori "musim semi", "musim panas", "musim gugur", "musim dingin".
+Kami mulai menghitung jarak antara kategori "musim semi" dan "musim panas".
+Jarak adalah jumlah jarak atas fitur suhu dan cuaca.
+Untuk suhu, kami mengambil semua contoh dengan musim "musim semi", menghitung fungsi distribusi kumulatif empiris dan melakukan hal yang sama untuk contoh dengan musim "musim panas" dan mengukur jaraknya dengan statistik Kolmogorov-Smirnov.
+Untuk fitur cuaca, kami menghitung untuk semua kejadian "musim semi" probabilitas untuk setiap jenis cuaca, lakukan hal yang sama untuk kejadian "musim panas" dan jumlahkan jarak absolut dalam distribusi probabilitas.
+Jika "musim semi" dan "musim panas" memiliki suhu dan cuaca yang sangat berbeda, jarak kategori totalnya besar.
+Kami mengulangi prosedur dengan pasangan musiman lainnya dan mengurangi matriks jarak yang dihasilkan menjadi satu dimensi dengan penskalaan multi-dimensi.
 
 
 ### Examples
 
-Let us see ALE plots in action. 
-I have constructed a scenario in which partial dependence plots fail.
-The scenario consists of a prediction model and two strongly correlated features.
-The prediction model is mostly a linear regression model, but does something weird at a combination of the two features for which we have never observed instances.
+Mari kita lihat plot ALE beraksi.
+Saya telah membangun sebuah skenario di mana partial dependence plot gagal.
+Skenario terdiri dari model prediksi dan dua fitur yang sangat berkorelasi.
+Model prediksi sebagian besar merupakan model linear regression, tetapi melakukan sesuatu yang aneh pada kombinasi dua fitur yang belum pernah kami amati.
 
 ```{r correlation-problem, fig.cap = "Two features and the predicted outcome. The model predicts the sum of the two features (shaded background), with the exception that if x1 is greater than 0.7 and x2 less than 0.3, the model always predicts 2. This area is far from the distribution of data (point cloud) and does not affect the performance of the model and also should not affect its interpretation."}
 
@@ -349,11 +343,11 @@ ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) +
   scale_fill_viridis("Model\nprediction", option = "D")
 ```
 
-Is this a realistic, relevant scenario at all?
-When you train a model, the learning algorithm minimizes the loss for the existing training data instances.
-Weird stuff can happen outside the distribution of training data, because the model is not penalized for doing weird stuff in these areas.
-Leaving the data distribution is called extrapolation, which can also be used to fool machine learning models, described in the [chapter on adversarial examples](#adversarial).
-See in our little example how the partial dependence plots behave compared to ALE plots.
+Apakah ini skenario yang realistis dan relevan?
+Saat Anda melatih model, learning algorithm meminimalkan loss untuk instance data pelatihan yang ada.
+Hal-hal aneh dapat terjadi di luar distribusi data pelatihan, karena model tidak dihukum karena melakukan hal-hal aneh di area ini.
+Meninggalkan distribusi data disebut ekstrapolasi, yang juga dapat digunakan untuk menipu model machine learning, yang dijelaskan dalam [bab tentang adversarial examples](#adversarial).
+Lihat dalam contoh kecil kami bagaimana partial dependence plot berperilaku dibandingkan dengan plot ALE.
 
 
 ```{r correlation-pdp-ale-plot, fig.cap = "Comparison of the feature effects computed with PDP (upper row) and ALE (lower row). The PDP estimates are influenced by the odd behavior of the model outside the data distribution (steep jumps in the plots). The ALE plots correctly identify that the machine learning model has a linear relationship between features and prediction, ignoring areas without data."}
@@ -370,17 +364,16 @@ gridExtra::grid.arrange(pdp1, pdp2, ale1, ale2)
 
 
 
-But is it not interesting to see that our model behaves oddly at x1 > 0.7 and x2 < 0.3?
-Well, yes and no.
-Since these are data instances that might be physically impossible or at least extremely unlikely, it is usually irrelevant to look into these instances.
-But if you suspect that your test distribution might be slightly different and some instances are actually in that range, then it would be interesting to include this area in the calculation of feature effects. 
-But it has to be a conscious decision to include areas where we have not observed data yet and it should not be a side-effect of the method of choice like PDP.
-If you suspect that the model will later be used with differently distributed data, I recommend to use ALE plots and simulate the distribution of data you are expecting.
+Tapi bukankah menarik untuk melihat bahwa model kita berperilaku aneh pada x1 > 0,7 dan x2 <0,3?
+Yah, ya dan tidak.
+Karena ini adalah contoh data yang mungkin secara fisik tidak mungkin atau setidaknya sangat tidak mungkin, biasanya tidak relevan untuk melihat contoh ini.
+Tetapi jika Anda menduga bahwa distribusi pengujian Anda mungkin sedikit berbeda dan beberapa contoh sebenarnya berada dalam kisaran tersebut, maka akan menarik untuk menyertakan area ini dalam penghitungan efek fitur.
+Tapi itu harus menjadi keputusan sadar untuk memasukkan area di mana kami belum mengamati data dan itu tidak boleh menjadi efek samping dari metode pilihan seperti PDP.
+Jika Anda menduga bahwa model tersebut nantinya akan digunakan dengan data yang terdistribusi berbeda, saya sarankan untuk menggunakan plot ALE dan mensimulasikan distribusi data yang Anda harapkan.
 
-
-Turning to a real dataset, let us predict the [number of rented bikes](#bike-data) based on weather and day and check if the ALE plots really work as well as promised.
-We train a regression tree to predict the number of rented bicycles on a given day and use ALE plots to analyze how temperature, relative humidity and wind speed influence the predictions.
-Let us look at what the ALE plots say: 
+Beralih ke dataset nyata, mari kita prediksi [jumlah sepeda sewaan](#bike-data) berdasarkan cuaca dan hari dan periksa apakah plot ALE benar-benar berfungsi seperti yang dijanjikan.
+Kami melatih regression tree untuk memprediksi jumlah sepeda yang disewa pada hari tertentu dan menggunakan plot ALE untuk menganalisis bagaimana suhu, kelembaban relatif, dan kecepatan angin memengaruhi prediksi.
+Mari kita lihat apa yang dikatakan plot ALE:
 
 ```{r ale-bike-train}
 data(bike)
@@ -409,16 +402,16 @@ ale3 = FeatureEffect$new(pred.bike, "windspeed", method = "ale")$plot() +
 gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 ```
 
-Let us look at the correlation between temperature, humidity and wind speed and all other features.
-Since the data also contains categorical features, we cannot only use the Pearson correlation coefficient, which only works if both features are numerical.
-Instead, I train a linear model to predict, for example, temperature based on one of the other features as input.
-Then I measure how much variance the other feature in the linear model explains and take the square root. 
-If the other feature was numerical, then the result is equal to the absolute value of the standard Pearson correlation coefficient.
-But this model-based approach of "variance-explained" (also called ANOVA, which stands for ANalysis Of VAriance) works even if the other feature is categorical. 
-The "variance-explained" measure lies always between 0 (no association) and 1 (temperature can be perfectly predicted from the other feature).
-We calculate the explained variance of temperature, humidity and wind speed with all the other features.
-The higher the explained variance (correlation), the more (potential) problems with PD plots.
-The following figure visualizes how strongly the weather features are correlated with other features.
+Mari kita lihat korelasi antara suhu, kelembaban dan kecepatan angin dan semua fitur lainnya.
+Karena data juga berisi fitur kategoris, kami tidak dapat hanya menggunakan correlation coefficient Pearson, yang hanya berfungsi jika kedua fitur tersebut numerik.
+Sebagai gantinya, saya melatih model linier untuk memprediksi, misalnya, suhu berdasarkan salah satu fitur lain sebagai input.
+Kemudian saya mengukur berapa banyak varians yang dijelaskan oleh fitur lain dalam model linier dan mengambil akar kuadrat.
+Jika fitur lainnya adalah numerik, maka hasilnya sama dengan nilai absolut dari correlation coefficient Pearson standar.
+Tetapi pendekatan berbasis model dari "variance-explained" (juga disebut ANOVA, yang merupakan singkatan dari ANalysis Of VAriance) berfungsi bahkan jika fitur lainnya bersifat kategoris.
+Ukuran "yang dijelaskan varians" selalu terletak antara 0 (tidak ada hubungan) dan 1 (suhu dapat diprediksi dengan sempurna dari fitur lainnya).
+Kami menghitung varians suhu, kelembaban, dan kecepatan angin yang dijelaskan dengan semua fitur lainnya.
+Semakin tinggi varians yang dijelaskan (korelasi), semakin banyak (potensial) masalah dengan plot PD.
+Gambar berikut memvisualisasikan seberapa kuat fitur cuaca berkorelasi dengan fitur lainnya.
 
 ```{r ale-bike-cor, fig.cap = "The strength of the correlation between temperature, humidity and wind speed with all features, measured as the amount of variance explained, when we train a linear model with e.g. temperature to predict and season as feature. For temperature we observe -- not surprisingly -- a high correlation with season and month. Humidity correlates with weather situation."}
 
@@ -445,8 +438,8 @@ ggplot(combs, aes(x = x, y = y, fill = cor, label = lab)) +
   scale_fill_viridis("Variance\nexplained", begin = 0.2)
 ```
 
-This correlation analysis reveals that we may encounter problems with partial dependence plots, especially for the temperature feature.
-Well, see for yourself:
+Analisis korelasi ini mengungkapkan bahwa kita mungkin menghadapi masalah dengan partial dependence plot, terutama untuk fitur suhu.
+Nah, lihat sendiri:
 
 ```{r pdp-bike-compare, fig.cap = 'PDPs for temperature, humidity and wind speed. Compared to the ALE plots, the PDPs show a smaller decrease in predicted number of bikes for high temperature or high humidity. The PDP uses all data instances to calculate the effect of high temperatures, even if they are, for example, instances with the season "winter". The ALE plots are more reliable.'}
 pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp") 
@@ -459,10 +452,10 @@ p3 = pdp$plot() + scale_x_continuous('Wind speed') + scale_y_continuous('', limi
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
 ```
 
-Next, let us see ALE plots in action for a categorical feature.
-The month is a categorical feature for which we want to analyze the effect on the predicted number of bikes.
-Arguably, the months already have a certain order (January to December), but let us try to see what happens if we first reorder the categories by similarity and then compute the effects. 
-The months are ordered by the similarity of days of each month based on the other features, such as temperature or whether it is a holiday.
+Selanjutnya, mari kita lihat plot ALE beraksi untuk fitur kategoris.
+Bulan adalah fitur kategoris yang ingin kami analisis pengaruhnya terhadap prediksi jumlah sepeda.
+Boleh dibilang, bulan-bulan sudah memiliki urutan tertentu (Januari hingga Desember), tetapi mari kita coba melihat apa yang terjadi jika kita mengurutkan ulang kategori berdasarkan kesamaan dan kemudian menghitung efeknya.
+Bulan-bulan diurutkan berdasarkan kesamaan hari setiap bulan berdasarkan fitur lainnya, seperti suhu atau apakah itu hari libur.
 
 
 ```{r ale-bike-cat, fig.cap = 'ALE plot for the categorical feature month. The months are ordered by their similarity to each other, based on the distributions of the other features by month. We observe that January, March and April, but especially December and November, have a lower effect on the predicted number of rented bikes compared to the other months.'}
@@ -474,13 +467,13 @@ ggplot(alecat1$results) +
   scale_y_continuous("ALE of predicted bike rentals")
 ```
 
-Since many of the features are related to weather, the order of the months strongly reflects how similar the weather is between the months.
-All colder months are on the left side (February to April) and the warmer months on the right side (October to August). 
-Keep in mind that non-weather features have also been included in the similarity calculation, for example relative frequency of holidays has the same weight as the temperature for calculating the similarity between the months.
+Karena banyak fitur yang terkait dengan cuaca, urutan bulan sangat mencerminkan seberapa mirip cuaca di antara bulan-bulan tersebut.
+Semua bulan yang lebih dingin berada di sisi kiri (Februari hingga April) dan bulan-bulan yang lebih hangat di sisi kanan (Oktober hingga Agustus).
+Perlu diingat bahwa fitur non-cuaca juga telah dimasukkan dalam perhitungan kesamaan, misalnya frekuensi relatif hari libur memiliki bobot yang sama dengan suhu untuk menghitung kesamaan antar bulan.
 
-Next, we consider the second-order effect of humidity and temperature on the predicted number of bikes.
-Remember that the second-order effect is the additional interaction effect of the two features and does not include the main effects. 
-This means that, for example, you will not see the main effect that high humidity leads to a lower number of predicted bikes on average in the second-order ALE plot.
+Selanjutnya, kami mempertimbangkan efek orde kedua dari kelembaban dan suhu pada jumlah sepeda yang diprediksi.
+Ingat bahwa efek orde kedua adalah efek interaksi tambahan dari dua fitur dan tidak termasuk efek utama.
+Ini berarti bahwa, misalnya, Anda tidak akan melihat efek utama bahwa kelembaban tinggi menyebabkan jumlah sepeda yang diprediksi lebih rendah rata-rata di plot ALE orde kedua.
 
 ```{r ale-bike-2d, fig.cap = 'ALE plot for the 2nd-order effect of humidity and temperature on the predicted number of rented bikes. Lighter shade indicates an above average and darker shade a below average prediction when the main effects are already taken into account. The plot reveals an interaction between temperature and humidity: Hot and humid weather increases the prediction. In cold and humid weather an additional negative effect on the number of predicted bikes is shown.'}
 FeatureEffect$new(pred.bike, feature = c("hum", "temp"), method = "ale", grid.size = 40)$plot() +   
@@ -490,10 +483,10 @@ FeatureEffect$new(pred.bike, feature = c("hum", "temp"), method = "ale", grid.si
   scale_fill_viridis(option = "D")
 ```
 
-Keep in mind that both main effects of humidity and temperature say that the predicted number of bikes decreases in very hot and humid weather.
-In hot and humid weather, the combined effect of temperature and humidity is therefore not the sum of the main effects, but larger than the sum.
-To emphasize the difference between the pure second-order effect (the 2D ALE plot you just saw) and the total effect, let us look at the partial dependence plot.
-The PDP shows the total effect, which combines the mean prediction, the two main effects and the second-order effect (the interaction).
+Perlu diingat bahwa kedua efek utama dari kelembaban dan suhu mengatakan bahwa jumlah sepeda yang diprediksi berkurang dalam cuaca yang sangat panas dan lembab.
+Dalam cuaca panas dan lembab, efek gabungan dari suhu dan kelembaban oleh karena itu bukan jumlah dari efek utama, tetapi lebih besar dari jumlah tersebut.
+Untuk menekankan perbedaan antara efek orde kedua murni (plot ALE 2D yang baru saja Anda lihat) dan efek total, mari kita lihat partial dependence plot.
+PDP menunjukkan efek total, yang menggabungkan prediksi rata-rata, dua efek utama dan efek orde kedua (interaksi).
 
 ```{r pdp-bike-vs-ale-2D, fig.cap = "PDP of the total effect of temperature and humidity on the predicted number of bikes. The plot combines the main effect of each of the features and their interaction effect, as opposed to the 2D-ALE plot which only shows the interaction."}
 pdp = FeatureEffect$new(pred.bike, c("hum", "temp"), method = "pdp")
@@ -504,17 +497,17 @@ pdp$plot() +
   scale_fill_viridis(option = "D")
 ```
 
-If you are only interested in the interaction, you should look at the second-order effects, because the total effect mixes the main effects into the plot.
-But if you want to know the combined effect of the features, you should look at the total effect (which the PDP shows).
-For example, if you want to know the expected number of bikes at 30 degrees Celsius and 80 percent humidity, you can read it directly from the 2D PDP. 
-If you want to read the same from the ALE plots, you need to look at three plots: 
-The ALE plot for temperature, for humidity and for temperature + humidity and you also need to know the overall mean prediction.
-In a scenario where two features have no interaction, the total effect plot of the two features could be misleading because it probably shows a complex landscape, suggesting some interaction, but it is simply the product of the two main effects.
-The second-order effect would immediately show that there is no interaction.
+Jika Anda hanya tertarik pada interaksi, Anda harus melihat efek orde kedua, karena efek total mencampur efek utama ke dalam plot.
+Tetapi jika Anda ingin mengetahui efek gabungan dari fitur-fitur tersebut, Anda harus melihat efek totalnya (yang ditunjukkan oleh PDP).
+Misalnya, jika Anda ingin mengetahui perkiraan jumlah sepeda pada suhu 30 derajat Celcius dan kelembaban 80 persen, Anda dapat membacanya langsung dari PDP 2D.
+Jika Anda ingin membaca yang sama dari plot ALE, Anda perlu melihat tiga plot:
+Plot ALE untuk suhu, untuk kelembaban dan untuk suhu + kelembaban dan Anda juga perlu mengetahui prediksi rata-rata keseluruhan.
+Dalam skenario di mana dua fitur tidak memiliki interaksi, effect plot total dari dua fitur bisa menyesatkan karena mungkin menunjukkan lanskap yang kompleks, menunjukkan beberapa interaksi, tetapi itu hanyalah produk dari dua efek utama.
+Efek orde kedua akan segera menunjukkan bahwa tidak ada interaksi.
 
-Enough bicycles for now, let's turn to a classification task.
-We train a random forest to predict the probability of [cervical cancer](#cervical) based on risk factors.
-We visualize the accumulated local effects for two of the features:
+Cukup sepeda untuk saat ini, mari kita beralih ke tugas klasifikasi.
+Kami melatih random forest untuk memprediksi probabilitas [kanker serviks](#cervical) berdasarkan faktor risiko.
+Kami memvisualisasikan accumulated local effects untuk dua fitur:
 
 ```{r ale-cervical-1D, fig.cap = "ALE plots for the effect of age and years with hormonal contraceptives on the predicted probability of cervical cancer. For the age feature, the ALE plot shows that the predicted cancer probability is low on average up to age 40 and increases after that. The number of years with hormonal contraceptives is associated with a higher predicted cancer risk after 8 years."}
 data(cervical)
@@ -529,7 +522,7 @@ ale2 = FeatureEffect$new(pred.cervical, "Hormonal.Contraceptives..years.", metho
 gridExtra::grid.arrange(ale1, ale2, ncol = 2)
 ```
 
-Next, we look at the interaction between number of pregnancies and age.
+Selanjutnya, kita melihat interaksi antara jumlah kehamilan dan usia.
 
 
 ```{r ale-cervical-2d, fig.cap = 'ALE plot of the 2nd-order effect of number of pregnancies and age. The interpretation of the plot is a bit inconclusive, showing what seems like overfitting. For example, the plot shows an odd model behavior at age of 18-20 and more than 3 pregnancies (up to 5 percentage point increase in cancer probability). There are not many women in the data with this constellation of age and number of pregnancies (actual data are displayed as points), so the model is not severely penalized during the training for making mistakes for those women.'}
@@ -544,63 +537,63 @@ FeatureEffect$new(pred.cervical, c("Age", "Num.of.pregnancies"), grid.size = 30)
 
 ### Advantages
 
-**ALE plots are unbiased**, which means they still work when features are correlated.
-Partial dependence plots fail in this scenario because they marginalize over unlikely or even physically impossible combinations of feature values.
+**Plot ALE tidak bias**, yang berarti plot tersebut masih berfungsi saat fitur dikorelasikan.
+Partial dependence plot gagal dalam skenario ini karena mereka meminggirkan kombinasi nilai fitur yang tidak mungkin atau bahkan tidak mungkin secara fisik.
 
-**ALE plots are faster to compute** than PDPs and scale with O(n), since the largest possible number of intervals is the number of instances with one interval per instance.
-The PDP requires n times the number of grid points estimations. 
-For 20 grid points, PDPs require 20 times more predictions than the worst case ALE plot where as many intervals as instances are used.
+**Plot ALE lebih cepat dihitung** daripada PDP dan diskalakan dengan O(n), karena jumlah interval terbesar yang mungkin adalah jumlah instance dengan satu interval per instance.
+PDP membutuhkan n kali jumlah estimasi titik grid.
+Untuk 20 titik grid, PDP membutuhkan prediksi 20 kali lebih banyak daripada plot ALE kasus terburuk di mana interval sebanyak instance digunakan.
 
-The **interpretation of ALE plots is clear**: Conditional on a given value, the relative effect of changing the feature on the prediction can be read from the ALE plot. 
-**ALE plots are centered at zero**.
-This makes their interpretation nice, because the value at each point of the ALE curve is the difference to the mean prediction.
-**The 2D ALE plot only shows the interaction**: 
-If two features do not interact, the plot shows nothing.
+**Interpretasi plot ALE jelas**: Tergantung pada nilai yang diberikan, efek relatif dari perubahan fitur pada prediksi dapat dibaca dari plot ALE.
+**Plot ALE dipusatkan di nol**.
+Ini membuat interpretasi mereka bagus, karena nilai pada setiap titik kurva ALE adalah perbedaan dari prediksi rata-rata.
+**Plot ALE 2D hanya menunjukkan interaksi**:
+Jika dua fitur tidak berinteraksi, plot tidak menunjukkan apa-apa.
 
-All in all, in most situations I would **prefer ALE plots over PDPs**, because features are usually correlated to some extent.
+Secara keseluruhan, dalam kebanyakan situasi saya akan **lebih suka plot ALE daripada PDP**, karena fitur biasanya berkorelasi sampai batas tertentu.
 
 ### Disadvantages
 
-**ALE plots can become a bit shaky** (many small ups and downs) with a high number of intervals. 
-In this case, reducing the number of intervals makes the estimates more stable, but also smoothes out and hides some of the true complexity of the prediction model.
-There is **no perfect solution for setting the number of intervals**. 
-If the number is too small, the ALE plots might not be very accurate. 
-If the number is too high, the curve can become shaky.
+**Plot ALE bisa menjadi sedikit goyah** (banyak pasang surut kecil) dengan jumlah interval yang tinggi.
+Dalam hal ini, mengurangi jumlah interval membuat perkiraan lebih stabil, tetapi juga menghaluskan dan menyembunyikan beberapa kompleksitas model prediksi yang sebenarnya.
+**Tidak ada solusi sempurna untuk menyetel jumlah interval**.
+Jika jumlahnya terlalu kecil, plot ALE mungkin tidak terlalu akurat.
+Jika jumlahnya terlalu tinggi, kurva bisa menjadi goyah.
 
-Unlike PDPs, **ALE plots are not accompanied by ICE curves**.
-For PDPs, ICE curves are great because they can reveal heterogeneity in the feature effect, which means that the effect of a feature looks different for subsets of the data.
-For ALE plots you can only check per interval whether the effect is different between the instances, but each interval has different instances so it is not the same as ICE curves.
+Tidak seperti PDP, **plot ALE tidak disertai dengan kurva ICE**.
+Untuk PDP, kurva ICE sangat bagus karena dapat mengungkapkan heterogenitas dalam efek fitur, yang berarti bahwa efek fitur terlihat berbeda untuk subset data.
+Untuk plot ALE Anda hanya dapat memeriksa per interval apakah efeknya berbeda antara instance, tetapi setiap interval memiliki instance yang berbeda sehingga tidak sama dengan kurva ICE.
 
-**Second-order ALE estimates have a varying stability across the feature space, which is not visualized in any way.** 
-The reason for this is that each estimation of a local effect in a cell uses a different number of data instances.
-As a result, all estimates have a different accuracy (but they are still the best possible estimates).
-The problem exists in a less severe version for main effect ALE plots.
-The number of instances is the same in all intervals, thanks to the use of quantiles as grid, but in some areas there will be many short intervals and the ALE curve will consist of many more estimates.
-But for long intervals, which can make up a big part of the entire curve, there are comparatively fewer instances.
-This happened in the cervical cancer prediction ALE plot for high age for example.
+**Perkiraan ALE urutan kedua memiliki stabilitas yang bervariasi di seluruh ruang fitur, yang tidak divisualisasikan dengan cara apa pun.**
+Alasan untuk ini adalah bahwa setiap estimasi efek lokal dalam sel menggunakan jumlah instance data yang berbeda.
+Akibatnya, semua perkiraan memiliki akurasi yang berbeda (tetapi masih merupakan perkiraan terbaik).
+Masalahnya ada dalam versi yang kurang parah untuk plot ALE efek utama.
+Jumlah instance sama di semua interval, berkat penggunaan kuantil sebagai grid, tetapi di beberapa area akan ada banyak interval pendek dan kurva ALE akan terdiri dari lebih banyak perkiraan.
+Tetapi untuk interval yang panjang, yang dapat membentuk sebagian besar dari seluruh kurva, ada lebih sedikit contoh.
+Hal ini terjadi pada plot ALE prediksi kanker serviks untuk usia tinggi misalnya.
 
-**Second-order effect plots can be a bit annoying to interpret**, as you always have to keep the main effects in mind.
-It is tempting to read the heat maps as the total effect of the two features, but it is only the additional effect of the interaction.
-The pure second-order effect is interesting for discovering and exploring interactions, but for interpreting what the effect looks like, I think it makes more sense to integrate the main effects into the plot.
+**Effect plot urutan kedua bisa sedikit mengganggu untuk ditafsirkan**, karena Anda harus selalu mengingat efek utama.
+Sangat menggoda untuk membaca peta panas sebagai efek total dari dua fitur, tetapi itu hanya efek tambahan dari interaksi.
+Efek orde kedua murni menarik untuk menemukan dan mengeksplorasi interaksi, tetapi untuk menafsirkan seperti apa efeknya, saya pikir lebih masuk akal untuk mengintegrasikan efek utama ke dalam plot.
 
-The **implementation of ALE plots is much more complex** and less intuitive compared to partial dependence plots.
+**Penerapan plot ALE jauh lebih kompleks** dan kurang intuitif dibandingkan dengan partial dependence plot.
 
-Even though ALE plots are not biased in case of correlated features, **interpretation remains difficult when features are strongly correlated**.
-Because if they have a very strong correlation, it only makes sense to analyze the effect of changing both features together and not in isolation.
-This disadvantage is not specific to ALE plots, but a general problem of strongly correlated features.
+Meskipun plot ALE tidak bias dalam hal fitur berkorelasi, **interpretasi tetap sulit ketika fitur berkorelasi kuat**.
+Karena jika mereka memiliki korelasi yang sangat kuat, masuk akal untuk menganalisis efek perubahan kedua fitur secara bersamaan dan tidak secara terpisah.
+Kerugian ini tidak khusus untuk plot ALE, tetapi masalah umum fitur berkorelasi kuat.
 
-If the features are uncorrelated and computation time is not a problem, PDPs are slightly preferable because they are easier to understand and can be plotted along with ICE curves.
+Jika fitur tidak berkorelasi dan waktu komputasi tidak menjadi masalah, PDP sedikit lebih disukai karena lebih mudah dipahami dan dapat diplot bersama dengan kurva ICE.
 
 
-The list of disadvantages has become quite long, but do not be fooled by the number of words I use:
-As a rule of thumb: Use ALE instead of PDP.
+Daftar kekurangannya menjadi cukup panjang, tetapi jangan tertipu oleh jumlah kata yang saya gunakan:
+Sebagai aturan praktis: Gunakan ALE alih-alih PDP.
 
 
 ### Implementation and Alternatives
 
-Did I mention that [partial dependence plots](#pdp) and [individual conditional expectation curves](#ice) are an alternative? =) 
+Apakah saya menyebutkan bahwa [partial dependence plot](#pdp) dan [kurva individual conditional expectation](#ice) adalah alternatif? =)
 
-ALE plots are implemented in R and Python, once in the [ALEPlot R package](https://cran.r-project.org/web/packages/ALEPlot/index.html) by the inventor himself and once in the [iml package](https://cran.r-project.org/web/packages/iml/index.html) and in the [ALEPython package](https://github.com/blent-ai/ALEPython).  
+Plot ALE diimplementasikan dalam R dan Python, sekali dalam [paket ALEPlot R](https://cran.r-project.org/web/packages/ALEPlot/index.html) oleh penemu sendiri dan sekali di [iml package](https://cran.r-project.org/web/packages/iml/index.html) dan dalam [paket ALEPython](https://github.com/blent-ai/ALEPython).
 
 
 [^ALE]: Apley, Daniel W. "Visualizing the effects of predictor variables in black box supervised learning models." arXiv preprint arXiv:1612.08468 (2016).

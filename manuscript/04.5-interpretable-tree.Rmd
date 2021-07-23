@@ -7,19 +7,19 @@ set.seed(42)
 
 ## Decision Tree {#tree}
 
-Linear regression and logistic regression models fail in situations where the relationship between features and outcome is nonlinear or where features interact with each other.
-Time to shine for the decision tree!
-Tree based models split the data multiple times according to certain cutoff values in the features.
-Through splitting, different subsets of the dataset are created, with each instance belonging to one subset.
-The final subsets are called terminal or leaf nodes and the intermediate subsets are called internal nodes or split nodes.
-To predict the outcome in each leaf node, the average outcome of the training data in this node is used.
-Trees can be used for classification and regression.
+Linear regression dan logistic regression model gagal dalam situasi di mana hubungan antara fitur dan hasil tidak linier atau di mana fitur berinteraksi satu sama lain.
+Saatnya bersinar untuk decision trees!
+Model berbasis pohon membagi data beberapa kali sesuai dengan nilai batas tertentu dalam fitur.
+Melalui pemisahan, subset yang berbeda dari dataset dibuat, dengan setiap instance milik satu subset.
+Subset terakhir disebut node terminal atau daun dan subset perantara disebut node internal atau node split.
+Untuk memprediksi hasil di setiap simpul daun, hasil rata-rata dari data pelatihan di simpul ini digunakan.
+Pohon dapat digunakan untuk klasifikasi dan regresi.
 
-There are various algorithms that can grow a tree.
-They differ in the possible structure of the tree (e.g. number of splits per node), the criteria how to find the splits, when to stop splitting and how to estimate the simple models within the leaf nodes.
-The classification and regression trees (CART) algorithm is probably the most popular algorithm for tree induction.
-We will focus on CART, but the interpretation is similar for most other tree types.
-I recommend the book 'The Elements of Statistical Learning' (Friedman, Hastie and Tibshirani 2009)[^Hastie] for a more detailed introduction to CART.
+Ada berbagai algoritma yang dapat menumbuhkan pohon.
+Mereka berbeda dalam kemungkinan struktur pohon (misalnya jumlah perpecahan per node), kriteria bagaimana menemukan perpecahan, kapan harus berhenti membelah dan bagaimana memperkirakan model sederhana dalam node daun.
+Algoritma classification and regression trees (CART) mungkin merupakan algoritma yang paling populer untuk induksi pohon.
+Kami akan fokus pada CART, tetapi interpretasinya serupa untuk sebagian besar jenis pohon lainnya.
+Saya merekomendasikan buku 'The Elements of Statistical Learning' (Friedman, Hastie dan Tibshirani 2009)[^Hastie] untuk pengenalan yang lebih rinci tentang CART.
 
 ```{r tree-artificial, fig.cap="Decision tree with artificial data. Instances with a value greater than 3 for feature x1 end up in node 5. All other instances are assigned to node 3 or node 4, depending on whether values of feature x2  exceed 1.", dev.args = list(pointsize = 15)}
 library("partykit")
@@ -33,64 +33,64 @@ plot(ct, inner_panel = node_inner(ct, pval = FALSE, id = FALSE),
   terminal_panel = node_boxplot(ct, id = FALSE))
 ```
 
-The following formula describes the relationship between the outcome y and features x.
+Rumus berikut menjelaskan hubungan antara hasil y dan fitur x.
 
 $$\hat{y}=\hat{f}(x)=\sum_{m=1}^Mc_m{}I\{x\in{}R_m\}$$
 
-Each instance falls into exactly one leaf node (=subset $R_m$).
-$I_{\{x\in{}R_m\}}$ is the identity function that returns 1 if $x$ is in the subset $R_m$ and 0 otherwise.
-If an instance falls into a leaf node $R_l$, the predicted outcome is $\hat{y}=c_l$, where $c_l$ is the average of all training instances in leaf node $R_l$.
+Setiap instance jatuh ke dalam satu simpul daun (=subset $R_m$).
+$I_{\{x\in{}R_m\}}$ adalah fungsi identitas yang mengembalikan 1 jika $x$ ada dalam subset $R_m$ dan 0 sebaliknya.
+Jika sebuah instance jatuh ke dalam simpul daun $R_l$, hasil yang diprediksi adalah $\hat{y}=c_l$, di mana $c_l$ adalah rata-rata dari semua contoh pelatihan di simpul daun $R_l$.
 
-But where do the subsets come from?
-This is quite simple:
-CART takes a feature and determines which cut-off point minimizes the variance of y for a regression task or the Gini index of the class distribution of y for classification tasks.
-The variance tells us how much the y values in a node are spread around their mean value.
-The Gini index tells us how "impure" a node is, e.g. if all classes have the same frequency, the node is impure, if only one class is present, it is maximally pure.
-Variance and Gini index are minimized when the data points in the nodes have very similar values for y.
-As a consequence, the best cut-off point makes the two resulting subsets as different as possible with respect to the target outcome.
-For categorical features, the algorithm tries to create subsets by trying different groupings of categories.
-After the best cutoff per feature has been determined, the algorithm selects the feature for splitting that would result in the best partition in terms of the variance or Gini index and adds this split to the tree.
-The algorithm continues this search-and-split recursively in both new nodes until a stop criterion is reached.
-Possible criteria are:
-A minimum number of instances that have to be in a node before the split, or the minimum number of instances that have to be in a terminal node.
+Tapi dari mana subset itu berasal?
+Ini cukup sederhana:
+CART mengambil fitur dan menentukan titik potong mana yang meminimalkan varians y untuk tugas regresi atau indeks Gini dari distribusi kelas y untuk tugas klasifikasi.
+Varians memberi tahu kita berapa banyak nilai y dalam sebuah simpul tersebar di sekitar nilai rata-ratanya.
+Indeks Gini memberi tahu kita seberapa "tidak murni" sebuah node, mis. jika semua kelas memiliki frekuensi yang sama, simpul tersebut tidak murni, jika hanya satu kelas yang hadir, maka simpul tersebut murni maksimal.
+Varians dan indeks Gini diminimalkan ketika titik data dalam node memiliki nilai yang sangat mirip untuk y.
+Akibatnya, titik potong terbaik membuat dua himpunan bagian yang dihasilkan menjadi berbeda mungkin sehubungan dengan hasil target.
+Untuk fitur kategoris, algoritme mencoba membuat himpunan bagian dengan mencoba pengelompokan kategori yang berbeda.
+Setelah cutoff terbaik per fitur telah ditentukan, algoritme memilih fitur untuk pemisahan yang akan menghasilkan partisi terbaik dalam hal varians atau indeks Gini dan menambahkan pemisahan ini ke pohon.
+Algoritme melanjutkan pencarian dan pemisahan ini secara rekursif di kedua node baru hingga kriteria berhenti tercapai.
+Kriteria yang mungkin adalah:
+Jumlah minimum instance yang harus berada di sebuah node sebelum pemisahan, atau jumlah minimum instance yang harus berada di terminal node.
 
 ### Interpretation
 
-The interpretation is simple:
-Starting from the root node, you go to the next nodes and the edges tell you which subsets you are looking at.
-Once you reach the leaf node, the node tells you the predicted outcome.
-All the edges are connected by 'AND'.
+Interpretasinya sederhana:
+Mulai dari simpul akar, Anda pergi ke simpul berikutnya dan ujung-ujungnya memberi tahu Anda himpunan bagian mana yang Anda lihat.
+Setelah Anda mencapai simpul daun, simpul tersebut memberi tahu Anda hasil yang diprediksi.
+Semua tepi dihubungkan oleh 'DAN'.
 
-Template: If feature x is [smaller/bigger] than threshold c AND ... then the predicted outcome is the mean value of y of the instances in that node.
+Templat: Jika fitur x [lebih kecil/lebih besar] dari ambang c AND ... maka hasil yang diprediksi adalah nilai rata-rata y dari instance di simpul itu.
 
 **Feature importance**
 
-The overall importance of a feature in a decision tree can be computed in the following way:
-Go through all the splits for which the feature was used and measure how much it has reduced the variance or Gini index compared to the parent node.
-The sum of all importances is scaled to 100.
-This means that each importance can be interpreted as share of the overall model importance.
+Pentingnya keseluruhan fitur dalam decision trees dapat dihitung dengan cara berikut:
+Telusuri semua pemisahan yang menggunakan fitur tersebut dan ukur seberapa besar penurunan varians atau indeks Gini dibandingkan dengan simpul induk.
+Jumlah semua kepentingan diskalakan menjadi 100.
+Ini berarti bahwa setiap kepentingan dapat diinterpretasikan sebagai bagian dari kepentingan model secara keseluruhan.
 
-**Tree decomposition**
+**Dekomposisi pohon**
 
-Individual predictions of a decision tree can be explained by decomposing the decision path into one component per feature.
-We can track a decision through the tree and explain a prediction by the contributions  added at each decision node.
+Prediksi individu dari decision trees dapat dijelaskan dengan menguraikan jalur keputusan menjadi satu komponen per fitur.
+Kita dapat melacak keputusan melalui pohon dan menjelaskan prediksi dengan kontribusi yang ditambahkan pada setiap simpul keputusan.
 
-The root node in a decision tree is our starting point.
-If we were to use the root node to make predictions, it would predict the mean of the outcome of the training data.
-With the next split, we either subtract or add a term to this sum, depending on the next node in the path.
-To get to the final prediction, we have to follow the path of the data instance that we want to explain and keep adding to the formula.
+Node akar dalam decision trees adalah titik awal kami.
+Jika kita menggunakan simpul akar untuk membuat prediksi, itu akan memprediksi rata-rata dari hasil data pelatihan.
+Dengan pembagian berikutnya, kami mengurangi atau menambahkan istilah ke jumlah ini, tergantung pada simpul berikutnya di jalur.
+Untuk sampai ke prediksi akhir, kita harus mengikuti jalur instance data yang ingin kita jelaskan dan terus menambahkan ke rumus.
 
 $$\hat{f}(x)=\bar{y}+\sum_{d=1}^D\text{split.contrib(d,x)}=\bar{y}+\sum_{j=1}^p\text{feat.contrib(j,x)}$$
 
-The prediction of an individual instance is the mean of the target outcome plus the sum of all contributions of the D splits that occur between the root node and the terminal node where the instance ends up.
-We are not interested in the split contributions though, but in the feature contributions.
-A feature might be used for more than one split or not at all.
-We can add the contributions for each of the p features and get an interpretation of how much each feature has contributed to a prediction.
+Prediksi instance individu adalah rata-rata dari hasil target ditambah jumlah semua kontribusi dari D split yang terjadi antara node root dan node terminal tempat instance berakhir.
+Kami tidak tertarik pada kontribusi split, tetapi pada feature contribution.
+Sebuah fitur dapat digunakan untuk lebih dari satu split atau tidak sama sekali.
+Kita dapat menambahkan kontribusi untuk setiap p fitur dan mendapatkan interpretasi seberapa besar kontribusi setiap fitur terhadap prediksi.
 
 ### Example
-Let us have another look at the [bike rental data](#bike-data).
-We want to predict the number of rented bikes on a certain day with a decision tree.
-The learned tree looks like this:
+Mari kita lihat lagi [data sewa sepeda](#bike-data).
+Kami ingin memprediksi jumlah sepeda yang disewa pada hari tertentu dengan decision trees.
+Pohon yang dipelajari terlihat seperti ini:
 
 ```{r tree-example, fig.cap="Regression tree fitted on the bike rental data. The maximum allowed depth for the tree was set to 2. The trend feature (days since 2011) and the temperature (temp) have been selected for the splits. The boxplots show the distribution of bicycle counts in the terminal node.", dev.args = list(pointsize = 13)}
 data(bike)
@@ -104,15 +104,15 @@ plot(xp, digits = 0, id = FALSE, terminal_panel = node_boxplot(xp, id = FALSE),
   inner_panel = node_inner(xp, id = FALSE, pval = FALSE)
   )
 ```
-The first split and one of the second splits were performed with the trend feature, which counts the days since  data collection began and covers the trend that the bike rental service has become more popular over time.
-For days prior to the 105th day, the predicted number of bicycles is around 1800, between the 106th and 430th day it is around 3900.
-For days after the 430th day, the prediction is either 4600 (if temperature is below 12 degrees) or 6600 (if temperature is above 12 degrees).
+Split pertama dan split kedua dilakukan dengan fitur tren, yang menghitung hari sejak pengumpulan data dimulai dan mencakup tren bahwa layanan penyewaan sepeda menjadi lebih populer dari waktu ke waktu.
+Untuk hari sebelum hari ke 105, prediksi jumlah sepeda sekitar 1800, antara hari ke 106 dan 430 sekitar 3900.
+Untuk hari setelah hari ke 430, prediksinya adalah 4600 (jika suhu di bawah 12 derajat) atau 6600 (jika suhu di atas 12 derajat).
 
-The feature importance tells us how much a feature helped to improve the purity of all nodes.
-Here, the variance was used, since predicting bicycle rentals is a regression task.
+Feature importance memberi tahu kita seberapa banyak fitur membantu meningkatkan kemurnian semua node.
+Di sini, varians digunakan, karena memprediksi persewaan sepeda adalah tugas regresi.
 
-The visualized tree shows that both temperature and time trend were used for the splits, but does not quantify which feature was more important.
-The feature importance measure shows that the time trend is far more important than temperature.
+Pohon yang divisualisasikan menunjukkan bahwa tren suhu dan waktu digunakan untuk pemisahan, tetapi tidak mengukur fitur mana yang lebih penting.
+Ukuran feature importance menunjukkan bahwa tren waktu jauh lebih penting daripada suhu.
 
 ```{r tree-importance, fig.cap = "Importance of the features measured by how much the node purity is improved on average."}
 imp = round(100 * x$variable.importance / sum(x$variable.importance),0)
@@ -124,62 +124,62 @@ ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) +
 
 ### Advantages
 
-The tree structure is ideal for **capturing interactions** between features in the data.
+Struktur pohon ideal untuk **menangkap interaksi** antar fitur dalam data.
 
-The data ends up in **distinct groups** that are often easier to understand than points on a multi-dimensional hyperplane as in linear regression.
-The interpretation is arguably pretty simple.
+Data berakhir dalam **grup berbeda** yang seringkali lebih mudah dipahami daripada titik pada hyperplane multidimensi seperti pada linear regression.
+Penafsirannya bisa dibilang cukup sederhana.
 
-The tree structure also has a **natural visualization**, with its nodes and edges.
+Struktur pohon juga memiliki **visualisasi alami**, dengan simpul dan tepinya.
 
-Trees **create good explanations** as defined in the [chapter on "Human-Friendly Explanations"](#good-explanation).
-The tree structure automatically invites to think about predicted values for individual instances as counterfactuals:
-"If a feature had been greater / smaller than the split point, the prediction would have been y1 instead of y2."
-The tree explanations are contrastive, since you can always compare the prediction of an instance with relevant "what if"-scenarios (as defined by the tree) that are simply the other leaf nodes of the tree.
-If the tree is short, like one to three splits deep, the resulting explanations are selective.
-A tree with a depth of three requires a maximum of three features and split points to create the explanation for the prediction of an individual instance.
-The truthfulness of the prediction depends on the predictive performance of the tree.
-The explanations for short trees are very simple and general, because for each split the instance falls into either one or the other leaf, and binary decisions are easy to understand.
+Pohon **membuat penjelasan yang baik** seperti yang didefinisikan dalam [bab tentang "Penjelasan yang Ramah Manusia"](#good-explanation).
+Struktur pohon secara otomatis mengundang untuk berpikir tentang nilai yang diprediksi untuk masing-masing contoh sebagai kontrafaktual:
+"Jika fitur lebih besar / lebih kecil dari titik split, prediksinya akan menjadi y1 bukan y2."
+Penjelasan pohon bersifat kontras, karena Anda selalu dapat membandingkan prediksi instance dengan skenario "bagaimana jika" yang relevan (sebagaimana didefinisikan oleh pohon) yang hanya merupakan simpul daun lain dari pohon.
+Jika pohonnya pendek, seperti satu hingga tiga terbelah, penjelasan yang dihasilkan bersifat selektif.
+Pohon dengan kedalaman tiga membutuhkan maksimal tiga fitur dan titik pisah untuk membuat penjelasan untuk prediksi masing-masing instance.
+Kebenaran prediksi tergantung pada kinerja prediksi pohon.
+Penjelasan untuk pohon pendek sangat sederhana dan umum, karena untuk setiap pemisahan, instance jatuh ke salah satu atau daun lainnya, dan keputusan biner mudah dipahami.
 
-There is no need to transform features. 
-In linear models, it is sometimes necessary to take the logarithm of a feature. 
-A decision tree works equally well with any monotonic transformation of a feature.
+Tidak perlu mengubah fitur.
+Dalam model linier, terkadang perlu untuk mengambil logaritma dari sebuah fitur.
+Sebuah decision trees bekerja sama baiknya dengan transformasi monoton dari sebuah fitur.
 
 
 
 ### Disadvantages
 
-**Trees fail to deal with linear relationships**.
-Any linear relationship between an input feature and the outcome has to be approximated by splits, creating a step function.
-This is not efficient.
+**Trees gagal menangani hubungan linier**.
+Setiap hubungan linier antara fitur input dan hasilnya harus didekati dengan pemisahan, membuat fungsi langkah.
+Ini tidak efisien.
 
-This goes hand in hand with **lack of smoothness**.
-Slight changes in the input feature can have a big impact on the predicted outcome, which is usually not desirable.
-Imagine a tree that predicts the value of a house and the tree uses the size of the house as one of the split feature.
-The split occurs at 100.5 square meters.
-Imagine user of a house price estimator using your decision tree model:
-They measure their house, come to the conclusion that the house has 99 square meters, enter it into the price calculator and get a prediction of 200 000 Euro.
-The users notice that they have forgotten to measure a small storage room with 2 square meters.
-The storage room has a sloping wall, so they are not sure whether they can count all of the area or only half of it.
-So they decide to try both 100.0 and 101.0 square meters.
-The results: The price calculator outputs 200 000 Euro and 205 000 Euro, which is rather unintuitive, because there has been no change from 99 square meters to 100.
+Ini sejalan dengan **kurangnya kelancaran**.
+Perubahan kecil pada fitur input dapat berdampak besar pada hasil yang diprediksi, yang biasanya tidak diinginkan.
+Bayangkan sebuah pohon yang memprediksi nilai sebuah rumah dan pohon tersebut menggunakan ukuran rumah sebagai salah satu fitur split.
+Perpecahan terjadi pada 100,5 meter persegi.
+Bayangkan pengguna penaksir harga rumah menggunakan model decision trees Anda:
+Mereka mengukur rumah mereka, sampai pada kesimpulan bahwa rumah itu memiliki luas 99 meter persegi, memasukkannya ke dalam kalkulator harga dan mendapatkan prediksi 200.000 Euro.
+Pengguna menyadari bahwa mereka lupa mengukur ruang penyimpanan kecil seluas 2 meter persegi.
+Ruang penyimpanan memiliki dinding miring, sehingga mereka tidak yakin apakah mereka dapat menghitung seluruh area atau hanya setengahnya.
+Jadi mereka memutuskan untuk mencoba keduanya 100,0 dan 101,0 meter persegi.
+Hasil: Kalkulator harga menghasilkan 200.000 Euro dan 205.000 Euro, yang agak tidak intuitif, karena tidak ada perubahan dari 99 meter persegi menjadi 100.
 
-Trees are also quite **unstable**.
-A few changes in the training dataset can create a completely different tree.
-This is because each split depends on the parent split.
-And if a different feature is selected as the first split feature, the entire tree structure changes.
-It does not create confidence in the model if the structure changes so easily.
+Pohon juga cukup **tidak stabil**.
+Beberapa perubahan dalam set data pelatihan dapat membuat pohon yang sama sekali berbeda.
+Ini karena setiap pemisahan tergantung pada pemisahan induk.
+Dan jika fitur yang berbeda dipilih sebagai fitur pemisahan pertama, seluruh struktur pohon akan berubah.
+Itu tidak menciptakan kepercayaan pada model jika strukturnya berubah begitu mudah.
 
-Decision trees are very interpretable -- as long as they are short.
-**The number of terminal nodes increases quickly with depth.**
-The more terminal nodes and the deeper the tree, the more difficult it becomes to understand the decision rules of a tree.
-A depth of 1 means 2 terminal nodes.
-Depth of 2 means max. 4 nodes. 
-Depth of 3 means max. 8 nodes.
-The maximum number of terminal nodes in a tree is 2 to the power of the depth.
+decision trees sangat dapat diinterpretasikan -- asalkan pendek.
+**Jumlah node terminal meningkat dengan cepat seiring dengan kedalaman.**
+Semakin banyak simpul terminal dan semakin dalam pohon, semakin sulit untuk memahami decision rules pohon.
+Kedalaman 1 berarti 2 simpul terminal.
+Kedalaman 2 berarti maks. 4 node.
+Kedalaman 3 berarti maks. 8 node.
+Jumlah maksimum node terminal di pohon adalah 2 pangkat kedalaman.
 
 ### Software
 
-For the examples in this chapter, I used the `rpart` R package that implements CART (classification and regression trees).
-CART is implemented in many programming languages, including [Python](https://scikit-learn.org/stable/modules/tree.html).
-Arguably, CART is a pretty old and somewhat outdated algorithm and there are some interesting new algorithms for fitting trees.
-You can find an overview of some R packages for decision trees in the [Machine Learning and Statistical Learning CRAN Task View](https://cran.r-project.org/web/views/MachineLearning.html) under the keyword "Recursive Partitioning".
+Untuk contoh dalam bab ini, saya menggunakan paket `rpart` R yang mengimplementasikan CART (pohon klasifikasi dan regresi).
+CART diimplementasikan dalam banyak bahasa pemrograman, termasuk [Python](https://scikit-learn.org/stable/modules/tree.html).
+Bisa dibilang, CART adalah algoritma yang cukup tua dan agak ketinggalan jaman dan ada beberapa algoritma baru yang menarik untuk memasang pohon.
+Anda dapat menemukan ikhtisar beberapa paket R untuk decision trees di [Machine Learning and Statistical Learning CRAN Task View](https://cran.r-project.org/web/views/MachineLearning.html) di bawah kata kunci "Recursive Partitioning".

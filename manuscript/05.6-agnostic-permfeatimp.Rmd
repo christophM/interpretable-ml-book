@@ -7,35 +7,35 @@ set.seed(42)
 
 ## Permutation Feature Importance {#feature-importance}
 
-Permutation feature importance measures the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome. 
+Permutation feature importance mengukur peningkatan kesalahan prediksi model setelah kami mengubah nilai fitur, yang memutuskan hubungan antara fitur dan hasil sebenarnya.
 
 ### Theory
 
-The concept is really straightforward: 
-We measure the importance of a feature by calculating the increase in the model's prediction error after permuting the feature.
-A feature is "important" if shuffling its values increases the model error, because in this case the model relied on the feature for the prediction.
-A feature is "unimportant" if shuffling its values leaves the model error unchanged, because in this case the model ignored the feature for the prediction.
-The permutation feature importance measurement was introduced by Breiman (2001)[^Breiman2001] for random forests.
-Based on this idea, Fisher, Rudin, and Dominici (2018)[^Fisher2018] proposed a model-agnostic version of the feature importance and called it model reliance. 
-They also introduced more advanced ideas about feature importance, for example a (model-specific) version that takes into account that many prediction models may predict the data well.
-Their paper is worth reading.
+Konsepnya sangat mudah:
+Kami mengukur feature importance dengan menghitung peningkatan kesalahan prediksi model setelah mengubah fitur tersebut.
+Sebuah fitur "penting" jika mengacak nilainya meningkatkan kesalahan model, karena dalam hal ini model mengandalkan fitur untuk prediksi.
+Sebuah fitur dikatakan "tidak penting" jika mengacak nilainya membuat kesalahan model tidak berubah, karena dalam kasus ini model mengabaikan fitur untuk prediksi.
+Pengukuran permutation feature importance diperkenalkan oleh Breiman (2001)[^Breiman2001] untuk random forest.
+Berdasarkan ide ini, Fisher, Rudin, dan Dominici (2018)[^Fisher2018] mengusulkan versi model-agnostic dari feature importance dan menyebutnya model ketergantungan.
+Mereka juga memperkenalkan gagasan yang lebih maju tentang feature importance, misalnya versi (model-specific) yang memperhitungkan bahwa banyak model prediksi dapat memprediksi data dengan baik.
+Makalah mereka layak dibaca.
 
-**The permutation feature importance algorithm based on Fisher, Rudin, and Dominici (2018):**
+**Algoritme permutation feature importance berdasarkan Fisher, Rudin, dan Dominici (2018):**
 
-Input: Trained model f, feature matrix X, target vector y, error measure L(y,f).
+Input: Model terlatih f, matriks fitur X, vektor target y, ukuran kesalahan L(y,f).
 
-1. Estimate the original model error e^orig^ = L(y, f(X))  (e.g. mean squared error)
-2. For each feature j = 1,...,p do:
-    - Generate feature matrix X^perm^ by permuting feature j in the data X. This breaks the association between feature j and true outcome y.
-    - Estimate error e^perm^ = L(Y,f(X^perm^)) based on the predictions of the permuted data.
-    - Calculate permutation feature importance FI^j^= e^perm^/e^orig^. Alternatively, the difference can be used: FI^j^ = e^perm^ - e^orig^
-3. Sort features by descending FI.
+1. Perkirakan galat model asli e^orig^ = L(y, f(X)) (mis., mean squared error)
+2. Untuk setiap fitur j = 1,...,p lakukan:
+    - Hasilkan matriks fitur X^perm^ dengan mengubah fitur j dalam data X. Ini memutuskan hubungan antara fitur j dan hasil sebenarnya y.
+    - Estimasi kesalahan e^perm^ = L(Y,f(X^perm^)) berdasarkan prediksi data yang diizinkan.
+    - Hitung permutation feature importance FI^j^= e^perm^/e^orig^. Atau, perbedaannya dapat digunakan: FI^j^ = e^perm^ - e^orig^
+3. Urutkan fitur berdasarkan FI turun.
 
-Fisher, Rudin, and Dominici (2018) suggest in their paper to split the dataset in half and swap the values of feature j of the two halves instead of permuting feature j. 
-This is exactly the same as permuting feature j, if you think about it. 
-If you want a more accurate estimate, you can estimate the error of permuting feature j by pairing each instance with the value of feature j of each other instance (except with itself). 
-This gives you a dataset of size `n(n-1)` to estimate the permutation error, and it takes a large amount of computation time. 
-I can only recommend using the `n(n-1)` -method if you are serious about getting extremely accurate estimates.
+Fisher, Rudin, dan Dominici (2018) menyarankan dalam makalah mereka untuk membagi dataset menjadi dua dan menukar nilai fitur j dari dua bagian alih-alih mengubah fitur j.
+Ini persis sama dengan mengubah fitur j, jika Anda memikirkannya.
+Jika Anda menginginkan perkiraan yang lebih akurat, Anda dapat memperkirakan kesalahan permutasi fitur j dengan memasangkan setiap instance dengan nilai fitur j dari setiap instance lainnya (kecuali dengan dirinya sendiri).
+Ini memberi Anda kumpulan data berukuran `n(n-1)` untuk memperkirakan kesalahan permutasi, dan ini membutuhkan banyak waktu komputasi.
+Saya hanya dapat merekomendasikan penggunaan metode `n(n-1)` jika Anda serius ingin mendapatkan perkiraan yang sangat akurat.
 
 
 ### Should I Compute Importance on Training or Test Data? {#feature-importance-data}
@@ -66,21 +66,21 @@ perf2 = mlr::performance(pred2, measures = list(mlr::mae))
 ```
 
 
-*tl;dr: I do not have a definite answer.*  
+*tl;dr: Saya tidak punya jawaban pasti.*
 
-Answering the question about training or test data touches the fundamental question of what feature importance is.
-The best way to understand the difference between feature importance based on training vs. based on test data is an "extreme" example.
-I trained a support vector machine to predict a continuous, random target outcome given 50 random features (200 instances).
-By "random" I mean that the target outcome is independent of the 50 features.
-This is like predicting tomorrow's temperature given the latest lottery numbers.
-If the model "learns" any relationships, then it overfits.
-And in fact, the SVM did overfit on the training data.
-The mean absolute error (short: mae) for the training data is `r round(perf1,2)` and for the test data `r round(perf2,2)`, which is also the error of the best possible model that always predicts the mean outcome of 0 (mae of  `r round(mean(abs(y2)),2)`).
-In other words, the SVM model is garbage.
-What values for the feature importance would you expect for the 50 features of this overfitted SVM?
-Zero because none of the features contribute to improved performance on unseen test data?
-Or should the importances reflect how much the model depends on each of the features, regardless whether the learned relationships generalize to unseen data?
-Let us take a look at how the distributions of feature importances for training and test data differ.
+Menjawab pertanyaan tentang data pelatihan atau pengujian menyentuh pertanyaan mendasar tentang feature importance.
+Cara terbaik untuk memahami perbedaan antara feature importance berdasarkan pelatihan vs. berdasarkan data pengujian adalah contoh "ekstrim".
+Saya melatih support vector machine untuk memprediksi hasil target acak yang berkelanjutan dengan 50 fitur acak (200 contoh).
+Yang saya maksud dengan "acak" adalah hasil target tidak bergantung pada 50 fitur.
+Ini seperti memprediksi suhu besok mengingat nomor lotere terbaru.
+Jika model "mempelajari" hubungan apa pun, maka model itu terlalu cocok.
+Dan faktanya, SVM melakukan overfit pada data pelatihan.
+Kesalahan absolut rata-rata (singkat: mae) untuk data pelatihan adalah `r round(perf1,2)` dan untuk data uji `r round(perf2,2)`, yang juga merupakan kesalahan model terbaik yang selalu memprediksi hasil rata-rata dari 0 (mae dari `r round(mean(abs(y2)),2)`).
+Dengan kata lain, model SVM adalah sampah.
+Nilai apa untuk feature importance yang Anda harapkan untuk 50 fitur dari SVM yang dilebih-lebihkan ini?
+Nol karena tidak ada fitur yang berkontribusi pada peningkatan kinerja pada data pengujian yang tidak terlihat?
+Atau haruskah kepentingan mencerminkan seberapa besar model bergantung pada masing-masing fitur, terlepas dari apakah hubungan yang dipelajari digeneralisasikan ke data yang tidak terlihat?
+Mari kita lihat bagaimana distribusi feature importance untuk data pelatihan dan pengujian berbeda.
 
 ```{r feature-imp-sim, fig.cap="Distributions of feature importance values by data type. An SVM was trained on a regression dataset with 50 random features and 200 instances. The SVM overfits the data: Feature importance based on the training data shows many important features. Computed on unseen test data, the feature importances are close to a ratio of one (=unimportant)."}
 pred = Predictor$new(mod, cbind(X, y = y), y = "y")
@@ -99,63 +99,63 @@ ggplot(imp.dat) + geom_boxplot(aes(x = dat.type, y = importance)) +
   scale_x_discrete("")
 ```
 
-It is unclear to me which of the two results is more desirable.
-So I will try to make a case for both versions and let you decide for yourself.
+Tidak jelas bagi saya mana dari dua hasil yang lebih diinginkan.
+Jadi saya akan mencoba membuat kasus untuk kedua versi dan membiarkan Anda memutuskan sendiri.
 
-**The case for test data**
+**Kasus untuk data uji**
 
-This is a simple case: 
-Model error estimates based on training data are garbage -> feature importance relies on model error estimates -> feature importance based on training data is garbage.  
-Really, it is one of the first things you learn in machine learning:
-If you measure the model error (or performance) on the same data on which the model was trained, the measurement is usually too optimistic, which means that the model seems to work much better than it does in reality.
-And since the permutation feature importance relies on measurements of the model error, we should use unseen test data.
-The feature importance based on training data makes us mistakenly believe that features are important for the predictions, when in reality the model was just overfitting and the features were not important at all.
+Ini adalah kasus sederhana:
+Estimasi kesalahan model berdasarkan data pelatihan adalah sampah feature importance bergantung pada perkiraan kesalahan model feature importance berdasarkan data pelatihan adalah sampah.
+Sungguh, ini adalah salah satu hal pertama yang Anda pelajari dalam machine learning:
+Jika Anda mengukur kesalahan model (atau kinerja) pada data yang sama di mana model dilatih, pengukuran biasanya terlalu optimis, yang berarti bahwa model tersebut tampaknya bekerja jauh lebih baik daripada kenyataannya.
+Dan karena permutation feature importance bergantung pada pengukuran kesalahan model, kita harus menggunakan data uji yang tidak terlihat.
+Feature importance berdasarkan data pelatihan membuat kita keliru percaya bahwa feature importance untuk prediksi, padahal pada kenyataannya model hanya overfitting dan fitur tidak penting sama sekali.
 
-**The case for training data**
+**Kasus untuk data pelatihan**
 
 ```{r garbage-svm-mvp}
 max.imp = imp$results[imp$results$importance == max(imp$results$importance),]
 ```
 
-The arguments for using training data are somewhat more difficult to formulate, but are IMHO just as compelling as the arguments for using test data.
-We take another look at our garbage SVM.
-Based on the training data, the most important feature was `r max.imp$feature`.
-Let us look at a partial dependence plot of feature `r max.imp$feature`.
-The partial dependence plot shows how the model output changes based on changes of the feature and does not rely on the generalization error.
-It does not matter whether the PDP is computed with training or test data.
+Argumen untuk menggunakan data pelatihan agak lebih sulit untuk dirumuskan, tetapi IMHO sama menariknya dengan argumen untuk menggunakan data uji.
+Kami melihat lagi SVM sampah kami.
+Berdasarkan data pelatihan, fitur yang paling penting adalah `r max.imp$feature`.
+Mari kita lihat partial dependence plot fitur `r max.imp$feature`.
+Partial dependence plot menunjukkan bagaimana output model berubah berdasarkan perubahan fitur dan tidak bergantung pada kesalahan generalisasi.
+Tidak masalah apakah PDP dihitung dengan data pelatihan atau uji.
 
 ```{r garbage-svm-pdp, fig.cap=sprintf("PDP of feature %s, which is the most important feature according to the feature importance based on the training data. The plot shows how the SVM depends on this feature to make predictions", max.imp$feature)}
 pdp = FeatureEffect$new(pred2, max.imp$feature, method = "pdp")
 pdp$plot()
 ```
 
-The plot clearly shows that the SVM has learned to rely on feature `r max.imp$feature` for its predictions, but according to the feature importance based on the test data (`r round(imp2$results[imp2$results$feature == max.imp$feature, "importance"], 2)`), it is not important.
-Based on the training data, the importance is `r round(max.imp$importance, 2)`, reflecting that the model has learned to use this feature.
-Feature importance based on the training data tells us which features are important for the model in the sense that it depends on them for making predictions.
+Plot dengan jelas menunjukkan bahwa SVM telah belajar untuk mengandalkan fitur `r max.imp$feature` untuk prediksinya, tetapi menurut feature importance berdasarkan data pengujian (`r round(imp2$results[imp2 $results$feature == max.imp$feature, "importance"], 2)`), tidak penting.
+Berdasarkan data pelatihan, kepentingannya adalah `r round(max.imp$importance, 2)`, yang mencerminkan bahwa model telah belajar menggunakan fitur ini.
+Feature importance berdasarkan data pelatihan memberi tahu kita fitur mana yang penting untuk model dalam arti bahwa fitur tersebut bergantung pada fitur tersebut untuk membuat prediksi.
 
-As part of the case for using training data, I would like to introduce an argument against test data.
-In practice, you want to use all your data to train your model to get the best possible model in the end.
-This means no unused test data is left to compute the feature importance.
-You have the same problem when you want to estimate the generalization error of your model.
-If you would use (nested) cross-validation for the feature importance estimation, you would have the problem that the feature importance is not calculated on the final model with all the data, but on models with subsets of the data that might behave differently.
+Sebagai bagian dari kasus penggunaan data pelatihan, saya ingin memperkenalkan argumen yang menentang data pengujian.
+Dalam praktiknya, Anda ingin menggunakan semua data Anda untuk melatih model Anda untuk mendapatkan model terbaik pada akhirnya.
+Ini berarti tidak ada data uji yang tidak digunakan yang tersisa untuk menghitung feature importance.
+Anda memiliki masalah yang sama ketika Anda ingin memperkirakan kesalahan generalisasi model Anda.
+Jika Anda akan menggunakan validasi silang (bersarang) untuk estimasi feature importance, Anda akan memiliki masalah bahwa feature importance tidak dihitung pada model akhir dengan semua data, tetapi pada model dengan himpunan bagian dari data yang mungkin berperilaku berbeda.
 
-In the end, you need to decide whether you want to know how much the model relies on each feature for making predictions (-> training data) or how much the feature contributes to the performance of the model on unseen data (-> test data).
-To the best of my knowledge, there is no research addressing the question of training vs. test data.
-It will require more thorough examination than my "garbage-SVM" example.
-We need more research and more experience with these tools to gain a better understanding.
+Pada akhirnya, Anda perlu memutuskan apakah Anda ingin mengetahui seberapa besar model bergantung pada setiap fitur untuk membuat prediksi (-> data pelatihan) atau seberapa besar fitur berkontribusi pada kinerja model pada data yang tidak terlihat (-> data uji ).
+Sejauh pengetahuan saya, tidak ada penelitian yang membahas pertanyaan pelatihan vs. data uji.
+Ini akan membutuhkan pemeriksaan yang lebih menyeluruh daripada contoh "garbage-SVM" saya.
+Kami membutuhkan lebih banyak penelitian dan lebih banyak pengalaman dengan alat-alat ini untuk mendapatkan pemahaman yang lebih baik.
 
-Next, we will look at some examples.
-I based the importance computation on the training data, because I had to choose one and using the training data needed a few lines less code.
+Selanjutnya, kita akan melihat beberapa contoh.
+Saya mendasarkan perhitungan pentingnya pada data pelatihan, karena saya harus memilih satu dan menggunakan data pelatihan membutuhkan beberapa baris kode lebih sedikit.
 
 ### Example and Interpretation
 
-I show examples for classification and regression. 
+Saya menunjukkan contoh untuk klasifikasi dan regresi.
 
-**Cervical cancer (classification)**
+**Kanker serviks (klasifikasi)**
 
-We fit a random forest model to predict [cervical cancer](#cervical).
-We measure the error increase by 1-AUC (1 minus the area under the ROC curve).
-Features associated with a model error increase by a factor of 1 (= no change) were not important for predicting cervical cancer.
+Kami menyesuaikan model random forest untuk memprediksi [kanker serviks](#cervical).
+Kami mengukur peningkatan kesalahan sebesar 1-AUC (1 dikurangi area di bawah kurva ROC).
+Fitur yang terkait dengan peningkatan kesalahan model dengan faktor 1 (= tidak ada perubahan) tidak penting untuk memprediksi kanker serviks.
 
 ```{r}
 library('mlr')
@@ -178,12 +178,12 @@ plot(importance) +
 ```
 
 
-The feature with the highest importance was `r imp.dat[1, 'feature']` associated with an error increase of `r round(imp.dat[1,'importance'], 2)` after permutation.
+Fitur dengan kepentingan tertinggi adalah `r imp.dat[1, 'feature']` terkait dengan peningkatan kesalahan `r round(imp.dat[1,'importance'], 2)` setelah permutasi .
 
-**Bike sharing (regression)**
+**Berbagi sepeda (regresi)**
 
-We fit a support vector machine model to predict [the number of rented bikes](#bike-data), given weather conditions and calendar information.
-As error measurement we use the mean absolute error.
+Kami menyesuaikan model support vector machine untuk memprediksi [jumlah sepeda yang disewa](#bike-data), dengan kondisi cuaca dan informasi kalender.
+Sebagai pengukuran kesalahan, kami menggunakan kesalahan absolut rata-rata.
 
 
 ```{r}
@@ -207,87 +207,87 @@ plot(importance) +
 
 ### Advantages
 
-**Nice interpretation**: Feature importance is the increase in model error when the feature's information is destroyed.
+**Interpretasi yang bagus**: feature importance adalah peningkatan kesalahan model ketika informasi fitur dihancurkan.
 
-Feature importance provides a **highly compressed, global insight** into the model's behavior. 
+Feature importance memberikan **wawasan global yang sangat padat** tentang perilaku model.
 
-A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are **comparable across different problems**. 
+Aspek positif dari penggunaan rasio kesalahan alih-alih perbedaan kesalahan adalah bahwa pengukuran feature importance **dapat dibandingkan di berbagai masalah**.
 
-The importance measure automatically **takes into account all interactions** with other features.
-By permuting the feature you also destroy the interaction effects with other features. 
-This means that the permutation feature importance takes into account both the  main feature effect and the interaction effects on model performance.
-This is also a disadvantage because the importance of the interaction between two features is included in the importance measurements of both features.
-This means that the feature importances do not add up to the total drop in performance, but the sum is larger.
-Only if there is no interaction between the features, as in a linear model, the importances add up approximately.
+Ukuran kepentingan secara otomatis **memperhitungkan semua interaksi** dengan fitur lain.
+Dengan mengubah fitur tersebut, Anda juga menghancurkan efek interaksi dengan fitur lainnya.
+Ini berarti bahwa permutation feature importance memperhitungkan efek fitur utama dan efek interaksi pada kinerja model.
+Ini juga merupakan loss karena pentingnya interaksi antara dua fitur termasuk dalam pengukuran kepentingan dari kedua fitur.
+Ini berarti bahwa feature importance tidak menambah total penurunan kinerja, tetapi jumlahnya lebih besar.
+Hanya jika tidak ada interaksi antara fitur, seperti dalam model linier, kepentingannya bertambah kira-kira.
 
-Permutation feature importance **does not require retraining the model**.
-Some other methods suggest deleting a feature, retraining the model and then comparing the model error.
-Since the retraining of a machine learning model can take a long time, "only" permuting a feature can save a lot of time.
-Importance methods that retrain the model with a subset of features appear intuitive at first glance, but the model with the reduced data is meaningless for the feature importance.
-We are interested in the feature importance of a fixed model.
-Retraining with a reduced dataset creates a different model than the one we are interested in.
-Suppose you train a sparse linear model (with Lasso) with a fixed number of features with a non-zero weight.
-The dataset has 100 features, you set the number of non-zero weights to 5.
-You analyze the importance of one of the features that have a non-zero weight.
-You remove the feature and retrain the model.
-The model performance remains the same because another equally good feature gets a non-zero weight and your conclusion would be that the feature was not important.
-Another example:
-The model is a decision tree and we analyze the importance of the feature that was chosen as the first split.
-You remove the feature and retrain the model. 
-Since another feature is chosen as the first split, the whole tree can be very different, which means that we compare the error rates of (potentially) completely different trees to decide how important that feature is for one of the trees.
+Permutation feature importance **tidak memerlukan pelatihan ulang model**.
+Beberapa metode lain menyarankan untuk menghapus fitur, melatih kembali model, dan kemudian membandingkan kesalahan model.
+Karena pelatihan ulang model machine learning dapat memakan waktu lama, "hanya" mengubah permutasi fitur dapat menghemat banyak waktu.
+Metode urgensi yang melatih kembali model dengan subset fitur tampak intuitif pada pandangan pertama, tetapi model dengan data yang dikurangi tidak ada artinya untuk urgensi fitur.
+Kami tertarik pada feature importance model tetap.
+Pelatihan ulang dengan kumpulan data yang dikurangi menciptakan model yang berbeda dari yang kami minati.
+Misalkan Anda melatih sparse linear models (dengan Lasso) dengan sejumlah fitur tetap dengan bobot bukan nol.
+Dataset memiliki 100 fitur, Anda mengatur jumlah bobot bukan nol menjadi 5.
+Anda menganalisis pentingnya salah satu fitur yang memiliki bobot bukan nol.
+Anda menghapus fitur dan melatih kembali modelnya.
+Performa model tetap sama karena fitur lain yang sama baiknya mendapat bobot bukan nol dan kesimpulan Anda adalah bahwa fitur tersebut tidak penting.
+Contoh lain:
+Modelnya adalah decision trees dan kami menganalisis feature importance yang dipilih sebagai pemisahan pertama.
+Anda menghapus fitur dan melatih kembali modelnya.
+Karena fitur lain dipilih sebagai pemisahan pertama, seluruh pohon bisa sangat berbeda, yang berarti bahwa kami membandingkan tingkat kesalahan (berpotensi) pohon yang sama sekali berbeda untuk memutuskan seberapa penting fitur tersebut untuk salah satu pohon.
 
 ### Disadvantages
 
-It is very **unclear whether you should use training or test data** to compute the feature importance.
+Sangat **tidak jelas apakah Anda harus menggunakan data pelatihan atau pengujian** untuk menghitung feature importance.
 
-Permutation feature importance is **linked to the error of the model**.
-This is not inherently bad, but in some cases not what you need.
-In some cases, you might prefer to know how much the model's output varies for a feature without considering what it means for performance.
-For example, you want to find out how robust your model's output is when someone manipulates the features. 
-In this case, you would not be interested in how much the model performance decreases when a feature is permuted, but how much of the model's output variance is explained by each feature. 
-Model variance (explained by the features) and feature importance correlate strongly when the model generalizes well (i.e. it does not overfit).
+Permutation feature importance **terkait dengan kesalahan model**.
+Ini pada dasarnya tidak buruk, tetapi dalam beberapa kasus bukan yang Anda butuhkan.
+Dalam beberapa kasus, Anda mungkin lebih suka mengetahui seberapa besar variasi keluaran model untuk suatu fitur tanpa mempertimbangkan apa artinya bagi kinerja.
+Misalnya, Anda ingin mengetahui seberapa kuat keluaran model Anda saat seseorang memanipulasi fitur.
+Dalam hal ini, Anda tidak akan tertarik pada seberapa besar penurunan performa model saat fitur di- permutasi, tetapi seberapa banyak varians output model yang dijelaskan oleh setiap fitur.
+Varians model (dijelaskan oleh fitur) dan feature importance berkorelasi kuat ketika model digeneralisasi dengan baik (yaitu tidak overfit).
 
-You **need access to the true outcome**. 
-If someone only provides you with the model and unlabeled data -- but not the true outcome -- you cannot compute the permutation feature importance.
+Anda **membutuhkan akses ke hasil yang sebenarnya**.
+Jika seseorang hanya memberi Anda model dan data yang tidak berlabel -- tetapi bukan hasil yang sebenarnya -- Anda tidak dapat menghitung permutation feature importance.
 
-The permutation feature importance depends on shuffling the feature, which adds randomness to the measurement.
-When the permutation is repeated, the **results might vary greatly**.
-Repeating the permutation and averaging the importance measures over repetitions stabilizes the measure, but increases the time of computation.
+Permutation feature importance tergantung pada pengocokan fitur, yang menambahkan keacakan pada pengukuran.
+Ketika permutasi diulang, **hasilnya mungkin sangat berbeda**.
+Mengulangi permutasi dan merata-ratakan ukuran kepentingan di atas pengulangan menstabilkan ukuran, tetapi meningkatkan waktu komputasi.
 
-If features are correlated, the permutation feature importance **can be biased by unrealistic data instances**. 
-The problem is the same as with [partial dependence plots](#pdp):
-The permutation of features produces unlikely data instances when two or more features are correlated.
-When they are positively correlated (like height and weight of a person) and I shuffle one of the features, I create new instances that are unlikely or even physically impossible (2 meter person weighing 30 kg for example), yet I use these new instances to measure the importance.
-In other words, for the permutation feature importance of a correlated feature, we consider how much the model performance decreases when we exchange the feature with values we would never observe in reality.
-Check if the features are strongly correlated and be careful about the interpretation of the feature importance if they are.
+Jika fitur berkorelasi, permutation feature importance **dapat dibias oleh instance data yang tidak realistis**.
+Masalahnya sama dengan [partial dependence plot](#pdp):
+Permutasi fitur menghasilkan contoh data yang tidak mungkin ketika dua atau lebih fitur dikorelasikan.
+Ketika mereka berkorelasi positif (seperti tinggi dan berat seseorang) dan saya mengacak salah satu fitur, saya membuat instance baru yang tidak mungkin atau bahkan tidak mungkin secara fisik (misalnya 2 meter orang dengan berat 30 kg), namun saya menggunakan instance baru ini untuk mengukur pentingnya.
+Dengan kata lain, untuk permutation feature importance dari fitur yang berkorelasi, kami mempertimbangkan seberapa besar kinerja model menurun ketika kami menukar fitur dengan nilai yang tidak akan pernah kami amati dalam kenyataan.
+Periksa apakah fitur berkorelasi kuat dan berhati-hatilah dengan interpretasi feature importance jika memang demikian.
 
-Another tricky thing:
-**Adding a correlated feature can decrease the importance of the associated feature** by splitting the importance between both features.
-Let me give you an example of what I mean by "splitting" feature importance:
-We want to predict the probability of rain and use the temperature at 8:00 AM of the day before as a feature along with other uncorrelated features.
-I train a random forest and it turns out that the temperature is the most important feature and all is well and I sleep well the next night.
-Now imagine another scenario in which I additionally include the temperature at 9:00 AM as a feature that is strongly correlated with the temperature at 8:00 AM.
-The temperature at 9:00 AM does not give me much additional information if I already know the temperature at 8:00 AM.
-But having more features is always good, right?
-I train a random forest with the two temperature features and the uncorrelated features.
-Some of the trees in the random forest pick up the 8:00 AM temperature, others the 9:00 AM temperature, again others both and again others none. 
-The two temperature features together have a bit more importance than the single temperature feature before, but instead of being at the top of the list of important features, each temperature is now somewhere in the middle.
-By introducing a correlated feature, I kicked the most important feature from the top of the importance ladder to mediocrity.
-On one hand this is fine, because it simply reflects the behavior of the underlying machine learning model, here the random forest. 
-The 8:00 AM temperature has simply become less important because the model can now rely on the 9:00 AM measurement as well.
-On the other hand, it makes the interpretation of the feature importance considerably more difficult.
-Imagine you want to check the features for measurement errors.
-The check is expensive and you decide to check only the top 3 of the most important features.
-In the first case you would check the temperature, in the second case you would not include any temperature feature just because they now share the importance.
-Even though the importance values might make sense at the level of model behavior, it is confusing if you have correlated features.
+Hal rumit lainnya:
+**Menambahkan fitur yang berkorelasi dapat mengurangi feature importance terkait** dengan membagi kepentingan di antara kedua fitur tersebut.
+Biarkan saya memberi Anda contoh tentang apa yang saya maksud dengan feature importance "pemisahan":
+Kami ingin memprediksi kemungkinan hujan dan menggunakan suhu pada pukul 8:00 pagi hari sebelumnya sebagai fitur bersama dengan fitur lain yang tidak berkorelasi.
+Saya melatih random forest dan ternyata suhu adalah fitur yang paling penting dan semuanya baik-baik saja dan saya tidur nyenyak malam berikutnya.
+Sekarang bayangkan skenario lain di mana saya juga menyertakan suhu pada jam 9:00 pagi sebagai fitur yang sangat berkorelasi dengan suhu pada jam 8:00 pagi.
+Suhu pada jam 9:00 pagi tidak memberi saya banyak informasi tambahan jika saya sudah mengetahui suhu pada jam 8:00 pagi.
+Tetapi memiliki lebih banyak fitur selalu bagus, bukan?
+Saya melatih random forest dengan dua fitur suhu dan fitur yang tidak berkorelasi.
+Beberapa pohon di random forest mengambil suhu 8:00 pagi, yang lain suhu 9:00 pagi, lagi yang lain keduanya dan lagi yang lain tidak sama sekali.
+Kedua fitur suhu bersama-sama memiliki sedikit lebih penting daripada fitur suhu tunggal sebelumnya, tetapi alih-alih berada di urutan teratas daftar fitur penting, masing-masing suhu sekarang berada di tengah.
+Dengan memperkenalkan fitur yang berkorelasi, saya menendang fitur yang paling penting dari puncak tangga kepentingan menjadi biasa-biasa saja.
+Di satu sisi ini baik-baik saja, karena ini hanya mencerminkan perilaku model machine learning yang mendasarinya, di sini random forest.
+Suhu pukul 08:00 menjadi kurang penting karena model sekarang dapat mengandalkan pengukuran pukul 09:00 juga.
+Di sisi lain, itu membuat interpretasi feature importance jauh lebih sulit.
+Bayangkan Anda ingin memeriksa fitur untuk kesalahan pengukuran.
+Cek itu mahal dan Anda memutuskan untuk memeriksa hanya 3 fitur terpenting.
+Dalam kasus pertama Anda akan memeriksa suhu, dalam kasus kedua Anda tidak akan menyertakan fitur suhu hanya karena mereka sekarang berbagi kepentingan.
+Meskipun nilai kepentingan mungkin masuk akal pada tingkat perilaku model, akan membingungkan jika Anda memiliki fitur yang berkorelasi.
 
 
 ### Software and Alternatives
 
-The `iml` R package was used for the examples.
-The R packages `DALEX` and `vip`, as well as the Python library `alibi`, `scikit-learn` and `rfpimp`, also implement model-agnostic permutation feature importance.
+Paket `iml` R digunakan sebagai contoh.
+Paket R `DALEX` dan `vip`, serta library Python `alibi`, `scikit-learn` dan `rfpimp`, juga mengimplementasikan permutation feature importance model-agnostic.
 
-An algorithm called [PIMP](https://academic.oup.com/bioinformatics/article/26/10/1340/193348) adapts the feature importance algorithm to provide p-values for the importances.
+Algoritme yang disebut [PIMP](https://academic.oup.com/bioinformatics/article/26/10/1340/193348) mengadaptasi algoritme urgensi fitur untuk memberikan p-value untuk urgensi.
 
 
 [^Breiman2001]: Breiman, Leo.“Random Forests.” Machine Learning 45 (1). Springer: 5-32 (2001).

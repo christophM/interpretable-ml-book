@@ -7,240 +7,232 @@ set.seed(42)
 
 ## Adversarial Examples {#adversarial}
 
-An adversarial example is an instance with small, intentional feature perturbations that cause a machine learning model to make a false prediction.
-I recommend reading the chapter about [Counterfactual Explanations](#counterfactual) first, as the concepts are very similar.
-Adversarial examples are counterfactual examples with the aim to deceive the model, not interpret it.
+Adversarial examples adalah instance dengan perturbations fitur kecil yang disengaja yang menyebabkan model machine learning membuat prediksi yang salah.
+Saya sarankan membaca bab tentang [counterfactual explanations](#counterfactual) terlebih dahulu, karena konsepnya sangat mirip.
+Contoh adversarial adalah contoh kontrafaktual dengan tujuan untuk menipu model, bukan menginterpretasikannya.
 
-<!-- *Keywords: adversarial examples, adversarial machine learning, counterfactuals, evasion attacks, machine learning security* -->
+Mengapa kita tertarik pada adversarial examples?
+Apakah mereka bukan hanya produk sampingan dari model machine learning tanpa relevansi praktis?
+Jawabannya jelas "tidak".
+Sdversarial examples membuat model machine learning rentan terhadap serangan, seperti dalam skenario berikut.
 
-Why are we interested in adversarial examples?
-Are they not just curious by-products of machine learning models without practical relevance?
-The answer is a clear "no".
-Adversarial examples make machine learning models vulnerable to attacks, as in the following scenarios.
+Sebuah mobil self-driving menabrak mobil lain karena mengabaikan tanda berhenti.
+Seseorang telah menempatkan gambar di atas tanda, yang terlihat seperti tanda berhenti dengan sedikit kotoran untuk manusia, tetapi dirancang agar terlihat seperti tanda larangan parkir untuk perangkat lunak pengenalan tanda mobil.
 
-A self-driving car crashes into another car because it ignores a stop sign.
-Someone had placed a picture over the sign, which looks like a stop sign with a little dirt for humans, but was designed to look like a parking prohibition sign for the sign recognition software of the car.
+Pendeteksi spam gagal mengklasifikasikan email sebagai spam.
+Email spam telah dirancang menyerupai email biasa, tetapi dengan tujuan menipu penerima.
 
-A spam detector fails to classify an email as spam.
-The spam mail has been designed to resemble a normal email, but with the intention of cheating the recipient.
+Pemindai bertenaga machine learning memindai koper untuk mencari senjata di bandara.
+Pisau dikembangkan untuk menghindari deteksi dengan membuat sistem berpikir itu adalah payung.
 
-A machine-learning powered scanner scans suitcases for weapons at the airport.
-A knife was developed to avoid detection by making the system think it is an umbrella.
-
-Let us take a look at some ways to create adversarial examples.
+Mari kita lihat beberapa cara untuk membuat adversarial examples.
 
 ### Methods and Examples
 
-There are many techniques to create adversarial examples.
-Most approaches suggest minimizing the distance between the adversarial example and the instance to be manipulated, while shifting the prediction to the desired (adversarial) outcome.
-Some methods require access to the gradients of the model, which of course only works with gradient based models such as neural networks, other methods only require access to the prediction function, which makes these methods model-agnostic.
-The methods in this section focus on image classifiers with deep neural networks, as  a lot of research is done in this area and the visualization of adversarial images is very educational.
-Adversarial examples for images are images with intentionally perturbed pixels with the aim to deceive the model during application time.
-The examples impressively demonstrate how easily deep neural networks for object recognition can be deceived by images that appear harmless to humans.
-If you have not yet seen these examples, you might be surprised, because the changes in predictions are incomprehensible for a human observer.
-Adversarial examples are like optical illusions but for machines.
+Ada banyak teknik untuk membuat adversarial examples.
+Sebagian besar pendekatan menyarankan meminimalkan jarak antara adversarial examples dan contoh yang akan dimanipulasi, sambil menggeser prediksi ke hasil (permusuhan) yang diinginkan.
+Beberapa metode memerlukan akses ke gradien model, yang tentu saja hanya bekerja dengan model berbasis gradien seperti jaringan saraf, metode lain hanya memerlukan akses ke fungsi prediksi, yang membuat metode ini model-agnostic.
+Metode di bagian ini berfokus pada pengklasifikasi gambar dengan deep neural networks, karena banyak penelitian dilakukan di bidang ini dan visualisasi gambar permusuhan sangat mendidik.
+Adversarial examples untuk gambar adalah gambar dengan piksel yang sengaja diganggu dengan tujuan untuk menipu model selama waktu aplikasi.
+Contoh-contoh tersebut secara mengesankan menunjukkan betapa mudahnya deep neural networks untuk pengenalan objek dapat ditipu oleh gambar yang tampak tidak berbahaya bagi manusia.
+Jika Anda belum melihat contoh-contoh ini, Anda mungkin akan terkejut, karena perubahan prediksi tidak dapat dipahami oleh pengamat manusia.
+adversarial examples seperti ilusi optik tetapi untuk mesin.
 
-**Something is Wrong With My Dog**
+**Ada yang Salah Dengan Anjing Saya**
 
-Szegedy et. al (2013)[^szegedy] used a gradient based optimization approach in their work "Intriguing Properties of Neural Networks" to find adversarial examples for deep neural networks.
+Szegedy et. al (2013)[^szegedy] menggunakan pendekatan optimasi berbasis gradien dalam pekerjaan mereka "Intriguing Properties of Neural Networks" untuk menemukan adversarial examples untuk deep neural network.
 
 ```{r adversarial-ostrich, fig.cap = 'Adversarial examples for AlexNet by Szegedy et. al (2013). All images in the left column are correctly classified. The middle column shows the (magnified) error added to the images to produce the images in the right column all categorized (incorrectly) as "Ostrich". "Intriguing properties of neural networks", Figure 5 by Szegedy et. al. CC-BY 3.0.', out.width=600}
 knitr::include_graphics("images/adversarial-ostrich.jpg")
 ```
 
-These adversarial examples were generated by minimizing the following function with respect to r:
+Adversarial examples ini dihasilkan dengan meminimalkan fungsi berikut terhadap r:
 
 $$loss(\hat{f}(x+r),l)+c\cdot|r|$$
 
-In this formula, x is an image (represented as a vector of pixels), r is the changes to the pixels to create an adversarial image (x+r produces a new image), l is the desired outcome class, and the parameter c is used to balance the distance between images and the distance between predictions.
-The first term is the distance between the predicted outcome of the adversarial example and the desired class l, the second term measures the distance between the adversarial example and the original image.
-This formulation is almost identical to the loss function to generate [counterfactual explanations](#counterfactual).
-There are additional constraints for r so that the pixel values remain between 0 and 1.
-The authors suggest to solve this optimization problem with a box-constrained L-BFGS, an optimization algorithm that works with gradients.
+Dalam rumus ini, x adalah gambar (direpresentasikan sebagai vektor piksel), r adalah perubahan piksel untuk membuat gambar permusuhan (x+r menghasilkan gambar baru), l adalah kelas hasil yang diinginkan, dan parameter c digunakan untuk menyeimbangkan jarak antara gambar dan jarak antara prediksi.
+Suku pertama adalah jarak antara hasil prediksi dari contoh adversarial dan kelas l yang diinginkan, suku kedua mengukur jarak antara contoh adversarial dan gambar asli.
+Rumusan ini hampir identik dengan fungsi loss untuk menghasilkan [counterfactual explanations](#counterfactual).
+Ada kendala tambahan untuk r sehingga nilai piksel tetap antara 0 dan 1.
+Penulis menyarankan untuk menyelesaikan masalah optimasi ini dengan box-constrained L-BFGS, sebuah algoritma optimasi yang bekerja dengan gradien.
 
-**Disturbed panda: Fast gradient sign method**
+**Panda terganggu: Metode fast gradient sign**
 
-Goodfellow et. al (2014)[^goodfellow] invented the fast gradient sign method for generating adversarial images.
-The gradient sign method uses the gradient of the underlying model to find adversarial examples.
-The original image x is manipulated by adding or subtracting a small error $\epsilon$ to each pixel. 
-Whether we add or subtract $\epsilon$ depends on whether the sign of the gradient for a pixel is positive or negative.
-Adding errors in the direction of the gradient means that the image is intentionally altered so that the model classification fails.
+Goodfellow et. al (2014)[^goodfellow] menemukan metode fast gradient sign untuk menghasilkan gambar permusuhan.
+Metode gradient sign menggunakan gradien model yang mendasarinya untuk menemukan adversarial examples.
+Gambar asli x dimanipulasi dengan menambahkan atau mengurangi kesalahan kecil $\epsilon$ untuk setiap piksel.
+Apakah kita menambah atau mengurangi $\epsilon$ tergantung pada apakah gradient sign untuk suatu piksel positif atau negatif.
+Menambahkan kesalahan pada arah gradien berarti gambar sengaja diubah sehingga klasifikasi model gagal.
 
-The following formula describes the core of the fast gradient sign method:
+Rumus berikut menjelaskan inti dari metode fast gradient sign:
 
 $$x^\prime=x+\epsilon\cdot{}sign(\bigtriangledown_x{}J(\theta,x,y))$$
 
+di mana $\bigtriangledown_x{}J$ adalah gradien fungsi kehilangan model sehubungan dengan vektor piksel masukan asli x, y adalah vektor label sebenarnya untuk x dan $\theta$ adalah vektor parameter model.
+Dari vektor gradien (yang selama vektor piksel input) kita hanya perlu tanda:
+gradient sign adalah positif (+1) jika peningkatan intensitas piksel meningkatkan loss (kesalahan yang dibuat model) dan negatif (-1) jika penurunan intensitas piksel meningkatkan loss.
+Kerentanan ini terjadi ketika jaringan saraf memperlakukan hubungan antara intensitas piksel input dan skor kelas secara linier.
+Secara khusus, arsitektur jaringan saraf yang mendukung linearitas, seperti LSTM, jaringan maxout, jaringan dengan unit aktivasi ReLU atau algoritma machine learning linier lainnya seperti logistic regression rentan terhadap metode gradient sign.
+Serangan dilakukan dengan ekstrapolasi.
+Linearitas antara intensitas piksel input dan skor kelas menyebabkan kerentanan terhadap outlier, yaitu model dapat ditipu dengan memindahkan nilai piksel ke area di luar distribusi data.
+Saya berharap adversarial examples ini cukup spesifik untuk arsitektur jaringan saraf tertentu.
+Tetapi ternyata Anda dapat menggunakan kembali adversarial examples untuk menipu jaringan dengan arsitektur berbeda yang dilatih untuk tugas yang sama.
 
-where $\bigtriangledown_x{}J$ is the gradient of the models loss function with respect to the original input pixel vector x, y is the true label vector for x and $\theta$ is the model parameter vector.
-From the gradient vector (which is as long as the vector of the input pixels) we only need the sign:
-The sign of the gradient is positive (+1) if an increase in pixel intensity increases the loss (the error the model makes) and negative (-1) if a decrease in pixel intensity increases the loss.
-This vulnerability occurs when a neural network treats a relationship between an input pixel intensity and the class score linearly.
-In particular, neural network architectures that favor linearity, such as LSTMs, maxout networks, networks with ReLU activation units or other linear machine learning algorithms such as logistic regression are vulnerable to the gradient sign method.
-The attack is carried out by extrapolation.
-The linearity between the input pixel intensity and the class scores leads to vulnerability to outliers, i.e. the model can be deceived by moving pixel values into areas outside the data distribution.
-I expected these adversarial examples to be quite specific to a given neural network architecture.
-But it turns out that you can reuse adversarial examples to deceive networks with a different architecture trained on the same task.
+Goodfellow et. al (2014) menyarankan untuk menambahkan adversarial examples ke data pelatihan untuk mempelajari model yang kuat.
 
-Goodfellow et. al (2014) suggested adding adversarial examples to the training data to learn robust models.
+**Ubur-ubur... Tidak, tunggu. Bak mandi: serangan 1-piksel**
 
-
-**A jellyfish ... No, wait. A bathtub: 1-pixel attacks**
-
-The approach presented by Goodfellow and colleagues (2014) requires many pixels to be changed, if only by a little.
-But what if you can only change a single pixel?
-Would you be able to deceive a machine learning model?
-Su et. al (2019) [^1pixel] showed that it is actually possible to deceive image classifiers by changing a single pixel.
+Pendekatan yang disajikan oleh Goodfellow dkk (2014) membutuhkan banyak piksel untuk diubah, meskipun hanya sedikit.
+Tetapi bagaimana jika Anda hanya dapat mengubah satu piksel?
+Apakah Anda dapat menipu model machine learning?
+Su et. al (2019) [^1pixel] menunjukkan bahwa sebenarnya mungkin untuk menipu pengklasifikasi gambar dengan mengubah satu piksel.
 
 ```{r adversarial-1pixel, fig.cap = "By intentionally changing a single pixel a neural network trained on ImageNet can be deceived to predict the wrong class instead of the original class.", out.width=600}
 knitr::include_graphics("images/adversarial-1pixel.png")
 ```
 
-Similar to counterfactuals, the 1-pixel attack looks for a modified example x' which comes close to the original image x, but changes the prediction to an adversarial outcome.
-However, the definition of closeness differs: Only a single pixel may change.
-The 1-pixel attack uses differential evolution to find out which pixel is to be changed and how.
-Differential evolution is loosely inspired by biological evolution of species.
-A population of individuals called candidate solutions recombines generation by generation until a solution is found.
-Each candidate solution encodes a pixel modification and is represented by a vector of five elements: the x- and y-coordinates and the red, green and blue (RGB) values.
-The search starts with, for example, 400 candidate solutions (= pixel modification suggestions) and creates a new generation of candidate solutions (children) from the parent generation using the following formula:
+Mirip dengan kontrafaktual, serangan 1-piksel mencari contoh modifikasi x' yang mendekati gambar asli x, tetapi mengubah prediksi menjadi hasil yang berlawanan.
+Namun, definisi kedekatan berbeda: Hanya satu piksel yang dapat berubah.
+Serangan 1-piksel menggunakan evolusi diferensial untuk mengetahui piksel mana yang akan diubah dan bagaimana caranya.
+Evolusi diferensial secara longgar diilhami oleh evolusi biologis spesies.
+Sebuah populasi individu yang disebut solusi kandidat menggabungkan generasi demi generasi sampai solusi ditemukan.
+Setiap solusi kandidat mengkodekan modifikasi piksel dan diwakili oleh vektor lima elemen: koordinat x dan y dan nilai merah, hijau dan biru (RGB).
+Pencarian dimulai dengan, misalnya, 400 kandidat solusi (= saran modifikasi piksel) dan membuat generasi baru solusi kandidat (anak) dari generasi induk menggunakan rumus berikut:
 
 $$x_{i}(g+1)=x_{r1}(g)+F\cdot(x_{r2}(g)-x_{r3}(g))$$
 
-where each $x_i$ is an element of a candidate solution (either x-coordinate, y-coordinate, red, green or blue), g is the current generation, F is a scaling parameter (set to 0.5) and r1, r2 and r3 are different random numbers.
-Each new child candidate solution is in turn a pixel with the five attributes for location and color and each of those attributes is a mixture of three random parent pixels.
+di mana setiap $x_i$ adalah elemen dari solusi kandidat (baik koordinat x, koordinat y, merah, hijau atau biru), g adalah generasi saat ini, F adalah parameter penskalaan (diatur ke 0,5) dan r1, r2 dan r3 adalah bilangan acak yang berbeda.
+Setiap solusi kandidat anak baru pada gilirannya merupakan piksel dengan lima atribut untuk lokasi dan warna dan masing-masing atribut tersebut merupakan campuran dari tiga piksel induk acak.
 
-The creation of children is stopped if one of the candidate solutions is an adversarial example, meaning it is classified as an incorrect class, or if the number of maximum iterations specified by the user is reached.
+Pembuatan anak dihentikan jika salah satu solusi kandidat adalah contoh adversarial, artinya diklasifikasikan sebagai kelas yang salah, atau jika jumlah iterasi maksimum yang ditentukan oleh pengguna tercapai.
 
+**Semuanya adalah pemanggang roti: adversarial patch**
 
-**Everything is a toaster: Adversarial patch**
-
-One of my favorite methods brings adversarial examples into physical reality.
-Brown et. al (2017)[^toaster] designed a printable label that can be stuck next to objects to make them look like toasters for an image classifier.
-Brilliant work!
+Salah satu metode favorit saya membawa adversarial examples ke dalam realitas fisik.
+Brown et. al (2017)[^toaster] merancang label yang dapat dicetak yang dapat ditempelkan di samping objek agar terlihat seperti pemanggang roti untuk pengklasifikasi gambar.
+Pekerjaan yang brilian!
 
 ```{r adversarial-toaster, fig.cap = "A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et. al (2017).", out.width=600}
 knitr::include_graphics("images/adversarial-toaster.png")
 ```
 
-This method differs from the methods presented so far for adversarial examples, since the restriction that the adversarial image must be very close to the original image is removed.
-Instead, the method completely replaces a part of the image with a patch that can take on any shape. 
-The image of the patch is optimized over different background images, with different positions of the patch on the images, sometimes moved, sometimes larger or smaller and rotated, so that the patch works in many situations.
-In the end, this optimized image can be printed and used to deceive image classifiers in the wild.
+Metode ini berbeda dari metode yang disajikan sejauh ini untuk adversarial examples, karena batasan bahwa gambar permusuhan harus sangat dekat dengan gambar asli dihilangkan.
+Sebagai gantinya, metode ini sepenuhnya menggantikan bagian dari gambar dengan tambalan yang dapat mengambil bentuk apa pun.
+Gambar tambalan dioptimalkan di atas gambar latar belakang yang berbeda, dengan posisi tambalan yang berbeda pada gambar, terkadang dipindahkan, terkadang lebih besar atau lebih kecil dan diputar, sehingga tambalan berfungsi dalam banyak situasi.
+Pada akhirnya, gambar yang dioptimalkan ini dapat dicetak dan digunakan untuk menipu pengklasifikasi gambar di alam liar.
 
+**Jangan pernah membawa kura-kura cetak 3D ke tembak-menembak -- bahkan jika komputer Anda menganggap itu ide yang bagus: adversarial examples yang kuat**
 
-**Never bring a 3D-printed turtle to a gunfight -- even if your computer thinks it is a good idea: Robust adversarial examples**
-
-The next method is literally adding another dimension to the toaster:
-Athalye et. al (2017)[^turtle] 3D-printed a turtle that was designed to look like a rifle to a deep neural network from almost all possible angles.
-Yeah, you read that right.
-A physical object that looks like a turtle to humans looks like a rifle to the computer!
+Metode selanjutnya secara harfiah menambahkan dimensi lain ke pemanggang roti:
+Athalye et. al (2017)[^turtle] 3D-mencetak kura-kura yang dirancang agar terlihat seperti senapan ke deep neural network dari hampir semua sudut yang memungkinkan.
+Ya, Anda membacanya dengan benar.
+Objek fisik yang terlihat seperti kura-kura bagi manusia terlihat seperti senapan bagi komputer!
 
 ```{r adversarial-turtle, fig.cap = "Athalye et. al (2017) created a 3D-printed that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier.", out.width=600}
 knitr::include_graphics("images/adversarial-turtle.png")
 ```
 
-The authors have found a way to create an adversarial example in 3D for a 2D classifier that is adversarial over transformations, such as all possibilities to rotate the turtle, zoom in and so on.
-Other approaches such as the fast gradient method no longer work when the image is rotated or viewing angle changes.
-Athalye et. al (2017) propose the Expectation Over Transformation (EOT) algorithm, which is a method for generating adversarial examples that even work when the image is transformed.
-The main idea behind EOT is to optimize adversarial examples across many possible transformations.
-Instead of minimizing the distance between the adversarial example and the original image, EOT keeps the expected distance between the two below a certain threshold, given a selected distribution of possible transformations.
-The expected distance under transformation can be written as:
+Penulis telah menemukan cara untuk membuat adversarial examples dalam 3D untuk pengklasifikasi 2D yang bertentangan dengan transformasi, seperti semua kemungkinan untuk memutar kura-kura, memperbesar dan sebagainya.
+Pendekatan lain seperti metode gradien cepat tidak lagi berfungsi saat gambar diputar atau sudut pandang berubah.
+Athalye et. al (2017) mengusulkan algoritma Expectation Over Transformation (EOT), yang merupakan metode untuk menghasilkan adversarial examples yang bahkan berfungsi ketika gambar ditransformasikan.
+Ide utama di balik EOT adalah untuk mengoptimalkan adversarial examples di banyak kemungkinan transformasi.
+Alih-alih meminimalkan jarak antara adversarial examples dan gambar asli, EOT menjaga jarak yang diharapkan antara keduanya di bawah ambang batas tertentu, mengingat distribusi yang dipilih dari kemungkinan transformasi.
+Jarak yang diharapkan di bawah transformasi dapat ditulis sebagai:
 
 $$\mathbb{E}_{t\sim{}T}[d(t(x^\prime),t(x))]$$
 
-where x is the original image, t(x) the transformed image (e.g. rotated), x' the adversarial example and t(x') its transformed version.
-Apart from working with a distribution of transformations, the EOT method follows the familiar pattern of framing the search for adversarial examples as an optimization problem.
-We try to find an adversarial example x' that maximizes the probability for the selected class $y_t$ (e.g. "rifle") across the distribution of possible transformations T:
+di mana x adalah gambar asli, t(x) gambar yang diubah (misalnya diputar), x' adversarial examples dan t(x') versi transformasinya.
+Selain bekerja dengan distribusi transformasi, metode EOT mengikuti pola yang sudah dikenal dalam membingkai pencarian adversarial examples sebagai masalah optimasi.
+Kami mencoba untuk menemukan adversarial examples x' yang memaksimalkan probabilitas untuk kelas yang dipilih $y_t$ (misalnya "senapan") di seluruh distribusi kemungkinan transformasi T:
 
 $$\arg\max_{x^\prime}\mathbb{E}_{t\sim{}T}[log{}P(y_t|t(x^\prime))]$$
 
-With the constraint that the expected distance over all possible transformations between adversarial example x' and original image x remains below a certain threshold:
+Dengan batasan bahwa jarak yang diharapkan dari semua kemungkinan transformasi antara adversarial examples x' dan gambar asli x tetap di bawah ambang batas tertentu:
 
 $$\mathbb{E}_{t\sim{}T}[d(t(x^\prime),t(x))]<\epsilon\quad\text{and}\quad{}x\in[0,1]^d$$
 
-I think we should be concerned about the possibilities this method enables.
-The other methods are based on the manipulation of digital images.
-However, these 3D-printed, robust adversarial examples can be inserted into any real  scene and deceive a computer to wrongly classify an object.
-Let us turn it around: What if someone creates a rifle which looks like a turtle?
+Saya pikir kita harus memperhatikan kemungkinan yang dimungkinkan oleh metode ini.
+Metode lain didasarkan pada manipulasi gambar digital.
+Namun, contoh-adversarial examples yang kuat dan dicetak 3D ini dapat dimasukkan ke dalam adegan nyata apa pun dan menipu komputer untuk salah mengklasifikasikan suatu objek.
+Mari kita putar balik: Bagaimana jika seseorang membuat senapan yang terlihat seperti kura-kura?
 
-**The blindfolded adversary: Black box attack**
+**Musuh yang ditutup matanya: Serangan black box**
 
-Imagine the following scenario:
-I give you access to my great image classifier via Web API.
-You can get predictions from the model, but you do not have access to the model parameters.
-From the convenience of your couch, you can send data and my service answers with the corresponding classifications.
-Most adversarial attacks are not designed to work in this scenario because they require access to the gradient of the underlying deep neural network to find adversarial examples.
-Papernot and colleagues (2017)[^papernot] showed that it is possible to create adversarial examples without internal model information and without access to the training data.
-This type of (almost) zero-knowledge attack is called black box attack.
+Bayangkan skenario berikut:
+Saya memberi Anda akses ke pengklasifikasi gambar hebat saya melalui Web API.
+Anda bisa mendapatkan prediksi dari model, tetapi Anda tidak memiliki akses ke parameter model.
+Dari kenyamanan sofa Anda, Anda dapat mengirim data dan jawaban layanan saya dengan klasifikasi yang sesuai.
+Sebagian besar serangan permusuhan tidak dirancang untuk bekerja dalam skenario ini karena mereka memerlukan akses ke gradien deep neural networks yang mendasari untuk menemukan adversarial examples.
+Papernot dan rekan (2017)[^papernot] menunjukkan bahwa adalah mungkin untuk membuat adversarial examples tanpa informasi model internal dan tanpa akses ke data pelatihan.
+Jenis serangan (hampir) tanpa pengetahuan ini disebut serangan black box.
 
-How it works:
+Bagaimana itu bekerja:
 
-1. Start with a few images that come from the same domain as the training data, e.g. if the classifier to be attacked is a digit classifier, use images of digits. The knowledge of the domain is required, but not the access to the training data.
-1. Get predictions for the current set of images from the black box.
-1. Train a surrogate model on the current set of images (for example a neural network).
-1. Create a new set of synthetic images using a heuristic that examines for the current set of images in which direction to manipulate the pixels to make the model output have more variance.
-1. Repeat steps 2 to 4 for a predefined number of epochs.
-1. Create adversarial examples for the surrogate model using the fast gradient method (or similar).
-1. Attack the original model with adversarial examples.
+1. Mulailah dengan beberapa gambar yang berasal dari domain yang sama dengan data pelatihan, mis. jika classifier yang akan diserang adalah classifier digit, gunakan gambar digit. Pengetahuan tentang domain diperlukan, tetapi bukan akses ke data pelatihan.
+1. Dapatkan prediksi untuk kumpulan gambar saat ini dari black box.
+1. Latih surrogate models pada kumpulan gambar saat ini (misalnya jaringan saraf).
+1. Buat kumpulan gambar sintetik baru menggunakan heuristik yang memeriksa kumpulan gambar saat ini ke arah mana untuk memanipulasi piksel untuk membuat keluaran model memiliki lebih banyak varians.
+1. Ulangi langkah 2 hingga 4 untuk jumlah epoch yang telah ditentukan sebelumnya.
+1. Buat adversarial examples untuk surrogate models menggunakan metode gradien cepat (atau serupa).
+1. Serang model asli dengan adversarial examples.
 
-The aim of the surrogate model is to approximate the decision boundaries of the black box model, but not necessarily to achieve the same accuracy.
+Tujuan dari surrogate models adalah untuk mendekati batas keputusan dari model black box, tetapi tidak harus mencapai akurasi yang sama.
 
-The authors tested this approach by attacking image classifiers trained on various cloud machine learning services.
-These services train image classifiers on user uploaded images and labels.
-The software trains the model automatically -- sometimes with an algorithm unknown to the user -- and deploys it.
-The classifier then gives predictions for uploaded images, but the model itself cannot be inspected or downloaded.
-The authors were able to find adversarial examples for various providers, with up to 84% of the adversarial examples being misclassified.
+Penulis menguji pendekatan ini dengan menyerang pengklasifikasi gambar yang dilatih di berbagai layanan machine learning cloud.
+Layanan ini melatih pengklasifikasi gambar pada gambar dan label yang diunggah pengguna.
+Perangkat lunak melatih model secara otomatis -- terkadang dengan algoritme yang tidak diketahui pengguna -- dan menyebarkannya.
+Pengklasifikasi kemudian memberikan prediksi untuk gambar yang diunggah, tetapi model itu sendiri tidak dapat diperiksa atau diunduh.
+Penulis dapat menemukan adversarial examples untuk berbagai penyedia, dengan hingga 84% adversarial examples salah diklasifikasikan.
 
-The method even works if the black box model to be deceived is not a neural network.
-This includes machine learning models without gradients such as a decision trees.
+Metode itu bahkan berhasil jika model black box yang akan ditipu bukanlah jaringan saraf.
+Ini termasuk model machine learning tanpa gradien seperti decision trees.
 
 ### The Cybersecurity Perspective
 
-Machine learning deals with known unknowns: predicting unknown data points from a known distribution.
-The defense against attacks deals with unknown unknowns: robustly predicting unknown data points from an unknown distribution of adversarial inputs.
-As machine learning is integrated into more and more systems, such as autonomous vehicles or medical devices, they are also becoming entry points for attacks.
-Even if the predictions of a machine learning model on a test dataset are 100% correct,  adversarial examples can be found to deceive the model.
-The defense of machine learning models against cyber attacks is a new part of the field of cybersecurity.
+Machine learning berurusan dengan hal yang tidak diketahui: memprediksi titik data yang tidak diketahui dari distribusi yang diketahui.
+Pertahanan terhadap serangan berkaitan dengan hal-hal yang tidak diketahui: memprediksi titik data yang tidak diketahui secara kuat dari distribusi input musuh yang tidak diketahui.
+Karena machine learning diintegrasikan ke dalam lebih banyak sistem, seperti kendaraan otonom atau perangkat medis, mereka juga menjadi titik masuk untuk serangan.
+Bahkan jika prediksi model machine learning pada set data pengujian 100% benar, adversarial examples dapat ditemukan untuk menipu model.
+Pertahanan model machine learning terhadap serangan siber adalah bagian baru dari bidang keamanan siber.
 
-Biggio et. al (2018)[^adversarial] give a nice review of ten years of research on adversarial machine learning, on which this section is based.
-Cybersecurity is an arms-race in which attackers and defenders outwit each other time and again.
+Biggio et. al (2018)[^adversarial] memberikan ulasan yang bagus tentang sepuluh tahun penelitian tentang machine learning permusuhan, yang menjadi dasar bagian ini.
+Keamanan siber adalah perlombaan senjata di mana penyerang dan pembela saling mengecoh berkali-kali.
 
+**Ada tiga aturan emas dalam keamanan siber: 1) kenali musuh Anda 2) proaktif dan 3) lindungi diri Anda sendiri.**
 
-**There are three golden rules in cybersecurity: 1) know your adversary 2) be proactive and 3) protect yourself.**
+Aplikasi yang berbeda memiliki musuh yang berbeda.
+Orang yang mencoba menipu orang lain melalui email untuk mendapatkan uang mereka adalah agen musuh dari pengguna dan penyedia layanan email.
+Penyedia ingin melindungi penggunanya, sehingga mereka dapat terus menggunakan program email mereka, penyerang ingin membuat orang memberi mereka uang.
+Mengetahui musuh Anda berarti mengetahui tujuan mereka.
+Dengan asumsi Anda tidak tahu bahwa spammer ini ada dan satu-satunya penyalahgunaan layanan email adalah mengirimkan salinan musik bajakan, maka pembelaannya akan berbeda (misalnya memindai lampiran untuk materi berhak cipta alih-alih menganalisis teks untuk indikator spam).
 
-Different applications have different adversaries.
-People who try to defraud other people via email for their money are adversary agents of users and providers of email services.
-The providers want to protect their users, so that they can continue using their mail program, the attackers want to get people to give them money.
-Knowing your adversaries means knowing their goals.
-Assuming you do not know that these spammers exist and the only abuse of the email service is sending pirated copies of music, then the defense would be different (e.g. scanning the attachments for copyrighted material instead of analyzing the text for spam indicators).
+Menjadi proaktif berarti secara aktif menguji dan mengidentifikasi titik-titik lemah dari sistem.
+Anda proaktif ketika Anda secara aktif mencoba menipu model dengan contoh-adversarial examples dan kemudian bertahan melawan mereka.
+Menggunakan metode interpretasi untuk memahami fitur mana yang penting dan bagaimana fitur memengaruhi prediksi juga merupakan langkah proaktif dalam memahami kelemahan model machine learning.
+Sebagai ilmuwan data, apakah Anda memercayai model Anda di dunia yang berbahaya ini tanpa pernah melihat melampaui forces prediksi pada kumpulan data uji?
+Sudahkah Anda menganalisis bagaimana model berperilaku dalam skenario yang berbeda, mengidentifikasi input yang paling penting, memeriksa penjelasan prediksi untuk beberapa contoh?
+Sudahkah Anda mencoba menemukan input permusuhan?
+Penafsiran model machine learning memainkan peran utama dalam keamanan siber.
+Menjadi reaktif, kebalikan dari proaktif, berarti menunggu sampai sistem diserang dan baru kemudian memahami masalahnya dan memasang beberapa tindakan defensif.
 
-Being proactive means actively testing and identifying weak points of the system.
-You are proactive when you actively try to deceive the model with adversarial examples and then defend against them.
-Using interpretation methods to understand which features are important and how features affect the prediction is also a proactive step in understanding the weaknesses of a machine learning model.
-As the data scientist, do you trust your model in this dangerous world without ever having looked beyond the predictive power on a test dataset?
-Have you analyzed how the model behaves in different scenarios, identified the most important inputs, checked the prediction explanations for some examples?
-Have you tried to find adversarial inputs?
-The interpretability of machine learning models plays a major role in cybersecurity.
-Being reactive, the opposite of proactive, means waiting until the system has been attacked and only then understanding the problem and installing some defensive measures.
+Bagaimana kita dapat melindungi sistem machine learning kita dari contoh-contoh yang bertentangan?
+Pendekatan proaktif adalah pelatihan ulang berulang dari classifier dengan adversarial examples, juga disebut adversarial training.
+Pendekatan lain didasarkan pada game theory, seperti mempelajari transformasi invarian fitur atau optimasi yang kuat (regularisasi).
+Metode lain yang diusulkan adalah menggunakan beberapa pengklasifikasi alih-alih hanya satu dan meminta mereka memilih prediksi (ansambel), tetapi itu tidak memiliki jaminan untuk berfungsi, karena mereka semua dapat mengalami adversarial examples yang serupa.
+Pendekatan lain yang juga tidak bekerja dengan baik adalah gradien masking, yang membangun model tanpa gradien yang berguna dengan menggunakan pengklasifikasi neighbors terdekat, bukan model aslinya.
 
-How can we protect our machine learning systems against adversarial examples?
-A proactive approach is the iterative retraining of the classifier with adversarial examples, also called adversarial training.
-Other approaches are based on game theory, such as learning invariant transformations of the features or robust optimization (regularization).
-Another proposed method is to use multiple classifiers instead of just one and have them vote the prediction (ensemble), but that has no guarantee to work, since they could all suffer from similar adversarial examples.
-Another approach that does not work well either is gradient masking, which constructs a model without useful gradients by using a nearest neighbor classifier instead of the original model.
+Kita dapat membedakan jenis serangan dengan seberapa banyak penyerang tahu tentang sistem.
+Penyerang mungkin memiliki pengetahuan yang sempurna (serangan white box), artinya mereka tahu segalanya tentang model seperti jenis model, parameter, dan data pelatihan;
+penyerang mungkin memiliki pengetahuan sebagian (serangan kotak abu-abu), artinya mereka mungkin hanya mengetahui representasi fitur dan jenis model yang digunakan, tetapi tidak memiliki akses ke data pelatihan atau parameter;
+penyerang mungkin tidak memiliki pengetahuan (serangan black box), artinya mereka hanya dapat menanyakan model dengan cara black box tetapi tidak memiliki akses ke data pelatihan atau informasi tentang parameter model.
+Tergantung pada tingkat informasi, penyerang dapat menggunakan teknik yang berbeda untuk menyerang model.
+Seperti yang telah kita lihat dalam contoh, bahkan dalam kasus black box adversarial examples dapat dibuat, sehingga menyembunyikan informasi tentang data dan model tidak cukup untuk melindungi dari serangan.
 
-
-We can distinguish types of attacks by how much an attacker knows about the system.
-The attackers may have perfect knowledge (white box attack), meaning they know everything about the model like the type of model, the parameters and the training data;
-the attackers may have partial knowledge (gray box attack), meaning they might only know the feature representation and the type of model that was used, but have no access to the training data or the parameters;
-the attackers may have zero knowledge (black box attack), meaning they can only query the model in a black box manner but have no access to the training data or information about the model parameters.
-Depending on the level of information, the attackers can use different techniques to attack the model.
-As we have seen in the examples, even in the black box case adversarial examples can  be created, so that hiding information about data and model is not sufficient to protect against attacks.
-
-Given the nature of the cat-and-mouse game between attackers and defenders, we will see a lot of development and innovation in this area. 
-Just think of the many different types of spam emails that are constantly evolving.
-New methods of attacks against machine learning models are invented and new defensive measures are proposed  against these new attacks.
-More powerful attacks are developed to evade the latest defenses and so on, ad infinitum.
-With this chapter I hope to sensitize you to the problem of adversarial examples and that only by proactively studying the machine learning models are we able to discover and remedy weaknesses.
+Mengingat sifat game kucing-dan-tikus antara penyerang dan pembela, kita akan melihat banyak perkembangan dan inovasi di bidang ini.
+Pikirkan saja berbagai jenis email spam yang terus berkembang.
+Metode serangan baru terhadap model machine learning ditemukan dan langkah-langkah defensif baru diusulkan terhadap serangan baru ini.
+Serangan yang lebih kuat dikembangkan untuk menghindari pertahanan terbaru dan seterusnya, tanpa batas.
+Dengan bab ini saya berharap untuk membuat Anda peka terhadap masalah adversarial examples dan bahwa hanya dengan mempelajari model machine learning secara proaktif kita dapat menemukan dan memperbaiki kelemahan.
 
 
 

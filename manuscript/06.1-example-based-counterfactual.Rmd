@@ -10,254 +10,251 @@ devtools::load_all()
 set.seed(42)
 ```
 
-A counterfactual explanation describes a causal situation in the form: "If X had not occurred, Y would not have occurred".
-For example: "If I hadn't taken a sip of this hot coffee, I wouldn't have burned my tongue".
-Event Y is that I burned my tongue;
-cause X is that I had a hot coffee.
-Thinking in counterfactuals requires imagining a hypothetical reality that contradicts the observed facts (for example, a world in which I have not drunk the hot coffee), hence the name "counterfactual".
-The ability to think in counterfactuals makes us humans so smart compared to other animals.
+Counterfactual explanations menggambarkan situasi kausal dalam bentuk: "Jika X tidak terjadi, Y tidak akan terjadi".
+Misalnya: "Jika saya tidak menyesap kopi panas ini, lidah saya tidak akan terbakar".
+Acara Y adalah saya membakar lidah saya;
+karena X adalah saya minum kopi panas.
+Berpikir dalam kontrafaktual membutuhkan membayangkan realitas hipotetis yang bertentangan dengan fakta yang diamati (misalnya, dunia di mana saya belum minum kopi panas), maka nama "kontrafaktual".
+Kemampuan berpikir kontrafaktual menjadikan kita manusia begitu cerdas dibandingkan dengan hewan lain.
 
-In interpretable machine learning, counterfactual explanations can be used to explain predictions of individual instances.
-The "event" is the predicted outcome of an instance, the "causes" are the particular feature values of this instance that were input to the model and "caused" a certain prediction.
-Displayed as a graph, the relationship between the inputs and the prediction is very simple:
-The feature values cause the prediction.
+Dalam machine learning yang dapat diinterpretasikan, counterfactual explanations dapat digunakan untuk menjelaskan prediksi instance individu.
+"Peristiwa" adalah hasil yang diprediksi dari sebuah instance, "penyebab" adalah nilai fitur tertentu dari instance ini yang dimasukkan ke model dan "menyebabkan" prediksi tertentu.
+Ditampilkan sebagai grafik, hubungan antara input dan prediksi sangat sederhana:
+Nilai fitur menyebabkan prediksi.
 
 ```{r ml-graph-cf, fig.cap = "The causal relationships between inputs of a machine learning model and the predictions, when the model is merely seen as a black box. The inputs cause the prediction (not necessarily reflecting the real causal relation of the data).", out.width=500, align = 'center'}
 knitr::include_graphics("images/graph.jpg")
 ```
 
-Even if in reality the relationship between the inputs and the outcome to be predicted might not be causal, we can see the inputs of a model as the cause of the prediction.
+Bahkan jika pada kenyataannya hubungan antara input dan hasil yang diprediksi mungkin tidak kausal, kita dapat melihat input dari model sebagai penyebab prediksi.
 
-Given this simple graph, it is easy to see how we can simulate counterfactuals for predictions of machine learning models:
-We simply change the feature values of an instance before making the predictions and we analyze how the prediction changes.
-We are interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (for example, credit application accepted or rejected) or in which the prediction reaches a certain threshold (for example, the probability for cancer reaches 10%).
-**A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.**
+Dengan grafik sederhana ini, mudah untuk melihat bagaimana kita dapat mensimulasikan kontrafaktual untuk prediksi model machine learning:
+Kami hanya mengubah nilai fitur dari sebuah instance sebelum membuat prediksi dan kami menganalisis bagaimana prediksi berubah.
+Kami tertarik pada skenario di mana prediksi berubah dengan cara yang relevan, seperti pembalikan kelas prediksi (misalnya, aplikasi kredit diterima atau ditolak) atau di mana prediksi mencapai ambang tertentu (misalnya, kemungkinan kanker mencapai 10 %).
+**counterfactual explanations tentang prediksi menjelaskan perubahan terkecil pada nilai fitur yang mengubah prediksi menjadi keluaran yang telah ditentukan sebelumnya.**
 
-There are both model-agnostic and model-specific counterfactual explanation methods, but in this chapter we focus on model-agnostic methods that only work with the model inputs and outputs (and not the internal structure of specific models). 
-These methods would also feel at home in the [model-agnostic chapter](#agnostic), since the interpretation can be expressed as a summary of the differences in feature values ("change features A and B to change the prediction").
-But a counterfactual explanation is itself a new instance, so it lives in this chapter ("starting from instance X, change A and B to get a counterfactual instance").
-Unlike [prototypes](#proto), counterfactuals do not have to be actual instances from the training data, but can be a new combination of feature values.
+Ada metode counterfactual explanations model-agnostic dan model-spesifik, tetapi dalam bab ini kami fokus pada metode model-agnostic yang hanya bekerja dengan input dan output model (dan bukan struktur internal model tertentu).
+Metode ini juga akan terasa nyaman di [bab model-agnostic](#agnostic), karena interpretasi dapat dinyatakan sebagai ringkasan perbedaan nilai fitur ("ubah fitur A dan B untuk mengubah prediksi").
+Tetapi counterfactual explanations itu sendiri merupakan contoh baru, jadi ia tinggal di bab ini ("mulai dari contoh X, ubah A dan B untuk mendapatkan contoh kontrafaktual").
+Tidak seperti [prototypes](#proto), kontrafaktual tidak harus berupa instance aktual dari data pelatihan, tetapi dapat berupa kombinasi baru dari nilai fitur.
 
-Before discussing how to create counterfactuals, I would like to discuss some use cases for counterfactuals and how a good counterfactual explanation looks like.
+Sebelum membahas cara membuat kontrafaktual, saya ingin membahas beberapa kasus penggunaan kontrafaktual dan bagaimana counterfactual explanations yang baik.
 
-In this first example, Peter applies for a loan and gets rejected by the (machine learning powered) banking software.
-He wonders why his application was rejected and how he might improve his chances to get a loan.
-The question of "why" can be formulated as a counterfactual:
-What is the smallest change to the features (income, number of credit cards, age, ...) that would change the prediction from rejected to approved?
-One possible answer could be:
-If Peter would earn 10,000 Euro more per year, he would get the loan.
-Or if Peter had fewer credit cards and had not defaulted on a loan 5 years ago, he would get the loan.
-Peter will never know the reasons for the rejection, as the bank has no interest in transparency, but that is another story.
+Dalam contoh pertama ini, Peter mengajukan pinjaman dan ditolak oleh perangkat lunak perbankan (bertenaga machine learning).
+Dia bertanya-tanya mengapa aplikasinya ditolak dan bagaimana dia bisa meningkatkan peluangnya untuk mendapatkan pinjaman.
+Pertanyaan “mengapa” dapat dirumuskan sebagai kontrafaktual:
+Apa perubahan terkecil pada fitur (pendapatan, jumlah kartu kredit, usia, ...) yang akan mengubah prediksi dari ditolak menjadi disetujui?
+Salah satu jawaban yang mungkin adalah:
+Jika Peter akan mendapatkan 10.000 Euro lebih banyak per tahun, dia akan mendapatkan pinjaman.
+Atau jika Peter memiliki lebih sedikit kartu kredit dan tidak gagal membayar pinjaman 5 tahun yang lalu, dia akan mendapatkan pinjaman.
+Peter tidak akan pernah tahu alasan penolakannya, karena bank tidak tertarik pada transparansi, tapi itu cerita lain.
 
-In our second example we want to explain a model that predicts a continuous outcome with counterfactual explanations.
-Anna wants to rent out her apartment, but she is not sure how much to charge for it, so she decides to train a machine learning model to predict the rent.
-Of course, since Anna is a data scientist, that is how she solves her problems.
-After entering all the details about size, location, whether pets are allowed and so on, the model tells her that she can charge 900 Euro.
-She expected 1000 Euro or more, but she trusts her model and decides to play with the feature values of the apartment to see how she can improve the value of the apartment.
-She finds out that the apartment could be rented out for over 1000 Euro, if it were 15 m^2^ larger.
-Interesting, but non-actionable knowledge, because she cannot enlarge her apartment.
-Finally, by tweaking only the feature values under her control (built-in kitchen yes/no, pets allowed yes/no, type of floor, etc.), she finds out that if she allows pets and installs windows with better insulation, she can charge 1000 Euro.
-Anna had intuitively worked with counterfactuals to change the outcome.
+Dalam contoh kedua kami, kami ingin menjelaskan model yang memprediksi hasil berkelanjutan dengan counterfactual explanations.
+Anna ingin menyewakan apartemennya, tetapi dia tidak yakin berapa biayanya, jadi dia memutuskan untuk melatih model machine learning untuk memprediksi harga sewanya.
+Tentu saja, karena Anna adalah seorang ilmuwan data, begitulah cara dia menyelesaikan masalahnya.
+Setelah memasukkan semua detail tentang ukuran, lokasi, apakah hewan peliharaan diperbolehkan dan sebagainya, model tersebut mengatakan kepadanya bahwa dia dapat mengenakan biaya 900 Euro.
+Dia mengharapkan 1000 Euro atau lebih, tetapi dia mempercayai modelnya dan memutuskan untuk bermain dengan nilai fitur apartemen untuk melihat bagaimana dia dapat meningkatkan nilai apartemen.
+Dia mengetahui bahwa apartemen itu bisa disewa dengan harga lebih dari 1000 Euro, jika lebih besar 15 m^2^.
+Pengetahuan yang menarik, tetapi tidak dapat ditindaklanjuti, karena dia tidak dapat memperbesar apartemennya.
+Akhirnya, dengan mengubah hanya nilai fitur di bawah kendalinya (dapur built-in ya/tidak, hewan peliharaan diperbolehkan ya/tidak, jenis lantai, dll.), dia menemukan bahwa jika dia mengizinkan hewan peliharaan dan memasang jendela dengan insulasi yang lebih baik, dia dapat mengisi 1000 Euro.
+Anna secara intuitif bekerja dengan kontrafaktual untuk mengubah hasilnya.
 
-Counterfactuals are [human-friendly explanations](#good-explanation), because they are contrastive to the current instance and because they are selective, meaning they usually focus on a small number of feature changes.
-But counterfactuals suffer from the 'Rashomon effect'. 
-Rashomon is a Japanese movie in which the murder of a Samurai is told by different people.
-Each of the stories explains the outcome equally well, but the stories contradict each other. 
-The same can also happen with counterfactuals, since there are usually multiple different counterfactual explanations.
-Each counterfactual tells a different "story" of how a certain outcome was reached.
-One counterfactual might say to change feature A, the other counterfactual might say to leave A the same but change feature B, which is a contradiction.
-This issue of multiple truths can be addressed either by reporting all counterfactual explanations or by having a criterion to evaluate counterfactuals and select the best one. 
+Counterfactuals adalah [penjelasan ramah manusia](#good-explanation), karena kontras dengan contoh saat ini dan karena selektif, artinya mereka biasanya fokus pada sejumlah kecil perubahan fitur.
+Tapi kontrafaktual menderita dari 'efek Rashomon'.
+Rashomon adalah film Jepang di mana pembunuhan seorang Samurai diceritakan oleh orang yang berbeda.
+Masing-masing cerita menjelaskan hasilnya dengan sama baiknya, tetapi cerita-cerita itu saling bertentangan.
+Hal yang sama juga dapat terjadi dengan kontrafaktual, karena biasanya ada beberapa counterfactual explanations yang berbeda.
+Setiap kontrafaktual menceritakan "kisah" yang berbeda tentang bagaimana hasil tertentu dicapai.
+Satu kontrafaktual mungkin mengatakan untuk mengubah fitur A, kontrafaktual lainnya mungkin mengatakan untuk membiarkan A tetap sama tetapi mengubah fitur B, yang merupakan kontradiksi.
+Masalah kebenaran ganda ini dapat diatasi baik dengan melaporkan semua counterfactual explanations atau dengan memiliki kriteria untuk mengevaluasi kontrafaktual dan memilih yang terbaik.
 
-Speaking of criteria, how do we define a good counterfactual explanation?
-First, the user of a counterfactual explanation defines a relevant change in the prediction of an instance (= the alternative reality).
-An obvious first requirement is that **a counterfactual instance produces the predefined prediction as closely as possible**.
-It is not always possible to find a counterfactual with the predefined prediction.
-For example, in a classification setting with two classes, a rare class and a frequent class, the model might always classify an instance as the frequent class.
-Changing the feature values so that the predicted label would flip from the frequent class to the rare class might be impossible.
-We want therfore relax the requirement that the prediction of the counterfactual must exactly match the predefined outcome.
-In the classification example, we could look for a counterfactual where the predicted probability of the rare class is increased to 10% instead of the current 2%.
-The question then is, what are the minimal changes in the features so that the predicted probability changes from 2% to 10% (or close to 10%)?
-Another quality criterion is that **a counterfactual should be as similar as possible to the instance regarding feature values**.
-The distance between two instances can be measured, for example, with the Manhattan distance or the Gower distance if we have both discrete and continuous features.
-The counterfactual should not only be close to the original instance, but should also **change as few features as possible**.
-To measure how good a counterfactual explanation is in this metric, we can simply count the number of changed features or, in fancy mathematical terms, measure the $L_0$ norm between counterfactual and actual instance.
-Third, it is often desirable to generate **multiple diverse counterfactual explanations** so that the decision-subject gets access to multiple viable ways of generating a different outcome. For instance, continuing our loan example, one counterfactual explanation might suggest only to double the income to get a loan, while another counterfactual might suggest shifting to a nearby city and increase the income by a small amount to get a loan. It could be noted that while the first counterfactual might be possible for some, the latter might be more actionable for some. Thus, besides providing a decision-subject with different ways to get the desired outcome, diversity also enables "diverse" individuals to alter the features that are convenient for them. 
-The last requirement is that **a counterfactual instance should have feature values that are likely**. 
-It would not make sense to generate a counterfactual explanation for the rent example where the size of an apartment is negative or the number of rooms is set to 200.
-It is even better when the counterfactual is likely according to the joint distribution of the data, for example, an apartment with 10 rooms and 20 m^2^ should not be regarded as counterfactual explanation. 
-Ideally, if the number of square meters is increased, an increase in the number of rooms should also be proposed. 
+Berbicara tentang kriteria, bagaimana kita mendefinisikan counterfactual explanations yang baik?
+Pertama, pengguna counterfactual explanations mendefinisikan perubahan yang relevan dalam prediksi suatu kejadian (= realitas alternatif).
+Persyaratan pertama yang jelas adalah bahwa **contoh kontrafaktual menghasilkan prediksi yang telah ditentukan sedekat mungkin**.
+Tidak selalu mungkin untuk menemukan kontrafaktual dengan prediksi yang telah ditentukan sebelumnya.
+Misalnya, dalam pengaturan klasifikasi dengan dua kelas, kelas yang jarang dan kelas yang sering, model mungkin selalu mengklasifikasikan sebuah instance sebagai kelas yang sering.
+Mengubah nilai fitur sehingga label yang diprediksi akan berubah dari kelas yang sering ke kelas yang jarang mungkin tidak mungkin.
+Oleh karena itu, kami ingin melonggarkan persyaratan bahwa prediksi kontrafaktual harus sama persis dengan hasil yang telah ditentukan sebelumnya.
+Dalam contoh klasifikasi, kita dapat mencari kontrafaktual di mana probabilitas prediksi kelas langka meningkat menjadi 10%, bukan 2% saat ini.
+Pertanyaannya kemudian adalah, apa perubahan minimal pada fitur sehingga probabilitas yang diprediksi berubah dari 2% menjadi 10% (atau mendekati 10%)?
+Kriteria kualitas lainnya adalah **sebuah kontrafaktual harus semirip mungkin dengan contoh terkait nilai fitur**.
+Jarak antara dua contoh dapat diukur, misalnya, dengan jarak Manhattan atau jarak Gower jika kita memiliki fitur diskrit dan kontinu.
+Counterfactual tidak hanya harus dekat dengan instance asli, tetapi juga harus **mengubah fitur sesedikit mungkin**.
+Untuk mengukur seberapa baik counterfactual explanations dalam metrik ini, kita cukup menghitung jumlah fitur yang diubah atau, dalam istilah matematika yang bagus, mengukur norma $L_0$ antara contoh kontrafaktual dan aktual.
+Ketiga, seringkali diinginkan untuk menghasilkan **beberapa counterfactual explanations yang beragam** sehingga subjek keputusan mendapatkan akses ke berbagai cara yang layak untuk menghasilkan hasil yang berbeda. Misalnya, melanjutkan contoh pinjaman kami, satu counterfactual explanations mungkin menyarankan hanya untuk menggandakan pendapatan untuk mendapatkan pinjaman, sementara kontrafaktual lain mungkin menyarankan untuk pindah ke kota terdekat dan meningkatkan pendapatan dengan jumlah kecil untuk mendapatkan pinjaman. Dapat dicatat bahwa sementara kontrafaktual pertama mungkin untuk beberapa, yang terakhir mungkin lebih dapat ditindaklanjuti untuk beberapa. Jadi, selain memberikan subjek keputusan dengan cara yang berbeda untuk mendapatkan hasil yang diinginkan, keragaman juga memungkinkan individu yang "beraneka ragam" untuk mengubah fitur yang nyaman bagi mereka.
+Persyaratan terakhir adalah bahwa **instance kontrafaktual harus memiliki nilai fitur yang mungkin**.
+Tidak masuk akal untuk menghasilkan counterfactual explanations untuk contoh sewa di mana ukuran apartemen negatif atau jumlah kamar diatur ke 200.
+Lebih baik lagi bila kontrafaktualnya menurut distribusi data bersama, misalnya apartemen dengan 10 kamar dan 20 m^2^ tidak boleh dianggap sebagai counterfactual explanations.
+Idealnya, jika jumlah meter persegi ditingkatkan, peningkatan jumlah kamar juga harus diusulkan.
 
 ### Generating Counterfactual Explanations
 
-A simple and naive approach to generating counterfactual explanations is searching by trial and error.
-This approach involves randomly changing feature values of the instance of interest and stopping when the desired output is predicted.
-Like the example where Anna tried to find a version of her apartment for which she could charge more rent.
-But there are better approaches than trial and error.
-First, we define a loss function based on the criteria mentioned above.
-This loss takes as input the instance of interest, a counterfactual and the desired (counterfactual) outcome. 
-Then, we can find the counterfactual explanation that minimizes this loss using an optimization algorithm. 
-Many methods proceed in this way but differ in their definition of the loss function and optimization method. 
+Pendekatan sederhana dan naif untuk menghasilkan counterfactual explanations adalah mencari dengan coba-coba.
+Pendekatan ini melibatkan perubahan nilai fitur secara acak dari instance yang diinginkan dan berhenti ketika output yang diinginkan diprediksi.
+Seperti contoh di mana Anna mencoba menemukan versi apartemennya yang bisa dikenakan biaya sewa lebih banyak.
+Tetapi ada pendekatan yang lebih baik daripada coba-coba.
+Pertama, kami mendefinisikan loss function berdasarkan kriteria yang disebutkan di atas.
+loss ini mengambil sebagai masukan contoh kepentingan, kontrafaktual dan hasil yang diinginkan (kontrafaktual).
+Kemudian, kita dapat menemukan counterfactual explanations yang meminimalkan loss ini menggunakan algoritma optimasi.
+Banyak metode melanjutkan dengan cara ini tetapi berbeda dalam definisi loss function dan metode optimasi.
 
-In the following, we focus on two of them: first, the one by Wachter et. al (2017)[^wachter] who introduced counterfactual explanation as an interpretation method and, second, the one by Dandl et al. (2020)[^dandl] that takes into account all four criteria mentioned above.
+Berikut ini, kami fokus pada dua di antaranya: pertama, yang oleh Wachter et. al (2017)[^wachter] yang memperkenalkan counterfactual explanations sebagai metode interpretasi dan, kedua, oleh Dandl et al. (2020)[^dandl] yang memperhitungkan keempat kriteria yang disebutkan di atas.
 
 
 #### Method by Wachter et al. 
-Wachter et al. suggest minimizing the following loss:
+Wachter dkk. menyarankan meminimalkan loss berikut:
 
 $$L(x,x^\prime,y^\prime,\lambda)=\lambda\cdot(\hat{f}(x^\prime)-y^\prime)^2+d(x,x^\prime)$$
 
-The first term is the quadratic distance between the model prediction for the counterfactual x' and the desired outcome y', which the user must define in advance.
-The second term is the distance d between the instance x to be explained and the counterfactual x'.
-The loss measures how far the predicted outcome of the counterfactual is from the predefined outcome and how far the counterfactual is from the instance of interest.
-The distance function d is defined as the Manhattan distance weighted with the inverse median absolute deviation (MAD) of each feature.
+Suku pertama adalah jarak kuadrat antara prediksi model untuk kontrafaktual x' dan hasil yang diinginkan y', yang harus ditentukan pengguna terlebih dahulu.
+Suku kedua adalah jarak d antara contoh x yang akan dijelaskan dan kontrafaktual x'.
+loss mengukur seberapa jauh hasil prediksi kontrafaktual dari hasil yang telah ditentukan dan seberapa jauh kontrafaktual dari contoh yang diinginkan.
+Fungsi jarak d didefinisikan sebagai jarak Manhattan yang dibobot dengan deviasi absolut median terbalik (MAD) dari setiap fitur.
 
 $$d(x,x^\prime)=\sum_{j=1}^p\frac{|x_j-x^\prime_j|}{MAD_j}$$
 
-The total distance is the sum of all p feature-wise distances, that is, the absolute differences of feature values between instance x and counterfactual x'.
-The feature-wise distances are scaled by the inverse of the median absolute deviation of feature j over the dataset defined as:
-
+Jarak total adalah jumlah dari semua p jarak berdasarkan fitur, yaitu, perbedaan mutlak nilai fitur antara contoh x dan kontrafaktual x'.
+Jarak feature-wise diskalakan dengan kebalikan dari deviasi absolut median fitur j di atas kumpulan data yang didefinisikan sebagai:
 
 $$MAD_j=\text{median}_{i\in{}\{1,\ldots,n\}}(|x_{i,j}-\text{median}_{l\in{}\{1,\ldots,n\}}(x_{l,j})|)$$
 
-The median of a vector is the value at which half of the vector values are greater and the other half smaller.
-The MAD is the equivalent of the variance of a feature, but instead of using the mean as the center and summing over the square distances, we use the median as the center and sum over the absolute distances.
-The proposed distance function has the advantage over the Euclidean distance that 
-<!-- it introduces sparsity.
-This means that two points are closer to each other when fewer features are different. -->
-it is more robust to outliers.
-Scaling with the MAD is necessary to bring all the features to the same scale - it should not matter whether you measure the size of an apartment in square meters or square feet.
+Median vektor adalah nilai di mana setengah dari nilai vektor lebih besar dan setengah lainnya lebih kecil.
+MAD adalah setara dengan varians fitur, tetapi alih-alih menggunakan mean sebagai pusat dan menjumlahkan jarak kuadrat, kami menggunakan median sebagai pusat dan menjumlahkan jarak absolut.
+Fungsi jarak yang diusulkan memiliki keunggulan dibandingkan jarak Euclidean yaitu
+itu lebih kuat untuk outlier.
+Penskalaan dengan MAD diperlukan untuk membawa semua fitur ke skala yang sama - tidak masalah apakah Anda mengukur ukuran apartemen dalam meter persegi atau kaki persegi.
 
-The parameter $\lambda$ balances the distance in prediction (first term) against the distance in feature values (second term).
-The loss is solved for a given $\lambda$ and returns a counterfactual x'.
-A higher value of $\lambda$ means that we prefer counterfactuals with predictions close to the desired outcome y', a lower value means that we prefer counterfactuals x' that are very similar to x in the feature values.
-If $\lambda$ is very large, the instance with the prediction closest to y' will be selected, regardless how far it is away from x.
-Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x.
-The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from y'.
-This constraint can be written as:
+Parameter $\lambda$ menyeimbangkan jarak dalam prediksi (istilah pertama) dengan jarak dalam nilai fitur (istilah kedua).
+Loss diselesaikan untuk $\lambda$ tertentu dan mengembalikan x' kontrafaktual.
+Nilai $\lambda$ yang lebih tinggi berarti bahwa kami lebih menyukai kontrafaktual dengan prediksi yang mendekati hasil yang diinginkan y', nilai yang lebih rendah berarti bahwa kami lebih menyukai kontrafaktual x' yang sangat mirip dengan x dalam nilai fitur.
+Jika $\lambda$ sangat besar, instance dengan prediksi yang paling dekat dengan y' akan dipilih, terlepas dari seberapa jauh jaraknya dari x.
+Pada akhirnya, pengguna harus memutuskan bagaimana menyeimbangkan persyaratan bahwa prediksi untuk kontrafaktual sesuai dengan hasil yang diinginkan dengan persyaratan bahwa kontrafaktual mirip dengan x.
+Penulis metode menyarankan daripada memilih nilai untuk $\lambda$ untuk memilih toleransi $\epsilon$ untuk seberapa jauh prediksi dari contoh kontrafaktual diperbolehkan dari y'.
+Batasan ini dapat ditulis sebagai:
 
 $$|\hat{f}(x^\prime)-y^\prime|\leq\epsilon$$
 
-To minimize this loss function, any suitable optimization algorithm can be used, such as Nelder-Mead.
-If you have access to the gradients of the machine learning model, you can use gradient-based methods like ADAM.
-The instance x to be explained, the desired output y' and the tolerance parameter $\epsilon$ must be set in advance.
-The loss function is minimized for x' and the (locally) optimal counterfactual x' returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter):
+Untuk meminimalkan loss function ini, algoritma optimasi yang sesuai dapat digunakan, seperti Nelder-Mead.
+Jika Anda memiliki akses ke gradien model machine learning, Anda dapat menggunakan metode berbasis gradien seperti ADAM.
+Contoh x yang akan dijelaskan, keluaran yang diinginkan y' dan parameter toleransi $\epsilon$ harus ditetapkan terlebih dahulu.
+loss function diminimalkan untuk x' dan kontrafaktual x' optimal (lokal) dikembalikan sambil meningkatkan $\lambda$ hingga solusi yang cukup dekat ditemukan (= dalam parameter toleransi):
 
 $$\arg\min_{x^\prime}\max_{\lambda}L(x,x^\prime,y^\prime,\lambda).$$
 
-Overall, the recipe for producing the counterfactuals is simple:
+Secara keseluruhan, resep untuk menghasilkan kontrafaktual sederhana:
 
-1. Select an instance x to be explained, the desired outcome y', a tolerance $\epsilon$ and a (low) initial value for $\lambda$.
-1. Sample a random instance as initial counterfactual.
-1. Optimize the loss with the initially sampled counterfactual as starting point.
-1. While $|\hat{f}(x^\prime)-y^\prime|>\epsilon$:
-    - Increase $\lambda$.
-    - Optimize the loss with the current counterfactual as starting point.
-    - Return the counterfactual that minimizes the loss.
-1. Repeat steps 2-4 and return the list of counterfactuals or the one that minimizes the loss.
+1. Pilih contoh x untuk dijelaskan, hasil yang diinginkan y', toleransi $\epsilon$ dan nilai awal (rendah) untuk $\lambda$.
+1. Contoh contoh acak sebagai kontrafaktual awal.
+1. Optimalkan loss dengan kontrafaktual sampel awalnya sebagai titik awal.
+1. Sementara $|\hat{f}(x^\prime)-y^\prime|>\epsilon$:
+    - Tingkatkan $\lambda$.
+    - Optimalkan loss dengan kontrafaktual saat ini sebagai titik awal.
+    - Kembalikan kontrafaktual yang meminimalkan loss.
+1. Ulangi langkah 2-4 dan kembalikan daftar kontrafaktual atau daftar yang meminimalkan loss.
 
-The proposed method has some disadvantages.
-It **only takes the first and second criteria into account** not the last two ("produce counterfactuals with only a few feature changes and likely feature values").
-d does not prefer sparse solutions since increasing 10 features by 1 will give the same distance to x as increasing one feature by 10.
-Unrealistic feature combinations are not penalized.
+Metode yang diusulkan memiliki beberapa kelemahan.
+Ini **hanya mempertimbangkan kriteria pertama dan kedua** bukan dua yang terakhir ("menghasilkan kontrafaktual dengan hanya sedikit perubahan fitur dan kemungkinan nilai fitur").
+d tidak menyukai solusi sparse karena menambah 10 fitur sebanyak 1 akan memberikan jarak yang sama ke x dengan meningkatkan satu fitur sebesar 10.
+Kombinasi fitur yang tidak realistis tidak dikenakan sanksi.
 
-The method does **not handle categorical features** with many different levels well. 
-The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values.
-For example, 6 categorical features with 10 unique levels would mean 1 million runs. 
+Metode ini **tidak menangani fitur kategoris** dengan banyak level berbeda dengan baik.
+Penulis metode menyarankan untuk menjalankan metode secara terpisah untuk setiap kombinasi nilai fitur dari fitur kategoris, tetapi ini akan menyebabkan ledakan kombinatorial jika Anda memiliki beberapa fitur kategoris dengan banyak nilai.
+Misalnya, 6 fitur kategoris dengan 10 level unik berarti 1 juta run.
 
-Let us now have a look on another approach overcoming these issues. 
+Sekarang mari kita lihat pendekatan lain untuk mengatasi masalah ini.
 
 
 #### Method by Dandl et al. 
 
-Dandl et al. suggest to simultaneously minimize a four-objective loss:
+Dandl dkk. menyarankan untuk secara bersamaan meminimalkan four-objective loss:
 
 $$L(x,x',y',X^{obs})=\big(o_1(\hat{f}(x'),y'),o_2(x, x'),o_3(x,x'),o_4(x',X^{obs})\big) $$ 
 
-Each of the four objectives $o_1$ to $o_4$ corresponds to one of the four criteria mentioned above.
-The first objective $o_1$ reflects that the prediction of our counterfactual x' should be as close as possible to our desired prediction y'.
-We therefore want to minimize the distance between $\hat{f}(x')$ and y', here calculated by the Manhattan metric ($L_1$ norm):
+Masing-masing dari empat tujuan $o_1$ hingga $o_4$ sesuai dengan salah satu dari empat kriteria yang disebutkan di atas.
+Tujuan pertama $o_1$ mencerminkan bahwa prediksi kontrafaktual x' harus sedekat mungkin dengan prediksi y' yang diinginkan.
+Oleh karena itu, kami ingin meminimalkan jarak antara $\hat{f}(x')$ dan y', di sini dihitung dengan metrik Manhattan (norma ($L_1$):
 
 $$o_1(\hat{f}(x'),y')=\begin{cases}0&\text{if $\hat{f}(x')\in{}y'$}\\\inf\limits_{y'\in y'}|\hat{f}(x')-y'|&\text{else}\end{cases}$$
 
-The second objective $o_2$ reflects that our counterfactual should be as similar as possible to our instance $x$.
-It quantifies the distance between x' and x
-as the Gower distance:
+Tujuan kedua $o_2$ mencerminkan bahwa kontrafaktual kita harus semirip mungkin dengan instance $x$ kita.
+Ini mengukur jarak antara x' dan x
+sebagai jarak Gower:
 
 $$o_2(x,x')=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x_j, x'_j)$$
 
-with p being the number of features.
-The value of $\delta_G$ depends on the feature type of $x_j$:
+dengan p adalah jumlah fitur.
+Nilai $\delta_G$ bergantung pada tipe fitur $x_j$:
 
 $$\delta_G(x_j,x'_j)=\begin{cases}\frac{1}{\widehat{R}_j}|x_j-x'_j|&\text{if $x_j$ numerical}\\\mathbb{I}_{x_j\neq{}x'_j}&\text{if $x_j$ categorical}\end{cases}$$
 
-Dividing the distance of a numeric feature $j$ by $\widehat{R}_j$, the observed value range, scales $\delta_G$ for all features between 0 and 1.
+Membagi jarak fitur numerik $j$ dengan $\widehat{R}_j$, rentang nilai yang diamati, menskalakan $\delta_G$ untuk semua fitur antara 0 dan 1.
 
-The Gower distance can handle both numerical and categorical features but does not count how many features were changed.
-Therefore, we count the number of features in a third objectives $o_3$ using the $L_0$ norm:
+Jarak Gower dapat menangani fitur numerik dan kategorikal tetapi tidak menghitung berapa banyak fitur yang diubah.
+Oleh karena itu, kami menghitung jumlah fitur dalam tujuan ketiga $o_3$ menggunakan norma $L_0$:
 
 $$o_3(x,x')=||x-x'||_0=\sum_{j=1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
 
-By minimizing $o_3$ we aim for our third criteria - sparse feature changes.
+Dengan meminimalkan $o_3$ kami bertujuan untuk kriteria ketiga kami - perubahan fitur yang jarang.
 
-The fourth objective $o_4$ reflects that our counterfactuals should have likely feature values/combinations.
-We can infer how "likely" a data point is using the training data or another dataset.
-We denote this dataset as $X^{obs}$.
-As an approximation for the likelihood, $o_4$ measures the average Gower distance between x' and the nearest observed data point $x^{[1]}\in{}X^{obs}$:
+Tujuan keempat $o_4$ mencerminkan bahwa kontrafaktual kita seharusnya memiliki kemungkinan nilai/kombinasi fitur.
+Kita dapat menyimpulkan seberapa "kemungkinan" suatu titik data menggunakan data pelatihan atau kumpulan data lainnya.
+Kami menyatakan dataset ini sebagai $X^{obs}$.
+Sebagai perkiraan kemungkinan, $o_4$ mengukur jarak Gower rata-rata antara x' dan titik data pengamatan terdekat $x^{[1]}\in{}X^{obs}$:
 
 $$o_4(x',\textbf{X}^{obs})=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x'_j,x^{[1]}_j)$$
 
-Compared to Wachter et al., $L(x,x',y',X^{obs})$ has no balancing/weighting terms like $\lambda$. 
-We do not want to collapse the four objectives $o_1$, $o_2$, $o_3$ and $o_4$ into a single objective by summing them up and weighting them, but we want to optimize all four terms simultaneously.
+Dibandingkan dengan Wachter dkk., $L(x,x',y',X^{obs})$ tidak memiliki istilah penyeimbang/pembobotan seperti $\lambda$.
+Kami tidak ingin menciutkan empat tujuan $o_1$, $o_2$, $o_3$ dan $o_4$ menjadi satu tujuan dengan menjumlahkannya dan memberi bobot, tetapi kami ingin mengoptimalkan keempat istilah secara bersamaan.
 
-How can we do that?
-We use the **Nondominated Sorting Genetic Algorithm**[^deb] or short NSGA-II.
-NSGA-II is a nature-inspired algorithm that applies Darwin's law of the "survival of the fittest".
-We denote the fitness of a counterfactual by its vector of objectives values $(o_1,o_2,o_3,o_4)$.
-The lower a counterfactuals four objectives, the "fitter" it is.
+Bagaimana kita bisa melakukan itu?
+Kami menggunakan **Nondominated Sorting Genetic Algorithm**[^deb] atau NSGA-II singkat.
+NSGA-II adalah algoritma yang terinspirasi dari alam yang menerapkan hukum Darwin tentang "survival of the fittest".
+Kami menyatakan kesesuaian kontrafaktual dengan nilai vektor tujuan $(o_1,o_2,o_3,o_4)$.
+Semakin rendah sebuah kontrafaktual empat tujuan, semakin "bugar" itu.
 
-The algorithm consists of four steps that are repeated until a stopping criterion is met, for example, a maximum number of iterations/generations.
-The following figure visualizes the four steps of one generation. 
+Algoritma terdiri dari empat langkah yang diulang sampai kriteria berhenti terpenuhi, misalnya, jumlah maksimum iterasi/generasi.
+Gambar berikut memvisualisasikan empat langkah dari satu generasi.
 
 ```{r nsgaII-cf, fig.cap = "Visualization of one generation of the NSGA-II algorithm.", out.width=700}
 knitr::include_graphics("images/cfexp-nsgaII.jpg")
 ```
 
-In the first generation a group of counterfactual candidates is initialized by randomly changing some of the features compared to our instance x to be explained.
-Sticking with above's credit example, one counterfactual could suggest to increase the income by € 30,000 while another one proposes to have no default in the last 5 years and a reduction in age by 10.
-All other feature values are equal to the values of x.
-Each candidate is then evaluated using the four objective functions of above.
-Among them, we randomly select some candidates, where fitter candidates are more likely selected.
-The candidates are pairwise recombined to produce children that are similar to them by averaging their numerical feature values or by crossing over their categorical features. 
-In addition, we slightly mutate the feature values of the children to explore the whole feature space.
+Pada generasi pertama sekelompok kandidat kontrafaktual diinisialisasi dengan mengubah beberapa fitur secara acak dibandingkan dengan contoh x yang akan dijelaskan.
+Berpegang pada contoh kredit di atas, satu kontrafaktual dapat menyarankan untuk meningkatkan pendapatan sebesar € 30.000 sementara yang lain mengusulkan untuk tidak mengalami default dalam 5 tahun terakhir dan pengurangan usia sebesar 10.
+Semua nilai fitur lainnya sama dengan nilai x.
+Setiap kandidat kemudian dievaluasi menggunakan empat fungsi tujuan di atas.
+Di antara mereka, kami secara acak memilih beberapa kandidat, di mana kandidat yang lebih bugar kemungkinan besar akan dipilih.
+Kandidat digabungkan kembali secara berpasangan untuk menghasilkan anak-anak yang mirip dengan mereka dengan merata-ratakan nilai fitur numerik mereka atau dengan menyilangkan fitur kategoris mereka.
+Selain itu, kami sedikit mengubah nilai fitur anak-anak untuk menjelajahi seluruh ruang fitur.
 
-From the two resulting groups, one with parents and one with children, we only want the best half using two sorting algorithms. 
-The nondominated sorting algorithm sorts the candidates according to their objective values. 
-If candidates are equally good, the crowding distance sorting algorithm sorts the candidates according to their diversity.
+Dari dua kelompok yang dihasilkan, satu dengan orang tua dan satu dengan anak-anak, kami hanya ingin setengah terbaik menggunakan dua algoritma pengurutan.
+Algoritma penyortiran nondominated mengurutkan kandidat menurut nilai objektifnya.
+Jika kandidat sama baiknya, algoritma crowding distance sorting mengurutkan kandidat berdasarkan keragamannya.
 
-Given the ranking of the two sorting algorithms, we select the most promising and/or most diverse half of the candidates. 
-We use this set for the next generation and start again with the selection, recombination and mutation process. 
-By repeating the steps over and over we hopefully approach a diverse set of promising candidates with low objective values.
-From this set we can choose those with which we are most satisfied, or we can give a summary of all counterfactuals by highlighting which and how often features have been changed. 
+Mengingat peringkat dari dua algoritme pengurutan, kami memilih separuh kandidat yang paling menjanjikan dan/atau paling beragam.
+Kami menggunakan set ini untuk generasi berikutnya dan memulai lagi dengan proses seleksi, rekombinasi dan mutasi.
+Dengan mengulangi langkah-langkah tersebut berulang-ulang, kami berharap dapat mendekati beragam kandidat yang menjanjikan dengan nilai objektif yang rendah.
+Dari set ini kita dapat memilih yang paling memuaskan kita, atau kita dapat memberikan ringkasan semua kontrafaktual dengan menyoroti fitur mana dan seberapa sering telah diubah.
 
 ### Example
 
-The following example is based on the credit dataset example in Dandl et al. (2020).
-The German Credit Risk dataset can be found on the machine learning challenges platform [kaggle.com](https://www.kaggle.com/uciml/german-credit). 
+Contoh berikut didasarkan pada contoh kumpulan data kredit di Dandl et al. (2020).
+Kumpulan data Risiko Kredit Jerman dapat ditemukan di platform tantangan machine learning [kaggle.com](https://www.kaggle.com/uciml/german-credit).
 
-The authors trained a support vector machine (with radial basis kernel) to predict the probability that a customer has a good credit risk. 
-The corresponding dataset has 522 complete observations and nine features containing credit and customer information. 
+Penulis melatih support vector machine (dengan radial basis kernel) untuk memprediksi probabilitas bahwa pelanggan memiliki risiko kredit yang baik.
+Kumpulan data yang sesuai memiliki 522 pengamatan lengkap dan sembilan fitur yang berisi informasi kredit dan pelanggan.
 
-The goal is to find counterfactual explanations for a customer with the following feature values
+Tujuannya adalah untuk menemukan counterfactual explanations untuk pelanggan dengan nilai fitur berikut
 
 |age|sex|job |housing|savings|checking|amount|duration|purpose|  |
 |---|---|----|-------------|--------|---------------|----------|----------|----|
 |58  |f|unskilled|free|little|little |6143            |48     |car|
 
 
-The SVM predicts that the woman has a good credit risk with a probability of 24.2 \%. 
-The counterfactuals should answer how the input features need to be changed to get a predicted probability larger than 50 \%?
+SVM memprediksi bahwa wanita tersebut memiliki risiko kredit yang baik dengan probabilitas 24,2 \%.
+Kontrafaktual harus menjawab bagaimana fitur input perlu diubah untuk mendapatkan probabilitas yang diprediksi lebih besar dari 50 \%?
 
-The following table shows the 10 best counterfactuals:
+Tabel berikut menunjukkan 10 kontrafaktual terbaik:
 
 |age|sex|job |amount|duration|$o_2$|$o_3$|$o_3$|$\hat{f}(x')$|
 |---|---|----|-------------|--------|---------------|----------|----------|----|
@@ -273,71 +270,71 @@ The following table shows the 10 best counterfactuals:
 |-4 |m|  |-1254        |-24     |0.204          |4         |0.002     |0.506|
 
 
-The first five columns contain the proposed feature changes (only altered features are displayed), the next three columns show the objective values ($o_1$ equals 0 in all cases) and the last column displays the predicted probability. 
+Lima kolom pertama berisi perubahan fitur yang diusulkan (hanya fitur yang diubah yang ditampilkan), tiga kolom berikutnya menunjukkan nilai objektif ($o_1$ sama dengan 0 dalam semua kasus) dan kolom terakhir menampilkan probabilitas yang diprediksi.
 
-All counterfactuals have predicted probabilities greater than 50 \% and do not dominate each other. 
-Nondominated means that none of the counterfactuals has smaller values in all objectives than the other counterfactuals. 
-We can think of our counterfactuals as a set of trade-off solutions.
+Semua kontrafaktual telah memprediksi probabilitas lebih besar dari 50 \% dan tidak saling mendominasi.
+Nondominated berarti bahwa tidak ada kontrafaktual yang memiliki nilai lebih kecil di semua tujuan daripada kontrafaktual lainnya.
+Kita dapat menganggap kontrafaktual kita sebagai satu set solusi trade-off.
 
-They all suggest a reduction of the duration from 48 months to minimum 23 months, some of them propose that the woman should become skilled instead of unskilled. 
-Some counterfactuals even suggest to change the gender from female to male which shows a gender bias of the model. 
-This change is always accompanied by a reduction in age between 1 and 30 years.
-We can also see that although some counterfactuals suggest changes to 4 features, these counterfactuals are the ones that are closest to the training data. 
+Mereka semua menyarankan pengurangan durasi dari 48 bulan menjadi minimal 23 bulan, beberapa dari mereka mengusulkan agar wanita menjadi terampil bukan tidak terampil.
+Beberapa kontrafaktual bahkan menyarankan untuk mengubah jenis kelamin dari perempuan menjadi laki-laki yang menunjukkan bias gender model.
+Perubahan ini selalu disertai dengan pengurangan usia antara 1 hingga 30 tahun.
+Kita juga dapat melihat bahwa meskipun beberapa kontrafaktual menyarankan perubahan pada 4 fitur, kontrafaktual ini adalah yang paling dekat dengan data pelatihan.
 
 ### Advantages
 
-**The interpretation of counterfactual explanations is very clear**.
-If the feature values of an instance are changed according to the counterfactual, the prediction changes to the predefined prediction.
-There are no additional assumptions and no magic in the background. 
-This also means it is not as dangerous as methods like [LIME](#lime), where it is unclear how far we can extrapolate the local model for the interpretation.
+**Penafsiran counterfactual explanations sangat jelas**.
+Jika nilai fitur dari sebuah instance diubah sesuai dengan kontrafaktual, prediksi berubah menjadi prediksi yang telah ditentukan sebelumnya.
+Tidak ada asumsi tambahan dan tidak ada keajaiban di latar belakang.
+Ini juga berarti tidak berbahaya seperti metode seperti [LIME](#lime), di mana tidak jelas seberapa jauh kita dapat memperkirakan model lokal untuk interpretasi.
 
-The counterfactual method creates a new instance, but we can also summarize a counterfactual by reporting which feature values have changed.
-This gives us **two options for reporting our results**.
-You can either report the counterfactual instance or highlight which features have been changed between the instance of interest and the counterfactual instance.
+Metode kontrafaktual membuat contoh baru, tetapi kita juga dapat meringkas kontrafaktual dengan melaporkan nilai fitur mana yang telah berubah.
+Ini memberi kami **dua opsi untuk melaporkan hasil kami**.
+Anda dapat melaporkan instans kontrafaktual atau menyoroti fitur mana yang telah diubah antara instans yang diminati dan instans kontrafaktual.
 
-The **counterfactual method does not require access to the data or the model**.
-It only requires access to the model's prediction function, which would also work via a web API, for example.
-This is attractive for companies which are audited by third parties or which are offering explanations for users without disclosing the model or data. 
-A company has an interest in protecting model and data because of trade secrets or data protection reasons.
-Counterfactual explanations offer a balance between explaining model predictions and protecting the interests of the model owner.
+**Metode kontrafaktual tidak memerlukan akses ke data atau model**.
+Ini hanya membutuhkan akses ke fungsi prediksi model, yang juga akan berfungsi melalui API web, misalnya.
+Ini menarik bagi perusahaan yang diaudit oleh pihak ketiga atau yang menawarkan penjelasan kepada pengguna tanpa mengungkapkan model atau datanya.
+Suatu perusahaan berkepentingan untuk melindungi model dan data karena alasan rahasia dagang atau perlindungan data.
+Counterfactual explanations menawarkan keseimbangan antara menjelaskan prediksi model dan melindungi kepentingan pemilik model.
 
-The method **works also with systems that do not use machine learning**.
-We can create counterfactuals for any system that receives inputs and returns outputs.
-The system that predicts apartment rents could also consist of handwritten rules, and counterfactual explanations would still work.
+Metode ini **berfungsi juga dengan sistem yang tidak menggunakan machine learning**.
+Kita dapat membuat kontrafaktual untuk sistem apa pun yang menerima input dan mengembalikan output.
+Sistem yang memprediksi sewa apartemen juga dapat terdiri dari aturan tulisan tangan, dan counterfactual explanations akan tetap berfungsi.
 
-**The counterfactual explanation method is relatively easy to implement**, since it is essentially a loss function (with a single or many objectives) that can be optimized with standard optimizer libraries. 
-Some additional details must be taken into account, such as limiting feature values to meaningful ranges (e.g. only positive apartment sizes).
+**Metode counterfactual explanations relatif mudah diterapkan**, karena pada dasarnya merupakan loss function (dengan satu atau banyak tujuan) yang dapat dioptimalkan dengan pustaka pengoptimal standar.
+Beberapa detail tambahan harus diperhitungkan, seperti membatasi nilai fitur ke rentang yang berarti (misalnya, hanya ukuran apartemen positif).
 
 ### Disadvantages
 
-**For each instance you will usually find multiple counterfactual explanations (Rashomon effect)**.
-This is inconvenient - most people prefer simple explanations over the complexity of the real world.
-It is also a practical challenge.
-Let us say we generated 23 counterfactual explanations for one instance. 
-Are we reporting them all?
-Only the best?
-What if they are all relatively "good", but very different?
-These questions must be answered anew for each project.
-It can also be advantageous to have multiple counterfactual explanations, because then humans can select the ones that correspond to their previous knowledge.
+**Untuk setiap contoh, Anda biasanya akan menemukan beberapa counterfactual explanations (efek Rashomon)**.
+Ini tidak nyaman - kebanyakan orang lebih suka penjelasan sederhana daripada kompleksitas dunia nyata.
+Ini juga merupakan tantangan praktis.
+Katakanlah kita menghasilkan 23 counterfactual explanations untuk satu contoh.
+Apakah kita melaporkan semuanya?
+Hanya yang terbaik?
+Bagaimana jika semuanya relatif "baik", tetapi sangat berbeda?
+Pertanyaan-pertanyaan ini harus dijawab lagi untuk setiap proyek.
+Ini juga dapat menguntungkan untuk memiliki beberapa counterfactual explanations, karena dengan demikian manusia dapat memilih yang sesuai dengan pengetahuan mereka sebelumnya.
 
 ### Software and Alternatives {#example-software}
 
-The multi-objective counterfactual explanation method by Dandl et al. is implemented in a [Github repository](https://github.com/susanne-207/moc/tree/master/counterfactuals).
+Metode counterfactual explanations multi-tujuan oleh Dandl et al. diimplementasikan di [repositori Github](https://github.com/susanne-207/moc/tree/master/counterfactuals).
 
-In the Python package [Alibi](https://github.com/SeldonIO/alibi) authors implemented a [simple counterfactual method](https://docs.seldon.io/projects/alibi/en/stable/methods/CF.html) as well as an [extended method](https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html) that uses class prototypes to improve the interpretability and convergence of the algorithm outputs[^vanlooveren].
+Dalam paket Python [Alibi](https://github.com/SeldonIO/alibi) penulis menerapkan [metode kontrafaktual sederhana](https://docs.seldon.io/projects/alibi/en/stable/methods/CF.html) serta [metode yang diperluas](https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html) yang menggunakan prototypes kelas untuk meningkatkan interpretasi dan konvergensi keluaran algoritme [^vanlooveren].
 
-Karimi et al. (2019)[^karimi] also provided a Python implementation of their algorithm MACE in a [Github repository](https://github.com/amirhk/mace). 
-They translated necessary criteria for proper counterfactuals into logical formulae and use satisfiability solvers to find counterfactuals that satisfy them.
+Karimi dkk. (2019)[^karimi] juga menyediakan implementasi Python dari algoritme MACE mereka di [repositori Github](https://github.com/amirhk/mace).
+Mereka menerjemahkan kriteria yang diperlukan untuk kontrafaktual yang tepat ke dalam rumus logis dan menggunakan pemecah kepuasan untuk menemukan kontrafaktual yang memuaskan mereka.
 
-Mothilal et al. (2020)[^Mothilal] developed [DiCE (Diverse Counterfactual Explanation)](https://github.com/interpretml/DiCE) to generate a diverse set of counterfactual explanations based on determinantal point processes. Currently, DiCE works only works for differentiable models as it uses gradient descent for optimization.
+Mothilal dkk. (2020)[^Mothilal] mengembangkan [DICE (Diverse Counterfactual Explanation)](https://github.com/interpretml/DiCE) untuk menghasilkan serangkaian counterfactual explanations yang beragam berdasarkan proses titik penentu. Saat ini, DiCE hanya berfungsi untuk model yang dapat dibedakan karena menggunakan penurunan gradien untuk pengoptimalan.
 
-Another way to search counterfactuals is the Growing Spheres algorithm by Laugel et. al (2017)[^spheres].
-They do not use the word counterfactual in their paper, but the method is quite similar.
-They also define a loss function that favors counterfactuals with as few changes in the feature values as possible.
-Instead of directly optimizing the function, they suggest to first draw a sphere around the point of interest, sample points within that sphere and check whether one of the sampled points yields the desired prediction. 
-Then they contract or expand the sphere accordingly until a (sparse) counterfactual is found and finally returned.
+Cara lain untuk mencari kontrafaktual adalah algoritma Growing Spheres oleh Laugel et. al (2017)[^spheres].
+Mereka tidak menggunakan kata kontrafaktual dalam makalah mereka, tetapi metodenya sangat mirip.
+Mereka juga mendefinisikan loss function yang mendukung kontrafaktual dengan sesedikit mungkin perubahan dalam nilai fitur.
+Alih-alih mengoptimalkan fungsi secara langsung, mereka menyarankan untuk terlebih dahulu menggambar bola di sekitar tempat tujuan, mengambil sampel titik di dalam bola itu dan memeriksa apakah salah satu titik sampel menghasilkan prediksi yang diinginkan.
+Kemudian mereka berkontraksi atau memperluas lingkup sesuai sampai kontrafaktual (jarang) ditemukan dan akhirnya dikembalikan.
 
-Anchors by Ribeiro et. al (2018)[^anchors] are the opposite of counterfactuals, see chapter about [Scoped Rules (Anchors)](#anchors).
+Anchors oleh Ribeiro et. al (2018)[^anchors] adalah kebalikan dari kontrafaktual, lihat bab tentang [Scoped Rules (Anchors)](#anchors).
 
 
 [^anchors]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Anchors: High-precision model-agnostic explanations." AAAI Conference on Artificial Intelligence (2018).

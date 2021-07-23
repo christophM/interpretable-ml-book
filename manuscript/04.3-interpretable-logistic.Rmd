@@ -7,30 +7,30 @@ set.seed(42)
 
 ## Logistic Regression {#logistic}
 
-Logistic regression models the probabilities for classification problems with two possible outcomes.
-It's an extension of the linear regression model for classification problems.
+Logistic regression memodelkan probabilitas untuk masalah klasifikasi dengan dua kemungkinan hasil.
+Ini merupakan perpanjangan dari model linear regression untuk masalah klasifikasi.
 
 ### What is Wrong with Linear Regression for Classification?
 
-The  linear regression model can work well for regression, but fails for classification.
-Why is that?
-In case of two classes, you could label one of the classes with 0 and the other with 1 and use linear regression.
-Technically it works and most linear model programs will spit out weights for you.
-But there are a few problems with this approach:
+Model linear regression dapat bekerja dengan baik untuk regresi, tetapi gagal untuk klasifikasi.
+Mengapa demikian?
+Dalam kasus dua kelas, Anda bisa memberi label salah satu kelas dengan 0 dan yang lainnya dengan 1 dan menggunakan linear regression.
+Secara teknis ini berfungsi dan sebagian besar program model linier akan memberikan bobot untuk Anda.
+Tetapi ada beberapa masalah dengan pendekatan ini:
 
-A linear model does not output probabilities, but it treats the classes as numbers (0 and 1) and fits the best hyperplane (for a single feature, it is a line) that minimizes the distances between the points and the hyperplane.
-So it simply interpolates between the points, and you cannot interpret it as probabilities.
+Model linier tidak menghasilkan probabilitas, tetapi memperlakukan kelas sebagai angka (0 dan 1) dan cocok dengan hyperplane terbaik (untuk fitur tunggal, itu adalah garis) yang meminimalkan jarak antara titik dan hyperplane.
+Jadi itu hanya interpolasi antara titik-titik, dan Anda tidak dapat menafsirkannya sebagai probabilitas.
 
-A linear model also extrapolates and gives you values below zero and above one.
-This is a good sign that there might be a smarter approach to classification.
+Model linier juga mengekstrapolasi dan memberi Anda nilai di bawah nol dan di atas satu.
+Ini adalah pertanda baik bahwa mungkin ada pendekatan yang lebih cerdas untuk klasifikasi.
 
-Since the predicted outcome is not a probability, but a linear interpolation between points, there is no meaningful threshold at which you can distinguish one class from the other.
-A good illustration of this issue has been given on [Stackoverflow](https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression).
+Karena hasil yang diprediksi bukanlah probabilitas, tetapi interpolasi linier antara titik, tidak ada ambang batas yang berarti di mana Anda dapat membedakan satu kelas dari yang lain.
+Ilustrasi yang bagus tentang masalah ini telah diberikan di [Stackoverflow](https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression).
 
-Linear models do not extend to classification problems with multiple classes.
-You would have to start labeling the next class with 2, then 3, and so on.
-The classes might not have any meaningful order, but the linear model would force a weird structure on the relationship between the features and your class predictions.
-The higher the value of a feature with a positive weight, the more it contributes to the prediction of a class with a higher number, even if classes that happen to get a similar number are not closer than other classes.
+Model linier tidak meluas ke masalah klasifikasi dengan banyak kelas.
+Anda harus mulai memberi label pada kelas berikutnya dengan 2, lalu 3, dan seterusnya.
+Kelas mungkin tidak memiliki urutan yang berarti, tetapi model linier akan memaksa struktur aneh pada hubungan antara fitur dan prediksi kelas Anda.
+Semakin tinggi nilai fitur dengan bobot positif, semakin berkontribusi pada prediksi kelas dengan angka yang lebih tinggi, bahkan jika kelas yang kebetulan mendapatkan angka yang sama tidak lebih dekat dari kelas lainnya.
 
 
 ```{r linear-class-threshold, fig.cap="A linear model classifies tumors as malignant (1) or benign (0) given their size. The lines show the prediction of the linear model. For the data on the left, we can use 0.5 as classification threshold. After introducing a few more malignant tumor cases, the regression line shifts and a threshold of 0.5 no longer separates the classes. Points are slightly jittered to reduce over-plotting. "}
@@ -59,13 +59,13 @@ p1
 
 ### Theory
 
-A solution for classification is logistic regression.
-Instead of fitting a straight line or hyperplane, the logistic regression model uses the logistic function to squeeze the output of a linear equation between 0 and 1.
-The logistic function is defined as:
+Solusi untuk klasifikasi adalah logistic regression.
+Alih-alih memasang garis lurus atau hyperplane, regression models logistik menggunakan fungsi logistik untuk memeras output dari persamaan linier antara 0 dan 1.
+Fungsi logistik didefinisikan sebagai:
 
 $$\text{logistic}(\eta)=\frac{1}{1+exp(-\eta)}$$
 
-And it looks like this:
+Dan terlihat seperti ini:
 
 ```{r, logistic-function, fig.cap="The logistic function. It outputs numbers between 0 and 1. At input 0, it outputs 0.5."}
 logistic = function(x){1 / (1 + exp(-x))}
@@ -76,18 +76,18 @@ df = data.frame(x = x,
 ggplot(df) + geom_line(aes(x=x,y=y)) + my_theme()
 ```
 
-The step from linear regression  to logistic regression is kind of straightforward.
-In the linear regression model, we have modelled the relationship between outcome and features with a linear equation:
+Langkah dari linear regression ke logistic regression cukup mudah.
+Dalam model linear regression, kami telah memodelkan hubungan antara hasil dan fitur dengan persamaan linier:
 
 $$\hat{y}^{(i)}=\beta_{0}+\beta_{1}x^{(i)}_{1}+\ldots+\beta_{p}x^{(i)}_{p}$$
 
-For classification, we prefer probabilities between 0 and 1, so we wrap the right side of the equation into the logistic function.
-This forces the output to assume only values between 0 and 1.
+Untuk klasifikasi, kami lebih suka probabilitas antara 0 dan 1, jadi kami membungkus sisi kanan persamaan ke dalam fungsi logistik.
+Ini memaksa output untuk mengasumsikan hanya nilai antara 0 dan 1.
 
 $$P(y^{(i)}=1)=\frac{1}{1+exp(-(\beta_{0}+\beta_{1}x^{(i)}_{1}+\ldots+\beta_{p}x^{(i)}_{p}))}$$
 
-Let us revisit the tumor size example again.
-But instead of the linear regression model, we use the logistic regression model:
+Mari kita lihat kembali contoh ukuran tumor.
+Tapi alih-alih model linear regression, kami menggunakan regression models logistik:
 
 ```{r logistic-class-threshold, fig.cap="The logistic regression model finds the correct decision boundary between malignant and benign depending on tumor size. The line is the logistic function shifted and squeezed to fit the data."}
 logistic1 = glm(y ~ x, family = binomial(), data = df.lin.log[df.lin.log$case == '1) 0.5 threshold ok',])
@@ -118,71 +118,71 @@ p1 = ggplot(df.lin.log, aes(x=x,y=y)) +
 p1
 ```
 
-Classification works better with logistic regression and we can use 0.5 as a threshold in both cases. The inclusion of additional points does not really affect the estimated curve.
+Klasifikasi bekerja lebih baik dengan logistic regression dan kita dapat menggunakan 0,5 sebagai ambang batas dalam kedua kasus. Pencantuman poin tambahan tidak terlalu mempengaruhi kurva estimasi.
 
 ### Interpretation
-The interpretation of the weights in logistic regression differs from the interpretation of the weights in linear regression, since the outcome in logistic regression is a probability between 0 and 1.
-The weights do not influence the probability linearly any longer.
-The weighted sum is transformed by the logistic function to a probability.
-Therefore we need to reformulate the equation for the interpretation so that only the linear term is on the right side of the formula.
+Interpretasi bobot dalam logistic regression berbeda dari interpretasi bobot dalam linear regression, karena hasil dalam logistic regression adalah probabilitas antara 0 dan 1.
+Bobot tidak lagi mempengaruhi probabilitas secara linier.
+Jumlah tertimbang ditransformasikan oleh fungsi logistik menjadi probabilitas.
+Oleh karena itu kita perlu merumuskan kembali persamaan untuk interpretasi sehingga hanya suku linier yang berada di ruas kanan rumus.
 
 $$log\left(\frac{P(y=1)}{1-P(y=1)}\right)=log\left(\frac{P(y=1)}{P(y=0)}\right)=\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}$$
 
-We call the term in the log() function "odds" (probability of event divided by probability of no event) and wrapped in the logarithm it is called log odds.
+Kami menyebut istilah dalam fungsi log() "odds" (probabilitas kejadian dibagi dengan probabilitas tidak ada kejadian) dan dibungkus dalam logaritma yang disebut log odds.
 
-This formula shows that the logistic regression model is a linear model for the log odds.
-Great!
-That does not sound helpful!
-With a little shuffling of the terms, you can figure out how the prediction changes when one of the features $x_j$ is changed by 1 unit.
-To do this, we can first apply the exp() function to both sides of the equation:
+Rumus ini menunjukkan bahwa regression models logistik merupakan model linier untuk log odds.
+Bagus!
+Itu tidak terdengar membantu!
+Dengan sedikit mengacak istilah, Anda dapat mengetahui bagaimana prediksi berubah ketika salah satu fitur $x_j$ diubah 1 unit.
+Untuk melakukan ini, pertama-tama kita dapat menerapkan fungsi exp() ke kedua sisi persamaan:
 
 $$\frac{P(y=1)}{1-P(y=1)}=odds=exp\left(\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}\right)$$
 
-Then we compare what happens when we increase one of the feature values by 1.
-But instead of looking at the difference, we look at the ratio of the two predictions:
+Kemudian kami membandingkan apa yang terjadi ketika kami meningkatkan salah satu nilai fitur sebesar 1.
+Tapi alih-alih melihat perbedaannya, kami melihat rasio dari dua prediksi:
 
 $$\frac{odds_{x_j+1}}{odds}=\frac{exp\left(\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{j}(x_{j}+1)+\ldots+\beta_{p}x_{p}\right)}{exp\left(\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{j}x_{j}+\ldots+\beta_{p}x_{p}\right)}$$
 
-We apply the following rule:
+Kami menerapkan aturan berikut:
 
 $$\frac{exp(a)}{exp(b)}=exp(a-b)$$ 
 
-And we remove many terms:
+Dan kami menghapus banyak istilah:
 
 $$\frac{odds_{x_j+1}}{odds}=exp\left(\beta_{j}(x_{j}+1)-\beta_{j}x_{j}\right)=exp\left(\beta_j\right)$$
 
-In the end, we have something as simple as exp() of a feature weight.
-A change in a feature by one unit changes the odds ratio (multiplicative) by a factor of $\exp(\beta_j)$.
-We could also interpret it this way:
-A change in $x_j$ by one unit increases the log odds ratio by the value of the corresponding weight.
-Most people interpret the odds ratio because thinking about the log() of something is known to be hard on the brain.
-Interpreting the odds ratio already requires some getting used to.
-For example, if you have odds of 2, it means that the probability for y=1 is twice as high as y=0.
-If you have a weight (= log odds ratio) of 0.7, then increasing the respective feature by one unit multiplies the odds by exp(0.7) (approximately 2) and the odds change to 4.
-But usually you do not deal with the odds and interpret the weights only as the odds ratios.
-Because for actually calculating the odds you would need to set a value for each feature, which only makes sense if you want to look at one specific instance of your dataset.
+Pada akhirnya, kami memiliki sesuatu yang sederhana seperti exp() dari bobot fitur.
+Perubahan fitur sebesar satu unit mengubah rasio odds (perkalian) dengan faktor $\exp(\beta_j)$.
+Kita juga bisa mengartikannya seperti ini:
+Perubahan $x_j$ sebesar satu unit meningkatkan rasio odds log dengan nilai bobot yang sesuai.
+Kebanyakan orang menafsirkan rasio odds karena memikirkan log() dari sesuatu diketahui sulit di otak.
+Menafsirkan rasio odds sudah membutuhkan beberapa kebiasaan.
+Misalnya, jika Anda memiliki odds 2, itu berarti probabilitas untuk y=1 dua kali lebih tinggi dari y=0.
+Jika Anda memiliki bobot (= rasio odds log) 0,7, maka meningkatkan fitur masing-masing satu unit akan mengalikan peluang dengan exp(0,7) (kira-kira 2) dan peluang berubah menjadi 4.
+Tetapi biasanya Anda tidak berurusan dengan peluang dan menafsirkan bobot hanya sebagai rasio peluang.
+Karena untuk benar-benar menghitung peluang, Anda perlu menetapkan nilai untuk setiap fitur, yang hanya masuk akal jika Anda ingin melihat satu contoh spesifik dari kumpulan data Anda.
 
-These are the interpretations for the logistic regression model with different feature types:
+Ini adalah interpretasi untuk regression models logistik dengan tipe fitur yang berbeda:
 
-- Numerical feature:
-If you increase the value of feature $x_{j}$ by one unit, the estimated odds change by a factor of $\exp(\beta_{j})$
-- Binary categorical feature:
-One of the two values of the feature is the reference category (in some languages, the one encoded in 0).
-Changing the feature $x_{j}$ from the reference category to the other category changes the estimated odds by a factor of $\exp(\beta_{j})$.
-- Categorical feature with more than two categories:
-One solution to deal with multiple categories is one-hot-encoding, meaning that each category has its own column.
-You only need L-1 columns for a categorical feature with L categories, otherwise it is over-parameterized.
-The L-th category is then the reference category.
-You can use any other encoding that can be used in linear regression.
-The interpretation for each category then is equivalent to the interpretation of binary features.
+- Fitur numerik:
+Jika Anda meningkatkan nilai fitur $x_{j}$ sebanyak satu unit, perkiraan peluang berubah dengan faktor $\exp(\beta_{j})$
+- Fitur kategoris biner:
+Salah satu dari dua nilai fitur adalah kategori referensi (dalam beberapa bahasa, yang dikodekan dalam 0).
+Mengubah fitur $x_{j}$ dari kategori referensi ke kategori lain akan mengubah perkiraan peluang dengan faktor $\exp(\beta_{j})$.
+- Fitur kategoris dengan lebih dari dua kategori:
+Salah satu solusi untuk menangani banyak kategori adalah one-hot-encoding, artinya setiap kategori memiliki kolomnya sendiri.
+Anda hanya memerlukan kolom L-1 untuk fitur kategoris dengan kategori L, jika tidak maka parameternya berlebihan.
+Kategori ke-L kemudian menjadi kategori referensi.
+Anda dapat menggunakan pengkodean lain yang dapat digunakan dalam linear regression.
+Interpretasi untuk setiap kategori kemudian setara dengan interpretasi fitur biner.
 - Intercept $\beta_{0}$:
-When all numerical features are zero and the categorical features are at the reference category, the estimated odds are $\exp(\beta_{0})$.
-The interpretation of the intercept weight is usually not relevant.
+Ketika semua fitur numerik adalah nol dan fitur kategoris berada pada kategori referensi, perkiraan peluangnya adalah $\exp(\beta_{0})$.
+Interpretasi dari bobot intersep biasanya tidak relevan.
 
 ### Example
 
-We use the logistic regression model to predict [cervical cancer](#cervical) based on some risk factors.
-The following table shows the estimate weights, the associated odds ratios, and the standard error of the estimates.
+Kami menggunakan regression models logistik untuk memprediksi [kanker serviks](#cervical) berdasarkan beberapa faktor risiko.
+Tabel berikut menunjukkan bobot perkiraan, rasio peluang terkait, dan kesalahan standar perkiraan.
 
 ```{r logistic-example}
 data("cervical")
@@ -203,39 +203,39 @@ colnames(coef.table)[1] = 'Weight'
 kable(coef.table[, c('Weight', 'Odds ratio', 'Std. Error')], digits=2, caption='The results of fitting a logistic regression model on the cervical cancer dataset. Shown are the features used in the model, their estimated weights and corresponding odds ratios, and the standard errors of the estimated weights.')
 ```
 
-Interpretation of a numerical feature ("Num. of diagnosed STDs"):
-An increase in the number of diagnosed STDs (sexually transmitted diseases) changes (increases) the odds of cancer vs. no cancer by a factor of `r sprintf('%.2f', coef.table['Num. of diagnosed STDs', 'Odds ratio'])`, when all other features remain the same.
-Keep in mind that correlation does not imply causation.
+Interpretasi fitur numerik ("Jumlah PMS yang didiagnosis"):
+Peningkatan jumlah PMS yang terdiagnosis (penyakit menular seksual) mengubah (meningkatkan) kemungkinan kanker vs. tidak ada kanker dengan faktor `r sprintf('%.2f', coef.table['Num. of diagnosed STDs', 'Odds ratio'])`, saat semua fitur lainnya tetap sama.
+Perlu diingat bahwa korelasi tidak menyiratkan sebab-akibat.
 
-Interpretation of a categorical feature ("Hormonal contraceptives y/n"):
-For women using hormonal contraceptives, the odds for cancer vs. no cancer are by a factor of `r sprintf('%.2f', coef.table['Hormonal contraceptives y/n', 'Odds ratio'])` lower, compared to women without hormonal contraceptives, given all other features stay the same.
+Interpretasi fitur kategoris ("Kontrasepsi hormonal y/n"):
+Untuk wanita yang menggunakan kontrasepsi hormonal, peluang untuk kanker vs. tidak ada kanker adalah dengan faktor `r sprintf('%.2f', coef.table['Hormonal contraceptives y/n', 'Odds ratio'])` lebih rendah, dibandingkan dengan wanita tanpa kontrasepsi hormonal, mengingat semua fitur lainnya tetap sama.
 
-Like in the linear model, the interpretations always come with the clause that 'all other features stay the same'.
+Seperti dalam model linier, interpretasi selalu datang dengan klausa bahwa 'semua fitur lainnya tetap sama'.
 
 
 
 ### Advantages and Disadvantages
 
-Many of the pros and cons of the [linear regression model](#limo) also apply to the logistic regression model.
-Logistic regression has been widely used by many different people, but it struggles with its restrictive expressiveness (e.g. interactions must be added manually) and other models may have better predictive performance.
+Banyak pro dan kontra dari [model linear regression](#limo) juga berlaku untuk regression models logistik.
+logistic regression telah banyak digunakan oleh banyak orang yang berbeda, tetapi ia berjuang dengan ekspresi yang membatasi (misalnya interaksi harus ditambahkan secara manual) dan model lain mungkin memiliki kinerja prediksi yang lebih baik.
 
-Another disadvantage of the logistic regression model is that the interpretation is more difficult because the interpretation of the weights is multiplicative and not additive.
+Kelemahan lain dari regression models logistik adalah interpretasinya lebih sulit karena interpretasi bobotnya bersifat perkalian dan tidak aditif.
 
-Logistic regression can suffer from **complete separation**. 
-If there is a feature that would perfectly separate the two classes, the logistic regression model can no longer be trained.
-This is because the weight for that feature would not converge, because the optimal weight would be infinite.
-This is really a bit unfortunate, because such a feature is really useful. 
-But you do not need machine learning if you have a simple rule that separates both classes.
-The problem of complete separation can be solved by introducing penalization of the weights or defining a prior probability distribution of weights.
+Logistic regression dapat mengalami **pemisahan lengkap**.
+Jika ada fitur yang akan memisahkan kedua kelas secara sempurna, regression models logistik tidak dapat lagi dilatih.
+Ini karena bobot untuk fitur itu tidak akan konvergen, karena bobot optimalnya tidak terbatas.
+Ini benar-benar agak disayangkan, karena fitur seperti itu sangat berguna.
+Tetapi Anda tidak memerlukan machine learning jika Anda memiliki aturan sederhana yang memisahkan kedua kelas.
+Masalah pemisahan lengkap dapat diselesaikan dengan memperkenalkan penalty bobot atau mendefinisikan distribusi probabilitas bobot sebelumnya.
 
-On the good side, the logistic regression model is not only a classification model, but also gives you probabilities. 
-This is a big advantage over models that can only provide the final classification.
-Knowing that an instance has a 99% probability for a class compared to 51% makes a big difference.
+Sisi baiknya, regression models logistik tidak hanya model klasifikasi, tetapi juga memberi Anda probabilitas.
+Ini adalah keuntungan besar dibandingkan model yang hanya dapat memberikan klasifikasi akhir.
+Mengetahui bahwa sebuah instance memiliki probabilitas 99% untuk suatu kelas dibandingkan dengan 51% membuat perbedaan besar.
 
-Logistic regression can also be extended from binary classification to multi-class classification.
-Then it is called Multinomial Regression.
+Logistic regression juga dapat diperluas dari klasifikasi biner ke klasifikasi multi-kelas.
+Kemudian disebut multinomial regression.
 
 ### Software
 
-I used the `glm` function in R for all examples.
-You can find logistic regression in any programming language that can be used for performing data analysis, such as Python, Java, Stata, Matlab, ...
+Saya menggunakan fungsi `glm` di R untuk semua contoh.
+Anda dapat menemukan logistic regression dalam bahasa pemrograman apa pun yang dapat digunakan untuk melakukan analisis data, seperti Python, Java, Stata, Matlab, ...

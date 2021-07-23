@@ -7,16 +7,16 @@ set.seed(42)
 
 ## Prototypes and Criticisms {#proto}
 
-A **prototype** is a data instance that is representative of all the data.
-A **criticism** is a data instance that is not well represented by the set of prototypes.
-The purpose of criticisms is to provide insights together with prototypes, especially for data points which the prototypes do not represent well.
-Prototypes and criticisms can be used independently from a machine learning model to describe the data, but they can also be used to create an interpretable model or to make a black box model interpretable.
+Sebuah **prototypes** adalah contoh data yang mewakili semua data.
+Sebuah **criticism** adalah contoh data yang tidak terwakili dengan baik oleh kumpulan prototypes.
+Tujuan criticism adalah untuk memberikan wawasan bersama dengan prototypes, terutama untuk titik-data point yang tidak terwakili dengan baik oleh prototypes.
+prototypes dan criticism dapat digunakan secara independen dari model machine learning untuk menggambarkan data, tetapi mereka juga dapat digunakan untuk membuat interpretable models atau untuk membuat model black box yang dapat diinterpretasikan.
 
-In this chapter I use the expression "data point" to refer to a single instance, to emphasize the interpretation that an instance is also a point in a coordinate system where each feature is a dimension.
-The following figure shows a simulated data distribution, with some of the instances chosen as prototypes and some as criticisms.
-The small points are the data, the large points the criticisms and the large squares the prototypes.
-The prototypes are selected (manually) to cover the centers of the data distribution and the criticisms are points in a cluster without a prototype.
-Prototypes and criticisms are always actual instances from the data.
+Dalam bab ini saya menggunakan ungkapan "data point" untuk merujuk ke satu instance, untuk menekankan interpretasi bahwa suatu instance juga merupakan titik dalam sistem koordinat di mana setiap fitur adalah dimensi.
+Gambar berikut menunjukkan distribusi data simulasi, dengan beberapa contoh dipilih sebagai prototypes dan beberapa sebagai criticism.
+Poin kecil adalah data, poin besar criticism, dan kotak besar adalah prototypes.
+Prototypes dipilih (secara manual) untuk menutupi pusat-pusat distribusi data dan criticism adalah titik-titik dalam sebuah cluster tanpa prototypes.
+Prototypes dan criticism selalu merupakan contoh aktual dari data.
 
 ```{r, fig.cap = "Prototypes and criticisms for a data distribution with two features x1 and x2."}
 set.seed(1)
@@ -36,67 +36,67 @@ ggplot(dat, aes(x = x1, y = x2)) + geom_point(alpha = 0.7) +
 
 ```
 
-I selected the prototypes manually, which does not scale well and probably leads to poor results.
-There are many approaches to find prototypes in the data.
-One of these is k-medoids, a clustering algorithm related to the k-means algorithm.
-Any clustering algorithm that returns actual data points as cluster centers would qualify for selecting prototypes.
-But most of these methods find only prototypes, but no criticisms.
-This chapter presents MMD-critic by Kim et. al (2016)[^critique], an approach that combines prototypes and criticisms in a single framework.
+Saya memilih prototypes secara manual, yang skalanya tidak baik dan mungkin menghasilkan hasil yang buruk.
+Ada banyak pendekatan untuk menemukan prototypes dalam data.
+Salah satunya adalah k-medoids, sebuah algoritma clustering yang terkait dengan algoritma k-means.
+Setiap algoritma pengelompokan yang mengembalikan data point aktual sebagai pusat cluster akan memenuhi syarat untuk memilih prototypes.
+Tetapi sebagian besar metode ini hanya menemukan prototypes, tetapi tidak ada criticism.
+Bab ini menyajikan MMD-criticismus oleh Kim et. al (2016)[^criticism], sebuah pendekatan yang menggabungkan prototypes dan criticism dalam satu kerangka.
 
-MMD-critic compares the distribution of the data and the distribution of the selected prototypes.
-This is the central concept for understanding the MMD-critic method.
-MMD-critic selects prototypes that minimize the discrepancy between the two distributions.
-Data points in areas with high density are good prototypes, especially when points are selected from different "data clusters".
-Data points from regions that are not well explained  by the prototypes are selected as criticisms.
+MMD-critic membandingkan distribusi data dan distribusi prototypes yang dipilih.
+Ini adalah konsep sentral untuk memahami metode criticism MMD.
+MMD-critic memilih prototypes yang meminimalkan perbedaan antara dua distribusi.
+data point di area dengan kepadatan tinggi adalah prototypes yang baik, terutama ketika titik dipilih dari "klaster data" yang berbeda.
+Titik-data point dari daerah yang tidak dijelaskan dengan baik oleh prototypes dipilih sebagai criticism.
 
-Let us delve deeper into the theory.
+Mari kita mempelajari lebih dalam teorinya.
 
 ### Theory
 
-The MMD-critic procedure on a high-level can be summarized briefly:
+Prosedur criticism MMD pada level tinggi dapat diringkas secara singkat:
 
-1. Select the number of prototypes and criticisms you want to find.
-1. Find prototypes with greedy search.
-Prototypes are selected so that the distribution of the prototypes is close to the data distribution.
-1. Find criticisms with greedy search.
-Points are selected as criticisms where the distribution of prototypes differs from the distribution of the data.
+1. Pilih jumlah prototypes dan criticism yang ingin Anda temukan.
+1. Temukan prototypes dengan greedy search.
+prototypes dipilih agar sebaran prototypes mendekati sebaran data.
+1. Temukan criticism dengan greedy search.
+Poin dipilih sebagai criticism dimana distribusi prototypes berbeda dari distribusi data.
 
-We need a couple of ingredients to find prototypes and criticisms for a dataset with MMD-critic.
-As the most basic ingredient, we need a **kernel function** to estimate the data densities.
-A kernel is a function that weighs two data points according to their proximity.
-Based on density estimates, we need a measure that tells us how different two distributions are so that we can determine whether the distribution of the prototypes we select is close to the data distribution.
-This is solved by measuring the **maximum mean discrepancy (MMD)**.
-Also based on the kernel function, we need the **witness function** to tell us how different two distributions are at a particular data point.
-With the witness function, we can select criticisms, i.e. data points at which the distribution of prototypes and data diverges and the witness function takes on large absolute values.
-The last ingredient is a search strategy for good prototypes and criticisms, which is solved with a simple **greedy search**.
+Kami membutuhkan beberapa bahan untuk menemukan prototypes dan criticism untuk dataset dengan MMD-critic.
+Sebagai bahan paling dasar, kita membutuhkan **kernel function** untuk memperkirakan kepadatan data.
+Kernel adalah fungsi yang menimbang dua data point sesuai dengan kedekatannya.
+Berdasarkan perkiraan densitas, kita memerlukan ukuran yang memberitahu kita betapa berbedanya dua distribusi sehingga kita dapat menentukan apakah distribusi prototypes yang kita pilih dekat dengan distribusi data.
+Ini diselesaikan dengan mengukur **maximum mean discrepancy (MMD)**.
+Juga berdasarkan kernel function, kita memerlukan **witness function** untuk memberi tahu kita perbedaan dua distribusi pada data point tertentu.
+Dengan witness function, kita dapat memilih criticism, yaitu data point di mana distribusi prototypes dan data menyimpang dan witness function mengambil nilai absolut yang besar.
+Bahan terakhir adalah strategi pencarian untuk prototypes dan criticism yang baik, yang diselesaikan dengan **greedy search** sederhana.
 
 
-Let us start with the **maximum mean discrepancy (MMD)**, which measures the discrepancy between two distributions.
-The selection of prototypes creates a density distribution of prototypes.
-We want to evaluate whether the prototypes distribution differs from the data distribution.
-We estimate both with kernel density functions.
-The maximum mean discrepancy measures the difference between two distributions, which is the supremum over a function space of differences between the expectations according to the two distributions.
-All clear?
-Personally, I understand these concepts much better when I see how something is calculated with data.
-The following formula shows how to calculate the squared MMD measure (MMD2):
+Mari kita mulai dengan **maximum mean discrepancy (MMD)**, yang mengukur perbedaan antara dua distribusi.
+Pemilihan prototypes menciptakan distribusi kepadatan prototypes.
+Kami ingin mengevaluasi apakah distribusi prototypes berbeda dari distribusi data.
+Kami memperkirakan keduanya dengan fungsi kepadatan kernel.
+Perbedaan mean maksimum mengukur perbedaan antara dua distribusi, yang merupakan supremum atas ruang fungsi dari perbedaan antara harapan menurut dua distribusi.
+Semua jelas?
+Secara pribadi, saya memahami konsep-konsep ini jauh lebih baik ketika saya melihat bagaimana sesuatu dihitung dengan data.
+Rumus berikut menunjukkan cara menghitung ukuran MMD kuadrat (MMD2):
 
 $$MMD^2=\frac{1}{m^2}\sum_{i,j=1}^m{}k(z_i,z_j)-\frac{2}{mn}\sum_{i,j=1}^{m,n}k(z_i,x_j)+\frac{1}{n^2}\sum_{i,j=1}^n{}k(x_i,x_j)$$
 
-k is a kernel function that measures the similarity of two points, but more about this later.
-m is the number of prototypes z, and n is the number of data points x in our original dataset.
-The prototypes z are a selection of data points x.
-Each point is multidimensional, that is it can have multiple features.
-The goal of MMD-critic is to minimize MMD2.
-The closer MMD2 is to zero, the better the distribution of the prototypes fits the data.
-The key to bringing MMD2 down to zero is the term in the middle, which calculates the average proximity between the prototypes and all other data points (multiplied by 2).
-If this term adds up to the first term (the average proximity of the prototypes to each other) plus the last term (the average proximity of the data points to each other), then the prototypes explain the data perfectly.
-Try out what would happen to the formula if you used all n data points as prototypes.
+k adalah kernel function yang mengukur kesamaan dua titik, tetapi lebih lanjut tentang ini nanti.
+m adalah jumlah prototypes z, dan n adalah jumlah data point x dalam kumpulan data asli kami.
+prototypes z adalah pilihan data point x.
+Setiap titik bersifat multidimensi, yaitu dapat memiliki banyak fitur.
+Tujuan dari MMD-critic adalah untuk meminimalkan MMD2.
+Semakin dekat MMD2 ke nol, semakin baik distribusi prototypes sesuai dengan data.
+Kunci untuk membawa MMD2 ke nol adalah istilah di tengah, yang menghitung jarak rata-rata antara prototypes dan semua data point lainnya (dikalikan 2).
+Jika istilah ini ditambahkan ke suku pertama (kedekatan rata-rata prototypes satu sama lain) ditambah suku terakhir (kedekatan rata-rata data point satu sama lain), maka prototypes menjelaskan data dengan sempurna.
+Cobalah apa yang akan terjadi pada rumus jika Anda menggunakan semua n data point sebagai prototypes.
 
-The following graphic illustrates the MMD2 measure.
-The first plot shows the data points with two features, whereby the estimation of the data density is displayed with a shaded background.
-Each of the other plots shows different selections of prototypes, along with the MMD2 measure in the plot titles.
-The prototypes are the large dots and their distribution is shown as contour lines.
-The selection of the prototypes that best covers the data in these scenarios (bottom left) has the lowest discrepancy value.
+Grafik berikut menggambarkan ukuran MMD2.
+Plot pertama menunjukkan titik-data point dengan dua fitur, dimana estimasi kepadatan data ditampilkan dengan latar belakang yang diarsir.
+Masing-masing plot lainnya menunjukkan pilihan prototypes yang berbeda, bersama dengan ukuran MMD2 dalam judul plot.
+Prototypes adalah titik-titik besar dan distribusinya ditampilkan sebagai garis kontur.
+Pemilihan prototypes yang paling baik mencakup data dalam skenario ini (kiri bawah) memiliki nilai ketidaksesuaian yang paling rendah.
 
 ```{r mmd, fig.cap = "The squared maximum mean discrepancy measure (MMD2) for a dataset with two features and different selections of prototypes.", cache = FALSE}
 set.seed(42)
@@ -160,37 +160,37 @@ gridExtra::grid.arrange(p, p1, p2, p3, ncol = 2)
 ```
 
 
-A choice for the kernel is the radial basis function kernel:
+Pilihan untuk kernel adalah kernel radial basis function:
 
 $$k(x,x^\prime)=exp\left(-\gamma||x-x^\prime||^2\right)$$
 
-where ||x-x'||^2^ is the Euclidean distance between two points and $\gamma$ is a scaling parameter.
-The value of the kernel decreases with the distance between the two points and ranges between zero and one:
-Zero when the two points are infinitely far apart;
-one when the two points are equal.
+di mana ||x-x'||^2^ adalah jarak Euclidean antara dua titik dan $\gamma$ adalah parameter penskalaan.
+Nilai kernel menurun dengan jarak antara dua titik dan berkisar antara nol dan satu:
+Nol ketika dua titik berjauhan tak terhingga;
+satu ketika dua titik sama.
 
-We combine the MMD2 measure, the kernel and greedy search in an algorithm for finding prototypes:
+Kami menggabungkan ukuran MMD2, kernel, dan greedy search dalam algoritme untuk menemukan prototypes:
 
-- Start with an empty list of prototypes.
-- While the number of prototypes is below the chosen number m:
-    - For each point in the dataset, check how much MMD2 is reduced when the point is added to the list of prototypes. Add the data point that minimizes the MMD2 to the list.
-- Return the list of prototypes.
+- Mulailah dengan daftar prototypes yang kosong.
+- Sedangkan jumlah prototype dibawah jumlah terpilih m :
+    - Untuk setiap titik dalam kumpulan data, periksa seberapa banyak MMD2 berkurang saat titik ditambahkan ke daftar prototypes. Tambahkan data point yang meminimalkan MMD2 ke daftar.
+- Kembalikan daftar prototypes.
 
-The remaining ingredient for finding criticisms is the witness function, which tells us how much two density estimates differ at a particular point.
-It can be estimated using:
+Bahan yang tersisa untuk menemukan criticism adalah witness function, yang memberitahu kita berapa banyak dua perkiraan kepadatan berbeda pada titik tertentu.
+Dapat diperkirakan dengan menggunakan:
 
 $$witness(x)=\frac{1}{n}\sum_{i=1}^nk(x,x_i)-\frac{1}{m}\sum_{j=1}^mk(x,z_j)$$
 
-For two datasets (with the same features), the witness function gives you the means of evaluating in which empirical distribution the point x fits better.
-To find criticisms, we look for extreme values of the witness function in both negative and positive directions.
-The first term in the witness function is the average proximity between point x and the data, and, respectively, the second term is the average proximity between point x and the prototypes.
-If the witness function for a point x is close to zero, the density function of the data and the prototypes are close together, which means that the distribution of prototypes resembles the distribution of the data at point x.
-A negative witness function at point x means that the prototype distribution overestimates the data distribution (for example if we select a prototype but there are only few data points nearby);
-a positive witness function at point x means that the prototype distribution underestimates the data distribution (for example if there are many data points around x but we have not selected any prototypes nearby).
+Untuk dua kumpulan data (dengan fitur yang sama), witness function memberi Anda sarana untuk mengevaluasi di mana distribusi empiris titik x lebih cocok.
+Untuk menemukan criticism, kami mencari nilai ekstrem dari witness function baik ke arah negatif maupun positif.
+Suku pertama dalam witness function adalah jarak rata-rata antara titik x dan data, dan suku kedua berturut-turut adalah jarak rata-rata antara titik x dan prototypes.
+Jika witness function untuk titik x mendekati nol, maka fungsi kerapatan data dan prototypes saling berdekatan, yang berarti sebaran prototypes menyerupai sebaran data di titik x.
+witness function negatif pada titik x berarti bahwa distribusi prototypes melebih-lebihkan distribusi data (misalnya jika kita memilih prototypes tetapi hanya ada beberapa data point di dekatnya);
+witness function positif pada titik x berarti bahwa distribusi prototypes meremehkan distribusi data (misalnya jika ada banyak data point di sekitar x tetapi kami belum memilih prototypes terdekat).
 
-To give you more intuition, let us reuse the prototypes from the plot beforehand with the lowest MMD2 and display the witness function for a few manually selected points.
-The labels in the following plot show the value of the witness function for various points marked as triangles.
-Only the point in the middle has a high absolute value and is therefore a good candidate for a criticism.
+Untuk memberi Anda lebih banyak intuisi, mari kita gunakan kembali prototypes dari plot sebelumnya dengan MMD2 terendah dan tampilkan witness function untuk beberapa titik yang dipilih secara manual.
+Label pada plot berikut menunjukkan nilai witness function untuk berbagai titik yang ditandai sebagai segitiga.
+Hanya titik di tengah yang memiliki nilai absolut tinggi dan oleh karena itu merupakan kandidat yang baik untuk dicriticism.
 
 
 ```{r witness, fig.cap = "Evaluations of the witness function at different points.", cache = FALSE, dependson = "mmd"}
@@ -211,67 +211,67 @@ p + geom_point(data = pt2, color = "red") +
     geom_point(data = wit.points, color = "black", shape = 17, size = 4)
 ```
 
-The witness function allows us to explicitly search for data instances that are not well represented by the prototypes.
-Criticisms are points with high absolute value in the witness function.
-Like prototypes, criticisms are also found through greedy search.
-But instead of reducing the overall MMD2, we are looking for points that maximize a cost function that includes the witness function and a regularizer term.
-The additional term in the optimization function enforces diversity in the points, which is needed so that the points come from different clusters.
+Witness function memungkinkan kita untuk secara eksplisit mencari contoh data yang tidak terwakili dengan baik oleh prototypes.
+Criticism adalah poin yang memiliki nilai absolut tinggi dalam witness function.
+Seperti prototypes, criticism juga ditemukan melalui greedy search.
+Namun alih-alih mengurangi MMD2 secara keseluruhan, kami mencari poin yang memaksimalkan fungsi biaya yang mencakup witness function dan istilah pengatur.
+Istilah tambahan dalam fungsi optimasi memaksakan keragaman pada titik-titik, yang diperlukan agar titik-titik itu berasal dari cluster yang berbeda.
 
-This second step is independent of how the prototypes are found.
-I could also have handpicked some prototypes and used the procedure described here to learn criticisms.
-Or the prototypes could come from any clustering procedure, like k-medoids.
+Langkah kedua ini tidak tergantung pada bagaimana prototypes ditemukan.
+Saya juga bisa memilih sendiri beberapa prototypes dan menggunakan prosedur yang dijelaskan di sini untuk mempelajari criticism.
+Atau prototypes dapat berasal dari prosedur pengelompokan apa pun, seperti k-medoid.
 
-That is it with the important parts of MMD-critic theory.
-One question remains:
-**How can MMD-critic be used for interpretable machine learning?**
+Itu saja dengan bagian penting dari teori criticism MMD.
+Satu pertanyaan tersisa:
+**Bagaimana MMD-critic dapat digunakan untuk machine learning yang dapat diinterpretasikan?**
 
-MMD-critic can add interpretability in three ways:
-By helping to better understand the data distribution;
-by building an interpretable model;
-by making a black box model interpretable.
+MMD-critic dapat menambahkan interpretabilitas dalam tiga cara:
+Dengan membantu untuk lebih memahami distribusi data;
+dengan membangun model yang dapat ditafsirkan;
+dengan membuat model black box dapat diinterpretasikan.
 
-If you apply MMD-critic to your data to find prototypes and criticisms, it will improve your understanding of the data, especially if you have a complex data distribution with edge cases.
-But with MMD-critic you can achieve more!
+Jika Anda menerapkan MMD-critic ke data Anda untuk menemukan prototypes dan criticism, itu akan meningkatkan pemahaman Anda tentang data, terutama jika Anda memiliki distribusi data yang kompleks dengan kasus tepi.
+Tetapi dengan MMD-critic Anda dapat mencapai lebih banyak!
 
-For example, you can create an interpretable prediction model: a so-called "nearest prototype model".
-The prediction function is defined as:
+Misalnya, Anda dapat membuat model prediksi yang dapat ditafsirkan: apa yang disebut "model prototypes terdekat".
+Fungsi prediksi didefinisikan sebagai:
 
 $$\hat{f}(x)=argmax_{i\in{}S}k(x,x_i)$$
 
-which means that we select the prototype i from the set of prototypes S that is closest to the new data point, in the sense that it yields the highest value of the kernel function.
-The prototype itself is returned as an explanation for the prediction.
-This procedure has three tuning parameters:
-The type of kernel, the kernel scaling parameter and the number of prototypes.
-All parameters can be optimized within a cross validation loop.
-The criticisms are not used in this approach.
+yang berarti bahwa kita memilih prototypes i dari himpunan prototypes S yang paling dekat dengan data point baru, dalam arti bahwa ia menghasilkan nilai tertinggi dari kernel function.
+Prototypes itu sendiri dikembalikan sebagai penjelasan untuk prediksi.
+Prosedur ini memiliki tiga parameter penyetelan:
+Jenis kernel, parameter penskalaan kernel, dan jumlah prototypes.
+Semua parameter dapat dioptimalkan dalam loop validasi silang.
+Criticism tidak digunakan dalam pendekatan ini.
 
-As a third option, we can use MMD-critic to make any machine learning model globally explainable by examining prototypes and criticisms along with their model predictions.
-The procedure is as follows:
+Sebagai opsi ketiga, kita dapat menggunakan MMD-critic untuk membuat model machine learning apa pun yang dapat dijelaskan secara global dengan memeriksa prototypes dan criticism beserta prediksi modelnya.
+Prosedurnya adalah sebagai berikut:
 
-1. Find prototypes and criticisms with MMD-critic.
-1. Train a machine learning model as usual.
-1. Predict outcomes for the prototypes and criticisms with the machine learning model.
-1. Analyse the predictions: In which cases was the algorithm wrong?
-Now you have a number of examples that represent the data well and help you to find the weaknesses of the machine learning model.
+1. Temukan prototypes dan criticism dengan MMD-critic.
+1. Latih model machine learning seperti biasa.
+1. Memprediksi hasil untuk prototypes dan criticism dengan model machine learning.
+1. Analisis prediksi: Dalam kasus apa algoritmanya salah?
+Sekarang Anda memiliki sejumlah contoh yang mewakili data dengan baik dan membantu Anda menemukan kelemahan model machine learning.
 
-How does that help?
-Remember when Google's image classifier identified black people as gorillas?
-Perhaps they should have used the procedure described here before deploying their image recognition model.
-It is not enough just to check the performance of the model, because if it were 99% correct, this issue could still be in the 1%.
-And labels can also be wrong!
-Going through all the training data and performing a sanity check if the prediction is problematic might have revealed the problem, but would be infeasible.
-But the selection of -- say a few thousand -- prototypes and criticisms is feasible and could have revealed a problem with the data:
-It might have shown that there is a lack of images of people with dark skin, which indicates a problem with the diversity in the dataset.
-Or it could have shown one or more images of a person with dark skin as a prototype or (probably) as a criticism with the notorious "gorilla" classification.
-I do not promise that MMD-critic would certainly intercept these kind of mistakes, but it is a good sanity check.
+Bagaimana itu membantu?
+Ingat ketika pengklasifikasi gambar Google mengidentifikasi orang kulit hitam sebagai gorila?
+Mungkin mereka seharusnya menggunakan prosedur yang dijelaskan di sini sebelum menerapkan model pengenalan gambar mereka.
+Tidak cukup hanya mengecek performa model, karena jika sudah 99% benar, masalah ini masih bisa di 1%.
+Dan label juga bisa salah!
+Memeriksa semua data pelatihan dan melakukan pemeriksaan kewarasan jika prediksi bermasalah mungkin telah mengungkapkan masalahnya, tetapi tidak mungkin.
+Tetapi pemilihan -- katakanlah beberapa ribu -- prototypes dan criticism layak dilakukan dan dapat mengungkapkan masalah dengan data:
+Ini mungkin menunjukkan bahwa ada kekurangan gambar orang dengan kulit gelap, yang menunjukkan adanya masalah dengan keragaman dalam kumpulan data.
+Atau bisa juga menampilkan satu atau lebih gambar seseorang dengan kulit gelap sebagai prototypes atau (mungkin) sebagai criticism dengan klasifikasi "gorila" yang terkenal kejam.
+Saya tidak berjanji bahwa criticismus MMD pasti akan mencegat kesalahan semacam ini, tetapi ini adalah pemeriksaan kewarasan yang baik.
 
 ### Examples
 
-The following example of MMD-critic uses a handwritten digit dataset.
+Contoh criticism MMD berikut menggunakan dataset digit tulisan tangan.
 
-Looking at the actual prototypes, you might notice that the number of images per digit is different.
-This is because a fixed number of prototypes were searched across the entire dataset and not with a fixed number per class.
-As expected, the prototypes show different ways of writing the digits.
+Melihat prototypes sebenarnya, Anda mungkin memperhatikan bahwa jumlah gambar per digit berbeda.
+Ini karena sejumlah prototypes tetap dicari di seluruh dataset dan bukan dengan jumlah tetap per kelas.
+Seperti yang diharapkan, prototypes menunjukkan cara yang berbeda untuk menulis angka.
 
 ```{r, prototypes-and-criticisms2, fig.cap = "Prototypes for a handwritten digits dataset.", out.width=600}
 knitr::include_graphics("images/proto-critique2.jpg")
@@ -280,61 +280,61 @@ knitr::include_graphics("images/proto-critique2.jpg")
 
 ### Advantages
 
-In a user study the authors of MMD-critic gave images to the participants, which they had to visually match to one of two sets of images, each representing one of two classes (e.g. two dog breeds).
-The **participants performed best when the sets showed prototypes and criticisms** instead of random images of a class.
+Dalam studi pengguna, penulis criticism MMD memberikan gambar kepada peserta, yang harus mereka sesuaikan secara visual dengan salah satu dari dua set gambar, masing-masing mewakili satu dari dua kelas (misalnya dua ras anjing).
+**Peserta tampil paling baik saat set menunjukkan prototypes dan criticism** daripada gambar acak dari suatu kelas.
 
-You are free to **choose the number of prototypes and criticisms**.
+Anda bebas **memilih jumlah prototypes dan criticism**.
 
-MMD-critic works with density estimates of the data.
-This **works with any type of data and any type of machine learning model**.
+MMD-critic bekerja dengan perkiraan kepadatan data.
+Ini **berfungsi dengan semua jenis data dan semua jenis model machine learning**.
 
-The algorithm is **easy to implement**.
+Algoritmenya **mudah diterapkan**.
 
-MMD-critic is very flexible in the way it is used to increase interpretability.
-It can be used to understand complex data distributions.
-It can be used to build an interpretable machine learning model.
-Or it can shed light on the decision making of a black box machine learning model.
+MMD-critic sangat fleksibel dalam penggunaannya untuk meningkatkan kemampuan interpretasi.
+Ini dapat digunakan untuk memahami distribusi data yang kompleks.
+Ini dapat digunakan untuk membangun model interpretable machine learning.
+Atau dapat menjelaskan pengambilan keputusan model machine learning black box.
 
-**Finding criticisms is independent of the selection process of the prototypes**.
-But it makes sense to select prototypes according to MMD-critic, because then both prototypes and criticisms are created using the same method of comparing prototypes and data densities.
+**Menemukan criticism tidak tergantung pada proses pemilihan prototypes**.
+Tetapi masuk akal untuk memilih prototypes menurut criticism MMD, karena prototypes dan criticism dibuat menggunakan metode yang sama untuk membandingkan prototypes dan kepadatan data.
 
 
 ### Disadvantages
 
-While, mathematically, prototypes and criticisms are defined differently, their **distinction is based on a cut-off value** (the number of prototypes).
-Suppose you choose a too low number of prototypes to cover the data distribution.
-The criticisms would end up in the areas that are not that well explained.
-But if you were to add more prototypes they would also end up in the same areas.
-Any interpretation has to take into account that criticisms strongly depend on the existing prototypes and the (arbitrary) cut-off value for the number of prototypes.
+Sementara, secara matematis, prototypes dan criticism didefinisikan secara berbeda, **perbedaannya didasarkan pada nilai batas** (jumlah prototypes).
+Misalkan Anda memilih jumlah prototypes yang terlalu rendah untuk menutupi distribusi data.
+Criticism akan berakhir di area yang tidak dijelaskan dengan baik.
+Tetapi jika Anda menambahkan lebih banyak prototypes, mereka juga akan berakhir di area yang sama.
+Setiap interpretasi harus memperhitungkan bahwa criticism sangat bergantung pada prototypes yang ada dan nilai batas (sewenang-wenang) untuk jumlah prototypes.
 
-You have to **choose the number of prototypes and criticisms**.
-As much as this can be nice-to-have, it is also a disadvantage.
-How many prototypes and criticisms do we actually need?
-The more the better? The less the better?
-One solution is to select the number of prototypes and criticisms by measuring how much time humans have for the task of looking at the images, which depends on the particular application.
-Only when using MMD-critic to build a classifier do we have a way to optimize it directly.
-One solution could be a screeplot showing the number of prototypes on the x-axis and the MMD2 measure on the y-axis.
-We would choose the number of prototypes where the MMD2 curve flattens.
+Anda harus **memilih jumlah prototypes dan criticism**.
+Sebanyak ini bisa menyenangkan untuk dimiliki, itu juga merupakan loss.
+Berapa banyak prototypes dan criticism yang sebenarnya kita butuhkan?
+Lebih banyak lebih baik? Semakin sedikit semakin baik?
+Salah satu solusinya adalah memilih jumlah prototypes dan criticism dengan mengukur berapa banyak waktu yang dimiliki manusia untuk tugas melihat gambar, yang tergantung pada aplikasi tertentu.
+Hanya ketika menggunakan MMD-critic untuk membangun classifier, kami memiliki cara untuk mengoptimalkannya secara langsung.
+Salah satu solusi dapat berupa screeplot yang menunjukkan jumlah prototypes pada sumbu x dan ukuran MMD2 pada sumbu y.
+Kami akan memilih jumlah prototypes di mana kurva MMD2 rata.
 
-The other parameters are the choice of the kernel and the kernel scaling parameter.
-We have the same problem as with the number of prototypes and criticisms:
-**How do we select a kernel and its scaling parameter?**
-Again, when we use MMD-critic as a nearest prototype classifier, we can tune the kernel parameters.
-For the unsupervised use cases of MMD-critic, however, it is unclear.
-(Maybe I am a bit harsh here, since all unsupervised methods have this problem.)
+Parameter lainnya adalah pilihan kernel dan parameter penskalaan kernel.
+Kami memiliki masalah yang sama dengan jumlah prototypes dan criticism:
+**Bagaimana cara memilih kernel dan parameter penskalaannya?**
+Sekali lagi, ketika kita menggunakan MMD-critic sebagai pengklasifikasi prototypes terdekat, kita dapat menyetel parameter kernel.
+Namun, untuk kasus penggunaan criticismus MMD yang tidak supervised, masih belum jelas.
+(Mungkin saya agak keras di sini, karena semua metode tanpa pengawasan memiliki masalah ini.)
 
-It takes all the features as input, **disregarding the fact that some features might not be relevant** for predicting the outcome of interest.
-One solution is to use only relevant features, for example image embeddings instead of raw pixels.
-This works as long as we have a way to project the original instance onto a representation that contains only relevant information.
+Dibutuhkan semua fitur sebagai masukan, **mengabaikan fakta bahwa beberapa fitur mungkin tidak relevan** untuk memprediksi hasil yang diinginkan.
+Salah satu solusinya adalah dengan hanya menggunakan fitur yang relevan, misalnya penyematan gambar, bukan piksel mentah.
+Ini berfungsi selama kita memiliki cara untuk memproyeksikan instance asli ke representasi yang hanya berisi informasi yang relevan.
 
-There is some code available, but it is **not yet implemented as nicely packaged and documented software**.
+Ada beberapa kode yang tersedia, tetapi **belum diimplementasikan sebagai perangkat lunak yang dikemas dan didokumentasikan dengan baik**.
 
 
 ### Code and Alternatives
 
-An implementation of MMD-critic can be found here: [https://github.com/BeenKim/MMD-critic](https://github.com/BeenKim/MMD-critic).
+Implementasi MMD-critic dapat ditemukan di sini: [https://github.com/BeenKim/MMD-critic](https://github.com/BeenKim/MMD-critic).
 
-The simplest alternative to finding prototypes is [k-medoids](https://en.wikipedia.org/wiki/K-medoids) by Kaufman et. al (1987).[^medoids]
+Alternatif paling sederhana untuk menemukan prototypes adalah [k-medoids](https://en.wikipedia.org/wiki/K-medoids) oleh Kaufman et. al (1987).[^medoids]
 
 [^medoids]: Kaufman, Leonard, and Peter Rousseeuw. "Clustering by means of medoids". North-Holland (1987).
 
