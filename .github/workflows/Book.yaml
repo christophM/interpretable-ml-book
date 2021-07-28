@@ -57,7 +57,8 @@ jobs:
           brew update
           brew install --cask xquartz
           brew install --cask calibre
-
+          brew install gsl
+          
       - name: Install R dependencies for book
         run: |
           remotes::install_deps(dependencies = TRUE)
@@ -75,14 +76,21 @@ jobs:
       - name: Build Book
         run: sh ./_build.sh
 
-      - name: Deploy Book
-        if: github.event_name == 'push'
-        run: ./_deploy.sh
+      - name: Checkout gh-pages
+      - uses: actions/checkout@v2
+        with:
+          - ref: gh-pages
+          - path: out
 
-      - name: Build and Deploy all book
-        if: github.event_name == 'push'
-        env:
-          CONNECT_API_KEY: ${{ secrets.RSC_BOOKDOWN_ORG_TOKEN }}
-          CONTENT_ID: 3
-        run: make -C inst/examples all
+      - name: Deploy new book version
+      - run: |
+          cd out
+          git rm -rf ./*
+          cp -r ../manuscript/_book/* ./
+          touch .nojekyll
+          git add .nojekyll
+          git add --all ./*
+          git commit -m "Update Book" --allow-empty
+          git push origin gh-pages
+
 
