@@ -2,8 +2,6 @@
 
 Explaining the decisions and behaviour of machine learning models.
 
-[![Build Status](https://travis-ci.org/christophM/interpretable-ml-book.svg?branch=master)](https://travis-ci.org/christophM/interpretable-ml-book)
-
 ![Build Status](https://github.com/christophM/interpretable-ml-book/actions/workflows/Book.yaml/badge.svg)
 
 ## Summary
