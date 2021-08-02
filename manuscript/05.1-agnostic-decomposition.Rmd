@@ -14,19 +14,18 @@ set.seed(42)
 
 ## Functional Decompositon {#decomposition}
 
-A prediction function is, or can be simplified to,a function that takes a high-dimensional input and outputs a 1-dimensional number.
+A prediction function is, or often can be simplified to, a function that takes a high-dimensional input and outputs a 1-dimensional number.
 The idea of functional decomposition is to split this high-dimensional function into lower-dimensional components, which allow to attribute effects to individual features and interactions between features.
 Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
 Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.
 
-This chapter is maybe the most central chapter in this book.
+This chapter may be the most central chapter in this book.
 It also comes very late, as the other chapters are mostly focused on methods.
 I see the primary value of functional decomposition in the mental model.
 Understanding functional decomposition gives you instant insights into other interpretation methods, and in general a better idea of model interpretation.
 
 
 <!-- Intuition -->
-### Some Intuition
 We start with a simple function that takes only two features as input and produces a 1-dimensional output, the prediction.
 We can visualize what the function looks like using a 3-D plot or a heatmap:
 
@@ -66,12 +65,12 @@ This formulation is basically a linear regression model, but where we include th
 
 Let us look into the decomposition of the function above.
 I just give it here, with explanations coming later.
-We have the intercept with $f_0\sim3.18$
+We have the intercept with $f_0\sim3.18$.
 Here is the rest of the decomposition of the function above:
 
 
 
-```{r, out.height = 300, out.width = 900}
+```{r, out.height = 200, out.width = 1800}
 pred.fun = function(model = NULL, newdata){
   f(newdata$x1, newdata$x2)
 }
@@ -109,7 +108,7 @@ Here, $x_S$ is the vector of features in the index set $S$.
 
 A function that takes in a p-dimensional vector can be split into $2^p$ components.
 
-$$|comps| = \sum_{i = 0}^p \over{p}{i} = 2^p$$
+$$#comps = \sum_{i = 0}^p \binom{p}{i} = 2^p$$
 
 For example, if the function has 10 features, we already would have 1042 components.
 With each additional feature, the number of components doubles (!!).
@@ -121,6 +120,7 @@ Another reasons against computing all components is that components with $|S|>2$
 
 So far, our problem of functional decomposition is under-specified, meaning there is no unique solution.
 The big problem with a functional decomposition is that it is quite arbitrary if we don't pose any limitations on how each of the components look like.
+Arbitrary means that we can move an effect between main effect and a higher interaction while the total prediction remains intact.
 I can give you some food for thought.
 We start with the minimal requirement that summing up our components (the $f_S$'s) actually sums up to the function $f$.
 That means that no matter what input we put into $f$ and the components, the outcome is equal.
@@ -128,7 +128,7 @@ Let's say you have a 3-dimensional function.
 It actually does not matter how this function look like, but the following decomposition would be valid:
 $f_0$ is 0.12.
 $f_1 = 2 \cdot x_1$ plus the number of shoes you own.
-$f_2, $f_3$, $f_{1,2}$, $f_{2,3}, f_{1,3}$ are all zero.
+$f_2$, $f_3$, $f_{1,2}$, $f_{2,3}, f_{1,3}$ are all zero.
 And finally to make this trick work, I define:
 
 $$f_{1,2,3} = f(x) - \sum_{S\subset\{1,\ldots,p\}} f_S(x_S)$$
@@ -137,13 +137,13 @@ Not very meaningful, and quite deceptive if you would present this as the interp
 How to we prevent this ambiguity?
 
 
-All methods:
+Some methods:
 
-- Use restricted models where we get components
-- Stein
-- Hooker fANOVA 1 and 2
-- [Accumulated Local Effects Plots](#ale)
-- See what Hooker cites
+- Use a restricted model: Looking at you, linear regression model! If you train a very restricted model, where we can identify within the model the individual components, then we get a decomposition for free. In a linear regression model without interactions specified, we only get an intercept and the first order effects. Each coefficient is then a first order effect. If we add interaction terms, then the coefficient of that interaction term plus the form of the chosen interaction may be interpreted as the second order interaction between the two respective features.
+- Stein. But very restricted, more interesting because of historic and academic reasons. The integrate does not really reflect the underlying data distribution TODO: Check in functional ANOVA paper how it is computed.
+- More sophisticated is the functional ANOVA, which works well in the case where the features are independent. This technique will be explained in detail below.
+- The generalized functional ANOVA is an extension of the functional ANOVA, which can also work for features that are dependent. It is, however, more difficult to compute. Also covered later in this chapter.
+- [Accumulated Local Effects Plots](#ale) also allow a functional decomposition.
 - See newer stuff (HDMR and whatnot)
 
 
@@ -157,6 +157,15 @@ Mention that this is source of confusion.
 e.g. you could have linear regression model with interaction term.
 You could see this as decomposition.
 But if you apply one of the methods that follows, especially for the following methods, the results might differ.
+So if we know that all interactions are zero, we can use the [GAM](#lm-extended) to model this function.
+What if we know that the maximum number of features involved in interactions is 2, i.e., $|S|\leq{}2$?
+This would mean we could model it with an additive function that also allows interactions between two features, such as MARS (CITE) or GA2M (CITE).
+
+Can a function exist where lower-components are zero, but the the interactions are non-zero?
+For example, components for $X_1$ and $X_2$ are zero, but their interaction is not?
+Yes!
+For example, the XOR problem where $Y=X_1XOR{}X_2$.
+
 
 ### Functional ANOVA
 
@@ -229,11 +238,11 @@ It is more general than the functional ANOVA that we encountered before, because
 
 The components are differently defined, namely:
 
-$$f_S(x_S) | S \subset P} = argmin_{g_S \in L^2(\mathbb{R}^S)}_{S \in P}} \int \left(\sum_\S \subset P} g_S(x_S) - f(x)\right)^2 w(x)dx.
+$$f_S(x_S) | S \subset P} = argmin_{g_S \in L^2(\mathbb{R}^S)}_{S \in P}} \int \left(\sum_\S \subset P} g_S(x_S) - f(x)\right)^2 w(x)dx.$$
 
 There is an additional constraint for the individual components:
 
-$$\forall f_S(x_S)| S \subset U}: \int f_S(x_S) f_U(x_U) w(x)dx = 0$$
+$$\forall f_S(x_S)| S \subset U: \int f_S(x_S) f_U(x_U) w(x)dx = 0$$
 
 Without this constraint, the solution would not be unique.
 We have not defined yet what $w(x)$ really is.
@@ -259,20 +268,6 @@ What is the motivation for ALE instead of functional ANOVA?
 Functional ANOVA can be difficult from intuition for strongly correlated features.
 
 TODO: Mention the disadvantage example in ALE paper for Generalized fANOVA for the correlated case.
-
-
-### Special Cases
-
-What if all components with $|S| > 2$ are zero?
-This means that we have no interactions.
-Which also means that we can use the [GAM](#lm-extended) to model this function.
-What if we know that the maximum number of features involved in interactions is 2, i.e., $|S|\leq{}2$?
-This would mean we could model it with an additive function that also allows interactions between two features, such as MARS (CITE) or GA2M.
-
-Can a function exist where lower-components are zero, but the the interactions are non-zero?
-For example, components for $X_1$ and $X_2$ are zero, but their interaction is not?
-Yes!
-For example, the XOR problem where $Y=X_1XOR{}X_2$.
 
 
 ### Viewing Other Methods Through the Lens of Decomposition
