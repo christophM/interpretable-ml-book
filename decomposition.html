@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>5.9 Scoped Rules (Anchors) | Interpretable Machine Learning</title>
+  <title>5.1 Functional Decompositon | Interpretable Machine Learning</title>
   <meta name="description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
   <meta name="generator" content="bookdown 0.22 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="5.9 Scoped Rules (Anchors) | Interpretable Machine Learning" />
+  <meta property="og:title" content="5.1 Functional Decompositon | Interpretable Machine Learning" />
   <meta property="og:type" content="book" />
   
   
@@ -16,7 +16,7 @@
   <meta name="github-repo" content="christophM/interpretable-ml-book" />
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="5.9 Scoped Rules (Anchors) | Interpretable Machine Learning" />
+  <meta name="twitter:title" content="5.1 Functional Decompositon | Interpretable Machine Learning" />
   
   <meta name="twitter:description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
   
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="lime.html"/>
-<link rel="next" href="shapley.html"/>
+<link rel="prev" href="agnostic.html"/>
+<link rel="next" href="pdp.html"/>
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -380,179 +380,226 @@ window.cookieconsent.initialise({
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="anchors" class="section level2">
-<h2><span class="header-section-number">5.9</span> Scoped Rules (Anchors)</h2>
-<p><em>Authors: Tobias Goerke &amp; Magdalena Lang</em></p>
-<p><em>This chapter is currently only available in this web version. ebook and print will follow.</em></p>
-<p>Anchors explains individual predictions of any black-box classification model by finding a decision rule that “anchors” the prediction sufficiently.
-A rule anchors a prediction if changes in other feature values do not affect the prediction.
-Anchors utilizes reinforcement learning techniques in combination with a graph search algorithm to reduce the number of model calls (and hence the required runtime) to a minimum while still being able to recover from local optima. Ribeiro, Singh, and Guestrin proposed the algorithm in 2018<a href="#fn42" class="footnote-ref" id="fnref42"><sup>42</sup></a> – the same researchers that introduced the <a href="lime.html#lime">LIME</a> algorithm.</p>
-<p>Like its predecessor, the anchors approach deploys a <em>perturbation-based</em> strategy to generate <em>local</em> explanations for predictions of black-box machine learning models. However, instead of surrogate models used by LIME, the resulting explanations are expressed as easy-to-understand <em>IF-THEN</em> rules, called <em>anchors</em>. These rules are reusable since they are <em>scoped</em>: anchors include the notion of coverage, stating precisely to which other, possibly unseen, instances they apply. Finding anchors involves an exploration or multi-armed bandit problem, which originates in the discipline of reinforcement learning. To this end, neighbors, or perturbations, are created and evaluated for every instance that is being explained. Doing so allows the approach to disregard the black-box’s structure and its internal parameters so that these can remain both unobserved and unaltered. Thus, the algorithm is <em>model-agnostic</em>, meaning it can be applied to <strong>any</strong> class of model.</p>
-<p>In their paper, the authors compare both of their algorithms and visualize how differently these consult an instance’s neighborhood to derive results. For this, the following figure depicts both LIME and anchors locally explaining a complex binary classifier (predicts either <strong>-</strong> or <strong>+</strong>) using two exemplary instances. LIME’s results do not indicate how faithful they are as LIME solely learns a linear decision boundary that best approximates the model given a perturbation space <span class="math inline">\(D\)</span>. Given the same perturbation space, the anchors approach constructs explanations whose coverage is adapted to the model’s behavior and clearly express their boundaries. Thus, they are faithful by design and state exactly for which instances they are valid. This property makes anchors particularly intuitive and easy to comprehend.</p>
-<div class="figure" style="text-align: center"><span id="fig:unnamed-chunk-24"></span>
-<img src="images/anchors-visualization.png" alt="LIME vs. Anchors -- A Toy Visualization. Figure from Ribeiro, Singh, and Guestrin (2018)." width="350" />
-<p class="caption">
-FIGURE 5.37: LIME vs. Anchors – A Toy Visualization. Figure from Ribeiro, Singh, and Guestrin (2018).
-</p>
+<div id="decomposition" class="section level2">
+<h2><span class="header-section-number">5.1</span> Functional Decompositon</h2>
+<p>A prediction function is, or often can be simplified to, a function that takes a high-dimensional input and outputs a 1-dimensional number.
+The idea of functional decomposition is to split this high-dimensional function into lower-dimensional components, which allow to attribute effects to individual features and interactions between features.
+Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
+Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.</p>
+<p>This chapter may be the most central chapter in this book.
+It also comes very late, as the other chapters are mostly focused on methods.
+I see the primary value of functional decomposition in the mental model.
+Understanding functional decomposition gives you instant insights into other interpretation methods, and in general a better idea of model interpretation.</p>
+<!-- Intuition -->
+<p>We start with a simple function that takes only two features as input and produces a 1-dimensional output, the prediction.
+We can visualize what the function looks like using a 3-D plot or a heatmap:</p>
+<p><img src="images/unnamed-chunk-12-1.png" width="1050" /></p>
+<p>This is a rather simple function to understand, so the use of decomposition might seem to much, but it is still useful.
+And especially when we have inputs with higher dimensions it should become clear why functional deomposition is so powerful.
+I did not show the formula that produced the function.
+This is on purpose, as in the machine learning setup, we don’t have a neat little formula for the prediction function, but in the case that it has a closed formula (e.g., random forests), it would be long and ugly.</p>
+<p>Can we decompose this function into lower-dimensional components?
+This would allows us to disentangle effects of the features and all their interactions with other features.
+This would allow us to describe feature effects and importances.
+The functional decomposition allows us to split the function into it’s components.
+For a two-dimensional function f, which only depends on two input features: <span class="math inline">\(f(x_1, x_2)\)</span>, we can split the function in the following way:</p>
+<p><span class="math display">\[f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1,2})\]</span></p>
+<p>The component <span class="math inline">\(f_0\)</span> is the intercept, components <span class="math inline">\(f_1\)</span> and <span class="math inline">\(f_2\)</span> are the main effects of <span class="math inline">\(x_1\)</span> and <span class="math inline">\(x_2\)</span> and <span class="math inline">\(f_{1,2}\)</span> is the interaction effect between the two features.
+The main effects tell us how each feature affects the prediction, independent of the other feature.
+The interaction effect tells us what the effect of the features is together.
+The intercept simply tells us what the prediction is when all feature effects are zero.</p>
+<p>This formulation is basically a linear regression model, but where we include the interaction terms between all features (which of course makes it non-linear in the original feature space).</p>
+<p>Let us look into the decomposition of the function above.
+I just give it here, with explanations coming later.
+We have the intercept with <span class="math inline">\(f_0\sim3.18\)</span>.
+Here is the rest of the decomposition of the function above:</p>
+<p><img src="images/unnamed-chunk-13-1.png" width="1800" height="200" /></p>
+<p>Before we go into details how exactly this was computed, and whether this is the only solution (spoiler: no), we head deeper into the mathematics.</p>
+<div id="deeper-into-the-mathematics" class="section level3">
+<h3><span class="header-section-number">5.1.1</span> Deeper Into the Mathematics</h3>
+<p>The example was two-dimensional.
+But let us talk about p-dimensional functions: <span class="math inline">\(f: \mathbb{R}^p \mapsto \mathbb{R}^1\)</span>.
+How does a composition of this function look like?
+Here it is:</p>
+<p><span class="math display">\[f(x) = f_0 + f_1(x_1) + \ldots + f_p(x_p) + f_{1,2}(x_1, x_2) + \ldots + f_{p-1, p}(x_{p - 1}, x_p) + \ldots + f_{1,\ldots,p}(x_1, \ldots, x_p)\]</span></p>
+<p>Okay that’s really ugly and long, we shorten it a bit.
+We can make it more precise and shorter by indexing all possible subsets of feature combinations: <span class="math inline">\(S\subseteq\{1,\ldots,p\}\)</span>.
+This contains all main effects, and all interactions, and also the empty set, which we need to define the intercept.
+The the function <span class="math inline">\(f\)</span> can be decomposed as:</p>
+<p><span class="math display">\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]</span></p>
+<p>Here, <span class="math inline">\(x_S\)</span> is the vector of features in the index set <span class="math inline">\(S\)</span>.</p>
+<p>A function that takes in a p-dimensional vector can be split into <span class="math inline">\(2^p\)</span> components.</p>
+<p><span class="math display">\[#comps = \sum_{i = 0}^p \binom{p}{i} = 2^p\]</span></p>
+<p>For example, if the function has 10 features, we already would have 1042 components.
+With each additional feature, the number of components doubles (!!).
+So, clearly it is not feasible for most functions to compute all the components.
+Another reasons against computing all components is that components with <span class="math inline">\(|S|&gt;2\)</span> are difficult to visualize and interpret.</p>
 </div>
-<p>As mentioned before, the algorithm’s results or explanations come in the form of rules, called anchors. The following simple example illustrates such an anchor. For instance, suppose we are given a bivariate black-box model that predicts whether or not a passenger survives the Titanic disaster. Now we would like to know <em>why</em> the model predicts for one specific individual that it survives. The anchors algorithm provides a result explanation like the one shown below.</p>
-<table>
-<caption>one exemplary individual and the model’s prediction</caption>
-<thead>
-<tr class="header">
-<th>Feature</th>
-<th align="center">Value</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Age</td>
-<td align="center">20</td>
-</tr>
-<tr class="even">
-<td>Sex</td>
-<td align="center">female</td>
-</tr>
-<tr class="odd">
-<td>Class</td>
-<td align="center">first</td>
-</tr>
-<tr class="even">
-<td>TicketPrice</td>
-<td align="center">300$</td>
-</tr>
-<tr class="odd">
-<td>More attributes</td>
-<td align="center">…</td>
-</tr>
-<tr class="even">
-<td><strong>Survived</strong></td>
-<td align="center"><strong>true</strong></td>
-</tr>
-</tbody>
-</table>
-<p>And the corresponding anchors explanation is:</p>
-<p>IF <code>SEX = female</code><br />
-AND <code>Class = first</code><br />
-THEN PREDICT <code>Survived = true</code><br />
-WITH PRECISION <code>97%</code><br />
-AND COVERAGE <code>15%</code></p>
-<p>The example shows how anchors can provide essential insights into a model’s prediction and its underlying reasoning. The result shows which attributes were taken into account by the model, which in this case, is the female sex and first class. Humans, being paramount for correctness, can use this rule to validate the model’s behavior. The anchor additionally tells us that it applies to 15% of perturbation space’s instances. In those cases the explanation is 97% accurate, meaning the displayed predicates are almost exclusively responsible for the predicted outcome.</p>
-<p>An anchor <span class="math inline">\(A\)</span> is formally defined as follows:</p>
-<p><span class="math display">\[\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{f(x)=f(z)}]\geq\tau,A(x)=1\]</span></p>
-<p>Wherein:</p>
+<div id="how-to-compute-the-components" class="section level3">
+<h3><span class="header-section-number">5.1.2</span> How to Compute the Components</h3>
+<p>So far, our problem of functional decomposition is under-specified, meaning there is no unique solution.
+The big problem with a functional decomposition is that it is quite arbitrary if we don’t pose any limitations on how each of the components look like.
+Arbitrary means that we can move an effect between main effect and a higher interaction while the total prediction remains intact.
+I can give you some food for thought.
+We start with the minimal requirement that summing up our components (the <span class="math inline">\(f_S\)</span>’s) actually sums up to the function <span class="math inline">\(f\)</span>.
+That means that no matter what input we put into <span class="math inline">\(f\)</span> and the components, the outcome is equal.
+Let’s say you have a 3-dimensional function.
+It actually does not matter how this function look like, but the following decomposition would be valid:
+<span class="math inline">\(f_0\)</span> is 0.12.
+<span class="math inline">\(f_1 = 2 \cdot x_1\)</span> plus the number of shoes you own.
+<span class="math inline">\(f_2\)</span>, <span class="math inline">\(f_3\)</span>, <span class="math inline">\(f_{1,2}\)</span>, <span class="math inline">\(f_{2,3}, f_{1,3}\)</span> are all zero.
+And finally to make this trick work, I define:</p>
+<p><span class="math display">\[f_{1,2,3} = f(x) - \sum_{S\subset\{1,\ldots,p\}} f_S(x_S)\]</span></p>
+<p>Not very meaningful, and quite deceptive if you would present this as the interpretation of your model.
+How to we prevent this ambiguity?</p>
+<p>Some methods:</p>
 <ul>
-<li><span class="math inline">\(x\)</span> represents the instance being explained (e.g., one row in a tabular data set).</li>
-<li><span class="math inline">\(A\)</span> is a set of predicates, i.e., the resulting rule or anchor, such that <span class="math inline">\(A(x)=1\)</span> when all feature predicates defined by <span class="math inline">\(A\)</span> correspond to <span class="math inline">\(x\)</span>’s feature values.</li>
-<li><span class="math inline">\(f\)</span> denotes the classification model to be explained (e.g., an artificial neural network model). It can be queried to predict a label for <span class="math inline">\(x\)</span> and its perturbations.</li>
-<li><span class="math inline">\(D_x (\cdot|A)\)</span> indicates the distribution of neighbors of <span class="math inline">\(x\)</span>, matching <span class="math inline">\(A\)</span>.</li>
-<li><span class="math inline">\(0 \leq \tau \leq 1\)</span> specifies a precision threshold. Only rules that achieve a local fidelity of at least <span class="math inline">\(\tau\)</span> are considered a valid result.</li>
+<li>Use a restricted model: Looking at you, linear regression model! If you train a very restricted model, where we can identify within the model the individual components, then we get a decomposition for free. In a linear regression model without interactions specified, we only get an intercept and the first order effects. Each coefficient is then a first order effect. If we add interaction terms, then the coefficient of that interaction term plus the form of the chosen interaction may be interpreted as the second order interaction between the two respective features.</li>
+<li>Stein. But very restricted, more interesting because of historic and academic reasons. The integrate does not really reflect the underlying data distribution TODO: Check in functional ANOVA paper how it is computed.</li>
+<li>More sophisticated is the functional ANOVA, which works well in the case where the features are independent. This technique will be explained in detail below.</li>
+<li>The generalized functional ANOVA is an extension of the functional ANOVA, which can also work for features that are dependent. It is, however, more difficult to compute. Also covered later in this chapter.</li>
+<li><a href="ale.html#ale">Accumulated Local Effects Plots</a> also allow a functional decomposition.</li>
+<li>See newer stuff (HDMR and whatnot)</li>
 </ul>
-<p>The formal description may be intimidating and can be put in words:</p>
-<blockquote>
-<p>Given an instance <span class="math inline">\(x\)</span> to be explained, a rule or an anchor <span class="math inline">\(A\)</span> is to be found, such that it applies to <span class="math inline">\(x\)</span>, while the same class as for <span class="math inline">\(x\)</span> gets predicted for a fraction of at least <span class="math inline">\(\tau\)</span> of <span class="math inline">\(x\)</span>’s neighbors where the same <span class="math inline">\(A\)</span> is applicable. A rule’s precision results from evaluating neighbors or perturbations (following <span class="math inline">\(D_x (z|A)\)</span>) using the provided machine learning model (denoted by the indicator function <span class="math inline">\(1_{f(x) = f(z)}\)</span>).</p>
-</blockquote>
-<div id="finding-anchors" class="section level3">
-<h3><span class="header-section-number">5.9.1</span> Finding Anchors</h3>
-<p>Although anchors’ mathematical description may seem clear and straightforward, constructing particular rules is infeasible. It would require evaluating <span class="math inline">\(1_{f(x) = f(z)}\)</span> for all <span class="math inline">\(z \in \mathcal{D}_x(\cdot|A)\)</span> which is not possible in continuous or large input spaces. Therefore, the authors propose to introduce the parameter <span class="math inline">\(0 \leq \delta \leq 1\)</span> to create a probabilistic definition. This way, samples are drawn until there is statistical confidence concerning their precision. The probabilistic definition reads as follows:</p>
-<p><span class="math display">\[P(prec(A)\geq\tau)\geq{}1-\delta\quad\textrm{with}\quad{}prec(A)=\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{f(x)=f(z)}]\]</span></p>
-<p>The previous two definitions are combined and extended by the notion of coverage. Its rationale consists of finding rules that apply to a preferably large part of the model’s input space. Coverage is formally defined as an anchors’ probability of applying to its neighbors, i.e., its perturbation space:</p>
-<p><span class="math display">\[cov(A)=\mathbb{E}_{\mathcal{D}_{(z)}[A(z)]}\]</span></p>
-<p>Including this element leads to anchors’ final definition taking into account the maximization of coverage:</p>
-<p><span class="math display">\[\underset{A\:\textrm{s.t.}\;P(prec(A)\geq\tau)\geq{}1-\delta}{\textrm{max}}cov(A)\]</span></p>
-<p>Thus, the proceeding strives for a rule that has the highest coverage among all eligible rules (all those that satisfy the precision threshold given the probabilistic definition). These rules are thought to be more important, as they describe a larger part of the model.
-Note that rules with more predicates tend to have higher precision than rules with fewer predicates. In particular, a rule that fixes every feature of <span class="math inline">\(x\)</span> reduces the evaluated neighborhood to identical instances. Thus, the model classifies all neighbors equally, and the rule’s precision is <span class="math inline">\(1\)</span>. At the same time, a rule that fixes many features is overly specific and only applicable to a few instances. Hence, there is a <em>trade-off between precision and coverage</em>.</p>
-<p>The anchors approach uses four main components to find explanations, as is shown in the figure below.</p>
-<p><strong>Candidate Generation</strong>: Generates new explanation candidates. In the first round, one candidate per feature of <span class="math inline">\(x\)</span> gets created and fixes the respective value of possible perturbations. In every other round, the best candidates of the previous round are extended by one feature predicate that is not yet contained therein.</p>
-<p><strong>Best Candidate Identification</strong>: Candidate rules are to be compared in regard to which rule explains <span class="math inline">\(x\)</span> the best. To this end, perturbations that match the currently observed rule are created evaluated by calling the model. However, these calls need to be minimized as to limit computational overhead. This is why, at the core of this component, there is a pure-exploration Multi-Armed-Bandit (<em>MAB</em>; <em>KL-LUCB</em><a href="#fn43" class="footnote-ref" id="fnref43"><sup>43</sup></a>, to be precise). MABs are used to efficiently explore and exploit different strategies (called arms in an analogy to slot machines) using sequential selection. In the given setting, each candidate rule is to be seen as an arm that can be pulled. Each time it is pulled, respective neighbors get evaluated, and we thereby obtain more information about the candidate rule’s payoff (precision in anchors’ case). The precision thus states how well the rule describes the instance to be explained.</p>
-<p><strong>Candidate Precision Validation</strong>: Takes more samples in case there is no statistical confidence yet that the candidate exceeds the <span class="math inline">\(\tau\)</span> threshold.</p>
-<p><strong>Modified Beam Search</strong>: All of the above components are assembled in a beam search, which is a graph search algorithm and a variant of the breadth-first algorithm. It carries the <span class="math inline">\(B\)</span> best candidates of each round over to the next one (where <span class="math inline">\(B\)</span> is called the <em>Beam Width</em>). These <span class="math inline">\(B\)</span> best rules are then used to create new rules. The beam search conducts at most <span class="math inline">\(featureCount(x)\)</span> rounds, as each feature can only be included in a rule at most once. Thus, at every round <span class="math inline">\(i\)</span>, it generates candidates with exactly <span class="math inline">\(i\)</span> predicates and selects the B best thereof. Therefore, by setting <span class="math inline">\(B\)</span> high, the algorithm more likely avoids local optima. In turn, this requires a high number of model calls and thereby increases the computational load.</p>
-<div class="figure"><span id="fig:unnamed-chunk-25"></span>
-<img src="images/anchors-process.jpg" alt="The anchors algorithm’s components and their interrelations (simplified)" width="800" />
-<p class="caption">
-FIGURE 5.38: The anchors algorithm’s components and their interrelations (simplified)
-</p>
 </div>
-<p>The approach is a seemingly perfect recipe for efficiently deriving statistically sound information about why any system classified an instance the way it did. It systematically experiments with the model’s input and concludes by observing respective outputs. It relies on well established and researched Machine Learning methods (MABs) to reduce the number of calls made to the model. This, in turn, drastically reduces the algorithm’s runtime.</p>
+<div id="getting-decomposition-for-free" class="section level3">
+<h3><span class="header-section-number">5.1.3</span> Getting Decomposition for free</h3>
+<p>For functions such as the <a href="limo.html#limo">linear regression model</a> or <a href="#extended-lm">generalized additive models (GAMs)</a>, we already get a decomposition for free.</p>
+<p>Write more here?</p>
+<p>Mention that this is source of confusion.
+e.g. you could have linear regression model with interaction term.
+You could see this as decomposition.
+But if you apply one of the methods that follows, especially for the following methods, the results might differ.
+So if we know that all interactions are zero, we can use the <a href="#lm-extended">GAM</a> to model this function.
+What if we know that the maximum number of features involved in interactions is 2, i.e., <span class="math inline">\(|S|\leq{}2\)</span>?
+This would mean we could model it with an additive function that also allows interactions between two features, such as MARS (CITE) or GA2M (CITE).</p>
+<p>Can a function exist where lower-components are zero, but the the interactions are non-zero?
+For example, components for <span class="math inline">\(X_1\)</span> and <span class="math inline">\(X_2\)</span> are zero, but their interaction is not?
+Yes!
+For example, the XOR problem where <span class="math inline">\(Y=X_1XOR{}X_2\)</span>.</p>
 </div>
-<div id="complexity-and-runtime" class="section level3">
-<h3><span class="header-section-number">5.9.2</span> Complexity and Runtime</h3>
-<p>Knowing the anchors approach’s asymptotic runtime behavior helps to evaluate how well it is expected to perform on specific problems. Let <span class="math inline">\(B\)</span> denote the beam width and <span class="math inline">\(p\)</span> the number of all features. Then the anchors algorithm is subject to:</p>
-<p><span class="math display">\[\mathcal{O}(B\cdot{}p^2+p^2\cdot\mathcal{O}_{\textrm{MAB}\lbrack{}B\cdot{}p,B\rbrack})\]</span></p>
-<p>This boundary abstracts from problem-independent hyperparameters, such as the statistical confidence <span class="math inline">\(\delta\)</span>. Ignoring hyperparameters helps reduce the boundary’s complexity (see original paper for more info). Since the MAB extracts the <span class="math inline">\(B\)</span> best out of <span class="math inline">\(B \cdot p\)</span> candidates in each round, most MABs and their runtimes multiply the <span class="math inline">\(p^2\)</span> factor more than any other parameter.</p>
-<p>It thus becomes apparent: the algorithm’s efficiency decreases with feature abundant problems.</p>
-</div>
-<div id="tabular-data-example" class="section level3">
-<h3><span class="header-section-number">5.9.3</span> Tabular Data Example</h3>
-<p>Tabular data is structured data represented by tables, wherein columns embody features and rows instances.
-For instance, we use the <a href="bike-data.html#bike-data">bike rental data</a> to demonstrate the anchors approach’s potential to explain ML predictions for selected instances. For this, we turn the regression into a classification problem and train a random forest as our black-box model. It is to classify whether the number of rented bicycles lies above or below the trend line.</p>
-<p>Before creating anchor explanations, one needs to define a perturbation function. An easy way to do so is to use an intuitive default perturbation space for tabular explanation cases which can be built by sampling from, e.g., the training data.
-When perturbing an instance, this default approach maintains the features’ values that are subject to the anchors’ predicates, while replacing the non-fixed features with values taken from another randomly sampled instance with a specified probability. This process yields new instances that are similar to the explained one but have adopted some values from other random instances. Thus, they resemble neighbors.</p>
-<div class="figure"><span id="fig:unnamed-chunk-28"></span>
-<img src="images/unnamed-chunk-28-1.png" alt="Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The 'base' rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions." width="1800" />
-<p class="caption">
-FIGURE 5.39: Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule’s precision, and a bar’s thickness corresponds to its coverage. The ‘base’ rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.
-</p>
-</div>
-<p>The results are instinctively interpretable and show for each explained instance, which features are most important for the model’s prediction. As the anchors only have a few predicates, they additionally have high coverage and hence apply to other cases.
-The rules shown above were generated with <span class="math inline">\(\tau = 0.9\)</span>. Thus, we ask for anchors whose evaluated perturbations faithfully support the label with an accuracy of at least <span class="math inline">\(90\%\)</span>. Also, discretization was used to increase the expressiveness and applicability of numerical features.</p>
-<p>All of the previous rules were generated for instances where the model decides confidently based on a few features. However, other instances are not as distinctly classified by the model as more features are of importance. In such cases, anchors get more specific, comprise more features, and apply to fewer instances.</p>
-<div class="figure"><span id="fig:unnamed-chunk-29"></span>
-<img src="images/unnamed-chunk-29-1.png" alt="Explaining instances near decision boundaries leads to specific rules comprising a higher number of feature predicates and lower coverage. Also, the empty rule, i.e., the base feature, gets less important. This can be interpreted as a signal for a decision boundary, as the instance is located in a volatile neighborhood." width="1800" />
-<p class="caption">
-FIGURE 5.40: Explaining instances near decision boundaries leads to specific rules comprising a higher number of feature predicates and lower coverage. Also, the empty rule, i.e., the base feature, gets less important. This can be interpreted as a signal for a decision boundary, as the instance is located in a volatile neighborhood.
-</p>
-</div>
-<p>While choosing the default perturbation space is a comfortable choice to make, it may have a great impact on the algorithm and can thus lead to biased results. For example, if the train set is unbalanced (there is an unequal number of instances of each class), the perturbation space is as well. This condition further affects the rule-finding and the result’s precision.</p>
-<p>The <a href="cervical.html#cervical">cervical cancer</a> data set is an excellent example of this situation.
-Applying the anchors algorithm leads to one of the following situations:</p>
+<div id="functional-anova" class="section level3">
+<h3><span class="header-section-number">5.1.4</span> Functional ANOVA</h3>
+<p>The functional ANOVA was proposed by Hooker (2004)<a href="#fn27" class="footnote-ref" id="fnref27"><sup>27</sup></a>.
+The requirement is that the model prediction function f is square integrable.
+The decomposition is as any decomposition:</p>
+<p><span class="math display">\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]</span></p>
+<p>Hooker (2004) proposes to estimate the individual components as:</p>
+<p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x) - \sum_{V \subset S} f_V(x)\right) d X_{-S})\]</span></p>
+<p>Ok, let’s take this thing apart.
+Instead we can also write:</p>
+<p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \right) d X_{-S})\]</span></p>
+<p>The first part is the integral over the prediction function, with respect of the features that are not in the set.
+This the same as the expectation of the function when we integrate out features <span class="math inline">\(X_{-S}\)</span>, and pretending that all features follow a uniform distribution.
+The second part are all the lower dimensional components, so we apply some kind of centering.
+For example if <span class="math inline">\(S=\{1,2\}\)</span>, meaning we look at the interaction effect of the first two features, and let’s say there are, in total, 4 features.
+Since the formula is recursive in the sense that to compute higher order interactions, you have to also compute all lower-order interactions, we start with the lowest order, namely the <span class="math inline">\(f_0\)</span> component which is a constant.
+For <span class="math inline">\(f_0\)</span>, the subset <span class="math inline">\(S=\{\emptyset\}\)</span> and therefore -S contains all features $XS.
+Therefore we get:</p>
+<p><span class="math display">\[f_S(x) = \int_{X} f(x) d X)\]</span></p>
+<p>This is simply the prediction function where we integrated over all features.
+And it can also be seen as the expectation of the function, but when we assume that all features are uniformly distributed.
+Now that we have <span class="math inline">\(f_0\)</span>, we can get the formula for <span class="math inline">\(f_1\)</span>:</p>
+<p><span class="math display">\[f_1(x) = \int_{X_{-1}} \left( f(x) - f_0\right) d X_{-S})\]</span></p>
+<p>The formula for <span class="math inline">\(f_2(x)\)</span> is equivalent.</p>
+<p>The the <span class="math inline">\(V\subset{}S\)</span> are ${,1,2} and the formula becomes:</p>
+<p><span class="math display">\[f_{1,2}(x) = \int{\{3,4\}} \left( f(x) - (f_0(x) + f_1(x) + f_2(x))\right) d X_{3},X_4\]</span></p>
+<p>This example shows how each higher order effect is defined by integrating over all other features, but also be removing all the lower-order effects that are subsets of the higher-order effects.</p>
+<p>Hooker (2004) showed that this fullfills a few desirable axioms:</p>
 <ul>
-<li>Explaining instances labeled <em>healthy</em> yields empty rules as all generated neighbors evaluate to <em>healthy</em>.</li>
-<li>Explanations for instances labeled <em>cancer</em> are overly specific, i.e., comprise many feature predicates, since the perturbation space mostly covers values from <em>healthy</em> instances.</li>
+<li>Zero Means: <span class="math inline">\(\int{}f_S(x_S)dX_s=0\)</span> for each <span class="math inline">\(\S\neq\emptyset\)</span>.</li>
+<li>Orthogonality: <span class="math inline">\(\int{}f_S(x_S)f_V(x_v)dX=0\)</span> for <span class="math inline">\(S\neq{}V\)</span></li>
+<li>Variance Decomposition: Let <span class="math inline">\(\sigma^2_{f}=\int{}f(x)^2dX\)</span>, then
+<span class="math display">\[ \sigma^2(f) = \sum_{S \subseteq P} \sigma^2_S(f_S),\]</span>
+where P is the set of all features.</li>
 </ul>
-<div class="figure"><span id="fig:unnamed-chunk-32"></span>
-<img src="images/unnamed-chunk-32-1.png" alt="Constructing anchors within unbalanced perturbation spaces leads to unexpressive results." width="1800" />
-<p class="caption">
-FIGURE 5.41: Constructing anchors within unbalanced perturbation spaces leads to unexpressive results.
-</p>
+<p>The zero means axiom implies that all effects or interactions are centered around zero.
+The orthogonality axiom says that any two components do not share information, meaning that, for example, the first order effect of feature <span class="math inline">\(X_1\)</span> and the interaction term of <span class="math inline">\(X_{1}\)</span> and <span class="math inline">\(X_2\)</span> are not correlated.
+The variance decomposition allows us to split the variance of the function <span class="math inline">\(f\)</span> among the components, and guarantees that it really adds up in the end.</p>
+<p>Actually solved with (centered) PDPs.</p>
+<p>When the feature are dependent, we may need the generalized functional ANOVA.</p>
 </div>
-<p>This outcome may be unwanted and can be approached in multiple ways. For example, a custom perturbation space can be defined that samples differently, e.g., from an unbalanced data set or a normal distribution. This, however, comes with a side-effect: the sampled neighbors are not representative and change the coverage’s scope. Alternatively, we could modify the MAB’s confidence <span class="math inline">\(\delta\)</span> and error parameter values <span class="math inline">\(\epsilon\)</span>. This would cause the MAB to draw more samples, ultimately leading to the minority being sampled more often in absolute terms.</p>
-<p>For this example, we use a subset of the cervical cancer set in which the majority of cases are labeled <em>cancer</em>. We then have the framework to create a corresponding perturbation space from it. Perturbations are now more likely to lead to varying predictions, and the anchors algorithm can identify important features. However, one needs to take the coverage’s definition into account: it is only defined within the perturbation space. In the previous examples, we used the train set as the perturbation space’s basis. Since we only use a subset here, a high coverage does not necessarily indicate globally high rule importance.</p>
-<div class="figure"><span id="fig:unnamed-chunk-33"></span>
-<img src="images/unnamed-chunk-33-1.png" alt="Balancing the data set before constructing anchors shows the model's reasoning for decisions in minority cases." width="3000" />
-<p class="caption">
-FIGURE 5.42: Balancing the data set before constructing anchors shows the model’s reasoning for decisions in minority cases.
-</p>
+<div id="generalized-functional-anova-for-dependent-features" class="section level3">
+<h3><span class="header-section-number">5.1.5</span> Generalized functional ANOVA for dependent features</h3>
+<p>But what do we do when features are dependent?
+If we simply integrate over the marginal distribution, we effectively create a new dataset which does not match with the joint distribution, but extrapolates to areas outside of the joint distribution.</p>
+<p>Is it possible to define a decomposition which fulfills the desired axioms, but in addition does not create data outside the distribution?</p>
+<p>The answer is yes, as long as we know the joint distribution.</p>
+<p>Hooker (2007) <a href="#fn28" class="footnote-ref" id="fnref28"><sup>28</sup></a> proposed the generalized functional anova, a decomposition that works for dependent features.
+It is more general than the functional ANOVA that we encountered before, because it is defined in terms of projections of f onto the space of additive functions.</p>
+<p>The components are differently defined, namely:</p>
+<p><span class="math display">\[f_S(x_S) | S \subset P} = argmin_{g_S \in L^2(\mathbb{R}^S)}_{S \in P}} \int \left(\sum_\S \subset P} g_S(x_S) - f(x)\right)^2 w(x)dx.\]</span></p>
+<p>There is an additional constraint for the individual components:</p>
+<p><span class="math display">\[\forall f_S(x_S)| S \subset U: \int f_S(x_S) f_U(x_U) w(x)dx = 0\]</span></p>
+<p>Without this constraint, the solution would not be unique.
+We have not defined yet what <span class="math inline">\(w(x)\)</span> really is.
+One solution would be to let <span class="math inline">\(w\)</span> be the uniform measure on the unit cube.
+The natural choice would of course be that w is the joint probability function.</p>
+<p>The estimation is done on a grid of points.
+We have two problems when doing the estimation.</p>
+<p>First problem is that we need to define <span class="math inline">\(w(x)\)</span>.
+While the joint distribution is a good choice, there are few cases where we actually know the joint distribution.
+The second problem is that we solve this in linear regression and have to do this theoretically for all components at once, meaning to solve this in a model with <span class="math inline">\(2^{P - 1}\)</span> components.
+For this for each feature a grid of feature values is defined.</p>
 </div>
+<div id="accumulated-local-effects-plots" class="section level3">
+<h3><span class="header-section-number">5.1.6</span> Accumulated Local Effects Plots</h3>
+<p>Accumulated Local Effect Plots can also be used as a functional decomposition.
+The resulting components are not orthogonal, though.
+But they are pseudo-orthogonal.</p>
+<p>When feature are independent of each other, then the result is the same as for functional ANOVA. (TODO check in ALE paper).
+What is the motivation for ALE instead of functional ANOVA?
+Functional ANOVA can be difficult from intuition for strongly correlated features.</p>
+<p>TODO: Mention the disadvantage example in ALE paper for Generalized fANOVA for the correlated case.</p>
 </div>
-<div id="advantages-13" class="section level3">
-<h3><span class="header-section-number">5.9.4</span> Advantages</h3>
-<p>The anchors approach offers multiple advantages over LIME. First, the algorithm’s output is easier to understand, as rules are <strong>easy to interpret</strong> (even for laypersons).</p>
-<p>Furthermore, <strong>anchors are subsettable</strong> and even state a measure of importance by including the notion of coverage. Second, the anchors approach <strong>works when model predictions are non-linear or complex</strong> in an instance’s neighborhood. As the approach deploys reinforcement learning techniques instead of fitting surrogate models, it is less likely to underfit the model.</p>
-<p>Apart from that, the algorithm is <strong>model-agnostic</strong> and thus applicable to any model.</p>
-<p>Furthermore, it is <strong>highly efficient as it can be parallelized</strong> by making use of MABs that support batch sampling (e.g., BatchSAR).</p>
+<div id="viewing-other-methods-through-the-lens-of-decomposition" class="section level3">
+<h3><span class="header-section-number">5.1.7</span> Viewing Other Methods Through the Lens of Decomposition</h3>
+<p>You might want to come back to this chapter again if you have a good grasp on some of the other methods.</p>
+<p>First on a high level:
+Feature effects are direct visualizations of the individual components.
+However we have to distinguish between total effect and isolated effect for the higher-order feature effects.
+PDP is total effect
+ALE is individual effect
+If you remove lower effects from PDP, you get fANOVA, at least for indepdentn feature case.</p>
+<p>PDP is a direct decomposition, but with additional intercept difference.
+ALE is a decomposition.
+For permutation feature importance,
+Methods such as SHApley and co only describe a prediction with 1-dimensional effects.
+What happened with the interaction terms? They are divided among the individual effects.
+What happened in PFI with the interactions? They are alos divided among individual effects.</p>
+<p>The SHAP interaction plots can also be better understood through decompositions.</p>
+<p>There are many methods that produce individual explanations in the form of <span class="math inline">\(f(X)=\sum_{p=1}^n\phi_j\)</span>, which attribute one number per feature, see <a href="shapley.html#shapley">Shapley Values</a>, <a href="lime.html#lime">LIME</a> and most <a href="pixel-attribution.html#pixel-attribution">pixel attribution methods for neural networks</a>, all of which you will encounter later in the book.
+Looking at them through functional decomposition:
+When methods fulfill the property of efficiency, like for example Shapley values do, it means that the sum of attributions are equal to the prediction.
+This means that we decomposed the function.
+But there are only first order effects, no interactions.
+It means that all the interactions have to be split among the individual values per feature.
+And we do not get separate interation effects.</p>
 </div>
-<div id="disadvantages-13" class="section level3">
-<h3><span class="header-section-number">5.9.5</span> Disadvantages</h3>
-<p>The algorithm suffers from a <strong>highly configurable</strong> and impactful setup, just like most perturbation-based explainers. Not only do hyperparameters such as the beam width or precision threshold need to be tuned to yield meaningful results but also does the perturbation function need to be explicitly designed for one domain/use-case. Think of how tabular data gets perturbed and think of how to apply the same concepts to image data (Hint: these cannot be applied). Luckily, default approaches may be used in some domains (e.g., tabular), facilitating an initial explanation setup.</p>
-<p>Also, <strong>many scenarios require discretization</strong> as otherwise results are too specific, have low coverage, and do not contribute to understanding the model. While discretization can help, it may also blur decision boundaries if used carelessly and thus have the exact opposite effect. Since there is no best discretization technique, users need to be aware of the data before deciding on how to discretize data not to obtain poor results.</p>
-<p>Constructing anchors requires <strong>many calls to the ML model</strong>, just like all perturbation-based explainers. While the algorithm deploys MABs to minimize the number of calls, its runtime still very much depends on the model’s performance and is therefore highly variable.</p>
-<p>Lastly, the notion of <strong>coverage is undefined in some domains</strong>. For example, there is no obvious or universal definition of how superpixels in one image compare to such in other images.</p>
+<div id="advantages-5" class="section level3">
+<h3><span class="header-section-number">5.1.8</span> Advantages</h3>
+<p>A rigorous way of thinking about high-dimensional functions.</p>
+<p>Allows to understand most other interpretation methods much better.</p>
+<p>Separation and attribution of effects.</p>
 </div>
-<div id="software-and-alternatives-4" class="section level3">
-<h3><span class="header-section-number">5.9.6</span> Software and Alternatives</h3>
-<p>There currently are two implementations available: <a href="https://github.com/marcotcr/anchor">anchor, a Python package</a> (also integrated by <a href="https://github.com/SeldonIO/alibi">Alibi</a>) and a <a href="https://github.com/viadee/javaAnchorExplainer">Java implementation</a>.
-The former is the anchors algorithm’s authors’ reference and the latter a high-performance implementation which comes with an R interface, called <a href="https://github.com/viadee/anchorsOnR">anchors</a>, which was used for the examples in this chapter.
-As of now, anchors supports tabular data only. However, anchors may theoretically be constructed for any domain or type of data.</p>
+<div id="disadvantages-5" class="section level3">
+<h3><span class="header-section-number">5.1.9</span> Disadvantages</h3>
+<p>When output high-dimensional, than not as simple.</p>
+<p>Makes little sense for images and text.</p>
+<p>No clear superior way for the axioms.</p>
+<p>Estimating higher effect components always difficult and no good way to visualize.</p>
+<p>Functional ANOVA is very difficult to estimate, no available software.</p>
+<p>ALE is an alternative for when features are dependent, but offers no variance decomposition.</p>
+<p>Does not have an implementation besides (ALE)[#ale].</p>
 
 <!--{pagebreak}-->
 </div>
 </div>
 <div class="footnotes">
 <hr />
-<ol start="42">
-<li id="fn42"><p>Marco Tulio Ribeiro, Sameer Singh, Carlos Guestrin. “Anchors: High-Precision Model-Agnostic Explanations.” AAAI Conference on Artificial Intelligence (AAAI), 2018<a href="anchors.html#fnref42" class="footnote-back">↩︎</a></p></li>
-<li id="fn43"><p>Emilie Kaufmann and Shivaram Kalyanakrishnan. “Information Complexity in Bandit Subset Selection”. Proceedings of Machine Learning Research (2013).<a href="anchors.html#fnref43" class="footnote-back">↩︎</a></p></li>
+<ol start="27">
+<li id="fn27"><p>Hooker, Giles. “Discovering additive structure in black box functions.” Proceedings of the tenth ACM SIGKDD international conference on Knowledge discovery and data mining. 2004.<a href="decomposition.html#fnref27" class="footnote-back">↩︎</a></p></li>
+<li id="fn28"><p>Hooker, Giles. “Generalized functional anova diagnostics for high-dimensional functions of dependent variables.” Journal of Computational and Graphical Statistics 16.3 (2007): 709-732.<a href="decomposition.html#fnref28" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
             </section>
@@ -560,8 +607,8 @@ As of now, anchors supports tabular data only. However, anchors may theoreticall
           </div>
         </div>
       </div>
-<a href="lime.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="shapley.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="agnostic.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="pdp.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
@@ -593,7 +640,7 @@ gitbook.start({
 "size": 2
 },
 "edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/manuscript/05.8.1-agnostic-Anchors.Rmd",
+"link": "https://github.com/christophM/interpretable-ml-book/edit/master/manuscript/05.1-agnostic-decomposition.Rmd",
 "text": "Edit"
 },
 "history": {
