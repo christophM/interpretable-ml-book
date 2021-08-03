@@ -15,25 +15,27 @@ set.seed(42)
 ## Functional Decompositon {#decomposition}
 
 A prediction function is, or often can be simplified to, a function that takes a high-dimensional input and outputs a 1-dimensional number.
-The idea of functional decomposition is to split this high-dimensional function into lower-dimensional components, which allow to attribute effects to individual features and interactions between features.
 Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
+The split allows to attribute effects to individual features and to identify interactions between features.
 Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.
 
-This chapter may be the most central chapter in this book.
-It also comes very late, as the other chapters are mostly focused on methods.
-I see the primary value of functional decomposition in the mental model.
-Understanding functional decomposition gives you instant insights into other interpretation methods, and in general a better idea of model interpretation.
-
+This chapter may be the most central in this book.
+While a full functional decomposition is usually infeasible in practice, it is very valuable to have understood the idea of functional decomposition.
+Functional decomposition is a fundamental principal that underlies many other techniques, or at least can act as a mental lens through which to understand better what other methods do.
 
 <!-- Intuition -->
-We start with a simple function that takes only two features as input and produces a 1-dimensional output, the prediction.
-We can visualize what the function looks like using a 3-D plot or a heatmap:
+We start with a function that takes two features as input and produces a 1-dimensional output, the prediction.
+The function is:
 
-```{r}
+$$y = f(x_1, x_2) = 2 + e^{x_1} - x_2 + x_1 \cdot x_2$$
+
+We can visualize the function with a 3-D plot or a heatmap with contour lines:
+
+```{r, fig.cap = "Prediction surface of a two-dimensional function."}
 x1 = seq(from = -1, to = 1, length.out = 30)
 x2 = seq(from = -1, to = 1, length.out = 30)
 f = function(x1, x2){
-   2 + exp(x1) - x2 + 0.5 * x1 * x2 
+   2 + exp(x1) - x2 +  x1 * x2 
 }
 
 dat = expand.grid(x1 = x1, x2 = x2)
@@ -43,34 +45,30 @@ p = ggplot(dat, aes(x = x1, y = x2, fill = y, z = y)) + geom_tile() + geom_conto
 p
 ```
 
-This is a rather simple function to understand, so the use of decomposition might seem to much, but it is still useful.
-And especially when we have inputs with higher dimensions it should become clear why functional deomposition is so powerful.
-I did not show the formula that produced the function.
-This is on purpose, as in the machine learning setup, we don't have a neat little formula for the prediction function, but in the case that it has a closed formula (e.g., random forests), it would be long and ugly.
-
-Can we decompose this function into lower-dimensional components?
-This would allows us to disentangle effects of the features and all their interactions with other features.
-This would allow us to describe feature effects and importances. 
-The functional decomposition allows us to split the function into it's components.
-For a two-dimensional function f, which only depends on two input features: $f(x_1, x_2)$, we can split the function in the following way:
+The function takes on large values when $x_1$ is large and $x_2$ is low, and it takes on low values for large $x_2$ and low $x_1$.
+We can see both from the formula and the figure that there is an interaction between the two features, meaning that the prediction is not merely a sum of each feature effect.
+Note that in a machine learning setup nobody will give us such a neat formula, but we usually have access to the prediction/classification function.
+Can we identify, just by having access to the function, the main effects and the interaction effect?
+This would tell us how each feature affects the prediction individually, and which part is due to interaction of both features.
+The solution is functional decomposition: to decompose this two-dimensional function into its components.
+For a two-dimensional function f, which only depends on two input features: $f(x_1, x_2)$, we want each componentn to represent a main effect, interaction or intercept:
 
 $$f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1,2})$$
 
 The component $f_0$ is the intercept, components $f_1$ and $f_2$ are the main effects of $x_1$ and $x_2$ and $f_{1,2}$ is the interaction effect between the two features.
-The main effects tell us how each feature affects the prediction, independent of the other feature.
+The main effects tell us how each feature affects the prediction, independent of the values the other feature takes on.
 The interaction effect tells us what the effect of the features is together.
-The intercept simply tells us what the prediction is when all feature effects are zero.
+The intercept simply tells us what the prediction is when all feature effects are set to zero.
+Note that the components themselves are functions (except for the intercept) with different input dimensionalities.
 
-This formulation is basically a linear regression model, but where we include the interaction terms between all features (which of course makes it non-linear in the original feature space).
-
-Let us look into the decomposition of the function above.
-I just give it here, with explanations coming later.
-We have the intercept with $f_0\sim3.18$.
-Here is the rest of the decomposition of the function above:
-
+Let us decompose the function above.
+I will just give you the components for now, and the explanation for how to derive at the decomposition later. 
+The intercept is $f_0\sim3.18$.
+Since the other components are functions, we can visualize them:
 
 
-```{r, out.height = 200, out.width = 1800}
+
+```{r, fig.cap = "Decomposition of a function."}
 pred.fun = function(model = NULL, newdata){
   f(newdata$x1, newdata$x2)
 }
@@ -86,16 +84,28 @@ p12 = interact$plot(rug = FALSE) + geom_contour(aes(z = .ale), color = "black") 
 p1 + p2 + p12
 ```
 
-Before we go into details how exactly this was computed, and whether this is the only solution (spoiler: no), we head deeper into the mathematics.
+Do you think the components make sense given the true formula above?
+For now it is a bit mysterious why the intercept has this specific value.
+The feature $x_1$ shows an exponential effect as main effect, and $x_2$ shows a negative linear effect.
+This matches the formula that produced the predictions.
+The interaction term looks like a pringles.
+In more mathematical terms, it is a hyperbolic paraboloid as we would expect for $x_1 \cdot x_2$.
+
+
+The example was two-dimensional.
+Before we go into the details how the components were computed, we define the decomposition for a more general setup.
+
 
 ### Deeper Into the Mathematics
 
-The example was two-dimensional.
-But let us talk about p-dimensional functions: $f: \mathbb{R}^p \mapsto \mathbb{R}^1$.
-How does a composition of this function look like?
-Here it is:
+We start with a function that takes $p$ features as input, $f: \mathbb{R}^p \mapsto \mathbb{R}^1$.
+This could be a regression function, but also the classification probability for a certain class or the score for a certain cluster (unsupervised machine learning).
+How does a composition look like in general?
 
-$$f(x) = f_0 + f_1(x_1) + \ldots + f_p(x_p) + f_{1,2}(x_1, x_2) + \ldots + f_{p-1, p}(x_{p - 1}, x_p) + \ldots + f_{1,\ldots,p}(x_1, \ldots, x_p)$$
+$$\begin{align*}f(x) = & f_0 + f_1(x_1) + \ldots + f_p(x_p) \\ & + f_{1,2}(x_1, x_2) + \ldots + f_{1,p}(x_1, x_p) + \ldots + f_{p-1,p} \\  & + \ldots + \\ & +  f_{1,\ldots,p}(x_1, \ldots, x_p)\end{align*}$$
+
+
+TODO: CONTINUE HERE
 
 Okay that's really ugly and long, we shorten it a bit.
 We can make it more precise and shorter by indexing all possible subsets of feature combinations: $S\subseteq\{1,\ldots,p\}$.
@@ -108,7 +118,7 @@ Here, $x_S$ is the vector of features in the index set $S$.
 
 A function that takes in a p-dimensional vector can be split into $2^p$ components.
 
-$$#comps = \sum_{i = 0}^p \binom{p}{i} = 2^p$$
+$$|comps| = \sum_{i = 0}^p \binom{p}{i} = 2^p$$
 
 For example, if the function has 10 features, we already would have 1042 components.
 With each additional feature, the number of components doubles (!!).
