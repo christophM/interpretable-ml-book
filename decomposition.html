@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2021-08-02" />
+<meta name="date" content="2021-08-03" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -383,45 +383,61 @@ window.cookieconsent.initialise({
 <div id="decomposition" class="section level2">
 <h2><span class="header-section-number">5.1</span> Functional Decompositon</h2>
 <p>A prediction function is, or often can be simplified to, a function that takes a high-dimensional input and outputs a 1-dimensional number.
-The idea of functional decomposition is to split this high-dimensional function into lower-dimensional components, which allow to attribute effects to individual features and interactions between features.
 Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
+The split allows to attribute effects to individual features and to identify interactions between features.
 Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.</p>
-<p>This chapter may be the most central chapter in this book.
-It also comes very late, as the other chapters are mostly focused on methods.
-I see the primary value of functional decomposition in the mental model.
-Understanding functional decomposition gives you instant insights into other interpretation methods, and in general a better idea of model interpretation.</p>
+<p>This chapter may be the most central in this book.
+While a full functional decomposition is usually infeasible in practice, it is very valuable to have understood the idea of functional decomposition.
+Functional decomposition is a fundamental principal that underlies many other techniques, or at least can act as a mental lens through which to understand better what other methods do.</p>
 <!-- Intuition -->
-<p>We start with a simple function that takes only two features as input and produces a 1-dimensional output, the prediction.
-We can visualize what the function looks like using a 3-D plot or a heatmap:</p>
-<p><img src="images/unnamed-chunk-12-1.png" width="1050" /></p>
-<p>This is a rather simple function to understand, so the use of decomposition might seem to much, but it is still useful.
-And especially when we have inputs with higher dimensions it should become clear why functional deomposition is so powerful.
-I did not show the formula that produced the function.
-This is on purpose, as in the machine learning setup, we don’t have a neat little formula for the prediction function, but in the case that it has a closed formula (e.g., random forests), it would be long and ugly.</p>
-<p>Can we decompose this function into lower-dimensional components?
-This would allows us to disentangle effects of the features and all their interactions with other features.
-This would allow us to describe feature effects and importances.
-The functional decomposition allows us to split the function into it’s components.
-For a two-dimensional function f, which only depends on two input features: <span class="math inline">\(f(x_1, x_2)\)</span>, we can split the function in the following way:</p>
+<p>We start with a function that takes two features as input and produces a 1-dimensional output, the prediction.
+The function is:</p>
+<p><span class="math display">\[y = f(x_1, x_2) = 2 + e^{x_1} - x_2 + x_1 \cdot x_2\]</span></p>
+<p>We can visualize the function with a 3-D plot or a heatmap with contour lines:</p>
+<div class="figure"><span id="fig:unnamed-chunk-12"></span>
+<img src="images/unnamed-chunk-12-1.png" alt="Prediction surface of a two-dimensional function." width="1050" />
+<p class="caption">
+FIGURE 5.2: Prediction surface of a two-dimensional function.
+</p>
+</div>
+<p>The function takes on large values when <span class="math inline">\(x_1\)</span> is large and <span class="math inline">\(x_2\)</span> is low, and it takes on low values for large <span class="math inline">\(x_2\)</span> and low <span class="math inline">\(x_1\)</span>.
+We can see both from the formula and the figure that there is an interaction between the two features, meaning that the prediction is not merely a sum of each feature effect.
+Note that in a machine learning setup nobody will give us such a neat formula, but we usually have access to the prediction/classification function.
+Can we identify, just by having access to the function, the main effects and the interaction effect?
+This would tell us how each feature affects the prediction individually, and which part is due to interaction of both features.
+The solution is functional decomposition: to decompose this two-dimensional function into its components.
+For a two-dimensional function f, which only depends on two input features: <span class="math inline">\(f(x_1, x_2)\)</span>, we want each componentn to represent a main effect, interaction or intercept:</p>
 <p><span class="math display">\[f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1,2})\]</span></p>
 <p>The component <span class="math inline">\(f_0\)</span> is the intercept, components <span class="math inline">\(f_1\)</span> and <span class="math inline">\(f_2\)</span> are the main effects of <span class="math inline">\(x_1\)</span> and <span class="math inline">\(x_2\)</span> and <span class="math inline">\(f_{1,2}\)</span> is the interaction effect between the two features.
-The main effects tell us how each feature affects the prediction, independent of the other feature.
+The main effects tell us how each feature affects the prediction, independent of the values the other feature takes on.
 The interaction effect tells us what the effect of the features is together.
-The intercept simply tells us what the prediction is when all feature effects are zero.</p>
-<p>This formulation is basically a linear regression model, but where we include the interaction terms between all features (which of course makes it non-linear in the original feature space).</p>
-<p>Let us look into the decomposition of the function above.
-I just give it here, with explanations coming later.
-We have the intercept with <span class="math inline">\(f_0\sim3.18\)</span>.
-Here is the rest of the decomposition of the function above:</p>
-<p><img src="images/unnamed-chunk-13-1.png" width="1800" height="200" /></p>
-<p>Before we go into details how exactly this was computed, and whether this is the only solution (spoiler: no), we head deeper into the mathematics.</p>
+The intercept simply tells us what the prediction is when all feature effects are set to zero.
+Note that the components themselves are functions (except for the intercept) with different input dimensionalities.</p>
+<p>Let us decompose the function above.
+I will just give you the components for now, and the explanation for how to derive at the decomposition later.
+The intercept is <span class="math inline">\(f_0\sim3.18\)</span>.
+Since the other components are functions, we can visualize them:</p>
+<div class="figure"><span id="fig:unnamed-chunk-13"></span>
+<img src="images/unnamed-chunk-13-1.png" alt="Decomposition of a function." width="1050" />
+<p class="caption">
+FIGURE 5.3: Decomposition of a function.
+</p>
+</div>
+<p>Do you think the components make sense given the true formula above?
+For now it is a bit mysterious why the intercept has this specific value.
+The feature <span class="math inline">\(x_1\)</span> shows an exponential effect as main effect, and <span class="math inline">\(x_2\)</span> shows a negative linear effect.
+This matches the formula that produced the predictions.
+The interaction term looks like a pringles.
+In more mathematical terms, it is a hyperbolic paraboloid as we would expect for <span class="math inline">\(x_1 \cdot x_2\)</span>.</p>
+<p>The example was two-dimensional.
+Before we go into the details how the components were computed, we define the decomposition for a more general setup.</p>
 <div id="deeper-into-the-mathematics" class="section level3">
 <h3><span class="header-section-number">5.1.1</span> Deeper Into the Mathematics</h3>
-<p>The example was two-dimensional.
-But let us talk about p-dimensional functions: <span class="math inline">\(f: \mathbb{R}^p \mapsto \mathbb{R}^1\)</span>.
-How does a composition of this function look like?
-Here it is:</p>
-<p><span class="math display">\[f(x) = f_0 + f_1(x_1) + \ldots + f_p(x_p) + f_{1,2}(x_1, x_2) + \ldots + f_{p-1, p}(x_{p - 1}, x_p) + \ldots + f_{1,\ldots,p}(x_1, \ldots, x_p)\]</span></p>
+<p>We start with a function that takes <span class="math inline">\(p\)</span> features as input, <span class="math inline">\(f: \mathbb{R}^p \mapsto \mathbb{R}^1\)</span>.
+This could be a regression function, but also the classification probability for a certain class or the score for a certain cluster (unsupervised machine learning).
+How does a composition look like in general?</p>
+<p><span class="math display">\[\begin{align*}f(x) = &amp; f_0 + f_1(x_1) + \ldots + f_p(x_p) \\ &amp; + f_{1,2}(x_1, x_2) + \ldots + f_{1,p}(x_1, x_p) + \ldots + f_{p-1,p} \\  &amp; + \ldots + \\ &amp; +  f_{1,\ldots,p}(x_1, \ldots, x_p)\end{align*}\]</span></p>
+<p>TODO: CONTINUE HERE</p>
 <p>Okay that’s really ugly and long, we shorten it a bit.
 We can make it more precise and shorter by indexing all possible subsets of feature combinations: <span class="math inline">\(S\subseteq\{1,\ldots,p\}\)</span>.
 This contains all main effects, and all interactions, and also the empty set, which we need to define the intercept.
@@ -429,7 +445,7 @@ The the function <span class="math inline">\(f\)</span> can be decomposed as:</p
 <p><span class="math display">\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]</span></p>
 <p>Here, <span class="math inline">\(x_S\)</span> is the vector of features in the index set <span class="math inline">\(S\)</span>.</p>
 <p>A function that takes in a p-dimensional vector can be split into <span class="math inline">\(2^p\)</span> components.</p>
-<p><span class="math display">\[#comps = \sum_{i = 0}^p \binom{p}{i} = 2^p\]</span></p>
+<p><span class="math display">\[|comps| = \sum_{i = 0}^p \binom{p}{i} = 2^p\]</span></p>
 <p>For example, if the function has 10 features, we already would have 1042 components.
 With each additional feature, the number of components doubles (!!).
 So, clearly it is not feasible for most functions to compute all the components.
