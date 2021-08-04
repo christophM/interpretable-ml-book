@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2021-08-03" />
+<meta name="date" content="2021-08-04" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -203,7 +203,7 @@ window.cookieconsent.initialise({
 <li class="chapter" data-level="5.1" data-path="decomposition.html"><a href="decomposition.html"><i class="fa fa-check"></i><b>5.1</b> Functional Decompositon</a><ul>
 <li class="chapter" data-level="5.1.1" data-path="decomposition.html"><a href="decomposition.html#deeper-into-the-mathematics"><i class="fa fa-check"></i><b>5.1.1</b> Deeper Into the Mathematics</a></li>
 <li class="chapter" data-level="5.1.2" data-path="decomposition.html"><a href="decomposition.html#how-to-compute-the-components"><i class="fa fa-check"></i><b>5.1.2</b> How to Compute the Components</a></li>
-<li class="chapter" data-level="5.1.3" data-path="decomposition.html"><a href="decomposition.html#getting-decomposition-for-free"><i class="fa fa-check"></i><b>5.1.3</b> Getting Decomposition for free</a></li>
+<li class="chapter" data-level="5.1.3" data-path="decomposition.html"><a href="decomposition.html#statistical-regression-models"><i class="fa fa-check"></i><b>5.1.3</b> Statistical Regression Models</a></li>
 <li class="chapter" data-level="5.1.4" data-path="decomposition.html"><a href="decomposition.html#functional-anova"><i class="fa fa-check"></i><b>5.1.4</b> Functional ANOVA</a></li>
 <li class="chapter" data-level="5.1.5" data-path="decomposition.html"><a href="decomposition.html#generalized-functional-anova-for-dependent-features"><i class="fa fa-check"></i><b>5.1.5</b> Generalized functional ANOVA for dependent features</a></li>
 <li class="chapter" data-level="5.1.6" data-path="decomposition.html"><a href="decomposition.html#accumulated-local-effects-plots"><i class="fa fa-check"></i><b>5.1.6</b> Accumulated Local Effects Plots</a></li>
@@ -433,93 +433,97 @@ In more mathematical terms, it is a hyperbolic paraboloid as we would expect for
 Before we go into the details how the components were computed, we define the decomposition for a more general setup.</p>
 <div id="deeper-into-the-mathematics" class="section level3">
 <h3><span class="header-section-number">5.1.1</span> Deeper Into the Mathematics</h3>
-<p>We start with a function that takes <span class="math inline">\(p\)</span> features as input, <span class="math inline">\(f: \mathbb{R}^p \mapsto \mathbb{R}^1\)</span>.
+<p>We start with a function that takes <span class="math inline">\(p\)</span> features as input, <span class="math inline">\(f: \mathbb{R}^p \mapsto \mathbb{R}\)</span>.
 This could be a regression function, but also the classification probability for a certain class or the score for a certain cluster (unsupervised machine learning).
 How does a composition look like in general?</p>
-<p><span class="math display">\[\begin{align*}f(x) = &amp; f_0 + f_1(x_1) + \ldots + f_p(x_p) \\ &amp; + f_{1,2}(x_1, x_2) + \ldots + f_{1,p}(x_1, x_p) + \ldots + f_{p-1,p} \\  &amp; + \ldots + \\ &amp; +  f_{1,\ldots,p}(x_1, \ldots, x_p)\end{align*}\]</span></p>
-<p>TODO: CONTINUE HERE</p>
-<p>Okay that’s really ugly and long, we shorten it a bit.
-We can make it more precise and shorter by indexing all possible subsets of feature combinations: <span class="math inline">\(S\subseteq\{1,\ldots,p\}\)</span>.
-This contains all main effects, and all interactions, and also the empty set, which we need to define the intercept.
-The the function <span class="math inline">\(f\)</span> can be decomposed as:</p>
+<p><span class="math display">\[\begin{align*}f(x) = &amp; f_0 + f_1(x_1) + \ldots + f_p(x_p) \\ &amp; + f_{1,2}(x_1, x_2) + \ldots + f_{1,p}(x_1, x_p) + \ldots + f_{p-1,p} \\  &amp; + \ldots  \\ &amp; +  f_{1,\ldots,p}(x_1, \ldots, x_p)\end{align*}\]</span></p>
+<p>We can make the decomposition look a bit mathematically nicer by indexing all possible subsets of feature combinations: <span class="math inline">\(S\subseteq\{1,\ldots,p\}\)</span>.
+This set contains the intercept (<span class="math inline">\(S=\emptyset\)</span>), main effects (<span class="math inline">\(|S|=1\)</span>), and all interactions (<span class="math inline">\(|S|\leq{}1\)</span>).
+With this subset defined, we can write the decomposition as:</p>
 <p><span class="math display">\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]</span></p>
-<p>Here, <span class="math inline">\(x_S\)</span> is the vector of features in the index set <span class="math inline">\(S\)</span>.</p>
-<p>A function that takes in a p-dimensional vector can be split into <span class="math inline">\(2^p\)</span> components.</p>
-<p><span class="math display">\[|comps| = \sum_{i = 0}^p \binom{p}{i} = 2^p\]</span></p>
-<p>For example, if the function has 10 features, we already would have 1042 components.
-With each additional feature, the number of components doubles (!!).
-So, clearly it is not feasible for most functions to compute all the components.
-Another reasons against computing all components is that components with <span class="math inline">\(|S|&gt;2\)</span> are difficult to visualize and interpret.</p>
+<p>Here, <span class="math inline">\(x_S\)</span> is the vector of features in the index set <span class="math inline">\(S\)</span>.
+Just how many components are those?
+A function that takes in a p-dimensional vector can be split into <span class="math inline">\(\sum_{i=0}^p\binom{p}{i}=2^p\)</span> components.
+For example, if the function has 10 features, we we can split it into 1042 components: 1 intercept, 10 main effects, 90 2-way interaction terms, 720 3-way interaction terms, …
+With each additional feature, the number of components doubles.
+Clearly it is not feasible for the most functions to compute all the components.
+Another reasons to NOT compute all components is that components with <span class="math inline">\(|S|&gt;2\)</span> are difficult to visualize and interpret.</p>
 </div>
 <div id="how-to-compute-the-components" class="section level3">
 <h3><span class="header-section-number">5.1.2</span> How to Compute the Components</h3>
-<p>So far, our problem of functional decomposition is under-specified, meaning there is no unique solution.
-The big problem with a functional decomposition is that it is quite arbitrary if we don’t pose any limitations on how each of the components look like.
-Arbitrary means that we can move an effect between main effect and a higher interaction while the total prediction remains intact.
-I can give you some food for thought.
-We start with the minimal requirement that summing up our components (the <span class="math inline">\(f_S\)</span>’s) actually sums up to the function <span class="math inline">\(f\)</span>.
-That means that no matter what input we put into <span class="math inline">\(f\)</span> and the components, the outcome is equal.
+<p>So far I have avoided the topic of how the components are defined and computed.
+Without any further constraints on how these components should behave, there is actually not unique solution.
+So far, the only restrictions we talked about were that the sum of components should yield the function again, and about the dimensionalities of each component.
+Because without further constraints, we are free to move effects between main effects and feature effects.
+For example we could say in the example above that one of the main effects is zero, and add its effets to the interaction.
+In this case the sum of all components is still the complete function.
+Here is an even more extreme example which highlights the need for restrictions for the components:
 Let’s say you have a 3-dimensional function.
-It actually does not matter how this function look like, but the following decomposition would be valid:
+It actually does not matter how this function look like, but the following decomposition would <strong>always</strong> be valid:
 <span class="math inline">\(f_0\)</span> is 0.12.
-<span class="math inline">\(f_1 = 2 \cdot x_1\)</span> plus the number of shoes you own.
+<span class="math inline">\(f_1 = 2 \cdot x_1\)</span> + number of shoes you own.
 <span class="math inline">\(f_2\)</span>, <span class="math inline">\(f_3\)</span>, <span class="math inline">\(f_{1,2}\)</span>, <span class="math inline">\(f_{2,3}, f_{1,3}\)</span> are all zero.
 And finally to make this trick work, I define:</p>
 <p><span class="math display">\[f_{1,2,3} = f(x) - \sum_{S\subset\{1,\ldots,p\}} f_S(x_S)\]</span></p>
 <p>Not very meaningful, and quite deceptive if you would present this as the interpretation of your model.
-How to we prevent this ambiguity?</p>
-<p>Some methods:</p>
+How to we prevent this ambiguity?
+Here is where different methods make different assumptions.</p>
+<p>In this chapter, we will discuss three of those:</p>
 <ul>
-<li>Use a restricted model: Looking at you, linear regression model! If you train a very restricted model, where we can identify within the model the individual components, then we get a decomposition for free. In a linear regression model without interactions specified, we only get an intercept and the first order effects. Each coefficient is then a first order effect. If we add interaction terms, then the coefficient of that interaction term plus the form of the chosen interaction may be interpreted as the second order interaction between the two respective features.</li>
-<li>Stein. But very restricted, more interesting because of historic and academic reasons. The integrate does not really reflect the underlying data distribution TODO: Check in functional ANOVA paper how it is computed.</li>
-<li>More sophisticated is the functional ANOVA, which works well in the case where the features are independent. This technique will be explained in detail below.</li>
-<li>The generalized functional ANOVA is an extension of the functional ANOVA, which can also work for features that are dependent. It is, however, more difficult to compute. Also covered later in this chapter.</li>
-<li><a href="ale.html#ale">Accumulated Local Effects Plots</a> also allow a functional decomposition.</li>
-<li>See newer stuff (HDMR and whatnot)</li>
+<li>Statistical regression models</li>
+<li>(Generalized) Functional ANOVA</li>
+<li><a href="ale.html#ale">Accumulated Local Effects</a></li>
 </ul>
 </div>
-<div id="getting-decomposition-for-free" class="section level3">
-<h3><span class="header-section-number">5.1.3</span> Getting Decomposition for free</h3>
-<p>For functions such as the <a href="limo.html#limo">linear regression model</a> or <a href="#extended-lm">generalized additive models (GAMs)</a>, we already get a decomposition for free.</p>
-<p>Write more here?</p>
-<p>Mention that this is source of confusion.
-e.g. you could have linear regression model with interaction term.
-You could see this as decomposition.
-But if you apply one of the methods that follows, especially for the following methods, the results might differ.
-So if we know that all interactions are zero, we can use the <a href="#lm-extended">GAM</a> to model this function.
-What if we know that the maximum number of features involved in interactions is 2, i.e., <span class="math inline">\(|S|\leq{}2\)</span>?
-This would mean we could model it with an additive function that also allows interactions between two features, such as MARS (CITE) or GA2M (CITE).</p>
-<p>Can a function exist where lower-components are zero, but the the interactions are non-zero?
-For example, components for <span class="math inline">\(X_1\)</span> and <span class="math inline">\(X_2\)</span> are zero, but their interaction is not?
-Yes!
-For example, the XOR problem where <span class="math inline">\(Y=X_1XOR{}X_2\)</span>.</p>
+<div id="statistical-regression-models" class="section level3">
+<h3><span class="header-section-number">5.1.3</span> Statistical Regression Models</h3>
+<p>This first approach links back to <a href="simple.html#simple">interpretable models</a>, especially <a href="extend-lm.html#extend-lm">generalized additive models</a>.
+Instead of decomposing a complex function, we can build restrictions into the modeling process so that we can simply read out the individual components.
+This is only feasible if we restrict the number of components, so that our model does not have to fit all the <span class="math inline">\(2^p\)</span> components.</p>
+<p>Let us go even simpler and consider the linear regression function:</p>
+<p><span class="math display">\[f(x) = \beta_0 + \beta_1 x_1 + \ldots \beta_p x_p\]</span></p>
+<p>This looks awfully similar to the functional decomposition, but with two major modifications.
+Modification 1: All interaction effects are excluded and we only keep intercept and main effects.
+Modification 2: The main effects are only allowed to be linear in the feature: <span class="math inline">\(f_j(x_j)=\beta_j{}x_j\)</span>.
+Viewing the linear regression model through the lens of functional decomposition, we can see that the model itself represents a functional decomposition of the true function that maps from features to target, but with strong assumptions of no interactions and linear effects.</p>
+<p>The generalized additive model relaxes the second assumption, as it allows more flexible function <span class="math inline">\(f_j\)</span> by using splines.
+Interactions can also be added, but this process is rather manual.
+Extension to the GAM exist which try to add 2-way interactions automatically. CITE GA2M.</p>
+<p>There is also some potential for confusion:
+When you have a linear regression model and add an interaction term, this decomposition will be different from when you apply one of the folloiwng functional decomposition approaches to the linear regression model.
+An additional requirement for this mismatch to occur is that the interacting features need to be correlated.
+The mismatch occurs because other functional decomposition approaches split the effects differently between interactions and main effect.</p>
+<p>When should we use statistical models instead of more comlex models that we decompose post-hoc?
+If most interactions are zero, especially the ones with 3 or more features.
+If we know that the maximum number of features involved in interactions is 2, i.e., <span class="math inline">\(|S|\leq{}2\)</span>, then we can use approaches like MARS or GA2M</p>
 </div>
 <div id="functional-anova" class="section level3">
 <h3><span class="header-section-number">5.1.4</span> Functional ANOVA</h3>
-<p>The functional ANOVA was proposed by Hooker (2004)<a href="#fn27" class="footnote-ref" id="fnref27"><sup>27</sup></a>.
-The requirement is that the model prediction function f is square integrable.
-The decomposition is as any decomposition:</p>
+<p>The functional ANOVA was proposed by Hooker (2004)<a href="#fn27" class="footnote-ref" id="fnref27"><sup>27</sup></a>.</p>
+<p>The requirement is that the model prediction function f is square integrable.
+As any functional decomposition, the functional ANOVA decomposes the function into components:</p>
 <p><span class="math display">\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]</span></p>
-<p>Hooker (2004) proposes to estimate the individual components as:</p>
+<p>Hooker (2004) proposes to estimate each components as:</p>
 <p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x) - \sum_{V \subset S} f_V(x)\right) d X_{-S})\]</span></p>
-<p>Ok, let’s take this thing apart.
-Instead we can also write:</p>
+<p>Ok, let us take this thing apart.
+We can rewrite the component as:</p>
 <p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \right) d X_{-S})\]</span></p>
-<p>The first part is the integral over the prediction function, with respect of the features that are not in the set.
-This the same as the expectation of the function when we integrate out features <span class="math inline">\(X_{-S}\)</span>, and pretending that all features follow a uniform distribution.
-The second part are all the lower dimensional components, so we apply some kind of centering.
-For example if <span class="math inline">\(S=\{1,2\}\)</span>, meaning we look at the interaction effect of the first two features, and let’s say there are, in total, 4 features.
-Since the formula is recursive in the sense that to compute higher order interactions, you have to also compute all lower-order interactions, we start with the lowest order, namely the <span class="math inline">\(f_0\)</span> component which is a constant.
-For <span class="math inline">\(f_0\)</span>, the subset <span class="math inline">\(S=\{\emptyset\}\)</span> and therefore -S contains all features $XS.
+<p>The first part is the integral over the prediction function with respect to the features that are not in the set of components <span class="math inline">\(S\)</span>, which is referred to with the <span class="math inline">\(-S\)</span>.
+For example if we compute the 2-way component for features 2 and 3, we would integrate over feature 1, 4, …
+The integral can also be seen as the expected value of the prediction function with respect to <span class="math inline">\(X_{-S}\)</span>, and pretending that all features follow a uniform distribution.
+We subtract from this interval all the lower dimensional components.
+This subtraction has the effect of kind of centering and also removing the effect of all lower-order effects.
+For example if <span class="math inline">\(S=\{2,3\}\)</span> we would subtract the main effects of both features <span class="math inline">\(f_2\)</span> and <span class="math inline">\(f_3\)</span>, and the intercept <span class="math inline">\(f_0\)</span>.
+The occurence of all lower-order effects also means that the formula is recursive: we have to go all the way to the intercept and compute all effects from intercept to one level below the effect we are interested in.
+For the intercept <span class="math inline">\(f_0\)</span>, the subset is the empty set <span class="math inline">\(S=\{\emptyset\}\)</span> and therefore -S contains all features $XS.
 Therefore we get:</p>
-<p><span class="math display">\[f_S(x) = \int_{X} f(x) d X)\]</span></p>
+<p><span class="math display">\[f_S(x) = \int_{X} f(x) dX\]</span></p>
 <p>This is simply the prediction function where we integrated over all features.
-And it can also be seen as the expectation of the function, but when we assume that all features are uniformly distributed.
-Now that we have <span class="math inline">\(f_0\)</span>, we can get the formula for <span class="math inline">\(f_1\)</span>:</p>
-<p><span class="math display">\[f_1(x) = \int_{X_{-1}} \left( f(x) - f_0\right) d X_{-S})\]</span></p>
-<p>The formula for <span class="math inline">\(f_2(x)\)</span> is equivalent.</p>
-<p>The the <span class="math inline">\(V\subset{}S\)</span> are ${,1,2} and the formula becomes:</p>
-<p><span class="math display">\[f_{1,2}(x) = \int{\{3,4\}} \left( f(x) - (f_0(x) + f_1(x) + f_2(x))\right) d X_{3},X_4\]</span></p>
+And it can also be seen as the expectation of the prediction function when we assume that all features are uniformly distributed.
+Now that we have <span class="math inline">\(f_0\)</span>, we can get the formula for <span class="math inline">\(f_1\)</span> (and equivalently for <span class="math inline">\(f_2\)</span>):</p>
+<p><span class="math display">\[f_1(x) = \int_{X_{-1}} \left( f(x) - f_0\right) d X_{-S}\]</span></p>
+<p>To finish the calculation for component <span class="math inline">\(f_{1,2}\)</span> we can put everything together:</p>
+<p><span class="math display">\[\begin{align*}f_{1,2}(x) &amp;= \int{\{3,4\}} \left( f(x) - (f_0(x) + f_1(x) - f_0 + f_2(x) - f_0)\right) d X_{3},X_4 \\  &amp;= \int{\{3,4\}} \left(f(x) - f_1(x) - f_2(x) + f_0)\right) d X_{3},X_4 \end{align*}\]</span></p>
 <p>This example shows how each higher order effect is defined by integrating over all other features, but also be removing all the lower-order effects that are subsets of the higher-order effects.</p>
 <p>Hooker (2004) showed that this fullfills a few desirable axioms:</p>
 <ul>
@@ -527,8 +531,11 @@ Now that we have <span class="math inline">\(f_0\)</span>, we can get the formul
 <li>Orthogonality: <span class="math inline">\(\int{}f_S(x_S)f_V(x_v)dX=0\)</span> for <span class="math inline">\(S\neq{}V\)</span></li>
 <li>Variance Decomposition: Let <span class="math inline">\(\sigma^2_{f}=\int{}f(x)^2dX\)</span>, then
 <span class="math display">\[ \sigma^2(f) = \sum_{S \subseteq P} \sigma^2_S(f_S),\]</span>
-where P is the set of all features.</li>
+where P is the set of all features.
+ANOVA stands for ANalysis Of VAriance.
+The reason is that the functional ANOVA also allows a decomposition of the variance of the model function:</li>
 </ul>
+<p>TODO</p>
 <p>The zero means axiom implies that all effects or interactions are centered around zero.
 The orthogonality axiom says that any two components do not share information, meaning that, for example, the first order effect of feature <span class="math inline">\(X_1\)</span> and the interaction term of <span class="math inline">\(X_{1}\)</span> and <span class="math inline">\(X_2\)</span> are not correlated.
 The variance decomposition allows us to split the variance of the function <span class="math inline">\(f\)</span> among the components, and guarantees that it really adds up in the end.</p>
@@ -567,6 +574,7 @@ But they are pseudo-orthogonal.</p>
 What is the motivation for ALE instead of functional ANOVA?
 Functional ANOVA can be difficult from intuition for strongly correlated features.</p>
 <p>TODO: Mention the disadvantage example in ALE paper for Generalized fANOVA for the correlated case.</p>
+<p>TODO: Example of mismatch between linear model with interaction and the ALE decomposition</p>
 </div>
 <div id="viewing-other-methods-through-the-lens-of-decomposition" class="section level3">
 <h3><span class="header-section-number">5.1.7</span> Viewing Other Methods Through the Lens of Decomposition</h3>
@@ -591,6 +599,10 @@ This means that we decomposed the function.
 But there are only first order effects, no interactions.
 It means that all the interactions have to be split among the individual values per feature.
 And we do not get separate interation effects.</p>
+<p>Can a function exist where lower-components are zero, but the the interactions are non-zero?
+For example, components for <span class="math inline">\(X_1\)</span> and <span class="math inline">\(X_2\)</span> are zero, but their interaction is not?
+Yes!
+For example, the XOR problem where <span class="math inline">\(Y=X_1XOR{}X_2\)</span>.</p>
 </div>
 <div id="advantages-5" class="section level3">
 <h3><span class="header-section-number">5.1.8</span> Advantages</h3>
