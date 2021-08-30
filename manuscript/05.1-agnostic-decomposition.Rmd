@@ -16,11 +16,11 @@ set.seed(42)
 
 A prediction function is, or often can be simplified to, a function that takes a high-dimensional input and outputs a 1-dimensional number.
 Functional decomposition takes this high-dimensional function and splits it into lower-dimensional components.
-The split allows to attribute effects to individual features and to identify interactions between features.
+The split allows us to attribute effects to individual features and to identify interactions between features.
 Functional decomposition is both an interpretation method and mental model which immensily helps you to understand other interpretation methods.
 
 This chapter may be the most central in this book.
-While a full functional decomposition is usually infeasible in practice, it is very valuable to have understood the idea of functional decomposition.
+While a full functional decomposition is usually infeasible in practice, it is very valuable to understand the idea of functional decomposition.
 Functional decomposition is a fundamental principal that underlies many other techniques, or at least can act as a mental lens through which to understand better what other methods do.
 
 <!-- Intuition -->
@@ -49,9 +49,9 @@ The function takes on large values when $x_1$ is large and $x_2$ is low, and it 
 We can see both from the formula and the figure that there is an interaction between the two features, meaning that the prediction is not merely a sum of each feature effect.
 Note that in a machine learning setup nobody will give us such a neat formula, but we usually have access to the prediction/classification function.
 Can we identify, just by having access to the function, the main effects and the interaction effect?
-This would tell us how each feature affects the prediction individually, and which part is due to interaction of both features.
+This would tell us how each feature affects the prediction individually, and which part is due to the interaction of both features.
 The solution is functional decomposition: to decompose this two-dimensional function into its components.
-For a two-dimensional function f, which only depends on two input features: $f(x_1, x_2)$, we want each componentn to represent a main effect, interaction or intercept:
+For a two-dimensional function f, which only depends on two input features: $f(x_1, x_2)$, we want each component to represent a main effect, interaction or intercept:
 
 $$f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1,2})$$
 
@@ -100,7 +100,7 @@ Before we go into the details how the components were computed, we define the de
 
 We start with a function that takes $p$ features as input, $f: \mathbb{R}^p \mapsto \mathbb{R}$.
 This could be a regression function, but also the classification probability for a certain class or the score for a certain cluster (unsupervised machine learning).
-How does a composition look like in general?
+How does a composition look in general?
 
 $$\begin{align*}f(x) = & f_0 + f_1(x_1) + \ldots + f_p(x_p) \\ & + f_{1,2}(x_1, x_2) + \ldots + f_{1,p}(x_1, x_p) + \ldots + f_{p-1,p} \\  & + \ldots  \\ & +  f_{1,\ldots,p}(x_1, \ldots, x_p)\end{align*}$$
 
@@ -116,21 +116,22 @@ Just how many components are those?
 A function that takes in a p-dimensional vector can be split into $\sum_{i=0}^p\binom{p}{i}=2^p$ components.
 For example, if the function has 10 features, we we can split it into 1042 components: 1 intercept, 10 main effects, 90 2-way interaction terms, 720 3-way interaction terms, ... 
 With each additional feature, the number of components doubles.
-Clearly it is not feasible for the most functions to compute all the components.
+Clearly it is not feasible to compute all the components for most functions.
 Another reasons to NOT compute all components is that components with $|S|>2$ are difficult to visualize and interpret.
 
 
 ### How to Compute the Components
 
 So far I have avoided the topic of how the components are defined and computed.
-Without any further constraints on how these components should behave, there is actually not unique solution.
+Without any further constraints on how these components should behave, there is actually no unique solution.
 So far, the only restrictions we talked about were that the sum of components should yield the function again, and about the dimensionalities of each component.
 Because without further constraints, we are free to move effects between main effects and feature effects.
-For example we could say in the example above that one of the main effects is zero, and add its effets to the interaction.
+For example we could say in the example above that one of the main effects is zero, and add its effects to the interaction.
 In this case the sum of all components is still the complete function.
+
 Here is an even more extreme example which highlights the need for restrictions for the components:
 Let's say you have a 3-dimensional function.
-It actually does not matter how this function look like, but the following decomposition would **always** be valid:
+It actually does not matter how this function looks, but the following decomposition would **always** be valid:
 $f_0$ is 0.12.
 $f_1 = 2 \cdot x_1$ + number of shoes you own.
 $f_2$, $f_3$, $f_{1,2}$, $f_{2,3}, f_{1,3}$ are all zero.
@@ -139,15 +140,15 @@ And finally to make this trick work, I define:
 $$f_{1,2,3} = f(x) - \sum_{S\subset\{1,\ldots,p\}} f_S(x_S)$$
 
 Not very meaningful, and quite deceptive if you would present this as the interpretation of your model.
-How to we prevent this ambiguity?
+How do we prevent this ambiguity?
 Here is where different methods make different assumptions.
 
-In this chapter, we will discuss three of those:
+In this chapter, we will discuss three methods:
 
 - Statistical regression models
 - Functional ANOVA
 - Generalized Functional ANOVA
-- [Accumulated Local Effects](#ale) which is captured in another chapter
+- [Accumulated Local Effects](#ale) is discussed in another chapter
 
 
 ### Statistical Regression Models
@@ -169,17 +170,17 @@ Viewing the linear regression model through the lens of functional decomposition
 
 The generalized additive model relaxes the second assumption, as it allows more flexible function $f_j$ by using splines.
 Interactions can also be added, but this process is rather manual.
-Extension to the GAM exist which try to add 2-way interactions automatically. CITE GA2M.
+Extensions to the GAM try to add 2-way interactions automatically. CITE GA2M.
 
 
 There is also some potential for confusion:
-When you have a linear regression model and add an interaction term, this decomposition will be different from when you apply one of the folloiwng functional decomposition approaches to the linear regression model.
+When you have a linear regression model and add an interaction term, this decomposition will be different from when you apply one of the following functional decomposition approaches to the linear regression model.
 An additional requirement for this mismatch to occur is that the interacting features need to be correlated.
 The mismatch occurs because other functional decomposition approaches split the effects differently between interactions and main effect.
 
-When should we use statistical models instead of more comlex models that we decompose post-hoc?
+When should we use statistical models instead of more complex models that we decompose post-hoc?
 If most interactions are zero, especially the ones with 3 or more features.
-If we know that the maximum number of features involved in interactions is 2, i.e., $|S|\leq{}2$, then we can use approaches like MARS or GA2M
+If we know that the maximum number of features involved in interactions is 2, i.e., $|S|\leq{}2$, then we can use approaches like MARS or GA2M.
 
 
 
@@ -189,7 +190,7 @@ The functional ANOVA was proposed by Hooker (2004)[^fanova].
 
 
 The requirement is that the model prediction function f is square integrable.
-As any functional decomposition, the functional ANOVA decomposes the function into components:
+As with any functional decomposition, the functional ANOVA decomposes the function into components:
 
 $$f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)$$
 
@@ -209,7 +210,7 @@ We subtract from this interval all the lower dimensional components.
 This subtraction has the effect of kind of centering and also removing the effect of all lower-order effects.
 For example if $S=\{2,3\}$ we would subtract the main effects of both features $f_2$ and $f_3$, and the intercept $f_0$.
 The occurence of all lower-order effects also means that the formula is recursive: we have to go all the way to the intercept and compute all effects from intercept to one level below the effect we are interested in.
-For the intercept $f_0$, the subset  is the empty set $S=\{\emptyset\}$ and therefore -S contains all features $XS.
+For the intercept $f_0$, the subset  is the empty set $S=\{\emptyset\}$ and therefore -S contains all features $XS$.
 Therefore we get:
 
 $$f_S(x) = \int_{X} f(x) dX$$
@@ -225,7 +226,7 @@ To finish the calculation for component $f_{1,2}$ we can put everything together
 $$\begin{align*}f_{1,2}(x) &= \int{\{3,4\}} \left( f(x) - (f_0(x) + f_1(x) - f_0 + f_2(x) - f_0)\right) d X_{3},X_4 \\  &= \int{\{3,4\}} \left(f(x) - f_1(x) - f_2(x) + f_0)\right) d X_{3},X_4 \end{align*}$$
 
 
-This example shows how each higher order effect is defined by integrating over all other features, but also be removing all the lower-order effects that are subsets of the higher-order effects.
+This example shows how each higher order effect is defined by integrating over all other features, but also by removing all the lower-order effects that are subsets of the higher-order effects.
 
 Hooker (2004) showed that this definition of functional components fullfills these (desirable) axioms:
 
@@ -240,8 +241,8 @@ The zero means axiom implies that all effects or interactions are centered aroun
 As a consequence, the interpretation at a position x is relative to the mean, and not the absolute prediction.
 
 The orthogonality axiom says that any two components do not share information, meaning that, for example, the first order effect of feature $X_1$ and the interaction term of $X_{1}$ and $X_2$ are not correlated.
-Because of orthogonality, all components are ``pure'' in the sense that they don't mix effects.
-It make a lot of sense that the component for, say, feature $X_4$ should be independent of the interaction term between features $X_1$ and $X_2$.
+Because of orthogonality, all components are "pure" in the sense that they don't mix effects.
+It makes a lot of sense that the component for, say, feature $X_4$ should be independent of the interaction term between features $X_1$ and $X_2$.
 The more interesting consequence is for orthogonality of hierarchical components, where one component contains features of another, for example, interaction between $X_1$ and $X_2$, and the main effect of feature $X_1$.
 A two-dimensional partial dependence plot for $X_1$ and $X_2$ would contain four effects: the intercept, the two main effects of $X_1$ and $X_2$ and the interaction between them.
 The funtional ANOVA component for $(X_1,X_2)$ only contains the interaction, and with the main effects.
@@ -253,13 +254,6 @@ ANOVA refers to a collection of methods that analyze differences of the mean of 
 ANOVA works by dividing up the variance and attributing it to other variables.
 Functional ANOVA is an extension of that concept to arbitrary functions.
 
-
-CONTINUE HERE
-
-some notes on generalized fANOVA chapter:
-- make it short
-- say its complicated
-- hint to porblems
 
 ### Generalized functional ANOVA for dependent features
 
