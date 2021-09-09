@@ -266,35 +266,33 @@ A natural choice for w is the joint probability distribution function.
 However, the joint distribution is usually unkown, and difficult to estimate.
 A trick can be two start with the unit measure on the unit cube, and cut out areas without data.
 
-The estimation itself is done on a grid of points, and stated as a minimization problem that can be solved using regression techniques.
+The estimation is done on a grid of points in the feature space, and stated as a minimization problem that can be solved using regression techniques.
 However, components cannot be computed individually, and not even only hierarchically, but a complex system of equations involving other components has to be solved.
 The computation is therefore quite complex and computationally expensive.
 
-CONTINUE HERE
 
 ### Accumulated Local Effect Plots
 
-ALE plots also provide a functional decomposition, meaning that if you add up all the ALE plots from intercept, 1D ALE plots, 2D ALE plots and so on, you end up with the prediction function.
-ALE differ from the (generalized) functional ANOVA, as the components are not orthogonal, but, what the authors call, pseudo-orthogonal.
-Pseudo-orthogonal means two things, but first of all we have to define the operator $H_S$ that takes a function $\hat{f}$ and maps it to its ALE components for feature subset $S$.
-This means that $H_{1,2}$ is the operator that takes in a machine learning model and produces the 2D ALE plot for features 1 and 2.
-We need this operator to understand this pseudo-orthogonality: If we apply the same operator twice in a row, we end up with the same ALE plot.
+ALE plots (Apley and Zhu 2021[^ale]) also provide a functional decomposition, meaning that adding up all ALE plots from intercept, 1D ALE plots, 2D ALE plots and so on, you end up with the prediction function.
+ALE differ from the (generalized) functional ANOVA, as the components are not orthogonal, but, as the authors call it, pseudo-orthogonal.
+To understand pseudo-orthogonality, we have to define the operator $H_S$ that takes a function $\hat{f}$ and maps it to its ALE plot for feature subset $S$.
+For example, the operator $H_{1,2}$ takes as input a machine learning model and produces the 2D ALE plot for features 1 and 2: $H_{1,2}(\hat{f}) = f_{ALE,12}$.
+If we apply the same operator twice, we end up with the same ALE plot.
 After applying the operator $H_{1,2}$ once to $\hat{f}$ we get the 2D ALE plot, $f_{ALE,12}$.
 Then we apply the operator again, but not to $\hat{f}$ but to $f_{ALE,12}$.
-This is possible, because its again a function.
-The result is again $f_{ALE,12}$, meaning we can apply the operator as often as we want and always end up with the same ALE plot.
-That is the first part of pseudo-orthogonality.
-But what if we have two operators, for different feature sets?
-For example $H_{1,2}$ and $H_{1}$ or $H_{1,2}$ and $H_{3,4,5}$?
-Pseudo-orthogonality means that if we first use ALE operator $H_S$ on a function, and then apply $H_U$ on the result (with $S \neq U$) then the result is zero.
-We compute $f_{ALE,12}$ for feature 1 and 2. Then we compute ALE for features 2 and 3, but on $f_{ALE,12}$ then answer is 0.
+This is possible, because the 2D ALE component itself is again a function.
+The result is again $f_{ALE,12}$, meaning we can apply the same operator multiples times and always end up with the same ALE plot.
+This is the first part of pseudo-orthogonality.
+But what is the result if we apply two different operators, for different feature sets?
+For example $H_{1,2}$ and $H_{1}$, or $H_{1,2}$ and $H_{3,4,5}$?
+The answer is zero.
+If we first use ALE operator $H_S$ on a function, and then apply $H_U$ on the result (with $S \neq U$) then the result is zero.
 In other words, the ALE plot of an ALE plot is zero, unless you apply the same ALE plot twice.
-Or in other other words, the ALE plot for feature set S, has zero other ALE plots in it.
-The ALE operator maps to orthogonal subspaces of an inner product space.
+Or in yet other words, the ALE plot for feature set S, has zero other ALE plots in it.
+Or in mathematical other words, the ALE operator maps to orthogonal subspaces of an inner product space.
 
-As Apley (2021) states, pseudo-orthogonality can be more desirable than hierarchical orthogonality.
-Pseudo-orthogonality does not entangle marginal effects of the features.
-Furthermore, ALE does not require estimates of the joint distribution, the components can be estimated in a hierarchical fashion, meaning that to compute the ALE effect for features 1 and 2, the only requirements are computations of ALE components of 1 and 2 individuially, and nothing else.
+As Apley and Zhu (2021) state, pseudo-orthogonality can be more desirable than hierarchical orthogonality, because it does not entangle marginal effects of the features.
+Furthermore, ALE does not require an estimate of the joint distribution, the components can be estimated in a hierarchical fashion, meaning that to compute the ALE effect for features 1 and 2, the only requirements are computations of ALE components of 1 and 2 individually, and nothing else.
 
 ### Statistical Regression Models
 
@@ -365,32 +363,41 @@ For example, the XOR problem where $Y=X_1XOR{}X_2$.
 
 -->
 
+### Bonus: Partial Dependence Plot
+
+Does the [Partial Dependence Plot](#pdp) also provide a functional decomposition?
+Short answer: No.
+The longer answer:
+The partial dependence plot for a feature set $S$ always contains all effects of the hierarchy -- the PDP for $\{1,2\}$ contains not only the interaction, but also the individual feature effects.
+As a consequence, adding up all PDPs for all subsets will not return the original function, and therefore not be a valid decomposition.
+But could we adapt the PDP, by maybe removing all lower effects?
+Yes, we could, but we would en up with something similar to the functional ANOVA.
+However, instead of integrating over a uniform distribution, the PDP integrates over the marginal distribution of $X_{-S}$, estimated using Monte Carlo sampling.
+
 ### Advantages
 
-I see functional decomposition as one of the core concepts of interpretability.
-While the prediction or classification function is high-dimensional and complex, we have to separate and attribute effects to individual features or interactions between them.
-Functional decomposition provides a theoretical justification for feature effect plotting methods.
+I see functional decomposition as a core concept of machine learning interpretability.
 
+Functional decomposition gives us a theoretical justification for decomposing high-dimensional and complex machine learning models into individual effects and interactions -- a necessary step that allows us to interpret individual effects.
+Functional decomposition is the core idea for  techniques such as statistical regression models, ALE, (generalized) functional ANOVA, PDP, the H-statistic and ICE curves.
 
-Functional decomposition enables also a better understanding of other methods.
-Instead of thinking about some complex function, you can think of a machine learning model as an additive sum of components, from low to high dimensionality.
-Other interpretation methods can be viewed through this lense.
-Permutation feature importance breaks the association between a feature and the target.
-Viewed through functional decomposition, we can understand that all components in which the feature was involved in are destroyed and therefore cannot contribute meaningfully to the correct prediction.
-These components involve the main effect of the feature, but also all interactions with other features.
-Or Shapley values decompose a prediction into additive effects of each feature.
-But the functional decomposition tells us that there should be also interaction effects, so where are they?
-Shapley values provide a fair attribution of effects to the individual features, meaning that all interactions are also attributed fairly to the features.
+Functional decomposition also enables a better understanding of other methods.
+For example, [permutation feature importance](#feature-importance) breaks the association between a feature and the target.
+Viewed through functional decomposition, we can see that the permutation "destroys" the effect of all components in which the feature was involved .
+This involves the main effect of the feature, but also all interactions with other features.
+As another example, Shapley values decompose a prediction into additive effects of each feature.
+But the functional decomposition tells us that there should also be interaction effects in the decomposition, so where are they?
+Shapley values provide a fair attribution of effects to the individual features, meaning that also all interactions are attributed fairly to the features, and are divided up among the "main" effects.
 
-ALE plots provide a functional decomposition that is fast to compute, has software implementations (see the ALE chapter).
+Looking at functional decomposition as a practical technique, there are many advantages in using ALE plots.
+ALE plots provide a functional decomposition that is fast to compute, has software implementations (see the ALE chapter), and desirable pseudo-orthogonality properties.
 
 ### Disadvantages
 
-The concept reaches its limits early for high-dimensional components.
-Beyond 2-way interactions, components become tricky to visualize.
-And of course we have an exponential explosion of the number of components, the more features we have.
+The concept of functional decomposition quickly reaches its limits early for high-dimensional components beyond interactions of two features.
+This exponential explosion of number of features both limits the practicability, since we cannot easily visualize higher-order interactions, but also the computational time is insane, if we were to compute all interactions.
 
-Each functional decomposition approach has drawbacks.
+Each functional decomposition method has drawbacks.
 The bottom-up approach -- constructing regression models -- has the disadvantage of being a quite manual process and putting many constraints on the model that might inhibit predictive performance.
 Functional ANOVA requires independent features.
 Generalized functional ANOVA is very difficult to estimate.
