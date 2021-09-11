@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2021-09-09" />
+<meta name="date" content="2021-09-11" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -404,8 +404,8 @@ The prediction function is not simply an additive effect between the two feature
 The presence of an interaction can be seen in the figure – the effect of changing values for feature <span class="math inline">\(X_1\)</span> depends on the value that feature <span class="math inline">\(X_2\)</span> has.</p>
 <!-- Referring back to functional decomposition for ML -->
 <p>Our job now is to decompose this function into main effects of features <span class="math inline">\(X_1\)</span> and <span class="math inline">\(X_2\)</span> and an interaction term.
-For a two-dimensional function f that depends on only two input features: <span class="math inline">\(f(x_1, x_2)\)</span>, we want each component to represent a main effect (<span class="math inline">\(f_1\)</span> and <span class="math inline">\(f_2\)</span>), interaction (<span class="math inline">\(f_{1,2}\)</span>) or intercept (<span class="math inline">\(f_0\)</span>):</p>
-<p><span class="math display">\[f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1,2})\]</span></p>
+For a two-dimensional function <span class="math inline">\(f\)</span> that depends on only two input features: <span class="math inline">\(f(x_1, x_2)\)</span>, we want each component to represent a main effect (<span class="math inline">\(f_1\)</span> and <span class="math inline">\(f_2\)</span>), interaction (<span class="math inline">\(f_{1,2}\)</span>) or intercept (<span class="math inline">\(f_0\)</span>):</p>
+<p><span class="math display">\[f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1},x_{2})\]</span></p>
 <p>The main effects indicate how each feature affects the prediction, independent of the values the other feature.
 The interaction effect indicates the joint effect of the features.
 The intercept simply tells us what the prediction is when all feature effects are set to zero.
@@ -430,12 +430,12 @@ Spoiler alert: the decomposition is based on accumulated local effect plots, whi
 A glance at the formula already gives us the answer to the decomposition, so no need for fancy methods, right?
 For feature <span class="math inline">\(x_1\)</span>, we can take all the summands that contain only <span class="math inline">\(x_1\)</span> as the component for that feature.
 That would be <span class="math inline">\(f_1(x_1) = e^{x_1}\)</span> and <span class="math inline">\(f_2(x_2) = -x_2\)</span> for feature <span class="math inline">\(x_2\)</span>.
-The interaction is then $f_{12}(x_{1},x_{2}) = x_1 <span class="math inline">\(x_2\)</span>.
+The interaction is then <span class="math inline">\(f_{12}(x_{1},x_{2}) = x_1 \cdot x_2\)</span>.
 While this is the correct answer for this example (up to constants), there are two problems with this approach:
 Problem 1): While the example started with the formula, the reality is that almost no machine learning model can be described with such a neat formula.
 Problem 2) is much more intricate and concerns what an interaction is.
 Imagine a simple function <span class="math inline">\(f(x_1,x_2) = x_1 \cdot x_2\)</span>, where both features take values larger than zero and are independent of each other.
-Using our look-at-the-formula tactic, we would conclude that therr is an interaction between features <span class="math inline">\(x_1\)</span> and <span class="math inline">\(x_2\)</span>, but not individual feature effects.
+Using our look-at-the-formula tactic, we would conclude that there is an interaction between features <span class="math inline">\(x_1\)</span> and <span class="math inline">\(x_2\)</span>, but not individual feature effects.
 But can we really say that feature <span class="math inline">\(x_1\)</span> has no individual effect on the prediction function?
 Regardless of what value the other feature <span class="math inline">\(x_2\)</span> takes on, the prediction increases as we increase <span class="math inline">\(x_1\)</span>.
 For example, for <span class="math inline">\(x_2 = 1\)</span>, the effect of <span class="math inline">\(x_1\)</span> is <span class="math inline">\(f(x_1, x_2 = 1) = x_1\)</span>, and when <span class="math inline">\(x_2 = 10\)</span> the effect is <span class="math inline">\(f(x_1, x_2 = 10) = 10 * x_1\)</span>.
@@ -494,14 +494,14 @@ In this chapter, we will discuss three methods that approach the functional deco
 <div id="functional-anova" class="section level3">
 <h3><span class="header-section-number">5.5.4</span> Functional ANOVA</h3>
 <p>Functional ANOVA was proposed by Hooker (2004)<a href="#fn35" class="footnote-ref" id="fnref35"><sup>35</sup></a>.
-A requirement for this approach is that the model prediction function f is square integrable.
+A requirement for this approach is that the model prediction function <span class="math inline">\(f\)</span> is square integrable.
 As with any functional decomposition, the functional ANOVA decomposes the function into components:</p>
 <p><span class="math display">\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]</span></p>
 <p>Hooker (2004) defines each component with the following formula:</p>
 <p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x) - \sum_{V \subset S} f_V(x)\right) d X_{-S})\]</span></p>
 <p>Okay, let us take this thing apart.
 We can rewrite the component as:</p>
-<p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \right) d X_{-S})\]</span></p>
+<p><span class="math display">\[f_S(x) = \int_{X_{-S}} \left( f(x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} f_V(x) \right) d X_{-S})\]</span></p>
 <p>On the left side is the integral over the prediction function with respect to the features excluded from the set <span class="math inline">\(S\)</span>, denoted with <span class="math inline">\(-S\)</span>.
 For example, if we compute the 2-way interaction component for features 2 and 3, we would integrate over features 1, 4, 5, …
 The integral can also be viewed as the expected value of the prediction function with respect to <span class="math inline">\(X_{-S}\)</span>, assuming that all features follow a uniform distribution from their minimum to their maximum.
@@ -509,7 +509,7 @@ From this interval, we subtract all components with subsets of <span class="math
 This subtraction removes the effect of all lower order effects and centers the effect.
 For <span class="math inline">\(S=\{2,3\}\)</span>, we subtract the main effects of both features <span class="math inline">\(f_2\)</span> and <span class="math inline">\(f_3\)</span>, as well as the intercept <span class="math inline">\(f_0\)</span>.
 The occurrence of these lower order effects makes the formula recursive: We have through the hierarchy of subsets down to the intercept and compute all these components.
-For the intercept component <span class="math inline">\(f_0\)</span>, the subset is the empty set <span class="math inline">\(S=\{\emptyset\}\)</span> and therefore -S contains all features:</p>
+For the intercept component <span class="math inline">\(f_0\)</span>, the subset is the empty set <span class="math inline">\(S=\{\emptyset\}\)</span> and therefore <span class="math inline">\(-S\)</span> contains all features:</p>
 <p><span class="math display">\[f_S(x) = \int_{X} f(x) dX\]</span></p>
 <p>This is simply the prediction function integrated over all features.
 The intercept can also be interpreted as the expectation of the prediction function when we assume that all features are uniformly distributed.
