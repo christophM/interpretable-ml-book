@@ -63,7 +63,7 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 ## Changelog
 All notable changes to the book will be documented here.
 
-### v1.2 (IN PROGRESS) [html version]
+### v2.0 (IN PROGRESS) [html version]
 - Added "Preface by the Author" chapter
 - Started section on neural network interpretation
 - Added chapter on feature visualization
@@ -71,6 +71,8 @@ All notable changes to the book will be documented here.
 - Added Anchors chapter
 - Fixed error in logistic regression chapter: Logistic regression was predicting class "Healthy", but interpretation in the text was for class "Cancer". Now regression weights have the correct sign.
 - Renamed Feature Importance chapter to "Permutation Feature Importance"
+- Added chapter about functional decomposition
+- Rearranged interpretation methods by local, global and deep learning (before: model-agnostic, example-based, deep learning)
 - Errata:
 	- Chapter 4.3 GLM, GAM and more: Logistic regression uses logit, not logistic function as link function.
 	- Chapter Linear models: Formula for adjusted R-squared was corrected (twice)
