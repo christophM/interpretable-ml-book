@@ -204,9 +204,10 @@ window.cookieconsent.initialise({
 <li class="chapter" data-level="7" data-path="global-methods.html"><a href="global-methods.html"><i class="fa fa-check"></i><b>7</b> Global Model-Agnostic Methods</a><ul>
 <li class="chapter" data-level="7.1" data-path="pdp.html"><a href="pdp.html"><i class="fa fa-check"></i><b>7.1</b> Partial Dependence Plot (PDP)</a><ul>
 <li class="chapter" data-level="7.1.1" data-path="pdp.html"><a href="pdp.html#examples"><i class="fa fa-check"></i><b>7.1.1</b> Examples</a></li>
-<li class="chapter" data-level="7.1.2" data-path="pdp.html"><a href="pdp.html#advantages-5"><i class="fa fa-check"></i><b>7.1.2</b> Advantages</a></li>
-<li class="chapter" data-level="7.1.3" data-path="pdp.html"><a href="pdp.html#disadvantages-5"><i class="fa fa-check"></i><b>7.1.3</b> Disadvantages</a></li>
-<li class="chapter" data-level="7.1.4" data-path="pdp.html"><a href="pdp.html#software-and-alternatives-1"><i class="fa fa-check"></i><b>7.1.4</b> Software and Alternatives</a></li>
+<li class="chapter" data-level="7.1.2" data-path="pdp.html"><a href="pdp.html#pdp-based-feature-importance"><i class="fa fa-check"></i><b>7.1.2</b> PDP-based Feature Importance</a></li>
+<li class="chapter" data-level="7.1.3" data-path="pdp.html"><a href="pdp.html#advantages-5"><i class="fa fa-check"></i><b>7.1.3</b> Advantages</a></li>
+<li class="chapter" data-level="7.1.4" data-path="pdp.html"><a href="pdp.html#disadvantages-5"><i class="fa fa-check"></i><b>7.1.4</b> Disadvantages</a></li>
+<li class="chapter" data-level="7.1.5" data-path="pdp.html"><a href="pdp.html#software-and-alternatives-1"><i class="fa fa-check"></i><b>7.1.5</b> Software and Alternatives</a></li>
 </ul></li>
 <li class="chapter" data-level="7.2" data-path="ale.html"><a href="ale.html"><i class="fa fa-check"></i><b>7.2</b> Accumulated Local Effects (ALE) Plot</a><ul>
 <li class="chapter" data-level="7.2.1" data-path="ale.html"><a href="ale.html#motivation-and-intuition"><i class="fa fa-check"></i><b>7.2.1</b> Motivation and Intuition</a></li>
@@ -457,8 +458,29 @@ FIGURE 7.4: PDP of cancer probability and the interaction of age and number of p
 </p>
 </div>
 </div>
+<div id="pdp-based-feature-importance" class="section level3">
+<h3><span class="header-section-number">7.1.2</span> PDP-based Feature Importance</h3>
+<p>Greenwell et. al (2018) <a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a> proposed a simple partial dependence-based feature importance measure.
+The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
+For numerical features, importance is defined as the deviation of each unique feature value from the average curve:</p>
+<p><span class="math display">\[I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(f_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K f_S({x^{(k)}_S))^2}}\]</span></p>
+<p>Note that here the <span class="math inline">\(x^{(k)}_S\)</span> are the K unique values of feature the <span class="math inline">\(X_S\)</span>.
+For categorical features we have:</p>
+<p><span class="math display">\[I(x_S) = (max_k(f_S(x^{(k)}_S)) - min_k(f_S(x^{(k)}_S)))/4\]</span></p>
+<p>This is the range of the PDP values for the unique categories divided by four.
+This strange way of calculating the deviation is called the range rule.
+It helps to get a rough estimate for the deviation when you only know the range.
+And the denominator four comes from the standard normal distribution:
+In the normal distribution, 95% of the data are minus two and plus two standard deviations around the mean.
+So the range divided by four gives a rough estimate that probably underestimates the actual variance.</p>
+<p>This PDP-based feature importance should be interpreted with care.
+It captures only the main effect of the feature and ignores possible feature interactions.
+A feature could be very important based on other methods such as <a href="feature-importance.html#feature-importance">permutation feature importance</a>, but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
+Another drawback of this measure is that it is defined over the unique values.
+A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.</p>
+</div>
 <div id="advantages-5" class="section level3">
-<h3><span class="header-section-number">7.1.2</span> Advantages</h3>
+<h3><span class="header-section-number">7.1.3</span> Advantages</h3>
 <p>The computation of partial dependence plots is <strong>intuitive</strong>:
 The partial dependence function at a particular feature value represents the average prediction if we force all data points to assume that feature value.
 In my experience, lay people usually understand the idea of PDPs quickly.</p>
@@ -469,11 +491,11 @@ It is more complicated when features are correlated, see also disadvantages.</p>
 <p>Partial dependence plots are <strong>easy to implement</strong>.</p>
 <p>The calculation for the partial dependence plots has a <strong>causal interpretation</strong>.
 We intervene on a feature and measure the changes in the predictions.
-In doing so, we analyze the causal relationship between the feature and the prediction.<a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a>
+In doing so, we analyze the causal relationship between the feature and the prediction.<a href="#fn31" class="footnote-ref" id="fnref31"><sup>31</sup></a>
 The relationship is causal for the model – because we explicitly model the outcome as a function of the features – but not necessarily for the real world!</p>
 </div>
 <div id="disadvantages-5" class="section level3">
-<h3><span class="header-section-number">7.1.3</span> Disadvantages</h3>
+<h3><span class="header-section-number">7.1.4</span> Disadvantages</h3>
 <p>The realistic <strong>maximum number of features</strong> in a partial dependence function is two.
 This is not the fault of PDPs, but of the 2-dimensional representation (paper or screen) and also of our inability to imagine more than 3 dimensions.</p>
 <p>Some PD plots do not show the <strong>feature distribution</strong>.
@@ -494,7 +516,7 @@ You then conclude that the feature has no effect on the prediction.
 By plotting the <a href="ice.html#ice">individual conditional expectation curves</a> instead of the aggregated line, we can uncover heterogeneous effects.</p>
 </div>
 <div id="software-and-alternatives-1" class="section level3">
-<h3><span class="header-section-number">7.1.4</span> Software and Alternatives</h3>
+<h3><span class="header-section-number">7.1.5</span> Software and Alternatives</h3>
 <p>There are a number of R packages that implement PDPs.
 I used the <code>iml</code> package for the examples, but there is also <code>pdp</code> or <code>DALEX</code>.
 In Python, partial dependence plots are built into <code>scikit-learn</code> and you can use <code>PDPBox</code>.</p>
@@ -507,7 +529,8 @@ In Python, partial dependence plots are built into <code>scikit-learn</code> and
 <hr />
 <ol start="29">
 <li id="fn29"><p>Friedman, Jerome H. “Greedy function approximation: A gradient boosting machine.” Annals of statistics (2001): 1189-1232.<a href="pdp.html#fnref29" class="footnote-back">↩︎</a></p></li>
-<li id="fn30"><p>Zhao, Qingyuan, and Trevor Hastie. “Causal interpretations of black-box models.” Journal of Business &amp; Economic Statistics, to appear. (2017).<a href="pdp.html#fnref30" class="footnote-back">↩︎</a></p></li>
+<li id="fn30"><p>Greenwell, Brandon M., Bradley C. Boehmke, and Andrew J. McCarthy. “A simple and effective model-based variable importance measure.” arXiv preprint arXiv:1805.04755 (2018).<a href="pdp.html#fnref30" class="footnote-back">↩︎</a></p></li>
+<li id="fn31"><p>Zhao, Qingyuan, and Trevor Hastie. “Causal interpretations of black-box models.” Journal of Business &amp; Economic Statistics, to appear. (2017).<a href="pdp.html#fnref31" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
             </section>
