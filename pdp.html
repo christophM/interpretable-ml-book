@@ -24,7 +24,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2021-09-13" />
+<meta name="date" content="2021-09-14" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -203,8 +203,8 @@ window.cookieconsent.initialise({
 <li class="chapter" data-level="6" data-path="example-based.html"><a href="example-based.html"><i class="fa fa-check"></i><b>6</b> Example-Based Explanations</a></li>
 <li class="chapter" data-level="7" data-path="global-methods.html"><a href="global-methods.html"><i class="fa fa-check"></i><b>7</b> Global Model-Agnostic Methods</a><ul>
 <li class="chapter" data-level="7.1" data-path="pdp.html"><a href="pdp.html"><i class="fa fa-check"></i><b>7.1</b> Partial Dependence Plot (PDP)</a><ul>
-<li class="chapter" data-level="7.1.1" data-path="pdp.html"><a href="pdp.html#examples"><i class="fa fa-check"></i><b>7.1.1</b> Examples</a></li>
-<li class="chapter" data-level="7.1.2" data-path="pdp.html"><a href="pdp.html#pdp-based-feature-importance"><i class="fa fa-check"></i><b>7.1.2</b> PDP-based Feature Importance</a></li>
+<li class="chapter" data-level="7.1.1" data-path="pdp.html"><a href="pdp.html#pdp-based-feature-importance"><i class="fa fa-check"></i><b>7.1.1</b> PDP-based Feature Importance</a></li>
+<li class="chapter" data-level="7.1.2" data-path="pdp.html"><a href="pdp.html#examples"><i class="fa fa-check"></i><b>7.1.2</b> Examples</a></li>
 <li class="chapter" data-level="7.1.3" data-path="pdp.html"><a href="pdp.html#advantages-5"><i class="fa fa-check"></i><b>7.1.3</b> Advantages</a></li>
 <li class="chapter" data-level="7.1.4" data-path="pdp.html"><a href="pdp.html#disadvantages-5"><i class="fa fa-check"></i><b>7.1.4</b> Disadvantages</a></li>
 <li class="chapter" data-level="7.1.5" data-path="pdp.html"><a href="pdp.html#software-and-alternatives-1"><i class="fa fa-check"></i><b>7.1.5</b> Software and Alternatives</a></li>
@@ -414,8 +414,29 @@ For categorical features, the partial dependence is very easy to calculate.
 For each of the categories, we get a PDP estimate by forcing all data instances to have the same category.
 For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season, we get 4 numbers, one for each season.
 To compute the value for “summer”, we replace the season of all data instances with “summer” and average the predictions.</p>
+<div id="pdp-based-feature-importance" class="section level3">
+<h3><span class="header-section-number">7.1.1</span> PDP-based Feature Importance</h3>
+<p>Greenwell et. al (2018) <a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a> proposed a simple partial dependence-based feature importance measure.
+The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
+For numerical features, importance is defined as the deviation of each unique feature value from the average curve:</p>
+<p><span class="math display">\[I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(f_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K f_S({x^{(k)}_S))^2}}\]</span></p>
+<p>Note that here the <span class="math inline">\(x^{(k)}_S\)</span> are the K unique values of feature the <span class="math inline">\(X_S\)</span>.
+For categorical features we have:</p>
+<p><span class="math display">\[I(x_S) = (max_k(f_S(x^{(k)}_S)) - min_k(f_S(x^{(k)}_S)))/4\]</span></p>
+<p>This is the range of the PDP values for the unique categories divided by four.
+This strange way of calculating the deviation is called the range rule.
+It helps to get a rough estimate for the deviation when you only know the range.
+And the denominator four comes from the standard normal distribution:
+In the normal distribution, 95% of the data are minus two and plus two standard deviations around the mean.
+So the range divided by four gives a rough estimate that probably underestimates the actual variance.</p>
+<p>This PDP-based feature importance should be interpreted with care.
+It captures only the main effect of the feature and ignores possible feature interactions.
+A feature could be very important based on other methods such as <a href="feature-importance.html#feature-importance">permutation feature importance</a>, but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
+Another drawback of this measure is that it is defined over the unique values.
+A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.</p>
+</div>
 <div id="examples" class="section level3">
-<h3><span class="header-section-number">7.1.1</span> Examples</h3>
+<h3><span class="header-section-number">7.1.2</span> Examples</h3>
 <p>In practice, the set of features S usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
 Everything beyond that is quite tricky.
 Even 3D on a 2D paper or monitor is already challenging.</p>
@@ -457,27 +478,6 @@ FIGURE 7.3: PDPs of cancer probability based on age and years with hormonal cont
 FIGURE 7.4: PDP of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45. For ages below 25, women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had 0 or more than 2 pregnancies. But be careful when drawing conclusions: This might just be a correlation and not causal!
 </p>
 </div>
-</div>
-<div id="pdp-based-feature-importance" class="section level3">
-<h3><span class="header-section-number">7.1.2</span> PDP-based Feature Importance</h3>
-<p>Greenwell et. al (2018) <a href="#fn30" class="footnote-ref" id="fnref30"><sup>30</sup></a> proposed a simple partial dependence-based feature importance measure.
-The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
-For numerical features, importance is defined as the deviation of each unique feature value from the average curve:</p>
-<p><span class="math display">\[I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(f_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K f_S({x^{(k)}_S))^2}}\]</span></p>
-<p>Note that here the <span class="math inline">\(x^{(k)}_S\)</span> are the K unique values of feature the <span class="math inline">\(X_S\)</span>.
-For categorical features we have:</p>
-<p><span class="math display">\[I(x_S) = (max_k(f_S(x^{(k)}_S)) - min_k(f_S(x^{(k)}_S)))/4\]</span></p>
-<p>This is the range of the PDP values for the unique categories divided by four.
-This strange way of calculating the deviation is called the range rule.
-It helps to get a rough estimate for the deviation when you only know the range.
-And the denominator four comes from the standard normal distribution:
-In the normal distribution, 95% of the data are minus two and plus two standard deviations around the mean.
-So the range divided by four gives a rough estimate that probably underestimates the actual variance.</p>
-<p>This PDP-based feature importance should be interpreted with care.
-It captures only the main effect of the feature and ignores possible feature interactions.
-A feature could be very important based on other methods such as <a href="feature-importance.html#feature-importance">permutation feature importance</a>, but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
-Another drawback of this measure is that it is defined over the unique values.
-A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.</p>
 </div>
 <div id="advantages-5" class="section level3">
 <h3><span class="header-section-number">7.1.3</span> Advantages</h3>
