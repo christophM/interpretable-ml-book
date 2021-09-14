@@ -7,16 +7,16 @@ set.seed(42)
 
 ## Permutation Feature Importance {#feature-importance}
 
-Permutation feature importance measures the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome. 
+Permutation feature importance measures the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome.
 
 ### Theory
 
-The concept is really straightforward: 
+The concept is really straightforward:
 We measure the importance of a feature by calculating the increase in the model's prediction error after permuting the feature.
 A feature is "important" if shuffling its values increases the model error, because in this case the model relied on the feature for the prediction.
 A feature is "unimportant" if shuffling its values leaves the model error unchanged, because in this case the model ignored the feature for the prediction.
 The permutation feature importance measurement was introduced by Breiman (2001)[^Breiman2001] for random forests.
-Based on this idea, Fisher, Rudin, and Dominici (2018)[^Fisher2018] proposed a model-agnostic version of the feature importance and called it model reliance. 
+Based on this idea, Fisher, Rudin, and Dominici (2018)[^Fisher2018] proposed a model-agnostic version of the feature importance and called it model reliance.
 They also introduced more advanced ideas about feature importance, for example a (model-specific) version that takes into account that many prediction models may predict the data well.
 Their paper is worth reading.
 
@@ -31,10 +31,10 @@ Input: Trained model f, feature matrix X, target vector y, error measure L(y,f).
     - Calculate permutation feature importance FI^j^= e^perm^/e^orig^. Alternatively, the difference can be used: FI^j^ = e^perm^ - e^orig^
 3. Sort features by descending FI.
 
-Fisher, Rudin, and Dominici (2018) suggest in their paper to split the dataset in half and swap the values of feature j of the two halves instead of permuting feature j. 
-This is exactly the same as permuting feature j, if you think about it. 
-If you want a more accurate estimate, you can estimate the error of permuting feature j by pairing each instance with the value of feature j of each other instance (except with itself). 
-This gives you a dataset of size `n(n-1)` to estimate the permutation error, and it takes a large amount of computation time. 
+Fisher, Rudin, and Dominici (2018) suggest in their paper to split the dataset in half and swap the values of feature j of the two halves instead of permuting feature j.
+This is exactly the same as permuting feature j, if you think about it.
+If you want a more accurate estimate, you can estimate the error of permuting feature j by pairing each instance with the value of feature j of each other instance (except with itself).
+This gives you a dataset of size `n(n-1)` to estimate the permutation error, and it takes a large amount of computation time.
 I can only recommend using the `n(n-1)` -method if you are serious about getting extremely accurate estimates.
 
 
@@ -139,17 +139,15 @@ This means no unused test data is left to compute the feature importance.
 You have the same problem when you want to estimate the generalization error of your model.
 If you would use (nested) cross-validation for the feature importance estimation, you would have the problem that the feature importance is not calculated on the final model with all the data, but on models with subsets of the data that might behave differently.
 
-In the end, you need to decide whether you want to know how much the model relies on each feature for making predictions (-> training data) or how much the feature contributes to the performance of the model on unseen data (-> test data).
-To the best of my knowledge, there is no research addressing the question of training vs. test data.
-It will require more thorough examination than my "garbage-SVM" example.
-We need more research and more experience with these tools to gain a better understanding.
+However, in the end I recommend to use test data for permutation feature importance.
+Because if you are interested in how much the model's predictions are influenced by a feature, you should use other importance measures such as [SHAP importance](#shap-feature-importance).
 
 Next, we will look at some examples.
 I based the importance computation on the training data, because I had to choose one and using the training data needed a few lines less code.
 
 ### Example and Interpretation
 
-I show examples for classification and regression. 
+I show examples for classification and regression.
 
 **Cervical cancer (classification)**
 
@@ -195,7 +193,7 @@ predictor = Predictor$new(mod, data = bike[-which(names(bike) == "cnt")], y = bi
 importance = FeatureImp$new(predictor, loss = 'mae')
 imp.dat = importance$results
 best = which(imp.dat$importance == max(imp.dat$importance))
-worst = which(imp.dat$importance == min(imp.dat$importance)) 
+worst = which(imp.dat$importance == min(imp.dat$importance))
 ```
 
 
@@ -209,12 +207,12 @@ plot(importance) +
 
 **Nice interpretation**: Feature importance is the increase in model error when the feature's information is destroyed.
 
-Feature importance provides a **highly compressed, global insight** into the model's behavior. 
+Feature importance provides a **highly compressed, global insight** into the model's behavior.
 
-A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are **comparable across different problems**. 
+A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are **comparable across different problems**.
 
 The importance measure automatically **takes into account all interactions** with other features.
-By permuting the feature you also destroy the interaction effects with other features. 
+By permuting the feature you also destroy the interaction effects with other features.
 This means that the permutation feature importance takes into account both the  main feature effect and the interaction effects on model performance.
 This is also a disadvantage because the importance of the interaction between two features is included in the importance measurements of both features.
 This means that the feature importances do not add up to the total drop in performance, but the sum is larger.
@@ -233,7 +231,7 @@ You remove the feature and retrain the model.
 The model performance remains the same because another equally good feature gets a non-zero weight and your conclusion would be that the feature was not important.
 Another example:
 The model is a decision tree and we analyze the importance of the feature that was chosen as the first split.
-You remove the feature and retrain the model. 
+You remove the feature and retrain the model.
 Since another feature is chosen as the first split, the whole tree can be very different, which means that we compare the error rates of (potentially) completely different trees to decide how important that feature is for one of the trees.
 
 ### Disadvantages
@@ -243,18 +241,18 @@ It is very **unclear whether you should use training or test data** to compute t
 Permutation feature importance is **linked to the error of the model**.
 This is not inherently bad, but in some cases not what you need.
 In some cases, you might prefer to know how much the model's output varies for a feature without considering what it means for performance.
-For example, you want to find out how robust your model's output is when someone manipulates the features. 
-In this case, you would not be interested in how much the model performance decreases when a feature is permuted, but how much of the model's output variance is explained by each feature. 
+For example, you want to find out how robust your model's output is when someone manipulates the features.
+In this case, you would not be interested in how much the model performance decreases when a feature is permuted, but how much of the model's output variance is explained by each feature.
 Model variance (explained by the features) and feature importance correlate strongly when the model generalizes well (i.e. it does not overfit).
 
-You **need access to the true outcome**. 
+You **need access to the true outcome**.
 If someone only provides you with the model and unlabeled data -- but not the true outcome -- you cannot compute the permutation feature importance.
 
 The permutation feature importance depends on shuffling the feature, which adds randomness to the measurement.
 When the permutation is repeated, the **results might vary greatly**.
 Repeating the permutation and averaging the importance measures over repetitions stabilizes the measure, but increases the time of computation.
 
-If features are correlated, the permutation feature importance **can be biased by unrealistic data instances**. 
+If features are correlated, the permutation feature importance **can be biased by unrealistic data instances**.
 The problem is the same as with [partial dependence plots](#pdp):
 The permutation of features produces unlikely data instances when two or more features are correlated.
 When they are positively correlated (like height and weight of a person) and I shuffle one of the features, I create new instances that are unlikely or even physically impossible (2 meter person weighing 30 kg for example), yet I use these new instances to measure the importance.
@@ -270,10 +268,10 @@ Now imagine another scenario in which I additionally include the temperature at 
 The temperature at 9:00 AM does not give me much additional information if I already know the temperature at 8:00 AM.
 But having more features is always good, right?
 I train a random forest with the two temperature features and the uncorrelated features.
-Some of the trees in the random forest pick up the 8:00 AM temperature, others the 9:00 AM temperature, again others both and again others none. 
+Some of the trees in the random forest pick up the 8:00 AM temperature, others the 9:00 AM temperature, again others both and again others none.
 The two temperature features together have a bit more importance than the single temperature feature before, but instead of being at the top of the list of important features, each temperature is now somewhere in the middle.
 By introducing a correlated feature, I kicked the most important feature from the top of the importance ladder to mediocrity.
-On one hand this is fine, because it simply reflects the behavior of the underlying machine learning model, here the random forest. 
+On one hand this is fine, because it simply reflects the behavior of the underlying machine learning model, here the random forest.
 The 8:00 AM temperature has simply become less important because the model can now rely on the 9:00 AM measurement as well.
 On the other hand, it makes the interpretation of the feature importance considerably more difficult.
 Imagine you want to check the features for measurement errors.
