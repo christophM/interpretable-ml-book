@@ -49,6 +49,32 @@ For each of the categories, we get a PDP estimate by forcing all data instances 
 For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season,  we get 4 numbers, one for each season.
 To compute the value for "summer", we replace the season of all data instances with "summer" and average the predictions.
 
+### PDP-based Feature Importance
+
+Greenwell et. al (2018) [^pdp-importance] proposed a simple partial dependence-based feature importance measure.
+The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
+For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
+
+$$I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(f_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K f_S({x^{(k)}_S))^2}}$$
+
+Note that here the $x^{(k)}_S$ are the K unique values of feature the $X_S$.
+For categorical features we have:
+
+$$I(x_S) = (max_k(f_S(x^{(k)}_S)) - min_k(f_S(x^{(k)}_S)))/4$$
+
+This is the range of the PDP values for the unique categories divided by four.
+This strange way of calculating the deviation is called the range rule.
+It helps to get a rough estimate for the deviation when you only know the range.
+And the denominator four comes from the standard normal distribution:
+In the normal distribution, 95\% of the data are minus two and plus two standard deviations around the mean.
+So the range divided by four gives a rough estimate that probably underestimates the actual variance.
+
+This PDP-based feature importance should be interpreted with care.
+It captures only the main effect of the feature and ignores possible feature interactions.
+A feature could be very important based on other methods such as [permutation feature importance](#feature-importance), but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
+Another drawback of this measure is that it is defined over the unique values.
+A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.
+
 
 
 ### Examples
@@ -135,32 +161,6 @@ pd = FeatureEffect$new(pred.cervical, c("Age", "Num.of.pregnancies"), method = "
 pd$plot() +
   scale_fill_viridis(option = "D")
 ```
-
-### PDP-based Feature Importance
-
-Greenwell et. al (2018) [^pdp-importance] proposed a simple partial dependence-based feature importance measure.
-The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
-For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
-
-$$I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(f_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K f_S({x^{(k)}_S))^2}}$$
-
-Note that here the $x^{(k)}_S$ are the K unique values of feature the $X_S$.
-For categorical features we have:
-
-$$I(x_S) = (max_k(f_S(x^{(k)}_S)) - min_k(f_S(x^{(k)}_S)))/4$$
-
-This is the range of the PDP values for the unique categories divided by four.
-This strange way of calculating the deviation is called the range rule.
-It helps to get a rough estimate for the deviation when you only know the range.
-And the denominator four comes from the standard normal distribution:
-In the normal distribution, 95\% of the data are minus two and plus two standard deviations around the mean.
-So the range divided by four gives a rough estimate that probably underestimates the actual variance.
-
-This PDP-based feature importance should be interpreted with care.
-It captures only the main effect of the feature and ignores possible feature interactions.
-A feature could be very important based on other methods such as [permutation feature importance](#feature-importance), but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
-Another drawback of this measure is that it is defined over the unique values.
-A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.
 
 
 ### Advantages
