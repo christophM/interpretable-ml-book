@@ -35,7 +35,8 @@ grep_references = function(file){
 # For the citation of the R packages
 get_R_bib = function (tweak = TRUE, width = NULL){
   lib = packageDescription("iml.book")
-  x = unlist(strsplit(lib$Imports, ",\\n"))
+  x = unlist(strsplit(lib$Import, ",\\n"))
+  x = c(x, "knitr")
   bib = sapply(x, function(pkg) {
     cite = citation(pkg, auto = if (pkg == "base")
       NULL
