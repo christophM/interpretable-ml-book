@@ -9,7 +9,9 @@ cd manuscript
 make -B 11-references.Rmd
 # Compile html version of book for gh-pages
 make -B html
-# Compile md version of book for leanpub
-# make -B leanpub
+# Compile pdf version of book for leanpub
+make -B pdf
+# Compile epub version of book for leanpub
+make -B epub
 cd ..
 
