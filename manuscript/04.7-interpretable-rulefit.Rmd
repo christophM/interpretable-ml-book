@@ -1,6 +1,7 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all()
 set.seed(42)
+library("kableExtra")
 ```
 
 <!--{pagebreak}-->
@@ -17,7 +18,7 @@ RuleFit automatically generates these features from decision trees.
 Each path through a tree can be transformed into a decision rule by combining the split decisions into a rule.
 The node predictions are discarded and only the splits are used in the decision rules:
 
-```{r rulefit-split, fig.cap="4 rules can be generated from a tree with 3 terminal nodes.", out.width=500}
+```{r rulefit-split, fig.cap="4 rules can be generated from a tree with 3 terminal nodes."}
 knitr::include_graphics("images/rulefit.jpg")
 ```
 
@@ -84,11 +85,12 @@ The calculation is explained later in the chapter.
 # Making the table a bit prettier
 coefs$description = gsub("\\%", "", coefs$description)
 coefs$description = gsub("c\\(", "(", coefs$description)
-kable(coefs[1:5, c('description', 'coefficient', 'imp')],
+tab = kable(coefs[1:5, c('description', 'coefficient', 'imp')],
   col.names = c('Description', 'Weight', 'Importance'),
   row.names=FALSE, 
   digits = 0)
-
+if (is.pdf) tab = tab %>% kableExtra::column_spec(1, width = "18em")
+tab
 ```
 
 
@@ -166,13 +168,16 @@ For categorical features the subset s contains some specific categories of the f
 
 A made up example for the bike rental dataset:
 
-$$r_{17}(x)=I(x_{\text{temp}}<15)\cdot{}I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\})\cdot{}I(10\leq{}x_{\text{windspeed}}<20)$$
+\begin{align*}
+r_{17}(x) & = I(x_{\text{temp}}<15) \cdot I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\}) \\
+            & \cdot I(10\leq x_{\text{windspeed}}<20) 
+\end{align*}
 
 This rule returns 1 if all three conditions are met, otherwise 0.
 RuleFit extracts all possible rules from a tree, not only from the leaf nodes.
 So another rule that would be created is:
 
-$$r_{18}(x)=I(x_{\text{temp}}<15)\cdot{}I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\}$$
+$$r_{18}(x)=I(x_{\text{temp}}<15)\cdot I(x_{\text{weather}}\in\{\text{good},\text{cloudy}\}$$
 
 Altogether, the number of rules created from an ensemble of M trees with $t_m$ terminal nodes each is:
 
@@ -217,7 +222,10 @@ $$\hat{f}(x)=\hat{\beta}_0+\sum_{k=1}^K\hat{\alpha}_k{}r_k(x)+\sum_{j=1}^p\hat{\
 where $\hat{\alpha}$ is the estimated weight vector for the rule features and $\hat{\beta}$ the weight vector for the original features.
 Since RuleFit uses Lasso, the loss function gets the additional constraint that forces some of the weights to get a zero estimate:
 
-$$(\{\hat{\alpha}\}_1^K,\{\hat{\beta}\}_0^p)=argmin_{\{\hat{\alpha}\}_1^K,\{\hat{\beta}\}_0^p}\sum_{i=1}^n{}L(y^{(i)},f(x^{(i)}))+\lambda\cdot\left(\sum_{k=1}^K|\alpha_k|+\sum_{j=1}^p|b_j|\right)$$
+\begin{align*}
+(\{\hat{\alpha}\}_1^K,\{\hat{\beta}\}_0^p) & = & argmin_{\{\hat{\alpha}\}_1^K,\{\hat{\beta}\}_0^p}\sum_{i=1}^n L(y^{(i)},f(x^{(i)}))  \\
+ & + & \lambda\cdot\left(\sum_{k=1}^K|\alpha_k| + \sum_{j=1}^p|b_j|\right)
+\end{align*}
 
 The result is a linear model that has linear effects for all of the original features and for the rules.
 The interpretation is the same as for linear models, the only difference is that some features are now binary rules.
@@ -227,7 +235,7 @@ The interpretation is the same as for linear models, the only difference is that
 
 For the linear terms of the original features, the feature importance is measured with the standardized predictor:
 
-$$I_j=|\hat{\beta}_j|\cdot{}std(l_j(x_j))$$
+$$I_j=|\hat{\beta}_j|\cdot std(l_j(x_j))$$
 
 where $\beta_j$ is the weight from the Lasso model and $std(l_j(x_j))$ is the standard deviation of the linear term over the data.
 
@@ -237,7 +245,7 @@ $$I_k=|\hat{\alpha}_k|\cdot\sqrt{s_k(1-s_k)}$$
 
 where $\hat{\alpha}_k$ is the associated Lasso weight of the decision rule and $s_k$ is the support of the feature in the data, which is the percentage of data points to which the decision rule applies (where $r_k(x)=1$): 
 
-$$s_k=\frac{1}{n}\sum_{i=1}^n{}r_k(x^{(i)})$$
+$$s_k=\frac{1}{n}\sum_{i=1}^n r_k(x^{(i)})$$
 
 A feature occurs as a linear term and possibly also within many decision rules.
 How do we measure the total importance of a feature?
