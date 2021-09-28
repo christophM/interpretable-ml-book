@@ -14,7 +14,7 @@ mobi : _book/interpretable-ml.mobi
 package: ../DESCRIPTION ../R/*.R
 	Rscript  -e "devtools::install('../')"
 
-html :  *.Rmd
+_book/index.html :  *.Rmd
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
 	rm -f interpretable-ml.Rmd
 	Rscript  -e "bookdown::render_book('./', 'bookdown::gitbook')"
