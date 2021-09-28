@@ -1,9 +1,8 @@
 .PHONY : sbrl
 
-all : html
+all : html pdf epub mobi
 
-book.file := Book.txt
-md.files := $(shell cat ${book.file})
+html : _book/index.html
 
 pdf : _book/interpretable-ml.pdf
 
