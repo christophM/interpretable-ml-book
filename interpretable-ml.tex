@@ -4512,9 +4512,9 @@ For example, when applied to a linear regression model, partial dependence plots
 
 The partial dependence function for regression is defined as:
 
-\[\hat{f}_{x_S}(x_S)=E_{x_C}\left[\hat{f}(x_S,x_C)\right]=\int\hat{f}(x_S,x_C)d\mathbb{P}(x_C)\]
+\[\hat{f}_{x_S}(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int\hat{f}(x_S,X_C)d\mathbb{P}(X_C)\]
 
-The \(x_S\) are the features for which the partial dependence function should be plotted and \(x_C\) are the other features used in the machine learning model \(\hat{f}\).
+The \(x_S\) are the features for which the partial dependence function should be plotted and \(X_C\) are the other features used in the machine learning model \(\hat{f}\), which are here treated as random variables.
 Usually, there are only one or two features in the set S.
 The feature(s) in S are those for which we want to know the effect on the prediction.
 The feature vectors \(x_S\) and \(x_C\) combined make up the total feature space x.
@@ -4772,23 +4772,29 @@ All three methods reduce the function by averaging the effects of the other feat
 
 Partial dependence plots average the predictions over the marginal distribution.
 
-\begin{align*}\hat{f}_{x_S,PDP}(x_S)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C)d{}x_C\end{align*}
+\begin{align*}
+\hat{f}_{S,PDP}(x)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right] \\
+& = \int_{X_C}\hat{f}(x_S,X_C)d\mathbb{P}(X_C)
+\end{align*}
 
-This is the value of the prediction function f, at feature value(s) \(x_S\), averaged over all features in \(x_C\).
+This is the value of the prediction function f, at feature value(s) \(x_S\), averaged over all features in \(X_C\) (here treated as random variables).
 Averaging means calculating the marginal expectation E over the features in set C, which is the integral over the predictions weighted by the probability distribution.
 Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in set S, and average the predictions for this manipulated dataset.
 This procedure ensures that we average over the marginal distribution of the features.
 
 M-plots average the predictions over the conditional distribution.
 
-\begin{align*}\hat{f}_{x_S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C|x_S)d{}x_C\end{align*}
+\begin{align*}\hat{f}_{S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]\\&=\int_{X_C}\hat{f}(x_S, X_C)d\mathbb{P}(X_C|X_S = x_S)\end{align*}
 
 The only thing that changes compared to PDPs is that we average the predictions conditional on each grid value of the feature of interest, instead of assuming the marginal distribution at each grid value.
 In practice, this means that we have to define a neighborhood, for example for the calculation of the effect of 30 m\textsuperscript{2} on the predicted house value, we could average the predictions of all houses between 28 and 32 m\textsuperscript{2}.
 
 ALE plots average the changes in the predictions and accumulate them over the grid (more on the calculation later).
 
-\begin{align*}\hat{f}_{x_S,ALE}(x_S)=&\int_{z_{0,1}}^{x_S}E_{X_C|X_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\=&\int_{z_{0,1}}^{x_S}\int_{x_C}\hat{f}^S(z_s,x_c)\mathbb{P}(x_C|z_S)d{}x_C{}dz_S-\text{constant}\end{align*}
+\begin{align*}
+\hat{f}_{S,ALE}(x_S)=&\int_{z_{0,S}}^{x_S}E_{X_C|X_S = x_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\
+ = & \int_{z_{0,S}}^{x_S}\int_{x_C}\hat{f}^S(z_s,X_c)\mathbb{P}(X_C|X_S = z_S)d{}x_C{}dz_S-\text{constant}
+\end{align*}
 
 The formula reveals three differences to M-Plots.
 First, we average the changes of predictions, not the predictions itself.
@@ -5084,10 +5090,27 @@ This makes their interpretation nice, because the value at each point of the ALE
 \textbf{The 2D ALE plot only shows the interaction}:
 If two features do not interact, the plot shows nothing.
 
+The entire prediction function can be decomposed into a sum of lower-dimensional ALE functions, as explained in the chapter on (functional decomposition){[}\#decomposition{]}.
+
 All in all, in most situations I would \textbf{prefer ALE plots over PDPs}, because features are usually correlated to some extent.
 
 \hypertarget{disadvantages-6}{%
 \subsection{Disadvantages}\label{disadvantages-6}}
+
+An \textbf{interpretation of the effect across intervals is not permissible} if the features are strongly correlated.
+Consider the case where your features are highly correlated, and you are looking at the left end of a 1D-ALE plot.
+The ALE curve might invite the following misinterpretation:
+``The ALE curve shows how the prediction changes, on average, when we gradually change the value of the respective feature for a data instance, and keeping the instances other feature values fixed.''
+The effects are computed per interval (locally) and therefore the interpretation of the effect can only be local.
+For convenience, the interval-wise effects are accumulated to show a smooth curve, but keep in mind that each interval is created with different data instances.
+
+ALE effects \textbf{may differ from the coefficients specified in a linear regression model} when features interact and are correlated.
+Grömping (2020)\footnote{Grömping, Ulrike. ``Model-Agnostic Effects Plots for Interpreting Machine Learning Models.'' Reports in Mathematics, Physics and Chemistry: Department II, Beuth University of Applied Sciences Berlin. Report 1/2020 (2020)} showed that in a linear models with two features with correlation between the features and an additional interaction term (\(f(x) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + beta_3 x_1 \cdot x_2\)), the first-order ALE plots do not show a straight line.
+Instead, they are slightly curved because they incorporate parts of the multiplicative interaction of the features.
+To understand what is happening here, I recommend reading the chapter on \protect\hyperlink{decomposition}{function decomposition}.
+In short, ALE defines first-order (or 1D) effects differently than the linear formula describes it.
+This is not necessarily wrong, because when features are correlated, the attribution of interactions is not as clear.
+But it is certainly unintuitive that ALE and linear coefficient do not match.
 
 \textbf{ALE plots can become a bit shaky} (many small ups and downs) with a high number of intervals.
 In this case, reducing the number of intervals makes the estimates more stable, but also smoothes out and hides some of the true complexity of the prediction model.
@@ -5127,7 +5150,8 @@ As a rule of thumb: Use ALE instead of PDP.
 
 Did I mention that \protect\hyperlink{pdp}{partial dependence plots} and \protect\hyperlink{ice}{individual conditional expectation curves} are an alternative? =)
 
-ALE plots are implemented in R and Python, once in the \href{https://cran.r-project.org/web/packages/ALEPlot/index.html}{ALEPlot R package} by the inventor himself and once in the \href{https://cran.r-project.org/web/packages/iml/index.html}{iml package} and in the \href{https://github.com/blent-ai/ALEPython}{ALEPython package}.
+ALE plots are implemented in R in the \href{https://cran.r-project.org/web/packages/ALEPlot/index.html}{ALEPlot R package} by the inventor himself and once in the \href{https://cran.r-project.org/web/packages/iml/index.html}{iml package}.
+ALE also has at least two Python implementations with the \href{https://github.com/blent-ai/ALEPython}{ALEPython package} and in \href{https://docs.seldon.io/projects/alibi/en/stable/index.html}{Alibi}.
 
 \newpage
 
@@ -8649,7 +8673,7 @@ At this point the concept labels are not yet involved.
   \item
     Calculate distribution of pixel activations \(\alpha_k\) over all images
   \item
-    Determine the 0.005-quantile level \(T_k\) of activations \(\alpha_k\). This means 0.5\% of all activations of channel k for image x are greater than \(T_k\).
+    Determine the 0.995-quantile level \(T_k\) of activations \(\alpha_k\). This means 0.5\% of all activations of channel k for image x are greater than \(T_k\).
   \item
     For each image x in the Broden dataset:
 
