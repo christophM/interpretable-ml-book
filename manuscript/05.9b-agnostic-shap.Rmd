@@ -65,12 +65,12 @@ SHAP describes the following three desirable properties:
 
 **1) Local accuracy**
 
-$$f(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
+$$\hat{f}(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'$$
 
 If you define $\phi_0=E_X(\hat{f}(x))$ and set all $x_j'$ to 1, this is the Shapley efficiency property.
 Only with a different name and using the coalition vector.
 
-$$f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
+$$\hat{f}(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
 
 **2) Missingness**
 
@@ -89,14 +89,14 @@ In practice this is only relevant for features that are constant.
 
 **3)  Consistency**
 
-Let $f_x(z')=f(h_x(z'))$ and $z_{\setminus{}j}'$ indicate that $z_j'=0$.
+Let $\hat{f}_x(z')=\hat{f}(h_x(z'))$ and $z_{\setminus{}j}'$ indicate that $z_j'=0$.
 For any two models f and f' that satisfy:
 
-$$f_x'(z')-f_x'(z_{\setminus{}j}')\geq{}f_x(z')-f_x(z_{\setminus{}j}')$$
+$$\hat{f}_x'(z')-\hat{f}_x'(z_{\setminus{}j}')\geq{}\hat{f}_x(z')-\hat{f}_x(z_{\setminus{}j}')$$
 
 for all inputs $z'\in\{0,1\}^M$, then:
 
-$$\phi_j(f',x)\geq\phi_j(f,x)$$
+$$\phi_j(\hat{f}',x)\geq\phi_j(\hat{f},x)$$
 
 The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same.
 From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee.
@@ -108,7 +108,7 @@ KernelSHAP estimates for an instance x the contributions of each feature value t
 KernelSHAP consists of 5 steps:
 
 - Sample coalitions $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
-- Get prediction for each $z_k'$ by first converting $z_k'$ to the original feature space and then applying model f: $f(h_x(z_k'))$
+- Get prediction for each $z_k'$ by first converting $z_k'$ to the original feature space and then applying model \hat{f}: $\hat{f}(h_x(z_k'))$
 - Compute the weight for each $z_k'$ with the SHAP kernel.
 - Fit weighted linear model.
 - Return Shapley values $\phi_k$, the coefficients from the linear model.
@@ -130,7 +130,7 @@ knitr::include_graphics("images/shap-simplified-features.jpg")
 
 $h_x$ for tabular data treats $X_C$ and $X_S$ as independent and integrates over the marginal distribution:
 
-$$f(h_x(z'))=E_{X_C}[f(x)]$$
+$$\hat{f}(h_x(z'))=E_{X_C}[\hat{f}(x)]$$
 
 Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
@@ -183,7 +183,7 @@ $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
 We train the linear model g by optimizing the following loss function L:
 
-$$L(f,g,\pi_{x})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x}(z')$$
+$$L(\hat{f},g,\pi_{x})=\sum_{z'\in{}Z}[\hat{f}(h_x(z'))-g(z')]^2\pi_{x}(z')$$
 
 where Z is the training data.
 This is the good old boring sum of squared errors that we usually optimize for linear models.
@@ -200,15 +200,15 @@ If we add an L1 penalty to the loss L, we can create sparse explanations.
 Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
 TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
 
-TreeSHAP defines the value function using the conditional expectation $E_{X_S|X_C}(f(x)|x_S)$ instead of the marginal expectation.
+TreeSHAP defines the value function using the conditional expectation $E_{X_S|X_C}(\hat{f}(x)|x_S)$ instead of the marginal expectation.
 The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.[^dummy1][^dummy2]
 The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
 
 How much faster is TreeSHAP?
 Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
 
-<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(f(x)|x_S)$ for all possible feature value subsets S.-->
-TreeSHAP uses the conditional expectation $E_{X_S|X_C}(f(x)|x_S)$ to estimate effects.
+<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(\hat{f}(x)|x_S)$ for all possible feature value subsets S.-->
+TreeSHAP uses the conditional expectation $E_{X_S|X_C}(\hat{f}(x)|x_S)$ to estimate effects.
 I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
 If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
 If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
@@ -340,7 +340,7 @@ $$\phi_{i,j}=\sum_{S\subseteq\setminus\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\del
 
 when $i\neq{}j$ and:
 
-$$\delta_{ij}(S)=f_x(S\cup\{i,j\})-f_x(S\cup\{i\})-f_x(S\cup\{j\})+f_x(S)$$
+$$\delta_{ij}(S)=\hat{f}_x(S\cup\{i,j\})-\hat{f}_x(S\cup\{i\})-\hat{f}_x(S\cup\{j\})+\hat{f}_x(S)$$
 
 This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects.
 We average the values over all possible feature coalitions S, as in the Shapley value computation.
