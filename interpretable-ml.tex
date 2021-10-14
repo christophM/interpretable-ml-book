@@ -125,7 +125,7 @@
 \makeatother
 \subtitle{A Guide for Making Black Box Models Explainable.}
 \author{Christoph Molnar}
-\date{2021-10-10}
+\date{2021-10-14}
 
 \begin{document}
 \maketitle
@@ -4110,9 +4110,9 @@ Each resulting tree is converted into multiple rules.
 Not only boosted trees, but any tree ensemble algorithm can be used to generate the trees for RuleFit.
 A tree ensemble can be described with this general formula:
 
-\[f(x)=a_0+\sum_{m=1}^M{}a_m{}f_m(X)\]
+\[\hat{f}(x) = a_0+\sum_{m=1}^M a_m \hat{f}_m(X)\]
 
-M is the number of trees and \(f_m(x)\) is the prediction function of the m-th tree.
+M is the number of trees and \(\hat{f}_m(x)\) is the prediction function of the m-th tree.
 The \(a\)'s are the weights.
 Bagged ensembles, random forest, AdaBoost and MART produce tree ensembles and can be used for RuleFit.
 
@@ -4514,7 +4514,7 @@ For example, when applied to a linear regression model, partial dependence plots
 
 The partial dependence function for regression is defined as:
 
-\[\hat{f}_{x_S}(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int\hat{f}(x_S,X_C)d\mathbb{P}(X_C)\]
+\[\hat{f}_S(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int\hat{f}(x_S,X_C)d\mathbb{P}(X_C)\]
 
 The \(x_S\) are the features for which the partial dependence function should be plotted and \(X_C\) are the other features used in the machine learning model \(\hat{f}\), which are here treated as random variables.
 Usually, there are only one or two features in the set S.
@@ -4523,9 +4523,9 @@ The feature vectors \(x_S\) and \(x_C\) combined make up the total feature space
 Partial dependence works by marginalizing the machine learning model output over the distribution of the features in set C, so that the function shows the relationship between the features in set S we are interested in and the predicted outcome.
 By marginalizing over the other features, we get a function that depends only on features in S, interactions with other features included.
 
-The partial function \(\hat{f}_{x_S}\) is estimated by calculating averages in the training data, also known as Monte Carlo method:
+The partial function \(\hat{f}_S\) is estimated by calculating averages in the training data, also known as Monte Carlo method:
 
-\[\hat{f}_{x_S}(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})\]
+\[\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})\]
 The partial function tells us for given value(s) of features S what the average marginal effect on the prediction is.
 In this formula, \(x^{(i)}_{C}\) are actual feature values from the dataset for the features in which we are not interested, and n is the number of instances in the dataset.
 An assumption of the PDP is that the features in C are not correlated with the features in S.
@@ -4552,12 +4552,12 @@ Greenwell et. al (2018) \footnote{Greenwell, Brandon M., Bradley C. Boehmke, and
 The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
 For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
 
-\[I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(f_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K f_S({x^{(k)}_S))^2}}\]
+\[I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(\hat{f}_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K \hat{f}_S({x^{(k)}_S))^2}}\]
 
 Note that here the \(x^{(k)}_S\) are the K unique values of feature the \(X_S\).
 For categorical features we have:
 
-\[I(x_S) = (max_k(f_S(x^{(k)}_S)) - min_k(f_S(x^{(k)}_S)))/4\]
+\[I(x_S) = (max_k(\hat{f}_S(x^{(k)}_S)) - min_k(\hat{f}_S(x^{(k)}_S)))/4\]
 
 This is the range of the PDP values for the unique categories divided by four.
 This strange way of calculating the deviation is called the range rule.
@@ -4830,7 +4830,7 @@ This procedure approximates the derivatives and also works for models without de
 
 First we estimate the uncentered effect:
 
-\[\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[f(z_{k,j},x^{(i)}_{\setminus{}j})-f(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]\]
+\[\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]\]
 
 Let us break this formula down, starting from the right side.
 The name \textbf{Accumulated Local Effects} nicely reflects all the individual components of this formula.
@@ -5107,7 +5107,7 @@ The effects are computed per interval (locally) and therefore the interpretation
 For convenience, the interval-wise effects are accumulated to show a smooth curve, but keep in mind that each interval is created with different data instances.
 
 ALE effects \textbf{may differ from the coefficients specified in a linear regression model} when features interact and are correlated.
-Grömping (2020)\footnote{Grömping, Ulrike. ``Model-Agnostic Effects Plots for Interpreting Machine Learning Models.'' Reports in Mathematics, Physics and Chemistry: Department II, Beuth University of Applied Sciences Berlin. Report 1/2020 (2020)} showed that in a linear model with two correlated features and an additional interaction term (\(f(x) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_1 x_2\)), the first-order ALE plots do not show a straight line.
+Grömping (2020)\footnote{Grömping, Ulrike. ``Model-Agnostic Effects Plots for Interpreting Machine Learning Models.'' Reports in Mathematics, Physics and Chemistry: Department II, Beuth University of Applied Sciences Berlin. Report 1/2020 (2020)} showed that in a linear model with two correlated features and an additional interaction term (\(\hat{f}(x) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_1 x_2\)), the first-order ALE plots do not show a straight line.
 Instead, they are slightly curved because they incorporate parts of the multiplicative interaction of the features.
 To understand what is happening here, I recommend reading the chapter on \protect\hyperlink{decomposition}{function decomposition}.
 In short, ALE defines first-order (or 1D) effects differently than the linear formula describes them.
@@ -5333,10 +5333,15 @@ We would need to conduct a statistical test, but this \textbf{test is not (yet) 
 
 Concerning the test problem, it is difficult to say when the H-statistic is large enough for us to consider an interaction ``strong''.
 
-Also, the H-statistics can be larger than 1, which makes the interpretation difficult.
+Also, the H-statistic can be larger than 1, which makes the interpretation difficult.
 
 When the total effect of two features is weak, but mostly consists of interactions, than the H-statistic will be very large.
-This can be easily overinterpreted as a strong interaction effect, when in reality both features play a minor role in the model.
+These spurious interactions require a small denominator of the H-statistic and are made worse when features are correlated.
+A spurious interaction can be easily overinterpreted as a strong interaction effect, when in reality both features play a minor role in the model.
+A possible remedy is to visualize the unnormalized version of the H-statistic, which is the square root of the numerator of the H-statistic \footnote{Inglis, Alan, Andrew Parnell, and Catherine Hurley. ``Visualizing Variable Importance and Variable Interaction Effects in Machine Learning Models.'' arXiv preprint arXiv:2108.04310 (2021).}.
+This scales the H-statistic to the same level as the response, at least for regression, and puts less emphasis on spurious interactions.
+
+\[H^{*}_{jk} = \sqrt{\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)}) - PD_k(x_{k}^{(i)})\right]^2}\]
 
 The H-statistic tells us the strength of interactions, but it does not tell us how the interactions look like.
 That is what \protect\hyperlink{pdp}{partial dependence plots} are for.
@@ -5348,7 +5353,7 @@ So the technique is not useful for image classifier.
 The interaction statistic works under the assumption that we can shuffle features independently.
 If the features correlate strongly, the assumption is violated and \textbf{we integrate over feature combinations that are very unlikely in reality}.
 That is the same problem that partial dependence plots have.
-You cannot say in general if it leads to overestimation or underestimation.
+Correlated features can lead to large values of the H-statistic.
 
 Sometimes the results are strange and for small simulations \textbf{do not yield the expected results}.
 But this is more of an anecdotal observation.
@@ -5386,7 +5391,7 @@ In addition, functional decomposition is a fundamental principle underlying many
 Let us jump right in and look at a particular function.
 This function takes two features as input and produces a one-dimensional output:
 
-\[y = f(x_1, x_2) = 2 + e^{x_1} - x_2 + x_1 \cdot x_2\]
+\[y = \hat{f}(x_1, x_2) = 2 + e^{x_1} - x_2 + x_1 \cdot x_2\]
 
 Think of the function as a machine learning model.
 We can visualize the function with a 3D plot or a heatmap with contour lines:
@@ -5405,9 +5410,9 @@ The prediction function is not simply an additive effect between the two feature
 The presence of an interaction can be seen in the figure -- the effect of changing values for feature \(X_1\) depends on the value that feature \(X_2\) has.
 
 Our job now is to decompose this function into main effects of features \(X_1\) and \(X_2\) and an interaction term.
-For a two-dimensional function \(f\) that depends on only two input features: \(f(x_1, x_2)\), we want each component to represent a main effect (\(f_1\) and \(f_2\)), interaction (\(f_{1,2}\)) or intercept (\(f_0\)):
+For a two-dimensional function \(\hat{f}\) that depends on only two input features: \(\hat{f}(x_1, x_2)\), we want each component to represent a main effect (\(\hat{f}_1\) and \(\hat{f}_2\)), interaction (\(\hat{f}_{1,2}\)) or intercept (\(\hat{f}_0\)):
 
-\[f(x_1, x_2) = f_0 + f_1(x_1) + f_2(x_2) + f_{1,2}(x_{1},x_{2})\]
+\[\hat{f}(x_1, x_2) = \hat{f}_0 + \hat{f}_1(x_1) + \hat{f}_2(x_2) + \hat{f}_{1,2}(x_{1},x_{2})\]
 
 The main effects indicate how each feature affects the prediction, independent of the values the other feature.
 The interaction effect indicates the joint effect of the features.
@@ -5415,7 +5420,7 @@ The intercept simply tells us what the prediction is when all feature effects ar
 Note that the components themselves are functions (except for the intercept) with different input dimensionality.
 
 I will just give you the components now and explain where they come from later.
-The intercept is \(f_0\sim3.18\).
+The intercept is \(\hat{f}_0\sim3.18\).
 Since the other components are functions, we can visualize them:
 
 \begin{figure}
@@ -5438,16 +5443,16 @@ Spoiler alert: the decomposition is based on accumulated local effect plots, whi
 But why all the excitement?
 A glance at the formula already gives us the answer to the decomposition, so no need for fancy methods, right?
 For feature \(x_1\), we can take all the summands that contain only \(x_1\) as the component for that feature.
-That would be \(f_1(x_1) = e^{x_1}\) and \(f_2(x_2) = -x_2\) for feature \(x_2\).
-The interaction is then \(f_{12}(x_{1},x_{2}) = x_1 \cdot x_2\).
+That would be \(\hat{f}_1(x_1) = e^{x_1}\) and \(\hat{f}_2(x_2) = -x_2\) for feature \(x_2\).
+The interaction is then \(\hat{f}_{12}(x_{1},x_{2}) = x_1 \cdot x_2\).
 While this is the correct answer for this example (up to constants), there are two problems with this approach:
 Problem 1): While the example started with the formula, the reality is that almost no machine learning model can be described with such a neat formula.
 Problem 2) is much more intricate and concerns what an interaction is.
-Imagine a simple function \(f(x_1,x_2) = x_1 \cdot x_2\), where both features take values larger than zero and are independent of each other.
+Imagine a simple function \(\hat{f}(x_1,x_2) = x_1 \cdot x_2\), where both features take values larger than zero and are independent of each other.
 Using our look-at-the-formula tactic, we would conclude that there is an interaction between features \(x_1\) and \(x_2\), but not individual feature effects.
 But can we really say that feature \(x_1\) has no individual effect on the prediction function?
 Regardless of what value the other feature \(x_2\) takes on, the prediction increases as we increase \(x_1\).
-For example, for \(x_2 = 1\), the effect of \(x_1\) is \(f(x_1, x_2 = 1) = x_1\), and when \(x_2 = 10\) the effect is \(f(x_1, x_2 = 10) = 10 * x_1\).
+For example, for \(x_2 = 1\), the effect of \(x_1\) is \(\hat{f}(x_1, x_2 = 1) = x_1\), and when \(x_2 = 10\) the effect is \(\hat{f}(x_1, x_2 = 10) = 10 \cdot x_1\).
 This, it is clear that feature \(x_1\) has a positive effect on the prediction, independent of \(x_2\), and is not zero.
 
 To solve problem 1) of lack of access to a neat formula, we need a method that uses only the prediction function or classification score.
@@ -5457,17 +5462,21 @@ But first, we should define more precisely what functional decomposition is.
 \hypertarget{functional-decomposition}{%
 \subsection{Functional Decomposition}\label{functional-decomposition}}
 
-A prediction function takes \(p\) features as input, \(f: \mathbb{R}^p \mapsto \mathbb{R}\) and produces an output.
+A prediction function takes \(p\) features as input, \(\hat{f}: \mathbb{R}^p \mapsto \mathbb{R}\) and produces an output.
 This can be a regression function, but it can also be the classification probability for a given class or the score for a given cluster (unsupervised machine learning).
 Fully decomposed, we can represent the prediction function as the sum of functional components:
 
-\begin{align*}f(x) = & f_0 + f_1(x_1) + \ldots + f_p(x_p) \\ & + f_{1,2}(x_1, x_2) + \ldots + f_{1,p}(x_1, x_p) + \ldots + f_{p-1,p}(x_{p-1}, x_p) \\  & + \ldots  \\ & +  f_{1,\ldots,p}(x_1, \ldots, x_p)\end{align*}
+\begin{align*}
+\hat{f}x) = & \hat{f}_0 + \hat{f}_1(x_1) + \ldots + \hat{f}_p(x_p) \\
+& + \hat{f}_{1,2}(x_1, x_2) + \ldots + \hat{f}_{1,p}(x_1, x_p) + \ldots + \hat{f}_{p-1,p}(x_{p-1}, x_p) \\ 
+& + \ldots  \\ & +  \hat{f}_{1,\ldots,p}(x_1, \ldots, x_p)
+\end{align*}
 
 We can make the decomposition formula a bit nicer by indexing all possible subsets of feature combinations: \(S\subseteq\{1,\ldots,p\}\).
 This set contains the intercept (\(S=\emptyset\)), main effects (\(|S|=1\)), and all interactions (\(|S|\geq{}1\)).
 With this subset defined, we can write the decomposition as follows:
 
-\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]
+\[\hat{f}x) = \sum_{S\subseteq\{1,\ldots,p\}} \hat{f}_S(x_S)\]
 
 In the formula, \(x_S\) is the vector of features in the index set \(S\).
 And each subset \(S\) represents a functional component, for example a main effect if S contains only one feature, or an interaction if \(|S| > 1\).
@@ -5492,10 +5501,10 @@ In the example at beginning of the chapter we could set both main effects to zer
 Here is an even more extreme example that illustrates the need for constraints on components.
 Suppose you have a 3-dimensional function.
 It does not really matter what this function looks, but the following decomposition would \textbf{always} work:
-\(f_0\) is 0.12.
-\(f_1(x_1)=2\cdot{}x_1\) + number of shoes you own.
-\(f_2\), \(f_3\), \(f_{1,2}\), \(f_{2,3}, f_{1,3}\) are all zero.
-And to make this trick work, I define \(f_{1,2,3}(x_1,x_2,x_3)=f(x)-\sum_{S\subset\{1,\ldots,p\}}f_S(x_S)\).
+\(\hat{f}_0\) is 0.12.
+\(\hat{f}_1(x_1)=2\cdot{}x_1\) + number of shoes you own.
+\(\hat{f}_2\), \(\hat{f}_3\), \(\hat{f}_{1,2}\), \(\hat{f}_{2,3}, \hat{f}_{1,3}\) are all zero.
+And to make this trick work, I define \(\hat{f}_{1,2,3}(x_1,x_2,x_3)=\hat{f}x)-\sum_{S\subset\{1,\ldots,p\}}\hat{f}_S(x_S)\).
 So the interaction term containing all features simply sucks up all the remaining effects, which by definition always works, in the sense that the sum of all components gives us the original prediction function.
 This decomposition would not be very meaningful and quite misleading if you were to present this as the interpretation of your model.
 
@@ -5519,37 +5528,37 @@ Functional ANOVA was proposed by Hooker (2004)\footnote{Hooker, Giles. ``Discove
 A requirement for this approach is that the model prediction function \(f\) is square integrable.
 As with any functional decomposition, the functional ANOVA decomposes the function into components:
 
-\[f(x) = \sum_{S\subseteq\{1,\ldots,p\}} f_S(x_S)\]
+\[\hat{f}x) = \sum_{S\subseteq\{1,\ldots,p\}} \hat{f}_S(x_S)\]
 
 Hooker (2004) defines each component with the following formula:
 
-\[f_S(x) = \int_{X_{-S}} \left( f(x) - \sum_{V \subset S} f_V(x)\right) d X_{-S})\]
+\[\hat{f}_S(x) = \int_{X_{-S}} \left( \hat{f}x) - \sum_{V \subset S} \hat{f}_V(x)\right) d X_{-S})\]
 
 Okay, let us take this thing apart.
 We can rewrite the component as:
 
-\[f_S(x) = \int_{X_{-S}} \left( f(x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} f_V(x) \right) d X_{-S})\]
+\[\hat{f}_S(x) = \int_{X_{-S}} \left( \hat{f}x)\right) d X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \hat{f}_V(x) \right) d X_{-S})\]
 
 On the left side is the integral over the prediction function with respect to the features excluded from the set \(S\), denoted with \(-S\).
 For example, if we compute the 2-way interaction component for features 2 and 3, we would integrate over features 1, 4, 5, \ldots{}
 The integral can also be viewed as the expected value of the prediction function with respect to \(X_{-S}\), assuming that all features follow a uniform distribution from their minimum to their maximum.
 From this interval, we subtract all components with subsets of \(S\).
 This subtraction removes the effect of all lower order effects and centers the effect.
-For \(S=\{2,3\}\), we subtract the main effects of both features \(f_2\) and \(f_3\), as well as the intercept \(f_0\).
+For \(S=\{2,3\}\), we subtract the main effects of both features \(\hat{f}_2\) and \(\hat{f}_3\), as well as the intercept \(\hat{f}_0\).
 The occurrence of these lower order effects makes the formula recursive: We have through the hierarchy of subsets down to the intercept and compute all these components.
-For the intercept component \(f_0\), the subset is the empty set \(S=\{\emptyset\}\) and therefore \(-S\) contains all features:
+For the intercept component \(\hat{f}_0\), the subset is the empty set \(S=\{\emptyset\}\) and therefore \(-S\) contains all features:
 
-\[f_S(x) = \int_{X} f(x) dX\]
+\[\hat{f}_S(x) = \int_{X} \hat{f}x) dX\]
 
 This is simply the prediction function integrated over all features.
 The intercept can also be interpreted as the expectation of the prediction function when we assume that all features are uniformly distributed.
-Now that we know \(f_0\), we can compute \(f_1\) (and equivalently \(f_2\)):
+Now that we know \(\hat{f}_0\), we can compute \(\hat{f}_1\) (and equivalently \(\hat{f}_2\)):
 
-\[f_1(x) = \int_{X_{-1}} \left( f(x) - f_0\right) d X_{-S}\]
+\[\hat{f}_1(x) = \int_{X_{-1}} \left( \hat{f}x) - \hat{f}_0\right) d X_{-S}\]
 
-To finish the calculation for the component \(f_{1,2}\), we can put everything together:
+To finish the calculation for the component \(\hat{f}_{1,2}\), we can put everything together:
 
-\begin{align*}f_{1,2}(x) &= \int_{X_{3,4}} \left( f(x) - (f_0(x) + f_1(x) - f_0 + f_2(x) - f_0)\right) d X_{3},X_4 \\  &= \int_{X_{3,4}} \left(f(x) - f_1(x) - f_2(x) + f_0)\right) d X_{3},X_4 \end{align*}
+\begin{align*}\hat{f}_{1,2}(x) &= \int_{X_{3,4}} \left( \hat{f}x) - (\hat{f}_0(x) + \hat{f}_1(x) - \hat{f}_0 + \hat{f}_2(x) - \hat{f}_0)\right) d X_{3},X_4 \\  &= \int_{X_{3,4}} \left(\hat{f}(x) - \hat{f}_1(x) - \hat{f}_2(x) + \hat{f}_0)\right) d X_{3},X_4 \end{align*}
 
 This example shows how each higher order effect is defined by integrating over all other features, but also by removing all the lower order effects that are subsets of the feature set we are interested in.
 
@@ -5558,11 +5567,11 @@ Hooker (2004) has shown that this definition of functional components satisfies 
 \begin{itemize}
 \tightlist
 \item
-  Zero Means: \(\int{}f_S(x_S)dX_s=0\) for each \(S\neq\emptyset\).
+  Zero Means: \(\int{}\hat{f}_S(x_S)dX_s=0\) for each \(S\neq\emptyset\).
 \item
-  Orthogonality: \(\int{}f_S(x_S)f_V(x_v)dX=0\) for \(S\neq{}V\)
+  Orthogonality: \(\int{}\hat{f}_S(x_S)\hat{f}_V(x_v)dX=0\) for \(S\neq{}V\)
 \item
-  Variance Decomposition: Let \(\sigma^2_{f}=\int{}f(x)^2dX\), then \(\sigma^2(f) = \sum_{S \subseteq \{1,\ldots,p\}} \sigma^2_S(f_S)\)
+  Variance Decomposition: Let \(\sigma^2_{\hat{f}}=\int \hat{f}x)^2dX\), then \(\sigma^2(\hat{f}) = \sum_{S \subseteq \{1,\ldots,p\}} \sigma^2_S(\hat{f}_S)\)
 \end{itemize}
 
 The zero means axiom implies that all effects or interactions are centered around zero.
@@ -5574,7 +5583,7 @@ Because of orthogonality, all components are ``pure'' in the sense that they do 
 It makes a lot of sense that the component for, say, feature \(X_4\) should be independent of the interaction term between features \(X_1\) and \(X_2\).
 The more interesting consequence arises for orthogonality of hierarchical components, where one component contains features of another, for example the interaction between \(X_1\) and \(X_2\), and the main effect of feature \(X_1\).
 In contrast, a two-dimensional partial dependence plot for \(X_1\) and \(X_2\) would contain four effects: the intercept, the two main effects of \(X_1\) and \(X_2\) and the interaction between them.
-The functional ANOVA component for \(f_{1,2}(x_1,x_2)\) contains only the pure interaction.
+The functional ANOVA component for \(\hat{f}_{1,2}(x_1,x_2)\) contains only the pure interaction.
 
 Variance decomposition allows us to divide the variance of the function \(f\) among the components, and guarantees that it adds up the total variance of the function in the end.
 The variance decomposition property can also explain to us why the method is called ``functional ANOVA''.
@@ -5596,15 +5605,15 @@ Hooker (2007) \footnote{Hooker, Giles. ``Generalized functional anova diagnostic
 It is a generalization of the functional ANOVA we encountered earlier, which means that the functional ANOVA is a special case of the generalized functional ANOVA.
 The components are defined as projections of f onto the space of additive functions:
 
-\[f_S(x_S) = argmin_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(f(x)  - \sum_{S \subset P} f_S(x_S)\right)^2 w(x)dx.\]
+\[\hat{f}_S(x_S) = argmin_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}x)  - \sum_{S \subset P} \hat{f}_S(x_S)\right)^2 w(x)dx.\]
 
 Instead of orthogonality, the components satisfy a hierarchical orthogonality condition:
 
-\[\forall f_S(x_S)| S \subset U: \int f_S(x_S) f_U(x_U) w(x)dx = 0\]
+\[\forall \hat{f}_S(x_S)| S \subset U: \int \hat{f}_S(x_S) \hat{f}_U(x_U) w(x)dx = 0\]
 
 Hierarchical orthogonality is different from orthogonality.
-For two feature sets S and U, neither of which is the subset of the other (e.g.~\(S=\{1,2\}\) and \(U=\{2,3\}\)), the components \(f_S\) and \(f_U\) need not be orthogonal for the decomposition to be hierarchically orthogonal.
-But all components for all subsets of \(S\) must be orthogonal to \(f_S\).
+For two feature sets S and U, neither of which is the subset of the other (e.g.~\(S=\{1,2\}\) and \(U=\{2,3\}\)), the components \(\hat{f}_S\) and \(\hat{f}_U\) need not be orthogonal for the decomposition to be hierarchically orthogonal.
+But all components for all subsets of \(S\) must be orthogonal to \(\hat{f}_S\).
 As a result, the interpretation differs in relevant ways:
 Similar to the M-Plot in the \protect\hyperlink{ale}{ALE chapter}, generalized functional ANOVA components can entangle the (marginal) effects of correlated features.
 Whether the components entangle the marginal effects also depends on the choice of weight function \(w(x)\).
@@ -5622,13 +5631,13 @@ The computation is therefore quite complex and computationally intensive.
 
 ALE plots (Apley and Zhu 2021\footnote{Apley, Daniel W., and Jingyu Zhu. ``Visualizing the effects of predictor variables in black box supervised learning models.'' Journal of the Royal Statistical Society: Series B (Statistical Methodology) 82.4 (2020): 1059-1086.}) also provide a functional decomposition, meaning that adding all ALE plots from intercept, 1D ALE plots, 2D ALE plots and so on, yields the prediction function.
 ALE differs from the (generalized) functional ANOVA, as the components are not orthogonal but, as the authors call it, pseudo-orthogonal.
-To understand pseudo-orthogonality, we have to define the operator \(H_S\), which takes a function \(f\) and maps it to its ALE plot for feature subset \(S\).
-For example, the operator \(H_{1,2}\) takes as input a machine learning model and produces the 2D ALE plot for features 1 and 2: \(H_{1,2}(f) = f_{ALE,12}\).
+To understand pseudo-orthogonality, we have to define the operator \(H_S\), which takes a function \(\hat{f}\) and maps it to its ALE plot for feature subset \(S\).
+For example, the operator \(H_{1,2}\) takes as input a machine learning model and produces the 2D ALE plot for features 1 and 2: \(H_{1,2}(\hat{f}) = \hat{f}_{ALE,12}\).
 If we apply the same operator twice, we get the same ALE plot.
-After applying the operator \(H_{1,2}\) to \(f\) once, we get the 2D ALE plot \(f_{ALE,12}\).
-Then we apply the operator again, not to \(f\) but to \(f_{ALE,12}\).
+After applying the operator \(H_{1,2}\) to \(f\) once, we get the 2D ALE plot \(\hat{f}_{ALE,12}\).
+Then we apply the operator again, not to \(f\) but to \(\hat{f}_{ALE,12}\).
 This is possible because the 2D ALE component is itself a function.
-The result is again \(f_{ALE,12}\), meaning we can apply the same operator severeal times and always get the same ALE plot.
+The result is again \(\hat{f}_{ALE,12}\), meaning we can apply the same operator severeal times and always get the same ALE plot.
 This is the first part of pseudo-orthogonality.
 But what is the result if we apply two different operators for different feature sets?
 For example, \(H_{1,2}\) and \(H_{1}\), or \(H_{1,2}\) and \(H_{3,4,5}\)?
@@ -5651,14 +5660,14 @@ Both approaches have in common that their goal is to provide individual and inte
 In statistical models, we restrict the number of components so that not all \(2^p\) components have to be fitted.
 The simplest version is linear regression:
 
-\[f(x) = \beta_0 + \beta_1 x_1 + \ldots \beta_p x_p\]
+\[\hat{f}x) = \beta_0 + \beta_1 x_1 + \ldots \beta_p x_p\]
 
 The formula looks very similar to the functional decomposition, but with two major modifications.
 Modification 1: All interaction effects are excluded and we keep only intercept and main effects.
-Modification 2: The main effects may only be linear in the features: \(f_j(x_j)=\beta_j{}x_j\).
+Modification 2: The main effects may only be linear in the features: \(\hat{f}_j(x_j)=\beta_j{}x_j\).
 Viewing the linear regression model through the lens of functional decomposition, we see that the model itself represents a functional decomposition of the true function that maps from features to target, but under strong assumptions that the effects are linear effects and there are no interactions.
 
-The generalized additive model relaxes the second assumption by allowing more flexible functions \(f_j\) through the use of splines.
+The generalized additive model relaxes the second assumption by allowing more flexible functions \(\hat{f}_j\) through the use of splines.
 Interactions can also be added, but this process is rather manual.
 Approaches such as GA2M attempt to add 2-way interactions automatically to a GAM. \footnote{Caruana, Rich, et al.~``Intelligible models for healthcare: Predicting pneumonia risk and hospital 30-day readmission.'' Proceedings of the 21th ACM SIGKDD international conference on knowledge discovery and data mining. 2015.}
 
@@ -5738,24 +5747,24 @@ Their paper is worth reading.
 
 \textbf{The permutation feature importance algorithm based on Fisher, Rudin, and Dominici (2018):}
 
-Input: Trained model f, feature matrix X, target vector y, error measure L(y,f).
+Input: Trained model \(\hat{f}\), feature matrix \(X\), target vector \(y\), error measure \(L(y,\hat{f})\).
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  Estimate the original model error e\textsuperscript{orig} = L(y, f(X)) (e.g.~mean squared error)
+  Estimate the original model error \(e_{orig} = L(y, \hat{f}(X))\) (e.g.~mean squared error)
 \item
-  For each feature j = 1,\ldots,p do:
+  For each feature \(j \in \{1,...,p\}\) do:
 
   \begin{itemize}
   \tightlist
   \item
-    Generate feature matrix X\textsuperscript{perm} by permuting feature j in the data X. This breaks the association between feature j and true outcome y.
+    Generate feature matrix \(X_{perm}\) by permuting feature j in the data X. This breaks the association between feature j and true outcome y.
   \item
-    Estimate error e\textsuperscript{perm} = L(Y,f(X\textsuperscript{perm})) based on the predictions of the permuted data.
+    Estimate error \(e_{perm} = L(Y,\hat{f}(X_{perm}))\) based on the predictions of the permuted data.
   \item
-    Calculate permutation feature importance FI\textsuperscript{j}= e\textsuperscript{perm}/e\textsuperscript{orig}. Alternatively, the difference can be used: FI\textsuperscript{j} = e\textsuperscript{perm} - e\textsuperscript{orig}
+    Calculate permutation feature importance as quotient \(FI_j= e_{perm}/e_{orig}\) or difference \(FI_j = e_{perm}- e_{orig}\)
   \end{itemize}
 \item
   Sort features by descending FI.
@@ -7314,7 +7323,7 @@ The example shows how anchors can provide essential insights into a model's pred
 
 An anchor \(A\) is formally defined as follows:
 
-\[\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{f(x)=f(z)}]\geq\tau,A(x)=1\]
+\[\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(x)=\hat{f}(z)}]\geq\tau,A(x)=1\]
 
 Wherein:
 
@@ -7335,15 +7344,15 @@ Wherein:
 The formal description may be intimidating and can be put in words:
 
 \begin{quote}
-Given an instance \(x\) to be explained, a rule or an anchor \(A\) is to be found, such that it applies to \(x\), while the same class as for \(x\) gets predicted for a fraction of at least \(\tau\) of \(x\)'s neighbors where the same \(A\) is applicable. A rule's precision results from evaluating neighbors or perturbations (following \(D_x (z|A)\)) using the provided machine learning model (denoted by the indicator function \(1_{f(x) = f(z)}\)).
+Given an instance \(x\) to be explained, a rule or an anchor \(A\) is to be found, such that it applies to \(x\), while the same class as for \(x\) gets predicted for a fraction of at least \(\tau\) of \(x\)'s neighbors where the same \(A\) is applicable. A rule's precision results from evaluating neighbors or perturbations (following \(D_x (z|A)\)) using the provided machine learning model (denoted by the indicator function \(1_{\hat{f}(x) = \hat{f}(z)}\)).
 \end{quote}
 
 \hypertarget{finding-anchors}{%
 \subsection{Finding Anchors}\label{finding-anchors}}
 
-Although anchors' mathematical description may seem clear and straightforward, constructing particular rules is infeasible. It would require evaluating \(1_{f(x) = f(z)}\) for all \(z \in \mathcal{D}_x(\cdot|A)\) which is not possible in continuous or large input spaces. Therefore, the authors propose to introduce the parameter \(0 \leq \delta \leq 1\) to create a probabilistic definition. This way, samples are drawn until there is statistical confidence concerning their precision. The probabilistic definition reads as follows:
+Although anchors' mathematical description may seem clear and straightforward, constructing particular rules is infeasible. It would require evaluating \(1_{\hat{f}(x) = \hat{f}(z)}\) for all \(z \in \mathcal{D}_x(\cdot|A)\) which is not possible in continuous or large input spaces. Therefore, the authors propose to introduce the parameter \(0 \leq \delta \leq 1\) to create a probabilistic definition. This way, samples are drawn until there is statistical confidence concerning their precision. The probabilistic definition reads as follows:
 
-\[P(prec(A)\geq\tau)\geq{}1-\delta\quad\textrm{with}\quad{}prec(A)=\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{f(x)=f(z)}]\]
+\[P(prec(A)\geq\tau)\geq{}1-\delta\quad\textrm{with}\quad{}prec(A)=\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(x)=\hat{f}(z)}]\]
 
 The previous two definitions are combined and extended by the notion of coverage. Its rationale consists of finding rules that apply to a preferably large part of the model's input space. Coverage is formally defined as an anchors' probability of applying to its neighbors, i.e., its perturbation space:
 
@@ -7971,12 +7980,12 @@ SHAP describes the following three desirable properties:
 
 \textbf{1) Local accuracy}
 
-\[f(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'\]
+\[\hat{f}(x)=g(x')=\phi_0+\sum_{j=1}^M\phi_jx_j'\]
 
 If you define \(\phi_0=E_X(\hat{f}(x))\) and set all \(x_j'\) to 1, this is the Shapley efficiency property.
 Only with a different name and using the coalition vector.
 
-\[f(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j\]
+\[\hat{f}(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j\]
 
 \textbf{2) Missingness}
 
@@ -7995,14 +8004,14 @@ In practice this is only relevant for features that are constant.
 
 \textbf{3) Consistency}
 
-Let \(f_x(z')=f(h_x(z'))\) and \(z_{\setminus{}j}'\) indicate that \(z_j'=0\).
+Let \(\hat{f}_x(z')=\hat{f}(h_x(z'))\) and \(z_{\setminus{}j}'\) indicate that \(z_j'=0\).
 For any two models f and f' that satisfy:
 
-\[f_x'(z')-f_x'(z_{\setminus{}j}')\geq{}f_x(z')-f_x(z_{\setminus{}j}')\]
+\[\hat{f}_x'(z')-\hat{f}_x'(z_{\setminus{}j}')\geq{}\hat{f}_x(z')-\hat{f}_x(z_{\setminus{}j}')\]
 
 for all inputs \(z'\in\{0,1\}^M\), then:
 
-\[\phi_j(f',x)\geq\phi_j(f,x)\]
+\[\phi_j(\hat{f}',x)\geq\phi_j(\hat{f},x)\]
 
 The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same.
 From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee.
@@ -8018,7 +8027,7 @@ KernelSHAP consists of 5 steps:
 \item
   Sample coalitions \(z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}\) (1 = feature present in coalition, 0 = feature absent).
 \item
-  Get prediction for each \(z_k'\) by first converting \(z_k'\) to the original feature space and then applying model f: \(f(h_x(z_k'))\)
+  Get prediction for each \(z_k'\) by first converting \(z_k'\) to the original feature space and then applying model \(\hat{f}: \hat{f}(h_x(z_k'))\)
 \item
   Compute the weight for each \(z_k'\) with the SHAP kernel.
 \item
@@ -8049,7 +8058,7 @@ For tabular data, the following figure visualizes the mapping from coalitions to
 
 \(h_x\) for tabular data treats \(X_C\) and \(X_S\) as independent and integrates over the marginal distribution:
 
-\[f(h_x(z'))=E_{X_C}[f(x)]\]
+\[\hat{f}(h_x(z'))=E_{X_C}[\hat{f}(x)]\]
 
 Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
@@ -8104,7 +8113,7 @@ Everything to build our weighted linear regression model:
 
 We train the linear model g by optimizing the following loss function L:
 
-\[L(f,g,\pi_{x})=\sum_{z'\in{}Z}[f(h_x(z'))-g(z')]^2\pi_{x}(z')\]
+\[L(\hat{f},g,\pi_{x})=\sum_{z'\in{}Z}[\hat{f}(h_x(z'))-g(z')]^2\pi_{x}(z')\]
 
 where Z is the training data.
 This is the good old boring sum of squared errors that we usually optimize for linear models.
@@ -8121,14 +8130,14 @@ If we add an L1 penalty to the loss L, we can create sparse explanations.
 Lundberg et. al (2018)\footnote{Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. ``Consistent individualized feature attribution for tree ensembles.'' arXiv preprint arXiv:1802.03888 (2018).} proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
 TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
 
-TreeSHAP defines the value function using the conditional expectation \(E_{X_S|X_C}(f(x)|x_S)\) instead of the marginal expectation.
+TreeSHAP defines the value function using the conditional expectation \(E_{X_S|X_C}(\hat{f}(x)|x_S)\) instead of the marginal expectation.
 The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.\footnote{Sundararajan, Mukund, and Amir Najmi. ``The many Shapley values for model explanation.'' arXiv preprint arXiv:1908.08474 (2019).}\footnote{Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. ``Feature relevance quantification in explainable AI: A causality problem.'' arXiv preprint arXiv:1910.13413 (2019).}
 The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
 
 How much faster is TreeSHAP?
 Compared to exact KernelSHAP, it reduces the computational complexity from \(O(TL2^M)\) to \(O(TLD^2)\), where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
 
-TreeSHAP uses the conditional expectation \(E_{X_S|X_C}(f(x)|x_S)\) to estimate effects.
+TreeSHAP uses the conditional expectation \(E_{X_S|X_C}(\hat{f}(x)|x_S)\) to estimate effects.
 I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
 If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
 If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
@@ -8278,7 +8287,7 @@ The Shapley interaction index from game theory is defined as:
 
 when \(i\neq{}j\) and:
 
-\[\delta_{ij}(S)=f_x(S\cup\{i,j\})-f_x(S\cup\{i\})-f_x(S\cup\{j\})+f_x(S)\]
+\[\delta_{ij}(S)=\hat{f}_x(S\cup\{i,j\})-\hat{f}_x(S\cup\{i\})-\hat{f}_x(S\cup\{j\})+\hat{f}_x(S)\]
 
 This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects.
 We average the values over all possible feature coalitions S, as in the Shapley value computation.
@@ -9259,11 +9268,11 @@ The coefficient vector of this trained binary classifier is then the CAV \(v_l^C
 In practice, we can use a SVM or a logistic regression model as the binary classifier.
 Lastly, given an image input \(x\), we can measure its ``conceptual sensitivity'' by calculating the directional derivative of the prediction in the direction of the unit CAV:
 
-\[S_{C,k,l}(x)=\nabla h_{l,k}(f_l(x))\cdot v_l^C\]
+\[S_{C,k,l}(x)=\nabla h_{l,k}(\hat{f}_l(x))\cdot v_l^C\]
 
-where \(f_l\) maps the input \(x\) to the activation vector of the layer \(l\) and \(h_{l,k}\) maps the activation vector to the logit output of class \(k\).
+where \(\hat{f}_l\) maps the input \(x\) to the activation vector of the layer \(l\) and \(h_{l,k}\) maps the activation vector to the logit output of class \(k\).
 
-Mathematically, the sign of \(S_{C,k,l}(x)\) only depends on the angle between the gradient of \(h_{l,k}(f_l(x))\) and \(v_l^C\).
+Mathematically, the sign of \(S_{C,k,l}(x)\) only depends on the angle between the gradient of \(h_{l,k}(\hat{f}_l(x))\) and \(v_l^C\).
 If the angle is greater than 90 degrees, \(S_{C,k,l}(x)\) will be positive, and if the angle is less than 90 degrees, \(S_{C,k,l}(x)\) will be negative.
 Since the gradient \(\nabla h_{l,k}\) points to the direction that maximizes the output the most rapidly, conceptual sensitivity \(S_{C,k,l}\), intuitively, indicates whether \(v_l^C\) points to the similar direction that maximizes \(h_{l,k}\).
 Thus, \(S_{C,k,l}(x)>0\) can be interpreted as concept \(C\) encouraging the model to classify \(x\) into class \(k\).
@@ -9275,12 +9284,12 @@ In the last paragraph, we have learned how to calculate the conceptual sensitivi
 However, our goal is to produce a global explanation that indicates an overall conceptual sensitivity of an entire class.
 A very straightforward approach done by TCAV is to calculate the ratio of inputs with positive conceptual sensitivities to the number of inputs for a class:
 
-\[TCAV_{Q_{C,k,l}}=\frac{|{x\in X_k:S_{C,k,l}(x)>0}|}{|X_k|}\]
+\[TCAV_{Q,C,k,l}=\frac{|{x\in X_k:S_{C,k,l}(x)>0}|}{|X_k|}\]
 
 Going back to our example, we are interested in how the concept of ``striped'' influences the model while classifying images as ``zebra''.
 We collect data that are labeled as ``zebra'' and calculate conceptual sensitivity for each input image.
 Then the TCAV score of the concept ``striped'' with predicting class ``zebra'' is the number of ``zebra'' images that have positive conceptual sensitivities divided by the total number of the ``zebra'' images.
-In other words, a \(TCAV_{Q_{"striped","zebra",l}}\) equal to 0.8 indicates that 80\% of predictions for ``zebra'' class are positively influenced by the concept of ``striped''.
+In other words, a \(TCAV_{Q, "striped","zebra",l}\) equal to 0.8 indicates that 80\% of predictions for ``zebra'' class are positively influenced by the concept of ``striped''.
 
 This looks great, but how do we know our TCAV score is meaningful?
 After all, a CAV is trained by user-selected concept and random datasets.
@@ -10054,7 +10063,7 @@ A calculation that 20 years ago was unthinkable in terms of resources can easily
 You can train models with thousands of training instances and hundreds of parameters on a laptop in seconds/minutes.
 It is therefore not a big leap to assume that deletion diagnostics will work without problems even with large neural networks in 10 years.
 
-\textbf{Influence functions are a good alternative to deletion diagnostics, but only for models with differentiable parameters}, such as neural networks.
+\textbf{Influence functions are a good alternative to deletion diagnostics, but only for models with a 2nd order diffentiable loss function with respect to its parameters}, such as neural networks.
 They do not work for tree-based methods like random forests, boosted trees or decision trees.
 Even if you have models with parameters and a loss function, the loss may not be differentiable.
 But for the last problem, there is a trick:
@@ -10735,7 +10744,7 @@ Regression. R package version 4.6-14. \url{https://CRAN.R-project.org/package=ra
 
 \textbf{tm}. Ingo Feinerer and Kurt Hornik (2020). tm: Text Mining Package. R package version 0.7-8. \url{https://CRAN.R-project.org/package=tm}
 
-\textbf{viridis}. Simon Garnier (2021). viridis: Colorblind-Friendly Color Maps for R. R package version 0.6.1. \url{https://CRAN.R-project.org/package=viridis}
+\textbf{viridis}. Simon Garnier (2021). viridis: Colorblind-Friendly Color Maps for R. R package version 0.6.2. \url{https://CRAN.R-project.org/package=viridis}
 
 \textbf{xgboost}. Tianqi Chen, Tong He, Michael Benesty, Vadim Khotilovich, Yuan Tang, Hyunsu Cho, Kailong Chen, Rory Mitchell, Ignacio Cano, Tianyi Zhou, Mu Li, Junyuan Xie, Min Lin, Yifeng Geng and Yutian Li (2021). xgboost: Extreme Gradient Boosting. R package version 1.4.1.1. \url{https://CRAN.R-project.org/package=xgboost}
 
