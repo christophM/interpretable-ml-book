@@ -1,3 +1,5 @@
+\newpage
+
 ## Detecting Concepts
 
 *Author: Fangzhou Li @ University of California, Davis*
@@ -43,11 +45,11 @@ The coefficient vector of this trained binary classifier is then the CAV $v_l^C$
 In practice, we can use a SVM or a logistic regression model as the binary classifier.
 Lastly, given an image input $x$, we can measure its "conceptual sensitivity" by calculating the directional derivative of the prediction in the direction of the unit CAV:
 
-$$S_{C,k,l}(x)=\nabla h_{l,k}(f_l(x))\cdot v_l^C$$
+$$S_{C,k,l}(x)=\nabla h_{l,k}(\hat{f}_l(x))\cdot v_l^C$$
 
-where $f_l$ maps the input $x$ to the activation vector of the layer $l$ and $h_{l,k}$ maps the activation vector to the logit output of class $k$.
+where $\hat{f}_l$ maps the input $x$ to the activation vector of the layer $l$ and $h_{l,k}$ maps the activation vector to the logit output of class $k$.
 
-Mathematically, the sign of $S_{C,k,l}(x)$ only depends on the angle between the gradient of $h_{l,k}(f_l(x))$ and $v_l^C$.
+Mathematically, the sign of $S_{C,k,l}(x)$ only depends on the angle between the gradient of $h_{l,k}(\hat{f}_l(x))$ and $v_l^C$.
 If the angle is greater than 90 degrees, $S_{C,k,l}(x)$ will be positive, and if the angle is less than 90 degrees, $S_{C,k,l}(x)$ will be negative.
 Since the gradient $\nabla h_{l,k}$ points to the direction that maximizes the output the most rapidly, conceptual sensitivity $S_{C,k,l}$, intuitively, indicates whether $v_l^C$ points to the similar direction that maximizes $h_{l,k}$.
 Thus, $S_{C,k,l}(x)>0$ can be interpreted as concept $C$ encouraging the model to classify $x$ into class $k$.
@@ -58,12 +60,12 @@ In the last paragraph, we have learned how to calculate the conceptual sensitivi
 However, our goal is to produce a global explanation that indicates an overall conceptual sensitivity of an entire class.
 A very straightforward approach done by TCAV is to calculate the ratio of inputs with positive conceptual sensitivities to the number of inputs for a class:
 
-$$TCAV_{Q_{C,k,l}}=\frac{|{x\in X_k:S_{C,k,l}(x)>0}|}{|X_k|}$$
+$$TCAV_{Q,C,k,l}=\frac{|{x\in X_k:S_{C,k,l}(x)>0}|}{|X_k|}$$
 
 Going back to our example, we are interested in how the concept of "striped" influences the model while classifying images as "zebra".
 We collect data that are labeled as "zebra" and calculate conceptual sensitivity for each input image.
 Then the TCAV score of the concept "striped" with predicting class "zebra" is the number of "zebra" images that have positive conceptual sensitivities divided by the total number of the "zebra" images.
-In other words, a $TCAV_{Q_{"striped","zebra",l}}$ equal to 0.8 indicates that 80% of predictions for "zebra" class are positively influenced by the concept of "striped".
+In other words, a $TCAV_{Q, "striped","zebra",l}$ equal to 0.8 indicates that 80% of predictions for "zebra" class are positively influenced by the concept of "striped".
 
 This looks great, but how do we know our TCAV score is meaningful?
 After all, a CAV is trained by user-selected concept and random datasets.
@@ -89,7 +91,7 @@ The image classifier we are using is InceptionV3[^inception], a convolutional ne
 Each concept or random dataset contains 50 images, and we are using 10 random datasets for the statistical significance test with the significance level of 0.05.
 We are not using the Bonferroni correction because we only have a few random datasets, but it is recommended to add the correction in practice to avoid false discovery.
 
-```{r fig.cap = "The example of measuring TCAV scores of three concepts for the model predicting “zebra”. The targeted bottleneck is a layer called “mixed4c”. A star sign above “dotted” indicates that “dotted” has not passed the statistical significance test, i.e., having the p-value larger than 0.05. Both “striped” and “zigzagged” have passed the test, and both concepts are useful for the model to identify “zebra” images according to TCAV. Figure originally from the TCAV GitHub.", out.width=800}
+```{r fig.cap = "The example of measuring TCAV scores of three concepts for the model predicting “zebra”. The targeted bottleneck is a layer called “mixed4c”. A star sign above “dotted” indicates that “dotted” has not passed the statistical significance test, i.e., having the p-value larger than 0.05. Both “striped” and “zigzagged” have passed the test, and both concepts are useful for the model to identify “zebra” images according to TCAV. Figure originally from the TCAV GitHub."}
 knitr::include_graphics("images/tcav.png")
 ```
 

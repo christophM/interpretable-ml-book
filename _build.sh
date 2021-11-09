@@ -7,9 +7,13 @@ Rscript scripts/prepare_data.R
 cd manuscript
 # Create references
 make -B 11-references.Rmd
+# Compile pdf version of book for leanpub
+make pdf
 # Compile html version of book for gh-pages
-make -B html
-# Compile md version of book for leanpub
-# make -B leanpub
+make html
+# Compile epub version of book for leanpub
+make epub
+# Convert to epub to mobi as well
+make mobi 
 cd ..
 

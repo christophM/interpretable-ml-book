@@ -1,5 +1,5 @@
 
-<!--{pagebreak}-->
+\newpage
 
 ## Influential Instances {#influential}
 
@@ -101,7 +101,7 @@ For example, the learner of a decision tree is an algorithm that selects the spl
 A learner for a neural network uses backpropagation to find the best weights.
 
 
-```{r learner, fig.cap = "A learner learns a model from training data (features plus target). The model makes predictions for new data.", out.width=600}
+```{r learner, fig.cap = "A learner learns a model from training data (features plus target). The model makes predictions for new data."}
 knitr::include_graphics("images/learner.png")
 ```
 
@@ -427,7 +427,7 @@ We do not actually need to calculate the new parameters, but we can use the infl
 How do the *predictions* change when we upweight training instance z?
 We can either calculate the new parameters and then make predictions using the newly parameterized model, or we can also calculate the influence  of instance z on the predictions directly, since we can calculate the influence by using the chain rule:
 
-$$\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}$$
+\begin{align*}I_{up,loss}(z,z_{test})&=\left.\frac{d{}L(z_{test},\hat{\theta}_{\epsilon,z})}{d\epsilon}\right|_{\epsilon=0}\\&=\left.\nabla_{\theta}L(z_{test},\hat{\theta})^T\frac{d\hat{\theta}_{\epsilon,z}}{d\epsilon}\right|_{\epsilon=0}\\&=-\nabla_{\theta}L(z_{test},\hat{\theta})^T{}H^{-1}_{\theta}\nabla_{\theta}L(z,\hat{\theta})\end{align*}
 
 The first line of this equation means that we measure the influence of a training instance on a certain prediction $z_{test}$ as a change in loss of the test instance when we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
 For the second line of the equation, we have applied the chain rule of derivatives and get the derivative of the loss of the test instance with respect to the parameters times the influence of z on the parameters.
@@ -510,6 +510,8 @@ You can analyze how much a training instance influences the overall loss of the 
 You can analyze how much a training instance influences the feature importance.
 You can analyze how much a training instance influences which feature is selected for the first split when training a [decision tree](#tree).
 
+It is also possible to **identify groups of influential instances** [^group-influential].
+
 ### Disadvantages of Identifying Influential Instances
 
 Deletion diagnostics are very **expensive to calculate** because they require retraining.
@@ -518,7 +520,7 @@ A calculation that 20 years ago was unthinkable in terms of resources can easily
 You can train models with thousands of training instances and hundreds of parameters on a laptop in seconds/minutes. 
 It is therefore not a big leap to assume that deletion diagnostics will work without problems even with large neural networks in 10 years.
 
-**Influence functions are a good alternative to deletion diagnostics, but only for models with differentiable parameters**, such as neural networks.
+**Influence functions are a good alternative to deletion diagnostics, but only for models with a 2nd order diffentiable loss function with respect to its parameters**, such as neural networks.
 They do not work for tree-based methods like random forests, boosted trees or decision trees.
 Even if you have models with parameters and a loss function, the loss may not be differentiable.
 But for the last problem, there is a trick:
@@ -533,14 +535,6 @@ But there is no guarantee that the approximation will always be so close.
 There is **no clear cutoff of the influence measure at which we call an instance influential or non-influential**.
 It is useful to sort the instances by influence, but it would be great to have the means not only to sort the instances, but actually to distinguish between influential and non-influential.
 For example, if you identify the top 10 most influential training instances for a test instance, some of them may not be influential because, for example, only the top 3 were really influential.
-
-The influence measures **only take into account the deletion of individual instances** and not the deletion of several instances at once.
-Larger groups of data instances may have some interactions  that strongly influence model training and prediction.
-But the problem lies in combinatorics:
-There are n possibilities to delete an individual instance from the data. 
-There are n times (n-1) possibilities to delete two instances from the training data. 
-There are n times (n-1) times (n-2) possibilities to delete three ...
-I guess you can see where this is going, there are just too many combinations.
 
 ### Software and Alternatives
 
@@ -558,3 +552,6 @@ The code is focused on the Tensorflow library, so you cannot use it directly for
 [^cook]: Cook, R. Dennis. "Detection of influential observation in linear regression." Technometrics 19.1 (1977): 15-18.
 
 [^koh]: Koh, Pang Wei, and Percy Liang. "Understanding black-box predictions via influence functions." arXiv preprint arXiv:1703.04730 (2017).
+
+[^group-influential]: Koh, Pang Wei, Kai-Siang Ang, Hubert HK Teo, and Percy Liang. "On the accuracy of influence functions for measuring group effects." arXiv preprint arXiv:1905.13289 (2019).
+

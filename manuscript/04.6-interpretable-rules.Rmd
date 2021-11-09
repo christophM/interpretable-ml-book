@@ -5,7 +5,7 @@ set.seed(42)
 if(!require("sbrl")) install.packages("../pkg/sbrl_1.2.tar.gz", repos = NULL, type = "source")
 ```
 
-<!--{pagebreak}-->
+\newpage
 
 ## Decision Rules {#rules}
 
@@ -185,6 +185,7 @@ Let us try OneR with real data.
 We use the [cervical cancer classification task](#cervical) to test the OneR algorithm. 
 All continuous input features were discretized into their 5 quantiles.
 The following rules are created:
+
 ```{r oner-cervical}
 library("OneR")
 data("cervical")
@@ -334,7 +335,7 @@ the path leading to that node is used as the rule condition.
 
 The following figure illustrates the beam search in a tree:
 
-```{r learn-one-rule, fig.cap = "Learning a rule by searching a path through a decision tree. A decision tree is grown to predict the target of interest. We start at the root node, greedily and iteratively follow the path which locally produces the purest subset (e.g. highest accuracy) and add all the split values to the rule condition. We end up with: If `location=good` and `size=big`, then `value=high`.", out.width=700}
+```{r learn-one-rule, fig.cap = "Learning a rule by searching a path through a decision tree. A decision tree is grown to predict the target of interest. We start at the root node, greedily and iteratively follow the path which locally produces the purest subset (e.g. highest accuracy) and add all the split values to the rule condition. We end up with: If `location=good` and `size=big`, then `value=high`."}
 knitr::include_graphics("images/learn-one-rule.png")
 ```
 
@@ -390,7 +391,9 @@ bike2$windspeed = round(bike2$windspeed)
 bike2$hum = round(bike2$hum)
 
 rule = JRip(cnt  ~ ., data = bike2)
-extract.rules.jrip(rule)
+tab = extract.rules.jrip(rule)
+if (is.pdf) tab = tab %>% column_spec(1, "10cm")
+tab
 ```
 
 The interpretation is simple:
@@ -582,7 +585,9 @@ saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-cervical.R
 
 ```{r sbrl-cervical-show}
 rules = readRDS("../data/cached-sbrl-cervical.RDS")
-kable(rules$rules)
+tab = kable(rules$rules)
+if (is.pdf) tab = tab %>%  column_spec(1, "10cm")
+tab
 ```
 
 Note that we get sensible rules, since the prediction on the THEN-part is not the class outcome, but the predicted probability for cancer.
@@ -595,7 +600,12 @@ Here is a sample of ten patterns:
 ```{r sbrl-cervical-premined}
 set.seed(1)
 conditions = sample(rules$rulenames, size = 10)
-kable(gsub("\\{|\\}", "", conditions), col.names = "pre-mined conditions")
+conditions = gsub("\\{|\\}", "", conditions)
+conditions = gsub(",", ", ", conditions)
+tab = kable(conditions, col.names = "pre-mined conditions")
+if (is.pdf) tab = tab %>%  column_spec(1, "10cm")
+tab
+
 ```
 
 Next, we apply the SBRL algorithm to the [bike rental prediction task](#bike-data).
@@ -628,7 +638,9 @@ saveRDS(rules, file = "../data/cached-sbrl-bike.RDS")
 
 ```{r sbrl-bike-show}
 rules = readRDS("../data/cached-sbrl-bike.RDS")
-kable(rules)
+tab = kable(rules)
+if (is.pdf) tab = tab %>% column_spec(1, width = "10cm")
+tab
 ```
 
 Let us predict the probability that the number of bikes will exceed 4000 for a day in 2012 with a temperature of 17 degrees Celsius. 
@@ -694,6 +706,7 @@ OneR is implemented in the [R package OneR](https://cran.r-project.org/web/packa
 OneR is also implemented in the [Weka machine learning library](https://www.eecs.yorku.ca/tdb/_doc.php/userg/sw/weka/doc/weka/classifiers/rules/package-summary.html) and as such available in Java, R and Python.
 RIPPER is also implemented in Weka. For the examples, I used the R implementation of JRIP in the [RWeka package](https://cran.r-project.org/web/packages/RWeka/index.html). 
 SBRL is available as [R package](https://cran.r-project.org/web/packages/sbrl/index.html) (which I used for the examples), in [Python](https://github.com/datascienceinc/Skater) or as [C implementation](https://github.com/Hongyuy/sbrlmod).
+Additionally, I recommend the [imodels package](https://github.com/csinva/imodels), which implements rule-based models such as Bayesian rule lists, CORELS, OneR, greedy rule lists, and more in a Python package with a unified scikit-learn interface.
 
 I will not even try to list all alternatives for learning decision rule sets and lists, but will point to some summarizing work.
 I recommend the book "Foundations of Rule Learning" by Fuernkranz et. al (2012)[^fuernkranz]. 

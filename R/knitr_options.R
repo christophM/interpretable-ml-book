@@ -13,6 +13,8 @@ library('iml')
 
 opts_chunk$set(
   echo = FALSE,
+  out.width = "\\textwidth",
+  fig.align = "center",
   message = FALSE,
   warning = FALSE,
   fig.path = "images/", 

@@ -4,7 +4,7 @@ set.seed(42)
 library(anchors)
 ```
 
-<!--{pagebreak}-->
+\newpage
 
 ## Scoped Rules (Anchors) {#anchors}
 
@@ -20,7 +20,7 @@ Like its predecessor, the anchors approach deploys a *perturbation-based* strate
 
 In their paper, the authors compare both of their algorithms and visualize how differently these consult an instance's neighborhood to derive results. For this, the following figure depicts both LIME and anchors locally explaining a complex binary classifier (predicts either **-** or **+**) using two exemplary instances. LIME’s results do not indicate how faithful they are as LIME solely learns a linear decision boundary that best approximates the model given a perturbation space $D$. Given the same perturbation space, the anchors approach constructs explanations whose coverage is adapted to the model’s behavior and clearly express their boundaries. Thus, they are faithful by design and state exactly for which instances they are valid. This property makes anchors particularly intuitive and easy to comprehend.
 
-```{r fig.cap="LIME vs. Anchors -- A Toy Visualization. Figure from Ribeiro, Singh, and Guestrin (2018).", out.width=350, fig.align="center"}
+```{r fig.cap="LIME vs. Anchors -- A Toy Visualization. Figure from Ribeiro, Singh, and Guestrin (2018).", fig.align="center"}
 knitr::include_graphics("images/anchors-visualization.png")
 ```
 
@@ -28,29 +28,25 @@ As mentioned before, the algorithm’s results or explanations come in the form 
 
 
 | Feature         | Value         |
-| --------------- |:-------------:|
+| --------------- |---------------|
 | Age             | 20            |
 | Sex             | female        |
 | Class           | first         |
-| TicketPrice     | 300\$          |
+| TicketPrice     | 300\$         |
 | More attributes | ...           |
-| **Survived**    | **true**      |
+| Survived        | true          |
 
 Table: one exemplary individual and the model's prediction
 
 And the corresponding anchors explanation is:
 
-IF `SEX = female`  
-AND `Class = first`  
-THEN PREDICT `Survived = true`  
-WITH PRECISION `97%`  
-AND COVERAGE `15%`  
+IF `SEX = female` AND `Class = first` THEN PREDICT `Survived = true` WITH PRECISION 97% AND COVERAGE 15%
  
 The example shows how anchors can provide essential insights into a model's prediction and its underlying reasoning. The result shows which attributes were taken into account by the model, which in this case, is the female sex and first class. Humans, being paramount for correctness, can use this rule to validate the model's behavior. The anchor additionally tells us that it applies to 15\% of perturbation space's instances. In those cases the explanation is 97\% accurate, meaning the displayed predicates are almost exclusively responsible for the predicted outcome.
 
 An anchor $A$ is formally defined as follows:
 
-$$\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{f(x)=f(z)}]\geq\tau,A(x)=1$$
+$$\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(x)=\hat{f}(z)}]\geq\tau,A(x)=1$$
 
 Wherein:
 
@@ -62,19 +58,19 @@ Wherein:
 
 The formal description may be intimidating and can be put in words:
 
-> Given an instance $x$ to be explained, a rule or an anchor $A$ is to be found, such that it applies to $x$, while the same class as for $x$ gets predicted for a fraction of at least $\tau$ of $x$’s neighbors where the same $A$ is applicable. A rule’s precision results from evaluating neighbors or perturbations (following $D_x (z|A)$) using the provided machine learning model (denoted by the indicator function $1_{f(x) = f(z)}$).
+> Given an instance $x$ to be explained, a rule or an anchor $A$ is to be found, such that it applies to $x$, while the same class as for $x$ gets predicted for a fraction of at least $\tau$ of $x$’s neighbors where the same $A$ is applicable. A rule’s precision results from evaluating neighbors or perturbations (following $D_x (z|A)$) using the provided machine learning model (denoted by the indicator function $1_{\hat{f}(x) = \hat{f}(z)}$).
 
 
 ### Finding Anchors
 
 
-Although anchors’ mathematical description may seem clear and straightforward, constructing particular rules is infeasible. It would require evaluating $1_{f(x) = f(z)}$ for all $z \in \mathcal{D}_x(\cdot|A)$ which is not possible in continuous or large input spaces. Therefore, the authors propose to introduce the parameter $0 \leq \delta \leq 1$ to create a probabilistic definition. This way, samples are drawn until there is statistical confidence concerning their precision. The probabilistic definition reads as follows:
+Although anchors’ mathematical description may seem clear and straightforward, constructing particular rules is infeasible. It would require evaluating $1_{\hat{f}(x) = \hat{f}(z)}$ for all $z \in \mathcal{D}_x(\cdot|A)$ which is not possible in continuous or large input spaces. Therefore, the authors propose to introduce the parameter $0 \leq \delta \leq 1$ to create a probabilistic definition. This way, samples are drawn until there is statistical confidence concerning their precision. The probabilistic definition reads as follows:
 
-$$P(prec(A)\geq\tau)\geq{}1-\delta\quad\textrm{with}\quad{}prec(A)=\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{f(x)=f(z)}]$$
+$$P(prec(A)\geq\tau)\geq{}1-\delta\quad\textrm{with}\quad{}prec(A)=\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(x)=\hat{f}(z)}]$$
 
 The previous two definitions are combined and extended by the notion of coverage. Its rationale consists of finding rules that apply to a preferably large part of the model’s input space. Coverage is formally defined as an anchors' probability of applying to its neighbors, i.e., its perturbation space: 
 
-$$cov(A)=\mathbb{E}_{\mathcal{D}_{(z)}[A(z)]}$$ 
+$$cov(A)=\mathbb{E}_{\mathcal{D}_{(z)}}[A(z)]$$ 
 
 Including this element leads to anchors' final definition taking into account the maximization of coverage:
 
@@ -93,7 +89,7 @@ The anchors approach uses four main components to find explanations, as is shown
 
 **Modified Beam Search**: All of the above components are assembled in a beam search, which is a graph search algorithm and a variant of the breadth-first algorithm. It carries the $B$ best candidates of each round over to the next one (where $B$ is called the *Beam Width*). These $B$ best rules are then used to create new rules. The beam search conducts at most $featureCount(x)$ rounds, as each feature can only be included in a rule at most once. Thus, at every round $i$, it generates candidates with exactly $i$ predicates and selects the B best thereof. Therefore, by setting $B$ high, the algorithm more likely avoids local optima. In turn, this requires a high number of model calls and thereby increases the computational load.
 
-```{r fig.cap="The anchors algorithm’s components and their interrelations (simplified)", out.width=800}
+```{r fig.cap="The anchors algorithm’s components and their interrelations (simplified)"}
 knitr::include_graphics("images/anchors-process.jpg")
 ```
 

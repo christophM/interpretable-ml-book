@@ -3,7 +3,7 @@ devtools::load_all()
 set.seed(42)
 ```
 
-<!--{pagebreak}-->
+\newpage
 
 ## Accumulated Local Effects (ALE) Plot {#ale}
 
@@ -160,33 +160,39 @@ All three methods reduce the function by averaging the effects of the other feat
 
 Partial dependence plots average the predictions over the marginal distribution.
 
-$$\begin{align*}\hat{f}_{x_S,PDP}(x_S)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C)d{}x_C\end{align*}$$
+\begin{align*}
+\hat{f}_{S,PDP}(x)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right] \\
+& = \int_{X_C}\hat{f}(x_S,X_C)d\mathbb{P}(X_C)
+\end{align*}
 
-This is the value of the prediction function f, at feature value(s) $x_S$, averaged over all features in $x_C$.
+This is the value of the prediction function f, at feature value(s) $x_S$, averaged over all features in $X_C$ (here treated as random variables).
 Averaging means calculating the marginal expectation E over the features in set C, which is the integral over the predictions weighted by the probability distribution.
 Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in set S, and average the predictions for this manipulated dataset.
 This procedure ensures that we average over the marginal distribution of the features.
 
 M-plots average the predictions over the conditional distribution.
 
-$$\begin{align*}\hat{f}_{x_S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]\\&=\int_{x_C}\hat{f}(x_S,x_C)\mathbb{P}(x_C|x_S)d{}x_C\end{align*}$$
+\begin{align*}\hat{f}_{S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]\\&=\int_{X_C}\hat{f}(x_S, X_C)d\mathbb{P}(X_C|X_S = x_S)\end{align*}
 
 The only thing that changes compared to PDPs is that we average the predictions conditional on each grid value of the feature of interest, instead of assuming the marginal distribution at each grid value. 
 In practice, this means that we have to define a neighborhood, for example for the calculation of the effect of 30 m^2^ on the predicted house value, we could average the predictions of all houses between 28 and 32 m^2^.
 
 ALE plots average the changes in the predictions and accumulate them over the grid (more on the calculation later).
 
-$$\begin{align*}\hat{f}_{x_S,ALE}(x_S)=&\int_{z_{0,1}}^{x_S}E_{X_C|X_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\=&\int_{z_{0,1}}^{x_S}\int_{x_C}\hat{f}^S(z_s,x_c)\mathbb{P}(x_C|z_S)d{}x_C{}dz_S-\text{constant}\end{align*}$$
+\begin{align*}
+\hat{f}_{S,ALE}(x_S)=&\int_{z_{0,S}}^{x_S}E_{X_C|X_S = x_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\
+ = & \int_{z_{0,S}}^{x_S}(\int_{x_C}\hat{f}^S(z_s,X_c)d\mathbb{P}(X_C|X_S = z_S)d{})dz_S-\text{constant}
+\end{align*}
 
 The formula reveals three differences to M-Plots. 
 First, we average the changes of predictions, not the predictions itself.
-The change is defined as the gradient (but later, for the actual computation, replaced by the differences in the predictions over an interval).
+The change is defined as the partial derivative (but later, for the actual computation, replaced by the differences in the predictions over an interval).
 
 
-$$\hat{f}^S(x_s,x_c)=\frac{\delta\hat{f}(x_S,x_C)}{\delta{}x_S}$$
+$$\hat{f}^S(x_s,x_c)=\frac{\partial\hat{f}(x_S,x_C)}{\partial{}x_S}$$
 
 The second difference is the additional integral over z.
-We accumulate the local gradients over the range of features in set S, which gives us the effect of the feature on the prediction.
+We accumulate the local partial derivatives over the range of features in set S, which gives us the effect of the feature on the prediction.
 For the actual computation, the z's are replaced by a grid of intervals over which we compute the changes in the prediction.
 Instead of directly averaging the predictions, the ALE method calculates the prediction differences conditional on features S and integrates the derivative over features S to estimate the effect.
 Well, that sounds stupid. 
@@ -207,11 +213,11 @@ Let us delve a little deeper into the estimation of ALE plots.
 
 First I will describe how ALE plots are estimated for a single numerical feature, later for two numerical features and for a single categorical feature.
 To estimate local effects, we divide the feature into many intervals and compute the differences in the predictions.
-This procedure approximates the gradients and also works for models without gradients.
+This procedure approximates the derivatives and also works for models without derivatives.
 
 First we estimate the uncentered effect: 
 
-$$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[f(z_{k,j},x^{(i)}_{\setminus{}j})-f(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]$$
+$$\hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]$$
 
 Let us break this formula down, starting from the right side. 
 The name **Accumulated Local Effects** nicely reflects all the individual components of this formula.
@@ -396,7 +402,7 @@ pred.bike = Predictor$new(mod.bike, data = bike, y = "cnt")
 
 
 
-```{r ale-bike, fig.cap = "ALE plots for the bike prediction model by temperature, humidity and wind speed. The temperature has a strong effect on the prediction. The average prediction rises with increasing temperature, but falls again above 25 degrees Celsius. Humidity has a negative effect: When above 60%, the higher the relative humidity, the lower the prediction. The wind speed does not affect the predictions much."}
+```{r ale-bike, fig.cap = "ALE plots for the bike prediction model by temperature, humidity and wind speed. The temperature has a strong effect on the prediction. The average prediction rises with increasing temperature, but falls again above 25 degrees Celsius. Humidity has a negative effect: When above 60\\%, the higher the relative humidity, the lower the prediction. The wind speed does not affect the predictions much."}
 limits = c(-1500, 800)
 
 ale1 = FeatureEffect$new(pred.bike, "temp", method = "ale")$plot() +
@@ -557,9 +563,26 @@ This makes their interpretation nice, because the value at each point of the ALE
 **The 2D ALE plot only shows the interaction**: 
 If two features do not interact, the plot shows nothing.
 
+The entire **prediction function can be decomposed** into a sum of lower-dimensional ALE functions, as explained in the chapter on [functional decomposition](#decomposition).
+
 All in all, in most situations I would **prefer ALE plots over PDPs**, because features are usually correlated to some extent.
 
 ### Disadvantages
+
+An **interpretation of the effect across intervals is not permissible** if the features are strongly correlated.
+Consider the case where your features are highly correlated, and you are looking at the left end of a 1D-ALE plot.
+The ALE curve might invite the following misinterpretation:
+"The ALE curve shows how the prediction changes, on average, when we gradually change the value of the respective feature for a data instance, and keeping the instances other feature values fixed."
+The effects are computed per interval (locally) and therefore the interpretation of the effect can only be local.
+For convenience, the interval-wise effects are accumulated to show a smooth curve, but keep in mind that each interval is created with different data instances.
+
+ALE effects **may differ from the coefficients specified in a linear regression model** when features interact and are correlated.
+Grömping (2020)[^unintuitive-ale] showed that in a linear model with two correlated features and an additional interaction term ($\hat{f}(x) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_1 x_2$), the first-order ALE plots do not show a straight line.
+Instead, they are slightly curved because they incorporate parts of the multiplicative interaction of the features.
+To understand what is happening here, I recommend reading the chapter on [function decomposition](#decomposition).
+In short, ALE defines first-order (or 1D) effects differently than the linear formula describes them.
+This is not necessarily wrong, because when features are correlated, the attribution of interactions is not as clear.
+But it is certainly unintuitive that ALE and linear coefficient do not match.
 
 **ALE plots can become a bit shaky** (many small ups and downs) with a high number of intervals. 
 In this case, reducing the number of intervals makes the estimates more stable, but also smoothes out and hides some of the true complexity of the prediction model.
@@ -600,7 +623,9 @@ As a rule of thumb: Use ALE instead of PDP.
 
 Did I mention that [partial dependence plots](#pdp) and [individual conditional expectation curves](#ice) are an alternative? =) 
 
-ALE plots are implemented in R and Python, once in the [ALEPlot R package](https://cran.r-project.org/web/packages/ALEPlot/index.html) by the inventor himself and once in the [iml package](https://cran.r-project.org/web/packages/iml/index.html) and in the [ALEPython package](https://github.com/blent-ai/ALEPython).  
+ALE plots are implemented in R in the [ALEPlot R package](https://cran.r-project.org/web/packages/ALEPlot/index.html) by the inventor himself and once in the [iml package](https://cran.r-project.org/web/packages/iml/index.html).
+ALE also has at least two Python implementations with the [ALEPython package](https://github.com/blent-ai/ALEPython) and in [Alibi](https://docs.seldon.io/projects/alibi/en/stable/index.html).
 
 [^ALE]: Apley, Daniel W., and Jingyu Zhu. "Visualizing the effects of predictor variables in black box supervised learning models." Journal of the Royal Statistical Society: Series B (Statistical Methodology) 82.4 (2020): 1059-1086.
 
+[^unintuitive-ale]: Grömping, Ulrike. "Model-Agnostic Effects Plots for Interpreting Machine Learning Models." Reports in Mathematics, Physics and Chemistry: Department II, Beuth University of Applied Sciences Berlin. Report 1/2020 (2020)
