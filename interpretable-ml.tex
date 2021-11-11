@@ -125,7 +125,7 @@
 \makeatother
 \subtitle{A Guide for Making Black Box Models Explainable.}
 \author{Christoph Molnar}
-\date{2021-11-09}
+\date{2021-11-11}
 
 \begin{document}
 \maketitle
@@ -210,7 +210,7 @@ After these three years in industry I started writing this book and a few months
 By starting this book, I regained the joy of writing and it helped me to develop a passion for research.
 
 This book covers many techniques of interpretable machine learning.
-In the first chapters I introduce the concept of interpretability and motivate why interpretability is necessary.
+In the first chapters, I introduce the concept of interpretability and motivate why interpretability is necessary.
 There are even some short stories!
 The book discusses the different properties of explanations and what humans think is a good explanation.
 Then we will discuss machine learning models that are inherently interpretable, for example regression models and decision trees.
@@ -233,7 +233,7 @@ Then we look at the theory of the method to get a deep understanding of how it w
 You will not be spared here, because the theory will contain formulas.
 I believe that a new method is best understood using examples.
 Therefore, each method is applied to real data.
-Some people say that statistician are very critical people.
+Some people say that statisticians are very critical people.
 For me, this is true, because each chapter contains critical discussions about advantages and disadvantages of the respective interpretation method.
 This book is not an advertisement for the methods, but it should help you decide whether a method works well for your application or not.
 In the last section of each chapter, available software implementations are discussed.
@@ -241,7 +241,7 @@ In the last section of each chapter, available software implementations are disc
 Machine learning has received great attention from many people in research and industry.
 Sometimes machine learning is overhyped in the media, but there are many real and impactful applications.
 Machine learning is a powerful technology for products, research and automation.
-Today machine learning is used, for example, to detect fraudulent financial transactions, recommend movies to watch and classify images.
+Today, machine learning is used, for example, to detect fraudulent financial transactions, recommend movies and classify images.
 It is often crucial that the machine learning models are interpretable.
 Interpretability helps the developer to debug and improve the model, build trust in the model, justify model predictions and gain insights.
 The increased need for machine learning interpretability is a natural consequence of an increased use of machine learning.
@@ -5791,7 +5791,7 @@ I can only recommend using the \texttt{n(n-1)} -method if you are serious about 
 \hypertarget{feature-importance-data}{%
 \subsection{Should I Compute Importance on Training or Test Data?}\label{feature-importance-data}}
 
-\emph{tl;dr: I do not have a definite answer.}
+\emph{tl;dr: You should probably use test data.}
 
 Answering the question about training or test data touches the fundamental question of what feature importance is.
 The best way to understand the difference between feature importance based on training vs.~based on test data is an ``extreme'' example.
@@ -5817,12 +5817,12 @@ Let us take a look at how the distributions of feature importances for training 
 \end{figure}
 
 It is unclear to me which of the two results is more desirable.
-So I will try to make a case for both versions and let you decide for yourself.
+So I will try to make a case for both versions.
 
 \textbf{The case for test data}
 
 This is a simple case:
-Model error estimates based on training data are garbage -\textgreater{} feature importance relies on model error estimates -\textgreater{} feature importance based on training data is garbage.\\
+Model error estimates based on training data are garbage -\textgreater{} feature importance relies on model error estimates -\textgreater{} feature importance based on training data is garbage.
 Really, it is one of the first things you learn in machine learning:
 If you measure the model error (or performance) on the same data on which the model was trained, the measurement is usually too optimistic, which means that the model seems to work much better than it does in reality.
 And since the permutation feature importance relies on measurements of the model error, we should use unseen test data.
@@ -5856,10 +5856,8 @@ This means no unused test data is left to compute the feature importance.
 You have the same problem when you want to estimate the generalization error of your model.
 If you would use (nested) cross-validation for the feature importance estimation, you would have the problem that the feature importance is not calculated on the final model with all the data, but on models with subsets of the data that might behave differently.
 
-In the end, you need to decide whether you want to know how much the model relies on each feature for making predictions (-\textgreater{} training data) or how much the feature contributes to the performance of the model on unseen data (-\textgreater{} test data).
-To the best of my knowledge, there is no research addressing the question of training vs.~test data.
-It will require more thorough examination than my ``garbage-SVM'' example.
-We need more research and more experience with these tools to gain a better understanding.
+However, in the end I recommend to use test data for permutation feature importance.
+Because if you are interested in how much the model's predictions are influenced by a feature, you should use other importance measures such as \protect\hyperlink{shap-feature-importance}{SHAP importance}.
 
 Next, we will look at some examples.
 I based the importance computation on the training data, because I had to choose one and using the training data needed a few lines less code.
@@ -5935,8 +5933,6 @@ Since another feature is chosen as the first split, the whole tree can be very d
 \hypertarget{disadvantages-9}{%
 \subsection{Disadvantages}\label{disadvantages-9}}
 
-It is very \textbf{unclear whether you should use training or test data} to compute the feature importance.
-
 Permutation feature importance is \textbf{linked to the error of the model}.
 This is not inherently bad, but in some cases not what you need.
 In some cases, you might prefer to know how much the model's output varies for a feature without considering what it means for performance.
@@ -5957,6 +5953,7 @@ The permutation of features produces unlikely data instances when two or more fe
 When they are positively correlated (like height and weight of a person) and I shuffle one of the features, I create new instances that are unlikely or even physically impossible (2 meter person weighing 30 kg for example), yet I use these new instances to measure the importance.
 In other words, for the permutation feature importance of a correlated feature, we consider how much the model performance decreases when we exchange the feature with values we would never observe in reality.
 Check if the features are strongly correlated and be careful about the interpretation of the feature importance if they are.
+However, pairwise correlations might not be sufficient to reveal the problem.
 
 Another tricky thing:
 \textbf{Adding a correlated feature can decrease the importance of the associated feature} by splitting the importance between both features.
@@ -5978,13 +5975,31 @@ The check is expensive and you decide to check only the top 3 of the most import
 In the first case you would check the temperature, in the second case you would not include any temperature feature just because they now share the importance.
 Even though the importance values might make sense at the level of model behavior, it is confusing if you have correlated features.
 
-\hypertarget{software-and-alternatives-2}{%
-\subsection{Software and Alternatives}\label{software-and-alternatives-2}}
+\hypertarget{alternatives-1}{%
+\subsection{Alternatives}\label{alternatives-1}}
+
+An algorithm called \href{https://academic.oup.com/bioinformatics/article/26/10/1340/193348}{PIMP} adapts the permutation feature importance algorithm to provide p-values for the importances.
+Another loss-based alternative is to omit the feature from the training data, retrain the model and measuring the increase in loss.
+Permuting a feature and measuring the increase in loss is not the only way to measure the importance of a feature.
+The different importance measures can be divided into model-specific and model-agnostic methods.
+The Gini importance for random forests or standardized regression coefficients for regression models are examples of model-specific importance measures.
+
+A model-agnostic alternative to permutation feature importance are variance-based measures.
+Variance-based feature importance measures such as Sobol's indices or \protect\hyperlink{decomposition}{functional ANOVA} give higher importance to features that cause high variance in the prediction function.
+Also \protect\hyperlink{shap}{SHAP importance} has similarities to a variance-based importance measure.
+If changing a feature greatly changes the output, then it is important.
+This definition of importance differs from the loss-based definition as in the case of permutation feature importance.
+This is evident in cases where a model overfitted.
+If a model overfits and uses a feature that is unrelated to the output, then the permutation feature importance would assign an importance of zero because this feature does not contribute to producing correct predictions.
+A variance-based importance measure, on the other hand, might assign the feature high importance as the prediction can change a lot when the feature is changed.
+
+A good overview of various importance techniques is provided in the paper by Wei (2015) \footnote{Wei, Pengfei, Zhenzhou Lu, and Jingwen Song. ``Variable importance analysis: a comprehensive review.'' Reliability Engineering \& System Safety 142 (2015): 399-432.}.
+
+\hypertarget{software-3}{%
+\subsection{Software}\label{software-3}}
 
 The \texttt{iml} R package was used for the examples.
 The R packages \texttt{DALEX} and \texttt{vip}, as well as the Python library \texttt{alibi}, \texttt{scikit-learn} and \texttt{rfpimp}, also implement model-agnostic permutation feature importance.
-
-An algorithm called \href{https://academic.oup.com/bioinformatics/article/26/10/1340/193348}{PIMP} adapts the feature importance algorithm to provide p-values for the importances.
 
 \newpage
 
@@ -6136,8 +6151,8 @@ The interpretable model you choose as a surrogate \textbf{comes with all its adv
 Some people argue that there are, in general, \textbf{no intrinsically interpretable models} (including even linear models and decision trees) and that it would even be dangerous to have an illusion of interpretability.
 If you share this opinion, then of course this method is not for you.
 
-\hypertarget{software-3}{%
-\subsection{Software}\label{software-3}}
+\hypertarget{software-4}{%
+\subsection{Software}\label{software-4}}
 
 I used the \texttt{iml} R package for the examples.
 If you can train a machine learning model, then you should be able to implement surrogate models yourself.
@@ -6599,8 +6614,8 @@ In ICE plots it might not be easy to \textbf{see the average}.
 This has a simple solution:
 Combine individual conditional expectation curves with the partial dependence plot.
 
-\hypertarget{software-and-alternatives-3}{%
-\subsection{Software and Alternatives}\label{software-and-alternatives-3}}
+\hypertarget{software-and-alternatives-2}{%
+\subsection{Software and Alternatives}\label{software-and-alternatives-2}}
 
 ICE plots are implemented in the R packages \texttt{iml} (used for these examples), \texttt{ICEbox}\footnote{Goldstein, Alex, et al.~``Package `ICEbox'.'' (2017).}, and \texttt{pdp}.
 Another R package that does something very similar to ICE is \texttt{condvis}. In Python, partial dependence plots are built into scikit-learn starting with version 0.24.0.
@@ -7499,8 +7514,8 @@ Constructing anchors requires \textbf{many calls to the ML model}, just like all
 
 Lastly, the notion of \textbf{coverage is undefined in some domains}. For example, there is no obvious or universal definition of how superpixels in one image compare to such in other images.
 
-\hypertarget{software-and-alternatives-4}{%
-\subsection{Software and Alternatives}\label{software-and-alternatives-4}}
+\hypertarget{software-and-alternatives-3}{%
+\subsection{Software and Alternatives}\label{software-and-alternatives-3}}
 
 There currently are two implementations available: \href{https://github.com/marcotcr/anchor}{anchor, a Python package} (also integrated by \href{https://github.com/SeldonIO/alibi}{Alibi}) and a \href{https://github.com/viadee/javaAnchorExplainer}{Java implementation}.
 The former is the anchors algorithm's authors' reference and the latter a high-performance implementation which comes with an R interface, called \href{https://github.com/viadee/anchorsOnR}{anchors}, which was used for the examples in this chapter.
@@ -7796,6 +7811,10 @@ Strumbelj et al.~(2014)\footnote{Štrumbelj, Erik, and Igor Kononenko. ``Explain
 where \(\hat{f}(x^{m}_{+j})\) is the prediction for x, but with a random number of feature values replaced by feature values from a random data point z, except for the respective value of feature j.
 The x-vector \(x^{m}_{-j}\) is almost identical to \(x^{m}_{+j}\), but the value \(x_j^{m}\) is also taken from the sampled z.
 Each of these M new instances is a kind of ``Frankenstein Monster'' assembled from two instances.
+Note that in the following algorithm, the order of features is not actually changed -- each feature remains at the same vector position when passed to the predict function.
+The order is only used as a ``trick'' here:
+By giving the features features a new order, we get a random mechanism that helps us put together the ``Frankenstein Monster''.
+For features that appear left of the feature \(x_j\), we take the values from the original observations, and for the features on the right, we take the values from a random instance.
 
 \textbf{Approximate Shapley estimation for single feature value}:
 
@@ -7918,8 +7937,8 @@ Another adaptation is conditional sampling: Features are sampled conditional on 
 While conditional sampling fixes the issue of unrealistic data points, a new issue is introduced:
 The resulting values are no longer the Shapley values to our game, since they violate the symmetry axiom, as found out by Sundararajan et. al (2019)\footnote{Sundararajan, Mukund, and Amir Najmi. ``The many Shapley values for model explanation.'' arXiv preprint arXiv:1908.08474 (2019).} and further discussed by Janzing et. al (2020)\footnote{Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. ``Feature relevance quantification in explainable AI: A causal problem.'' International Conference on Artificial Intelligence and Statistics. PMLR, 2020.}.
 
-\hypertarget{software-and-alternatives-5}{%
-\subsection{Software and Alternatives}\label{software-and-alternatives-5}}
+\hypertarget{software-and-alternatives-4}{%
+\subsection{Software and Alternatives}\label{software-and-alternatives-4}}
 
 Shapley values are implemented in both the \texttt{iml} and \href{https://github.com/bgreenwell/fastshap}{fastshap} packages for R.
 In Julia, you can use \href{https://gitlab.com/ExpandingMan/Shapley.jl}{Shapley.jl}.
@@ -8392,8 +8411,8 @@ It is \textbf{possible to create intentionally misleading interpretations} with 
 If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations).
 It is a disadvantage as the receiver of an explanation, as you can be less sure about their truthfulness.
 
-\hypertarget{software-4}{%
-\subsection{Software}\label{software-4}}
+\hypertarget{software-5}{%
+\subsection{Software}\label{software-5}}
 
 The authors implemented SHAP in the \href{https://github.com/slundberg/shap}{shap} Python package.
 This implementation works for tree-based models in the \href{https://scikit-learn.org/stable/}{scikit-learn} machine learning library for Python.
@@ -9234,8 +9253,8 @@ All in all, this is a \textbf{very unsatisfactory state of affairs}.
 We have to wait a little bit for more research on this topic.
 And please, no more invention of new methods, but more scrutiny of how to evaluate these methods.
 
-\hypertarget{software-5}{%
-\subsection{Software}\label{software-5}}
+\hypertarget{software-6}{%
+\subsection{Software}\label{software-6}}
 
 There are several software implementations of pixel attribution methods.
 For the example, I used \href{https://pypi.org/project/tf-keras-vis/}{tf-keras-vis}.
@@ -9401,8 +9420,8 @@ To use CW, one just simply substitutes a normalization layer, such as a batch no
 And thus, CW is very useful when users want to transform their pre-trained image classifiers to be intrinsically interpretable, while maintaining the model performance.
 CW is heavily inspired by whitening transformation, and we highly recommend you to study the mathematics behind whitening transformation if you are interested in learning more about CW.
 
-\hypertarget{software-6}{%
-\subsection{Software}\label{software-6}}
+\hypertarget{software-7}{%
+\subsection{Software}\label{software-7}}
 
 The official Python library of \href{https://pypi.org/project/tcav/}{TCAV} requires Tensorflow, but there are other versions implemented online.
 The easy-to-use Jupyter notebooks are also accessible on the \href{https://github.com/tensorflow/tcav/tree/master}{tensorflow/tcav}.
@@ -10095,8 +10114,8 @@ There is \textbf{no clear cutoff of the influence measure at which we call an in
 It is useful to sort the instances by influence, but it would be great to have the means not only to sort the instances, but actually to distinguish between influential and non-influential.
 For example, if you identify the top 10 most influential training instances for a test instance, some of them may not be influential because, for example, only the top 3 were really influential.
 
-\hypertarget{software-and-alternatives-6}{%
-\subsection{Software and Alternatives}\label{software-and-alternatives-6}}
+\hypertarget{software-and-alternatives-5}{%
+\subsection{Software and Alternatives}\label{software-and-alternatives-5}}
 
 Deletion diagnostics are very simple to implement.
 Take a look at \href{https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd}{the code} I wrote for the examples in this chapter.
