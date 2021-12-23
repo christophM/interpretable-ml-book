@@ -24,7 +24,7 @@ _book/index.html :  *.Rmd
 	R --no-save --args $< < ../scripts/process-rmd-leanpub.R
 	R --no-save --args $@ < ../scripts/fix-leanpub.R
 
-_book/interpretable-ml.pdf : *.Rmd
+_book/interpretable-ml.pdf : *.Rmd latex/*
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
 	rm -f interpretable-ml.Rmd
 	Rscript  -e "bookdown::render_book('./', 'bookdown::pdf_book')"
