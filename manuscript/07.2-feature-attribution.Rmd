@@ -25,11 +25,11 @@ Pixel attribution methods can be found under various names: sensitivity map, sal
 Pixel attribution is a special case of feature attribution, but for images.
 Feature attribution explains individual predictions by attributing each input feature according to how much it changed the prediction (negatively or positively).
 The features can be input pixels, tabular data or words.
-[SHAP](#shap), [Shapley Values](#shapley) and [LIME](#lime) are examples of general feature attribution methods.
+[SHAP](#shap), [Shapley values](#shapley) and [LIME](#lime) are examples of general feature attribution methods.
 
 We consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
 The output of the neural network for image I is called $S(I)=[S_1(I),\ldots,S_C(I)]$.
-All these methods take as input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) with p features and output as explanation a relevance value for each of the p input features: $R^c=[R_1^c,\ldots,R_p^c]$.
+All these methods take as input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) with p features and output as explanation a relevance score for each of the p input features: $R^c=[R_1^c,\ldots,R_p^c]$.
 The c indicates the relevance for the c-th output $S_C(I)$.
 
 <!-- Distinction -->
@@ -46,14 +46,14 @@ Another useful categorization for pixel attribution methods is the baseline ques
 
 **Gradient-only methods** tell us whether a change in a pixel would change the prediction. Examples are Vanilla Gradient and Grad-CAM.
 The interpretation of the gradient-only attribution is:
-If I were to change this pixel, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
-The larger the absolute value of the gradient, the stronger the effect of a change at this pixel.
+If I were to increase the color values of the pixel, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
+The larger the absolute value of the gradient, the stronger the effect of a change of this pixel.
 
 **Path-attribution methods** compare the current image to a reference image, which can be an artificial "zero" image such as a completely grey image.
 The difference in actual and baseline prediction is divided  among the pixels.
 The baseline image can also be multiple images: a distribution of images.
 This category includes model-specific gradient-based methods such as Deep Taylor and Integrated Gradients, as well as model-agnostic methods such as LIME and SHAP.
-Some path attribution methods are "complete", meaning that the sum of the relevance values for all input features is the difference between the prediction of the image minus the prediction of a reference image.
+Some path-attribution methods are "complete", meaning that the sum of the relevance scores for all input features is the difference between the prediction of the image and the prediction of a reference image.
 Examples are SHAP and Integrated Gradients.
 For path-attribution methods, the interpretation is always done with respect to the baseline:
 The difference between classification scores of the actual image and the baseline image are attributed to the pixels.
@@ -62,12 +62,12 @@ The usual assumption is to use a "neutral" image (distribution).
 Of course, it is perfectly possible to use your favorite selfie, but you should ask yourself if it makes sense in an application.
 It would certainly assert dominance among the other project members.
 
-Add this point I would normally give an intuition about how these methods work, but I think it is best if we just start with the Vanilla Gradient method, because it shows very nicely the general recipe that many other methods follow.
+At this point, I would normally give an intuitive explanation about how these methods work, but I think it is best if we just start with the Vanilla Gradient method, because it shows very nicely the general recipe that many other methods follow.
 
 
 ### Vanilla Gradient (Saliency Maps)
 
-The idea of Vanilla Gradient, introduced by [^saliency] as one of the first pixel attribution approaches is quite simple if you already know backpropagation.
+The idea of Vanilla Gradient, introduced by Simonyan et al. (2013) [^saliency] as one of the first pixel attribution approaches, is quite simple if you already know backpropagation.
 (They called their approach "Image-Specific Class Saliency", but I like Vanilla Gradient better).
 We calculate the gradient of the loss function for the class we are interested in with respect to the input pixels.
 This gives us a map of the size of the input features with negative to positive values.
@@ -93,13 +93,13 @@ $$w = \frac{\delta S_C}{\delta I}|_{I_0}$$
 Now, there is some ambiguity how to perform a backward pass of the gradients, since non-linear units such as ReLU (Rectifying Linear Unit) "remove" the sign.
 So when we do a backpass, we do not know whether to assign a positive or negative activation.
 Using my incredible ASCII art skill, the ReLU function looks like this: _/ and is defined as $X_{n+1}(x)=max(0,X_n)$ from layer $X_n$ to layer $X_{n-1}$.
-This means that when the activation of a neuron is 0, we do not know which value to backpropagate.
+This means that when the activation of a neuron is zero, we do not know which value to backpropagate.
 In the case of Vanilla Gradient, the ambiguity is resolved as follows:
 
 $$\frac{\delta f}{\delta X_n} = \frac{\delta f}{\delta X_{n+1}} \cdot \mathbf{I}(X_n > 0)$$
 
-Here, $\mathbf{I}$ is the element-wise indicator function, which is 0 where the activation at the lower layer was negative, and 1 where it is positive or zero.
-Vanilla Gradient takes the gradient we have back-propagated so far up to layer n+1, and then simply sets the gradients to zero where the activation at the layer below is negative.
+Here, $\mathbf{I}$ is the element-wise indicator function, which is zero where the activation at the lower layer was negative, and one where it is positive or zero.
+Vanilla Gradient takes the gradient we have backpropagated so far up to layer n+1, and then simply sets the gradients to zero where the activation at the layer below is negative.
 
 Let us look at an example where we have layers $X_n$ and $X_{n+1}=ReLU(X_{n+1})$. 
 Our fictive activation at $X_n$ is:
@@ -133,28 +133,28 @@ $$
 
 #### Problems with Vanilla Gradient
 
-Vanilla Gradient has a saturation problem (explained in Avanti et. al, 2017 [^deeplift]):
+Vanilla Gradient has a saturation problem, as explained in Avanti et al. (2017) [^deeplift]:
 When ReLU is used, and when the activation goes below zero, then the activation is capped at zero and does not change any more.
 The activation is saturated.
 For example: The input to the layer is two neurons with weights $-1$ and $-1$ and a bias of $1$.
-When passing through the ReLU layer, the activation will be neuron1 + neuron2 if the sum of both neurons is less than 1.
-If the sum of both is greater than 1, the activation will remain saturated at an activation of 1.
+When passing through the ReLU layer, the activation will be neuron1 + neuron2 if the sum of both neurons is $<1$
+If the sum of both is greater than 1, the activation will remain saturated at an activation of 1
 Also the gradient at this point will be zero, and Vanilla Gradient will say that this neuron is not important.
 
 And now, my dear readers, learn another method, more or less for free: DeconvNet
 
 ### DeconvNet
 
-DeconvNet by Zeiler an Fergus (2014) [^deconvnet] is almost identical to Vanilla Gradient.
+DeconvNet by Zeiler and Fergus (2014) [^deconvnet] is almost identical to Vanilla Gradient.
 The goal of DeconvNet is to reverse a neural network and the paper proposes operations that are reversals of the filtering, pooling and activation layers.
 If you take a look into the paper, it looks very different to Vanilla Gradient, but apart from the reversal of the ReLU layer, DeconvNet is equivalent to the Vanilla Gradient approach.
 Vanilla Gradient can be seen as a generalization of DeconvNet.
 DeconvNet makes a different choice for backpropagating the gradient through ReLU:
 
-$R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$$,
+$$R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$$,
 
 where $R_n$ and $R_{n+1}$ are the layer reconstructions.
-When backpassing from layer n to layer n-1, DeconvNet "remembers" which of the activations in layer n were set to zero in the forward pass and sets them to 0 in layer n-1.
+When backpassing from layer n to layer n-1, DeconvNet "remembers" which of the activations in layer n were set to zero in the forward pass and sets them to zero in layer n-1.
 Activations with a negative value in layer x are set to zero in layer n-1.
 The gradient $X_n$ for the example from earlier becomes:
 
@@ -276,7 +276,7 @@ The third image shows an octopus on the ocean floor, which is incorrectly classi
 
 And these are the pixel attributions that aim to explain the classification:
 
-```{r, fig.cap = "Pixel attributions or saliency maps for the vanilla method, smoothgrad and Grad-Cam."}
+```{r, fig.cap = "Pixel attributions or saliency maps for the Vanilla Gradient  method, smoothgrad and Grad-Cam."}
 knitr::include_graphics("images/smoothgrad.png")
 ```
 
@@ -334,7 +334,7 @@ The paper "Sanity Checks for Saliency Maps" [^sanity-checks] investigated whethe
 Insensitivity is highly undesirable because it would mean that the "explanation" is unrelated to model and data.
 Methods that are insensitive to model and training data are similar to edge detectors.
 Edge detectors simply highlight strong pixel color changes in images and are unrelated to a prediction model or abstract features of the image, and require not training.
-The methods tested were  Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with vanilla gradient).
+The methods tested were  Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with Vanilla Gradient).
 Vanilla gradients and Grad-CAM passed the insensitivity check, while Guided Backpropagation and Guided GradCAM fail.
 However, the sanity checks paper itself has found some criticism from Tomsett et. al (2020) [^sanity-metrics] with a paper called "Sanity Checks for Saliency Metrics" (of course).
 They found that there is a lack of consistency for evaluation metrics (I know, it is getting pretty meta now).
