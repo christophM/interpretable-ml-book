@@ -7,6 +7,9 @@ Rscript scripts/prepare_data.R
 cd manuscript
 # Create references
 make -B 11-references.Rmd
+
+make pdf
+
 # Compile html version of book for gh-pages
 make html
 cd ..
