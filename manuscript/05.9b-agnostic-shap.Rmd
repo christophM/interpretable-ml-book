@@ -9,8 +9,8 @@ set.seed(42)
 
 `r if(is.html){only.in.html}`
 
-SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2016)[^lundberg2016] is a method to explain individual predictions.
-SHAP is based on the game theoretically optimal [Shapley Values](#shapley).
+SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2017)[^lundberg2017] is a method to explain individual predictions.
+SHAP is based on the game theoretically optimal [Shapley values](#shapley).
 
 There are two reasons why SHAP got its own chapter and is not a subchapter of [Shapley values](#shapley).
 First, the SHAP authors proposed KernelSHAP, an alternative, kernel-based estimation approach for Shapley values inspired by [local surrogate models](#lime).
@@ -33,22 +33,22 @@ The feature values of a data instance act as players in a coalition.
 Shapley values tell us how to fairly distribute the "payout" (= the prediction) among the features.
 A player can be an individual feature value, e.g. for tabular data.
 A player can also be a group of feature values.
-For example to explain an image, pixels can be grouped to super pixels and the prediction distributed among them.
+For example to explain an image, pixels can be grouped to superpixels and the prediction distributed among them.
 One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feature attribution method, a linear model.
-That view connects LIME and Shapley Values.
+That view connects LIME and Shapley values.
 SHAP specifies the explanation as:
 
 $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
 where g is the explanation model, $z'\in\{0,1\}^M$ is the coalition vector, M is the maximum coalition size and $\phi_j\in\mathbb{R}$ is the feature attribution for a feature j, the Shapley values.
 What I call "coalition vector" is called "simplified features" in the SHAP paper.
-I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to super pixels.
+I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to superpixels.
 I believe it is helpful to think about the z's as describing coalitions:
 In the coalition vector, an entry of 1 means that the corresponding feature value is "present" and 0 that it is "absent".
 This should sound familiar to you if you know about Shapley values.
-To compute Shapley values, we simulate that only some features values are playing ("present") and some are not ("absent").
+To compute Shapley values, we simulate that only some feature values are playing ("present") and some are not ("absent").
 The representation as a linear model of coalitions is a trick for the computation of the $\phi$'s.
-For x, the instance of interest, the coalition vector x' is a vector of all 1's, i.e., all feature values are "present".
+For x, the instance of interest, the coalition vector x' is a vector of all 1's, i.e. all feature values are "present".
 The formula simplifies to:
 
 $$g(x')=\phi_0+\sum_{j=1}^M\phi_j$$
@@ -77,7 +77,7 @@ $$\hat{f}(x)=\phi_0+\sum_{j=1}^M\phi_jx_j'=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j$$
 $$x_j'=0\Rightarrow\phi_j=0$$
 
 Missingness says that a missing feature gets an attribution of zero.
-Note that $x_j'$ refers to the coalitions, where a value of 0 represents the absence of a feature value.
+Note that $x_j'$ refers to the coalitions where a value of 0 represents the absence of a feature value.
 In coalition notation, all feature values $x_j'$ of the instance to be explained should be '1'.
 The presence of a 0 would mean that the feature value is missing for the instance of interest.
 This property is not among the properties of the "normal" Shapley values.
@@ -85,7 +85,7 @@ So why do we need it for SHAP?
 Lundberg calls it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
 A missing feature could -- in theory -- have an arbitrary Shapley value without hurting the local accuracy property, since it is multiplied with $x_j'=0$.
 The Missingness property enforces that missing features get a Shapley value of 0.
-In practice this is only relevant for features that are constant.
+In practice, this is only relevant for features that are constant.
 
 **3)  Consistency**
 
@@ -105,7 +105,7 @@ From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as
 
 <!-- The general Idea of linear model -->
 KernelSHAP estimates for an instance x the contributions of each feature value to the prediction.
-KernelSHAP consists of 5 steps:
+KernelSHAP consists of five steps:
 
 - Sample coalitions $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
 - Get prediction for each $z_k'$ by first converting $z_k'$ to the original feature space and then applying model $\hat{f}: \hat{f}(h_x(z_k'))$
@@ -117,7 +117,7 @@ We can create a random coalition by repeated coin flips until we have a chain of
 For example, the vector of (1,0,1,0) means that we have a coalition of the first and third features.
 The K sampled coalitions become the dataset for the regression model.
 The target for the regression model is the prediction for a coalition.
-("Hold on!," you say, "The model has not been trained on these binary coalition data and can't make predictions for them.")
+("Hold on!," you say. "The model has not been trained on these binary coalition data and cannot make predictions for them.")
 To get from coalitions of feature values to valid data instances, we need a function $h_x(z')=z$ where $h_x:\{0,1\}^M\rightarrow\mathbb{R}^p$.
 The function $h_x$ maps 1's to the corresponding value from the instance x that we want to explain.
 For tabular data, it maps 0's to the values of another instance that we sample from the data.
@@ -144,7 +144,7 @@ For the marginal game, this feature value would always get a Shapley value of 0,
 
 For images, the following figure describes a possible mapping function:
 
-```{r fig.cap = "Function $h_x$ maps coalitions of super pixels (sp) to images. Super-pixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option."}
+```{r fig.cap = "Function $h_x$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option."}
 knitr::include_graphics("images/shap-superpixel.jpg")
 ```
 <!-- Kernel -->
@@ -155,10 +155,10 @@ SHAP weights the sampled instances according to the weight the coalition would g
 Small coalitions (few 1's) and large coalitions (i.e. many 1's) get the largest weights.
 The intuition behind it is:
 We learn most about individual features if we can study their effects in isolation.
-If a coalition consists of a single feature, we can learn about the features' isolated main effect on the prediction.
-If a coalition consists of all but one feature, we can learn about this features' total effect (main effect plus feature interactions).
-If a coalition consists of half the features, we learn little about an individual features contribution, as there are many possible coalitions with half of the features.
-To achieve Shapley compliant weighting, Lundberg et. al propose the SHAP kernel:
+If a coalition consists of a single feature, we can learn about this feature's isolated main effect on the prediction.
+If a coalition consists of all but one feature, we can learn about this feature's total effect (main effect plus feature interactions).
+If a coalition consists of half the features, we learn little about an individual feature's contribution, as there are many possible coalitions with half of the features.
+To achieve Shapley compliant weighting, Lundberg et al. propose the SHAP kernel:
 
 $$\pi_{x}(z')=\frac{(M-1)}{\binom{M}{|z'|}|z'|(M-|z'|)}$$
 
@@ -171,13 +171,13 @@ We can be a bit smarter about the sampling of coalitions:
 The smallest and largest coalitions take up most of the weight.
 We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly.
 We start with all possible coalitions with 1 and M-1 features, which makes 2 times M coalitions in total.
-When we have enough budget left (current budget is K - 2M), we can include coalitions with two features and with M-2 features and so on.
+When we have enough budget left (current budget is K - 2M), we can include coalitions with 2 features and with M-2 features and so on.
 From the remaining coalition sizes, we sample with readjusted weights.
 
 
 <!-- Linear Model -->
-We have the data, the target and the weights.
-Everything to build our weighted linear regression model:
+We have the data, the target and the weights;
+Everything we need to build our weighted linear regression model:
 
 $$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
 
@@ -187,21 +187,21 @@ $$L(\hat{f},g,\pi_{x})=\sum_{z'\in{}Z}[\hat{f}(h_x(z'))-g(z')]^2\pi_{x}(z')$$
 
 where Z is the training data.
 This is the good old boring sum of squared errors that we usually optimize for linear models.
-The estimated coefficients of the model, the $\phi_j$'s are the Shapley values.
+The estimated coefficients of the model, the $\phi_j$'s, are the Shapley values.
 
 
 Since we are in a linear regression setting, we can also make use of the standard tools for regression.
 For example, we can add regularization terms to make the model sparse.
 If we add an L1 penalty to the loss L, we can create sparse explanations.
-(I am not so sure whether the resulting coefficients would still be valid Shapley values though)
+(I am not so sure whether the resulting coefficients would still be valid Shapley values though.)
 
 ### TreeSHAP
 
-Lundberg et. al (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
+Lundberg et al. (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
 TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
 
 TreeSHAP defines the value function using the conditional expectation $E_{X_S|X_C}(\hat{f}(x)|x_S)$ instead of the marginal expectation.
-The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero.[^dummy1][^dummy2]
+The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero as shown by Sundararajan et al. (2019) [^cond1] and Janzing et al. (2019) [^cond2].
 The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
 
 How much faster is TreeSHAP?
@@ -211,7 +211,7 @@ Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL
 TreeSHAP uses the conditional expectation $E_{X_S|X_C}(\hat{f}(x)|x_S)$ to estimate effects.
 I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
 If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
-If we did no condition on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
+If we would not condition the prediction on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
 If S contains some, but not all, features, we ignore predictions of unreachable nodes.
 Unreachable means that the decision path that leads to this node contradicts values in $x_S$.
 From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node).
@@ -349,11 +349,11 @@ When we compute SHAP interaction values for all features, we get one matrix per 
 How can we use the interaction index?
 For example, to automatically color the SHAP feature dependence plot with the strongest interaction:
 
-```{r fig.cap = "SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of an STD increases the predicted cancer risk. For more years on contraceptives, the occurence of an STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits)."}
+```{r fig.cap = "SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of a STD increases the predicted cancer risk. For more years on contraceptives, the occurence of a STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits)."}
 knitr::include_graphics("images/shap-dependence-interaction.png")
 ```
 
-### Clustering SHAP values
+### Clustering Shapley Values
 
 You can cluster your data with the help of Shapley values.
 The goal of clustering is to find groups of similar instances.
@@ -362,7 +362,7 @@ Features are often on different scales.
 For example, height might be measured in meters, color intensity from 0 to 100 and some sensor output between -1 and 1.
 The difficulty is to compute distances between instances with such different, non-comparable features.
 
-SHAP clustering works by clustering on Shapley values of each instance.
+SHAP clustering works by clustering the Shapley values of each instance.
 This means that you cluster instances by explanation similarity.
 All SHAP values have the same unit -- the unit of the prediction space.
 You can use any clustering method.
@@ -371,7 +371,7 @@ The following example uses hierarchical agglomerative clustering to order the in
 The plot consists of many force plots, each of which explains the prediction of an instance.
 We rotate the force plots vertically and place them side by side according to their clustering similarity.
 
-```{r, fig.cap="Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. A cluster stands out: On the right is a group with a high predicted cancer risk."}
+```{r, fig.cap="Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. One cluster stands out: On the right is a group with a high predicted cancer risk."}
 knitr::include_graphics("images/shap-clustering.png")
 ```
 ### Advantages
@@ -415,7 +415,7 @@ Shapley values **can be misinterpreted** and access to data is needed to compute
 
 It is **possible to create intentionally misleading interpretations** with SHAP, which can hide biases [^fool].
 If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations).
-It is a disadvantage as the receiver of an explanation, as you can be less sure about their truthfulness.
+For the receivers of a SHAP explanation, it is a disadvantage: they cannot be sure about the truthfulness of the explanation.
 
 ### Software
 
@@ -423,15 +423,15 @@ The authors implemented SHAP in the [shap](https://github.com/slundberg/shap) Py
 This implementation works for tree-based models in the [scikit-learn](https://scikit-learn.org/stable/) machine learning library for Python.
 The shap package was also used for the examples in this chapter.
 SHAP is integrated into the tree boosting frameworks [xgboost](https://github.com/dmlc/xgboost/tree/master/python-package) and [LightGBM](https://github.com/microsoft/LightGBM).
-In R, there is the [shapper](https://modeloriented.github.io/shapper/) and [fastshap](https://github.com/bgreenwell/fastshap) packages.
+In R, there are the [shapper](https://modeloriented.github.io/shapper/) and [fastshap](https://github.com/bgreenwell/fastshap) packages.
 SHAP is also included in the R [xgboost](https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html) package.
 
-[^lundberg2016]: Lundberg, Scott M., and Su-In Lee. "A unified approach to interpreting model predictions." Advances in Neural Information Processing Systems. 2017.
+[^lundberg2017]: Lundberg, Scott M., and Su-In Lee. "A unified approach to interpreting model predictions." Advances in Neural Information Processing Systems (2017).
 
 [^tree-shap]: Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. "Consistent individualized feature attribution for tree ensembles." arXiv preprint arXiv:1802.03888 (2018).
 
-[^dummy1]: Sundararajan, Mukund, and Amir Najmi. "The many Shapley values for model explanation." arXiv preprint arXiv:1908.08474 (2019).
+[^cond1]: Sundararajan, Mukund, and Amir Najmi. "The many Shapley values for model explanation." arXiv preprint arXiv:1908.08474 (2019).
 
-[^dummy2]: Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. "Feature relevance quantification in explainable AI: A causality problem." arXiv preprint arXiv:1910.13413 (2019).
+[^cond2]: Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. "Feature relevance quantification in explainable AI: A causality problem." arXiv preprint arXiv:1910.13413 (2019).
 
-[^fool]: Slack, Dylan, et al. "Fooling lime and shap: Adversarial attacks on post hoc explanation methods." Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society. 2020.
+[^fool]: Slack, Dylan, Sophie Hilgard, Emily Jia, Sameer Singh, and Himabindu Lakkaraju. "Fooling lime and shap: Adversarial attacks on post hoc explanation methods." In Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society, pp. 180-186 (2020).

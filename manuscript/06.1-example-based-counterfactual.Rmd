@@ -30,7 +30,7 @@ Even if in reality the relationship between the inputs and the outcome to be pre
 
 Given this simple graph, it is easy to see how we can simulate counterfactuals for predictions of machine learning models:
 We simply change the feature values of an instance before making the predictions and we analyze how the prediction changes.
-We are interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (for example, credit application accepted or rejected) or in which the prediction reaches a certain threshold (for example, the probability for cancer reaches 10%).
+We are interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (for example, credit application accepted or rejected), or in which the prediction reaches a certain threshold (for example, the probability for cancer reaches 10%).
 **A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.**
 
 There are both model-agnostic and model-specific counterfactual explanation methods, but in this chapter we focus on model-agnostic methods that only work with the model inputs and outputs (and not the internal structure of specific models). 
@@ -45,19 +45,19 @@ He wonders why his application was rejected and how he might improve his chances
 The question of "why" can be formulated as a counterfactual:
 What is the smallest change to the features (income, number of credit cards, age, ...) that would change the prediction from rejected to approved?
 One possible answer could be:
-If Peter would earn 10,000 Euro more per year, he would get the loan.
-Or if Peter had fewer credit cards and had not defaulted on a loan 5 years ago, he would get the loan.
+If Peter would earn 10,000 more per year, he would get the loan.
+Or if Peter had fewer credit cards and had not defaulted on a loan five years ago, he would get the loan.
 Peter will never know the reasons for the rejection, as the bank has no interest in transparency, but that is another story.
 
-In our second example we want to explain a model that predicts a continuous outcome with counterfactual explanations.
+In our second example, we want to explain a model that predicts a continuous outcome with counterfactual explanations.
 Anna wants to rent out her apartment, but she is not sure how much to charge for it, so she decides to train a machine learning model to predict the rent.
 Of course, since Anna is a data scientist, that is how she solves her problems.
-After entering all the details about size, location, whether pets are allowed and so on, the model tells her that she can charge 900 Euro.
-She expected 1000 Euro or more, but she trusts her model and decides to play with the feature values of the apartment to see how she can improve the value of the apartment.
-She finds out that the apartment could be rented out for over 1000 Euro, if it were 15 m^2^ larger.
+After entering all the details about size, location, whether pets are allowed and so on, the model tells her that she can charge 900 EUR.
+She expected 1000 EUR or more, but she trusts her model and decides to play with the feature values of the apartment to see how she can improve the value of the apartment.
+She finds out that the apartment could be rented out for over 1000 EUR, if it were 15 m^2^ larger.
 Interesting, but non-actionable knowledge, because she cannot enlarge her apartment.
-Finally, by tweaking only the feature values under her control (built-in kitchen yes/no, pets allowed yes/no, type of floor, etc.), she finds out that if she allows pets and installs windows with better insulation, she can charge 1000 Euro.
-Anna had intuitively worked with counterfactuals to change the outcome.
+Finally, by tweaking only the feature values under her control (built-in kitchen yes/no, pets allowed yes/no, type of floor, etc.), she finds out that if she allows pets and installs windows with better insulation, she can charge 1000 EUR. 
+Anna has intuitively worked with counterfactuals to change the outcome.
 
 Counterfactuals are [human-friendly explanations](#good-explanation), because they are contrastive to the current instance and because they are selective, meaning they usually focus on a small number of feature changes.
 But counterfactuals suffer from the 'Rashomon effect'. 
@@ -74,14 +74,20 @@ An obvious first requirement is that **a counterfactual instance produces the pr
 It is not always possible to find a counterfactual with the predefined prediction.
 For example, in a classification setting with two classes, a rare class and a frequent class, the model might always classify an instance as the frequent class.
 Changing the feature values so that the predicted label would flip from the frequent class to the rare class might be impossible.
-We want therfore relax the requirement that the prediction of the counterfactual must exactly match the predefined outcome.
+We therefore want to relax the requirement that the prediction of the counterfactual must match the predefined outcome exactly .
 In the classification example, we could look for a counterfactual where the predicted probability of the rare class is increased to 10% instead of the current 2%.
 The question then is, what are the minimal changes in the features so that the predicted probability changes from 2% to 10% (or close to 10%)?
+
 Another quality criterion is that **a counterfactual should be as similar as possible to the instance regarding feature values**.
 The distance between two instances can be measured, for example, with the Manhattan distance or the Gower distance if we have both discrete and continuous features.
 The counterfactual should not only be close to the original instance, but should also **change as few features as possible**.
 To measure how good a counterfactual explanation is in this metric, we can simply count the number of changed features or, in fancy mathematical terms, measure the $L_0$ norm between counterfactual and actual instance.
-Third, it is often desirable to generate **multiple diverse counterfactual explanations** so that the decision-subject gets access to multiple viable ways of generating a different outcome. For instance, continuing our loan example, one counterfactual explanation might suggest only to double the income to get a loan, while another counterfactual might suggest shifting to a nearby city and increase the income by a small amount to get a loan. It could be noted that while the first counterfactual might be possible for some, the latter might be more actionable for some. Thus, besides providing a decision-subject with different ways to get the desired outcome, diversity also enables "diverse" individuals to alter the features that are convenient for them. 
+
+Third, it is often desirable to generate **multiple diverse counterfactual explanations** so that the decision-subject gets access to multiple viable ways of generating a different outcome.
+For instance, continuing our loan example, one counterfactual explanation might suggest only to double the income to get a loan, while another counterfactual might suggest shifting to a nearby city and increase the income by a small amount to get a loan.
+It could be noted that while the first counterfactual might be possible for some, the latter might be more actionable for others.
+Thus, besides providing a decision-subject with different ways to get the desired outcome, diversity also enables "diverse" individuals to alter the features that are convenient for them. 
+
 The last requirement is that **a counterfactual instance should have feature values that are likely**. 
 It would not make sense to generate a counterfactual explanation for the rent example where the size of an apartment is negative or the number of rooms is set to 200.
 It is even better when the counterfactual is likely according to the joint distribution of the data, for example, an apartment with 10 rooms and 20 m^2^ should not be regarded as counterfactual explanation. 
@@ -96,9 +102,9 @@ But there are better approaches than trial and error.
 First, we define a loss function based on the criteria mentioned above.
 This loss takes as input the instance of interest, a counterfactual and the desired (counterfactual) outcome. 
 Then, we can find the counterfactual explanation that minimizes this loss using an optimization algorithm. 
-Many methods proceed in this way but differ in their definition of the loss function and optimization method. 
+Many methods proceed in this way, but differ in their definition of the loss function and optimization method. 
 
-In the following, we focus on two of them: first, the one by Wachter et. al (2017)[^wachter] who introduced counterfactual explanation as an interpretation method and, second, the one by Dandl et al. (2020)[^dandl] that takes into account all four criteria mentioned above.
+In the following, we focus on two of them: first, the one by Wachter et al. (2017)[^wachter], who introduced counterfactual explanation as an interpretation method and, second, the one by Dandl et al. (2020)[^dandl] that takes into account all four criteria mentioned above.
 
 
 #### Method by Wachter et al. 
@@ -125,14 +131,14 @@ The proposed distance function has the advantage over the Euclidean distance tha
 <!-- it introduces sparsity.
 This means that two points are closer to each other when fewer features are different. -->
 it is more robust to outliers.
-Scaling with the MAD is necessary to bring all the features to the same scale - it should not matter whether you measure the size of an apartment in square meters or square feet.
+Scaling with the MAD is necessary to bring all the features to the same scale -- it should not matter whether you measure the size of an apartment in square meters or square feet.
 
 The parameter $\lambda$ balances the distance in prediction (first term) against the distance in feature values (second term).
 The loss is solved for a given $\lambda$ and returns a counterfactual x'.
 A higher value of $\lambda$ means that we prefer counterfactuals with predictions close to the desired outcome y', a lower value means that we prefer counterfactuals x' that are very similar to x in the feature values.
 If $\lambda$ is very large, the instance with the prediction closest to y' will be selected, regardless how far it is away from x.
 Ultimately, the user must decide how to balance the requirement that the prediction for the counterfactual matches the desired outcome with the requirement that the counterfactual is similar to x.
-The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away the prediction of the counterfactual instance is allowed to be from y'.
+The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away from $y'$ the prediction of the counterfactual instance is allowed to be.
 This constraint can be written as:
 
 $$|\hat{f}(x^\prime)-y^\prime|\leq\epsilon$$
@@ -162,7 +168,7 @@ Unrealistic feature combinations are not penalized.
 
 The method does **not handle categorical features** with many different levels well. 
 The authors of the method suggested running the method separately for each combination of feature values of the categorical features, but this will lead to a combinatorial explosion if you have multiple categorical features with many values.
-For example, 6 categorical features with 10 unique levels would mean 1 million runs. 
+For example, six categorical features with ten unique levels would mean one million runs. 
 
 Let us now have a look on another approach overcoming these issues. 
 
@@ -192,12 +198,12 @@ $$\delta_G(x_j,x'_j)=\begin{cases}\frac{1}{\widehat{R}_j}|x_j-x'_j|&\text{if $x_
 
 Dividing the distance of a numeric feature $j$ by $\widehat{R}_j$, the observed value range, scales $\delta_G$ for all features between 0 and 1.
 
-The Gower distance can handle both numerical and categorical features but does not count how many features were changed.
-Therefore, we count the number of features in a third objectives $o_3$ using the $L_0$ norm:
+The Gower distance can handle both numerical and categorical features, but does not count how many features were changed.
+Therefore, we count the number of features in a third objective $o_3$ using the $L_0$ norm:
 
 $$o_3(x,x')=||x-x'||_0=\sum_{j=1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
 
-By minimizing $o_3$ we aim for our third criteria - sparse feature changes.
+By minimizing $o_3$ we aim for our third criterion -- sparse feature changes.
 
 The fourth objective $o_4$ reflects that our counterfactuals should have likely feature values/combinations.
 We can infer how "likely" a data point is using the training data or another dataset.
@@ -213,7 +219,7 @@ How can we do that?
 We use the **Nondominated Sorting Genetic Algorithm**[^deb] or short NSGA-II.
 NSGA-II is a nature-inspired algorithm that applies Darwin's law of the "survival of the fittest".
 We denote the fitness of a counterfactual by its vector of objectives values $(o_1,o_2,o_3,o_4)$.
-The lower a counterfactuals four objectives, the "fitter" it is.
+The lower the values of the objectives for a counterfactual, the "fitter" it is.
 
 The algorithm consists of four steps that are repeated until a stopping criterion is met, for example, a maximum number of iterations/generations.
 The following figure visualizes the four steps of one generation. 
@@ -223,10 +229,10 @@ knitr::include_graphics("images/cfexp-nsgaII.jpg")
 ```
 
 In the first generation a group of counterfactual candidates is initialized by randomly changing some of the features compared to our instance x to be explained.
-Sticking with above's credit example, one counterfactual could suggest to increase the income by € 30,000 while another one proposes to have no default in the last 5 years and a reduction in age by 10.
+Sticking with above's credit example, one counterfactual could suggest to increase the income by € 30,000 while another one proposes to have no default in the last five years and a reduction in age by ten.
 All other feature values are equal to the values of x.
 Each candidate is then evaluated using the four objective functions of above.
-Among them, we randomly select some candidates, where fitter candidates are more likely selected.
+Among them, we randomly select some candidates, where fitter candidates are more likely to be selected.
 The candidates are pairwise recombined to produce children that are similar to them by averaging their numerical feature values or by crossing over their categorical features. 
 In addition, we slightly mutate the feature values of the children to explore the whole feature space.
 
@@ -257,7 +263,7 @@ The goal is to find counterfactual explanations for a customer with the followin
 The SVM predicts that the woman has a good credit risk with a probability of 24.2 \%. 
 The counterfactuals should answer how the input features need to be changed to get a predicted probability larger than 50 \%?
 
-The following table shows the 10 best counterfactuals:
+The following table shows the ten best counterfactuals:
 
 |age|sex|job |amount|duration|$o_2$|$o_3$|$o_4$|$\hat{f}(x')$|
 |---|---|----|-------------|--------|---------------|----------|----------|----|
@@ -281,8 +287,8 @@ We can think of our counterfactuals as a set of trade-off solutions.
 
 They all suggest a reduction of the duration from 48 months to minimum 23 months, some of them propose that the woman should become skilled instead of unskilled. 
 Some counterfactuals even suggest to change the gender from female to male which shows a gender bias of the model. 
-This change is always accompanied by a reduction in age between 1 and 30 years.
-We can also see that although some counterfactuals suggest changes to 4 features, these counterfactuals are the ones that are closest to the training data. 
+This change is always accompanied by a reduction in age between one and 30 years.
+We can also see that, although some counterfactuals suggest changes to four features, these counterfactuals are the ones that are closest to the training data. 
 
 ### Advantages
 
@@ -298,7 +304,7 @@ You can either report the counterfactual instance or highlight which features ha
 The **counterfactual method does not require access to the data or the model**.
 It only requires access to the model's prediction function, which would also work via a web API, for example.
 This is attractive for companies which are audited by third parties or which are offering explanations for users without disclosing the model or data. 
-A company has an interest in protecting model and data because of trade secrets or data protection reasons.
+A company has an interest in protecting model and data, because of trade secrets or data protection reasons.
 Counterfactual explanations offer a balance between explaining model predictions and protecting the interests of the model owner.
 
 The method **works also with systems that do not use machine learning**.
@@ -318,7 +324,7 @@ Are we reporting them all?
 Only the best?
 What if they are all relatively "good", but very different?
 These questions must be answered anew for each project.
-It can also be advantageous to have multiple counterfactual explanations, because then humans can select the ones that correspond to their previous knowledge.
+It can also be advantageous to have multiple counterfactual explanations, because humans then can select the ones that correspond to their previous knowledge.
 
 ### Software and Alternatives {#example-software}
 
@@ -326,33 +332,33 @@ The multi-objective counterfactual explanation method by Dandl et al. is impleme
 
 In the Python package [Alibi](https://github.com/SeldonIO/alibi) authors implemented a [simple counterfactual method](https://docs.seldon.io/projects/alibi/en/stable/methods/CF.html) as well as an [extended method](https://docs.seldon.io/projects/alibi/en/stable/methods/CFProto.html) that uses class prototypes to improve the interpretability and convergence of the algorithm outputs[^vanlooveren].
 
-Karimi et al. (2019)[^karimi] also provided a Python implementation of their algorithm MACE in a [Github repository](https://github.com/amirhk/mace). 
+Karimi et al. (2020)[^karimi] also provided a Python implementation of their algorithm MACE in a [Github repository](https://github.com/amirhk/mace). 
 They translated necessary criteria for proper counterfactuals into logical formulae and use satisfiability solvers to find counterfactuals that satisfy them.
 
 Mothilal et al. (2020)[^Mothilal] developed [DiCE (Diverse Counterfactual Explanation)](https://github.com/interpretml/DiCE) to generate a diverse set of counterfactual explanations based on determinantal point processes.
-DiCE implements both model-agnostic and a gradient-based methods.
+DiCE implements both a model-agnostic and a gradient-based method.
 
-Another way to search counterfactuals is the Growing Spheres algorithm by Laugel et. al (2017)[^spheres].
+Another way to search counterfactuals is the Growing Spheres algorithm by Laugel et al. (2017)[^spheres].
 They do not use the word counterfactual in their paper, but the method is quite similar.
 They also define a loss function that favors counterfactuals with as few changes in the feature values as possible.
 Instead of directly optimizing the function, they suggest to first draw a sphere around the point of interest, sample points within that sphere and check whether one of the sampled points yields the desired prediction. 
 Then they contract or expand the sphere accordingly until a (sparse) counterfactual is found and finally returned.
 
-Anchors by Ribeiro et. al (2018)[^anchors] are the opposite of counterfactuals, see chapter about [Scoped Rules (Anchors)](#anchors).
+Anchors by Ribeiro et al. (2018)[^anchors] are the opposite of counterfactuals, see chapter about [Scoped Rules (Anchors)](#anchors).
 
 
 [^anchors]: Ribeiro, Marco Tulio, Sameer Singh, and Carlos Guestrin. "Anchors: High-precision model-agnostic explanations." AAAI Conference on Artificial Intelligence (2018).
 
-[^spheres]: Laugel, Thibault, et al. "Inverse classification for comparison-based interpretability in machine learning." arXiv preprint arXiv:1712.08443 (2017).
+[^spheres]: Laugel, Thibault, Marie-Jeanne Lesot, Christophe Marsala, Xavier Renard, and Marcin Detyniecki. "Inverse classification for comparison-based interpretability in machine learning." arXiv preprint arXiv:1712.08443 (2017).
 
 [^wachter]: Wachter, Sandra, Brent Mittelstadt, and Chris Russell. "Counterfactual explanations without opening the black box: Automated decisions and the GDPR." (2017).
 
-[^vanlooveren]: Van Looveren, Arnaud, and Janis Klaise. "Interpretable Counterfactual Explanations Guided by Prototypes."  arXiv preprint arXiv:1907.02584 (2019).
+[^vanlooveren]: Van Looveren, Arnaud, and Janis Klaise. "Interpretable counterfactual explanations guided by prototypes."  arXiv preprint arXiv:1907.02584 (2019).
 
-[^dandl]: Dandl, Susanne, Christoph Molnar, Martin Binder, Bernd Bischl. "Multi-Objective Counterfactual Explanations". In: Bäck T. et al. (eds) Parallel Problem Solving from Nature – PPSN XVI. PPSN 2020. Lecture Notes in Computer Science, vol 12269. Springer, Cham (2020).
+[^dandl]: Dandl, Susanne, Christoph Molnar, Martin Binder, Bernd Bischl. "Multi-objective counterfactual explanations". In: Bäck T. et al. (eds) Parallel Problem Solving from Nature – PPSN XVI. PPSN 2020. Lecture Notes in Computer Science, vol 12269. Springer, Cham (2020).
 
-[^karimi]: Karimi, Amir-Hossein, Gilles Barthe, Borja Balle and Isabel Valera. “Model-Agnostic Counterfactual Explanations for Consequential Decisions.” AISTATS (2020).
+[^karimi]: Karimi, Amir-Hossein, Gilles Barthe, Borja Balle and Isabel Valera. “Model-agnostic counterfactual explanations for consequential decisions.” AISTATS (2020).
 
-[^deb]: Deb, Kalyanmoy, Amrit Pratap, Sameer Agarwal and T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II," in IEEE Transactions on Evolutionary Computation, vol. 6, no. 2, pp. 182-197, April 2002, doi: 10.1109/4235.996017.
+[^deb]: Deb, Kalyanmoy, Amrit Pratap, Sameer Agarwal and T. Meyarivan, "A fast and elitist multiobjective genetic algorithm: NSGA-II," in IEEE Transactions on Evolutionary Computation, vol. 6, no. 2, pp. 182-197, (2002).
 
-[^Mothilal]: Mothilal, Ramaravind K., Amit Sharma, and Chenhao Tan. "Explaining machine learning classifiers through diverse counterfactual explanations." Proceedings of the 2020 Conference on Fairness, Accountability, and Transparency. 2020.
+[^Mothilal]: Mothilal, Ramaravind K., Amit Sharma, and Chenhao Tan. "Explaining machine learning classifiers through diverse counterfactual explanations." Proceedings of the 2020 Conference on Fairness, Accountability, and Transparency. (2020).
