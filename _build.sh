@@ -13,7 +13,6 @@ make pdf
 make html
 # Compile epub version of book for leanpub
 make epub
-# Convert to epub to mobi as well
-make mobi 
+
 cd ..
 

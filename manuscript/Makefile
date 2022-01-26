@@ -1,14 +1,12 @@
 .PHONY : sbrl
 
-all : html pdf epub mobi
+all : html pdf epub
 
 html : _book/index.html
 
 pdf : _book/interpretable-ml.pdf
 
 epub : _book/interpretable-ml.epub
-
-mobi : _book/interpretable-ml.mobi
 
 
 package: ../DESCRIPTION ../R/*.R
@@ -33,9 +31,6 @@ _book/interpretable-ml.epub : *.Rmd
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
 	rm -f interpretable-ml.Rmd
 	Rscript  -e "bookdown::render_book('./', 'bookdown::epub_book')"
-
-_book/interpretable-ml.mobi: _book/interpretable-ml.epub
-	Rscript -e "bookdown::calibre('$<', output = '$@')"
 
 11-references.Rmd : *.Rmd
 	Rscript ../scripts/references.R
