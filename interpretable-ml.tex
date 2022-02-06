@@ -4,8 +4,8 @@
 \PassOptionsToPackage{dvipsnames,svgnames*,x11names*}{xcolor}
 %
 \documentclass[
-  12pt,
-]{krantz}
+  11pt,
+]{scrbook}
 \usepackage{lmodern}
 \usepackage{amssymb,amsmath}
 \usepackage{ifxetex,ifluatex}
@@ -73,16 +73,13 @@
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \setcounter{secnumdepth}{5}
-% to allow chinese characters
-%\usepackage[UTF8]{ctex}
-
-% dont show rmdnotes
-\newenvironment{rmdnote}{}{}
+% Geometry
+\usepackage[paperwidth=18.9cm, paperheight=24.61cm, inner=23mm, outer=17mm, top=20mm, bottom=24mm]{geometry}
 
 
 % Decide for a font
-\usepackage{Alegreya}
-\usepackage[scale=.7]{sourcecodepro}
+%\usepackage{Alegreya}
+%\usepackage[scale=.7]{sourcecodepro}
 
 
 % Make stuff less floaty
@@ -90,6 +87,33 @@
 \renewcommand{\topfraction}{0.8}
 \renewcommand{\bottomfraction}{0.8}
 \renewcommand{\floatpagefraction}{0.75}
+
+% For proofreading: Big margin on the right and 2x linespace
+%\linespread{2}
+%\geometry{
+%  a4paper,
+%    total={189mm,246mm},
+%  left=20mm,
+%  top=20mm,
+%  right=70mm,
+%  asymmetric
+%}
+
+% Header and footer configuration
+\usepackage[automark,headsepline]{scrlayer-scrpage}
+% Use scrpage2 instead of scrlayer-scrpage if you want to nicer chapter boxes, see main/main.tex. --- WILL NOT WORK WITH TEXLIVE 2019! ----
+%\usepackage[automark,headsepline]{scrpage2}
+\pagestyle{scrheadings}
+\ihead[\headmark]{\headmark}\ohead{\pagemark}
+% alternating chapter / section titles at the top of the page
+\automark[section]{chapter}
+% Make heading of each page italics and small capitals.
+\renewcommand*{\headfont}{\itshape\scshape}
+% Name of the chapter (\chapapp), number of the chapter (\thechapter) and no period (\autodot)
+\renewcommand*{\chaptermarkformat}{\chapapp~\thechapter\autodot\enskip}
+% Removes page numbers from bottom
+\ofoot{}
+
 
 % Turns href urls into foodnotes
 \let\oldhref\href
@@ -123,9 +147,9 @@
   \apptocmd{\@title}{\par {\large #1 \par}}{}{}
 }
 \makeatother
-\subtitle{A Guide for Making Black Box Models Explainable.}
+\subtitle{A Guide for Making Black Box Models Explainable}
 \author{Christoph Molnar}
-\date{2022-01-21}
+\date{2022-02-06}
 
 \begin{document}
 \maketitle
@@ -138,8 +162,73 @@
 %\includegraphics{images/dedication.pdf}
 %\end{center}
 
-\setlength{\abovedisplayskip}{-5pt}
-\setlength{\abovedisplayshortskip}{-5pt}
+%\setlength{\abovedisplayskip}{-5pt}
+%\setlength{\abovedisplayshortskip}{-5pt}
+
+
+% =========================================================================
+% Title page with cover
+% =========================================================================
+
+\iffalse
+\thispagestyle{empty}
+
+\vspace{3cm}
+  \begin{center}
+    {
+	\bfseries \sffamily \Huge Interpretable Machine Learning\par
+	\bfseries \LARGE A Guide for Making Black Box Models Explainable\par
+~\\
+	~\\
+	\bfseries \small Published by Christoph Molnar, Munich\par
+      }
+  \end{center}
+
+
+\newpage
+\fi
+% =========================================================================
+% Page with publishing details
+% =========================================================================
+
+
+
+\thispagestyle{empty}
+\begin{center}
+  {
+  \bfseries \sffamily \LARGE Interpretable Machine Learning\par
+  \bfseries \small A Guide for Making Black Box Models Explainable\par
+}
+
+\copyright~\the\year \textit{Christoph Molnar}, Germany, Munich\\
+\textsc{All Rights Reserved.}\\
+\url{christophmolnar.com}
+
+For more information about permission to reproduce selections from this book, write to \url{christoph.molnar.ai@gmail.com}.
+
+	\the\year, Second Edition
+
+% Impression line, indicating number and year of current printing
+% International Standard Book Number (ISBN)
+% International Standard Serial Number (ISSN), if applicable
+\ifxetex
+	\textsc{ISBN TODO} 
+\fi
+
+\includegraphics{images/by-nc-sa.png}
+
+This book is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.
+% For translations, indication of original-language title, publisher, and copyright, acknowledgments, permissions, and other credits, including acknowledgment of grants, if applicable and space permitting
+
+\end{center}
+
+% =========================================================================
+% Dedication / Empty page before outline
+% =========================================================================
+\newpage
+\thispagestyle{empty}
+\mbox{}
+\newpage
 
 {
 \hypersetup{linkcolor=}
@@ -1541,6 +1630,9 @@ k-nearest neighbors & No & No & No & class,regr\tabularnewline
 \bottomrule
 \end{longtable}
 
+You could argue that both logistic regression and Naive Bayes allow linear explanations.
+However, this is only true for the logarithm of the target: Increasing a feature by one point increases the \textbf{logarithm} of the target probability by a certain amount assuming all other features remain the same.
+
 \newpage
 
 \hypertarget{limo}{%
@@ -2847,15 +2939,16 @@ Linear effects are also covered by the framework, because for features to be han
 
 The big question is how to learn nonlinear functions.
 The answer is called ``splines'' or ``spline functions''.
-Splines are functions that can be combined in order to approximate arbitrary functions.
+Splines are functions that are constructed from simpler basis functions.
+Splines can be used to approximate other, more complex functions.
 A bit like stacking Lego bricks to build something more complex.
-There is a confusing number of ways to define these spline functions.
-If you are interested in learning more about all the ways to define splines, I wish you good luck on your journey.
+There is a confusing number of ways to define these spline basis functions.
+If you are interested in learning more about all the ways to define basis functions, I wish you good luck on your journey.
 I am not going to go into details here, I am just going to build an intuition.
-What personally helped me the most for understanding splines was to visualize the individual spline functions and to look into how the data matrix is modified.
-For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 4 columns, each representing a spline function.
-Usually you would have more spline functions, I only reduced the number for illustration purposes.
-The value for each instance of these new spline features depends on the instances' temperature values.
+What personally helped me the most for understanding splines was to visualize the individual basis functions and to look into how the data matrix is modified.
+For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 4 columns, each representing a spline basis function.
+Usually you would have more spline basis functions, I only reduced the number for illustration purposes.
+The value for each instance of these new spline basis features depends on the instances' temperature values.
 Together with all linear effects, the GAM then also estimates these spline weights.
 GAMs also introduce a penalty term for the weights to keep them close to zero.
 This effectively reduces the flexibility of the splines and reduces overfitting.
@@ -2883,8 +2976,8 @@ In the example where we are predicting the number of bicycles with a GAM using o
 \end{tabular}
 
 Each row represents an individual instance from the data (one day).
-Each spline column contains the value of the spline function at the particular temperature values.
-The following figure shows how these spline functions look like:
+Each spline basis column contains the value of the spline basis function at the particular temperature values.
+The following figure shows how these spline basis functions look like:
 
 \begin{figure}
 
@@ -2892,10 +2985,10 @@ The following figure shows how these spline functions look like:
 
 }
 
-\caption{To smoothly model the temperature effect, we use 4 spline functions. Each temperature value is mapped to (here) 4 spline values. If an instance has a temperature of 30 °C, the value for the first spline feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7.}\label{fig:splines}
+\caption{To smoothly model the temperature effect, we use 4 spline basis functions. Each temperature value is mapped to (here) 4 spline basis values. If an instance has a temperature of 30 °C, the value for the first spline basis feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7.}\label{fig:splines}
 \end{figure}
 
-The GAM assigns weights to each temperature spline feature:
+The GAM assigns weights to each temperature spline basis feature:
 
 \begin{tabular}{l|r}
 \hline
@@ -2913,7 +3006,7 @@ s(temp).4 & 558.27\\
 \hline
 \end{tabular}
 
-And the actual curve, which results from the sum of the spline functions weighted with the estimated weights, looks like this:
+And the actual spline curve, which results from the sum of the spline basis functions weighted with the estimated weights, looks like this:
 
 \begin{figure}
 
@@ -5617,7 +5710,7 @@ Hooker (2007) \footnote{Hooker, Giles. ``Generalized functional anova diagnostic
 It is a generalization of the functional ANOVA we encountered earlier, which means that the functional ANOVA is a special case of the generalized functional ANOVA.
 The components are defined as projections of f onto the space of additive functions:
 
-\[\hat{f}_S(x_S) = argmin_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(x)  - \sum_{S \subset P} \hat{f}_S(x_S)\right)^2 w(x)dx.\]
+\[\hat{f}_S(x_S) = argmin_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(x)  - \sum_{S \subset P} g_S(x_S)\right)^2 w(x)dx.\]
 
 Instead of orthogonality, the components satisfy a hierarchical orthogonality condition:
 
@@ -7566,11 +7659,6 @@ However, anchors may theoretically be constructed for any domain or type of data
 A prediction can be explained by assuming that each feature value of the instance is a ``player'' in a game where the prediction is the payout.
 Shapley values -- a method from coalitional game theory -- tells us how to fairly distribute the ``payout'' among the features.
 
-\begin{rmdnote}
-Interested in an in-depth, hands-on course on SHAP and Shapley values?
-Head over to \href{https://leanpub.com/c/shapley-xai}{the Shapley course page} and get notified once the course is available.
-\end{rmdnote}
-
 \hypertarget{general-idea}{%
 \subsection{General Idea}\label{general-idea}}
 
@@ -7847,10 +7935,10 @@ Strumbelj et al.~(2014)\footnote{Štrumbelj, Erik, and Igor Kononenko. ``Explain
 
 where \(\hat{f}(x^{m}_{+j})\) is the prediction for x, but with a random number of feature values replaced by feature values from a random data point z, except for the respective value of feature j.
 The x-vector \(x^{m}_{-j}\) is almost identical to \(x^{m}_{+j}\), but the value \(x_j^{m}\) is also taken from the sampled z.
-Each of these M new instances is a kind of ``Frankenstein Monster'' assembled from two instances.
+Each of these M new instances is a kind of ``Frankenstein's Monster'' assembled from two instances.
 Note that in the following algorithm, the order of features is not actually changed -- each feature remains at the same vector position when passed to the predict function.
 The order is only used as a ``trick'' here:
-By giving the features features a new order, we get a random mechanism that helps us put together the ``Frankenstein Monster''.
+By giving the features a new order, we get a random mechanism that helps us put together the ``Frankenstein's Monster''.
 For features that appear left of the feature \(x_j\), we take the values from the original observations, and for the features on the right, we take the values from a random instance.
 
 \textbf{Approximate Shapley estimation for single feature value}:
@@ -8002,11 +8090,6 @@ First, the SHAP authors proposed KernelSHAP, an alternative, kernel-based estima
 And they proposed TreeSHAP, an efficient estimation approach for tree-based models.
 Second, SHAP comes with many global interpretation methods based on aggregations of Shapley values.
 This chapter explains both the new estimation approaches and the global interpretation methods.
-
-\begin{rmdnote}
-Interested in an in-depth, hands-on course on SHAP and Shapley values?
-Head over to \href{https://leanpub.com/c/shapley-xai}{the Shapley course page} and get notified once the course is available.
-\end{rmdnote}
 
 I recommend reading the chapters on \protect\hyperlink{shapley}{Shapley values} and \protect\hyperlink{lime}{local models (LIME)} first.
 
@@ -10750,7 +10833,7 @@ Theory Group (Formerly: E1071), TU Wien. R package version 1.7-9. \url{https://C
 
 \textbf{knitr}. Yihui Xie (2021). knitr: A General-Purpose Package for Dynamic Report Generation in R. R package version 1.37. \url{https://CRAN.R-project.org/package=knitr}
 
-\textbf{latex2exp}. Stefano Meschiari (2021). latex2exp: Use LaTeX Expressions in Plots. R package version 0.5.0. \url{https://CRAN.R-project.org/package=latex2exp}
+\textbf{latex2exp}. Stefano Meschiari (2022). latex2exp: Use LaTeX Expressions in Plots. R package version 0.9.3. \url{https://CRAN.R-project.org/package=latex2exp}
 
 \textbf{lubridate}. Vitalie Spinu, Garrett Grolemund and Hadley Wickham (2021). lubridate: Make Dealing with Dates a Little Easier. R package version 1.8.0. \url{https://CRAN.R-project.org/package=lubridate}
 
@@ -10782,10 +10865,10 @@ Enhancements. R package version 2.2. \url{https://CRAN.R-project.org/package=One
 
 \textbf{R.utils}. Henrik Bengtsson (2021). R.utils: Various Programming Utilities. R package version 2.11.0. \url{https://CRAN.R-project.org/package=R.utils}
 
-\textbf{randomForest}. Fortran original by Leo Breiman, Adele Cutler, R port by Andy Liaw and Matthew Wiener. (2018). randomForest: Breiman and Cutler's Random Forests for Classification and
-Regression. R package version 4.6-14. \url{https://CRAN.R-project.org/package=randomForest}
+\textbf{randomForest}. Fortran original by Leo Breiman, Adele Cutler, R port by Andy Liaw and Matthew Wiener. (2022). randomForest: Breiman and Cutler's Random Forests for Classification and
+Regression. R package version 4.7-1. \url{https://CRAN.R-project.org/package=randomForest}
 
-\textbf{readr}. Hadley Wickham, Jim Hester and Jennifer Bryan (2021). readr: Read Rectangular Text Data. R package version 2.1.1. \url{https://CRAN.R-project.org/package=readr}
+\textbf{readr}. Hadley Wickham, Jim Hester and Jennifer Bryan (2022). readr: Read Rectangular Text Data. R package version 2.1.2. \url{https://CRAN.R-project.org/package=readr}
 
 \textbf{rjson}. Alex Couture-Beil (2022). rjson: JSON for R. R package version 0.2.21. \url{https://CRAN.R-project.org/package=rjson}
 
@@ -10797,9 +10880,9 @@ Regression. R package version 4.6-14. \url{https://CRAN.R-project.org/package=ra
 
 \textbf{shiny}. Winston Chang, Joe Cheng, JJ Allaire, Carson Sievert, Barret Schloerke, Yihui Xie, Jeff Allen, Jonathan McPherson, Alan Dipert and Barbara Borges (2021). shiny: Web Application Framework for R. R package version 1.7.1. \url{https://CRAN.R-project.org/package=shiny}
 
-\textbf{svglite}. Hadley Wickham, Lionel Henry, Thomas Lin Pedersen, T Jake Luciani, Matthieu Decorde and Vaudor Lise (2021). svglite: An `SVG' Graphics Device. R package version 2.0.0. \url{https://CRAN.R-project.org/package=svglite}
+\textbf{svglite}. Hadley Wickham, Lionel Henry, Thomas Lin Pedersen, T Jake Luciani, Matthieu Decorde and Vaudor Lise (2022). svglite: An `SVG' Graphics Device. R package version 2.1.0. \url{https://CRAN.R-project.org/package=svglite}
 
-\textbf{tidyr}. Hadley Wickham (2021). tidyr: Tidy Messy Data. R package version 1.1.4. \url{https://CRAN.R-project.org/package=tidyr}
+\textbf{tidyr}. Hadley Wickham and Maximilian Girlich (2022). tidyr: Tidy Messy Data. R package version 1.2.0. \url{https://CRAN.R-project.org/package=tidyr}
 
 \textbf{tm}. Ingo Feinerer and Kurt Hornik (2020). tm: Text Mining Package. R package version 0.7-8. \url{https://CRAN.R-project.org/package=tm}
 
@@ -10810,5 +10893,6 @@ Regression. R package version 4.6-14. \url{https://CRAN.R-project.org/package=ra
 \textbf{yaImpute}. Nicholas L. Crookston, Andrew O. Finley and John Coulston (2020). yaImpute: Nearest Neighbor Observation Imputation and Evaluation Tools. R package version 1.0-32. \url{https://CRAN.R-project.org/package=yaImpute}
 
 \printindex
+\thispagestyle{empty}
 
 \end{document}
