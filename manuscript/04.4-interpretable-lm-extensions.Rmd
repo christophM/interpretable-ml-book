@@ -486,15 +486,16 @@ Linear effects are also covered by the framework, because for features to be han
 
 The big question is how to learn nonlinear functions.
 The answer is called "splines" or "spline functions".
-Splines are functions that can be combined in order to approximate arbitrary functions.
+Splines are functions that are constructed from simpler basis functions.
+Splines can be used to approximate other, more complex functions.
 A bit like stacking Lego bricks to build something more complex.
-There is a confusing number of ways to define these spline functions.
-If you are interested in learning more about all the ways to define splines, I wish you good luck on your journey.
+There is a confusing number of ways to define these spline basis functions.
+If you are interested in learning more about all the ways to define basis functions, I wish you good luck on your journey.
 I am not going to go into details here, I am just going to build an intuition.
-What personally helped me the most for understanding splines was to visualize the individual spline functions and to look into how the data matrix is modified.
-For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 4 columns, each representing a spline function.
-Usually you would have more spline functions, I only reduced the number for illustration purposes.
-The value for each instance of these new spline features depends on the instances' temperature values.
+What personally helped me the most for understanding splines was to visualize the individual basis functions and to look into how the data matrix is modified.
+For example, to model the temperature with splines, we remove the temperature feature from the data and replace it with, say, 4 columns, each representing a spline basis function.
+Usually you would have more spline basis functions, I only reduced the number for illustration purposes.
+The value for each instance of these new spline basis features depends on the instances' temperature values.
 Together with all linear effects, the GAM then also estimates these spline weights.
 GAMs also introduce a penalty term for the weights to keep them close to zero. 
 This effectively reduces the flexibility of the splines and reduces overfitting. 
@@ -510,10 +511,10 @@ kable(head(model.matrix(mod.gam)), digits = 2)
 ```
 
 Each row represents an individual instance from the data (one day).
-Each spline column contains the value of the spline function at the particular temperature values. 
-The following figure shows how these spline functions look like:
+Each spline basis column contains the value of the spline basis function at the particular temperature values. 
+The following figure shows how these spline basis functions look like:
 
-```{r splines, fig.cap = "To smoothly model the temperature effect, we use 4 spline functions. Each temperature value is mapped to (here) 4 spline values. If an instance has a temperature of 30 °C, the value for the first spline feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7."}
+```{r splines, fig.cap = "To smoothly model the temperature effect, we use 4 spline basis functions. Each temperature value is mapped to (here) 4 spline basis values. If an instance has a temperature of 30 °C, the value for the first spline basis feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7."}
 
 mm = model.matrix(mod.gam)
 mm2 = data.table::melt(mm)
@@ -521,16 +522,16 @@ mm2 = mm2[mm2$Var2 != "(Intercept)",]
 
 ggplot(mm2) + geom_line(aes(x = rep(bike$temp, times = 4), y = value)) + facet_wrap("Var2") + 
   scale_x_continuous("Temperature") + 
-  scale_y_continuous("Value of spline feature")
+  scale_y_continuous("Value of spline basis feature")
 ```
 
-The GAM assigns weights to each temperature spline feature:
+The GAM assigns weights to each temperature spline basis feature:
 
 ```{r splines-weights}
 kable(coef(mod.gam), digits = 2, col.names = "weight")
 ```
 
-And the actual curve, which results from the sum of the spline functions weighted with the estimated weights, looks like this:
+And the actual spline curve, which results from the sum of the spline basis functions weighted with the estimated weights, looks like this:
 
 ```{r splines-curve, fig.cap = "GAM feature effect of the temperature for predicting the number of rented bikes (temperature used as the only feature)."}
 plot(mod.gam)
