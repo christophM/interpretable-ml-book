@@ -11,9 +11,13 @@ library('pre')
 library('iml')
 
 
+output <- opts_knit$get("rmarkdown.pandoc.to")
+is.html = !is.null(output) && output == "html"
+is.pdf = !is.null(output) && output == "latex"
+
 opts_chunk$set(
   echo = FALSE,
-  out.width = "\\textwidth",
+  out.width = ifelse(is.pdf, "0.8\\textwidth", "\\textwidth"),
   fig.align = "center",
   message = FALSE,
   warning = FALSE,
@@ -26,4 +30,3 @@ opts_chunk$set(
   dev.args = list(pointsize = 20)
 )
 
-output <- opts_knit$get("rmarkdown.pandoc.to")
