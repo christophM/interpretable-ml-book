@@ -12,8 +12,10 @@ library('iml')
 
 
 output <- opts_knit$get("rmarkdown.pandoc.to")
+print(output)
 is.html = !is.null(output) && output == "html"
 is.pdf = !is.null(output) && output == "latex"
+is.epub = !is.null(output) && output == "epub3" 
 
 opts_chunk$set(
   echo = FALSE,
