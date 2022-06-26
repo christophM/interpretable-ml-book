@@ -56,7 +56,7 @@ Stuff that both works for leanpub and for bookdown:
 - Figures can be referenced by using `[text of the link](#fig:tag-of-r-chunk-that-produced-figure)`
 - Start and end mathematical expressions with `$` (inline) or with `$$` (extra line). Will be automatically changed for leanpub with a regexpr. Conversion script only works if no empty spaces are in the formula.
 - Leave empty lines between formulas and text (if formula not inline). Formulas (with $$ ... $$) should be in one line and not over multiple lines (due to parser).
-- References have to be writen like this: `[^ref-tag]` and must be at the end of the respective file with `[^ref]: Details of the reference ...`. Make sure the space is included. References are collected in 10-reference.Rmd with the script references.R. Make sure not to use `[^ref-tag]: ` anywhere in the text, only at the bottom for the actual reference.
+- References have to be written like this: `[^ref-tag]` and must be at the end of the respective file with `[^ref]: Details of the reference ...`. Make sure the space is included. References are collected in 10-reference.Rmd with the script references.R. Make sure not to use `[^ref-tag]: ` anywhere in the text, only at the bottom for the actual reference.
 
 Printing for  proofreading with extra line spacing:
 Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line-height:1.7 to line-height:2.5, open local html with chrome, print to pdf with custom margin.
@@ -133,14 +133,14 @@ All notable changes to the book will be documented here.
 - The weights in LIME text chapter where shown with the wrong words. This has been fixed.
 - Improved introduction text
 - Added chapter about the future of interpretability
-- Added Criteria for Intepretability Methods
+- Added Criteria for Interpretability Methods
 
 ### v0.3 (2018-04-24)
 - Reworked the Feature Importance Chapter
 - Added third short story
 - Removed xkcd comic
 - Merged introduction and about the book chapters
-- Addeds pros & cons to pdp and ice chapters
+- Added pros & cons to pdp and ice chapters
 - Started using the iml package for plots in ice and pdp
 - Restructured the book files for Leanpub
 - Added a cover
