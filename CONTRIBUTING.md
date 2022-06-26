@@ -3,7 +3,7 @@ Any contribution is very welcome.
 For example, if you find a typo, a better way to formulate a sentence or if you have stylistic improvements, the first step is to fork the repository.
 Then you can make some changes and create a pull request.
 
-If you are interested in a bigger contribution, like writing a chapter or providing examples: that's great! Please open an issue on Github and we can discuss your ideas.
+If you are interested in a bigger contribution, like writing a chapter or providing examples: that's great! Please open an issue on GitHub and we can discuss your ideas.
 
 Rules for contributing text or code:
 

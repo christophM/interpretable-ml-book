@@ -11,7 +11,7 @@ This book is about interpretable machine learning. Machine learning is being bui
 In an ideal future, machines will be able to explain their decisions and make a transition into an algorithmic age more human. This books is recommended for machine learning practitioners, data scientists, statisticians and also for stakeholders deciding on the use of machine learning and intelligent algorithms.
 
 
-The book is automatically built from the master branch and pushed to gh-pages by Github Actions.
+The book is automatically built from the master branch and pushed to gh-pages by GitHub Actions.
 
 ## Contributing
 
