@@ -1,9 +1,9 @@
 # Script to insert VGWORT Zaehlmarken into the html pages
 
 # Directory where the HTML files can be found
-book_dir = "./"
+book_dir = "out/"
 
-# File that matches HTML filenames to the Zaehlmarken
+  # File that matches HTML filenames to the Zaehlmarken
 zaehlmarken_filename = "./vgwort/2022-07-06-zaehlmarken.csv"
 
 
