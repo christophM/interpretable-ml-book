@@ -36,7 +36,7 @@ grep_references = function(file){
 get_R_bib = function (tweak = TRUE, width = NULL){
   lib = packageDescription("iml.book")
   x = unlist(strsplit(lib$Import, ",\\n"))
-  x = c(x, "knitr")
+#   x = c(x, "knitr")
   bib = sapply(x, function(pkg) {
     cite = citation(pkg, auto = if (pkg == "base")
       NULL
@@ -75,7 +75,7 @@ for ( i in 1:nrow(reference_list)) {
 write_string = c(write_string, "",  "## R Packages Used {-}", "")
 for ( i in 1:length(r_reference_list)) {
   r_package_citation = paste0("**", names(r_reference_list[i]), "**. ",
-    format(r_reference_list[[i]], "textVersion", collapse = TRUE)[[1]])
+    base::format(r_reference_list[[i]], "text"))
   write_string = c(write_string, "", r_package_citation)
 }
 write_lines(write_string, fileConn)

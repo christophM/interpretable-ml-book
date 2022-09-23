@@ -32,7 +32,7 @@ _book/interpretable-ml.epub : *.Rmd
 	rm -f interpretable-ml.Rmd
 	Rscript  -e "bookdown::render_book('./', 'bookdown::epub_book')"
 
-11-references.Rmd : *.Rmd
+11-references.Rmd : *.Rmd ../scripts/references.R
 	Rscript ../scripts/references.R
 
 sbrl:
