@@ -8,6 +8,11 @@ pdf : _book/interpretable-ml.pdf
 
 epub : _book/interpretable-ml.epub
 
+amazon : _book/amazon.pdf
+
+_book/amazon.pdf : _book/interpretable-ml.pdf
+	gs -dPDFX -dBATCH -dNOPAUSE -dUseCIEColor -sProcessColorModel=DeviceCMYK -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile=_book/amazon.pdf _book/interpretable-machine-learning.pdf
+
 
 package: ../DESCRIPTION ../R/*.R
 	Rscript  -e "devtools::install('../')"
