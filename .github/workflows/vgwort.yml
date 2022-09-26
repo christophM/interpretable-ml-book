@@ -1,0 +1,52 @@
+# For help debugging build failures open an issue on the RStudio community with the 'github-actions' tag.
+# https://community.rstudio.com/new-topic?category=Package%20development&tags=github-actions
+on: deployment_status
+
+name: Insert VGWORT zaehlmarken
+
+jobs:
+  build:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KNITR_OPTIONS: "knitr.chunk.tidy=TRUE"
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+
+      - name: Checkout script
+        uses: actions/checkout@v2
+        with:
+          ref: master
+          path: temp
+
+      - name: Copy script 
+        run: |
+          cp -r temp/vgwort ./
+          rm -rf temp
+
+      - name: Install R
+        uses: r-lib/actions/setup-r@v1
+
+      - name: Install xml2 R package
+        run: |
+          install.packages('xml2')
+        shell: Rscript {0}
+
+      - name: Insert zaehlpixel
+        shell: bash
+        run: |
+          Rscript vgwort/vgwort-insert-zaehlmarken.R
+
+      - name: Update gh-pages
+        run: |
+          git add *.html
+          git commit -m "Update gh-pages (zaehlmarken)" --allow-empty
+          git push origin gh-pages
+
+
