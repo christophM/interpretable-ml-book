@@ -7,8 +7,8 @@ coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
   df = data.frame(Features = rownames(lm_summary),
     Estimate = lm_summary[,'Estimate'],
     std_error = lm_summary[,'Std. Error'])
-  df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
-  df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
+  df$lower = df$Estimate + qnorm(alpha/2) * df$std_error
+  df$upper = df$Estimate + qnorm(1-alpha/2) * df$std_error
 
 
   if(remove_intercept){
