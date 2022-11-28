@@ -30,6 +30,7 @@ _book/index.html :  *.Rmd
 _book/interpretable-ml.pdf : *.Rmd latex/*
 	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
 	rm -f interpretable-ml.Rmd
+	git rev-parse --short HEAD > latex/hash.tex
 	Rscript  -e "bookdown::render_book('./', 'bookdown::pdf_book')"
 
 _book/interpretable-ml.epub : *.Rmd

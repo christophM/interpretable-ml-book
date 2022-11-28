@@ -17,9 +17,10 @@ Second, SHAP comes with many global interpretation methods based on aggregations
 This chapter explains both the new estimation approaches and the global interpretation methods.
 
 ```{block2, type = "rmdnote", echo = is.html, eval=is.html}
-Interested in an in-depth, hands-on course on SHAP and Shapley values?
-Head over to [the Shapley course page](https://leanpub.com/c/shapley-xai) and get notified once the course is available.
+Just looking for the correct interpretation of SHAP lots?
+Save yourself time and get the [SHAP plots cheat sheet](https://christophmolnar.gumroad.com/l/shap-plots-for-tabular-data).
 ```
+
 
 I recommend reading the chapters on [Shapley values](#shapley) and [local models (LIME)](#lime) first.
 
@@ -87,10 +88,10 @@ In practice, this is only relevant for features that are constant.
 
 **3)  Consistency**
 
-Let $\hat{f}_x(z')=\hat{f}(h_x(z'))$ and $z_{\setminus{}j}'$ indicate that $z_j'=0$.
+Let $\hat{f}_x(z')=\hat{f}(h_x(z'))$ and $z_{-j}'$ indicate that $z_j'=0$.
 For any two models f and f' that satisfy:
 
-$$\hat{f}_x'(z')-\hat{f}_x'(z_{\setminus{}j}')\geq{}\hat{f}_x(z')-\hat{f}_x(z_{\setminus{}j}')$$
+$$\hat{f}_x'(z')-\hat{f}_x'(z_{-j}')\geq{}\hat{f}_x(z')-\hat{f}_x(z_{-j}')$$
 
 for all inputs $z'\in\{0,1\}^M$, then:
 
@@ -126,9 +127,9 @@ For tabular data, the following figure visualizes the mapping from coalitions to
 knitr::include_graphics("images/shap-simplified-features.jpg")
 ```
 
-$h_x$ for tabular data treats $X_C$ and $X_S$ as independent and integrates over the marginal distribution:
+$h_x$ for tabular data treats feature $X_j$ and $X_{-j}$ (the other features) as independent and integrates over the marginal distribution:
 
-$$\hat{f}(h_x(z'))=E_{X_C}[\hat{f}(x)]$$
+$$\hat{f}(h_x(z'))=E_{X_{-j}}[\hat{f}(x)]$$
 
 Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
@@ -195,10 +196,10 @@ If we add an L1 penalty to the loss L, we can create sparse explanations.
 
 ### TreeSHAP
 
-Lundberg et al. (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
+Lundberg et al. (2018)[^treeshap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
 TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
 
-TreeSHAP defines the value function using the conditional expectation $E_{X_S|X_C}(\hat{f}(x)|x_S)$ instead of the marginal expectation.
+TreeSHAP defines the value function using the conditional expectation $E_{X_j|X_{-j}}(\hat{f}(x)|x_j)$ instead of the marginal expectation.
 The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero as shown by Sundararajan et al. (2019) [^cond1] and Janzing et al. (2019) [^cond2].
 The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
 
@@ -206,7 +207,7 @@ How much faster is TreeSHAP?
 Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
 
 <!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(\hat{f}(x)|x_S)$ for all possible feature value subsets S.-->
-TreeSHAP uses the conditional expectation $E_{X_S|X_C}(\hat{f}(x)|x_S)$ to estimate effects.
+TreeSHAP uses the conditional expectation $E_{X_j|X_{-j}}(\hat{f}(x)|x_j)$ to estimate effects.
 I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
 If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
 If we would not condition the prediction on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
@@ -334,7 +335,7 @@ The dependence plot can be improved by highlighting these feature interactions.
 The interaction effect is the additional combined feature effect after accounting for the individual feature effects.
 The Shapley interaction index from game theory is defined as:
 
-$$\phi_{i,j}=\sum_{S\subseteq\setminus\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)$$
+$$\phi_{i,j}=\sum_{S\subseteq\backslash\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)$$
 
 when $i\neq{}j$ and:
 
