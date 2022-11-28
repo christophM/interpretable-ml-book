@@ -24,7 +24,7 @@ opts_chunk$set(
   warning = FALSE,
   fig.path = "images/", 
   collapse = TRUE,
-  dev = "CairoPNG",
+  dev = "jpeg",
   dpi = 150, 
   fig.height = 5, 
   fig.width = 7,
