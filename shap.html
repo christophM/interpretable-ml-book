@@ -23,7 +23,7 @@
 <meta name="author" content="Christoph Molnar" />
 
 
-<meta name="date" content="2022-11-12" />
+<meta name="date" content="2022-11-30" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -485,8 +485,8 @@ Second, SHAP comes with many global interpretation methods based on aggregations
 This chapter explains both the new estimation approaches and the global interpretation methods.</p>
 
 <div class="rmdnote">
-Interested in an in-depth, hands-on course on SHAP and Shapley values?
-Head over to <a href="https://leanpub.com/c/shapley-xai">the Shapley course page</a> and get notified once the course is available.
+Just looking for the correct interpretation of SHAP lots?
+Save yourself time and get the <a href="https://christophmolnar.gumroad.com/l/shap-plots-for-tabular-data">SHAP plots cheat sheet</a>.
 </div>
 <p>I recommend reading the chapters on <a href="shapley.html#shapley">Shapley values</a> and <a href="lime.html#lime">local models (LIME)</a> first.</p>
 <div id="definition" class="section level3 hasAnchor" number="9.6.1">
@@ -575,8 +575,8 @@ For tabular data, the following figure visualizes the mapping from coalitions to
 FIGURE 9.22: Function <span class="math inline">\(h_x\)</span> maps a coalition to a valid instance. For present features (1), <span class="math inline">\(h_x\)</span> maps to the feature values of x. For absent features (0), <span class="math inline">\(h_x\)</span> maps to the values of a randomly sampled data instance.
 </p>
 </div>
-<p><span class="math inline">\(h_x\)</span> for tabular data treats <span class="math inline">\(X_C\)</span> and <span class="math inline">\(X_S\)</span> as independent and integrates over the marginal distribution:</p>
-<p><span class="math display">\[\hat{f}(h_x(z&#39;))=E_{X_C}[\hat{f}(x)]\]</span></p>
+<p><span class="math inline">\(h_x\)</span> for tabular data treats feature <span class="math inline">\(X_j\)</span> and <span class="math inline">\(X_{-j}\)</span> (the other features) as independent and integrates over the marginal distribution:</p>
+<p><span class="math display">\[\hat{f}(h_x(z&#39;))=E_{X_{-j}}[\hat{f}(x)]\]</span></p>
 <p>Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
 The estimation puts too much weight on unlikely instances.
@@ -632,15 +632,15 @@ If we add an L1 penalty to the loss L, we can create sparse explanations.
 </div>
 <div id="treeshap" class="section level3 hasAnchor" number="9.6.3">
 <h3><span class="header-section-number">9.6.3</span> TreeSHAP<a href="shap.html#treeshap" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>Lundberg et al. (2018)[^tree-shap] proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
+<p>Lundberg et al. (2018)<a href="#fn70" class="footnote-ref" id="fnref70"><sup>70</sup></a> proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
 TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.</p>
-<p>TreeSHAP defines the value function using the conditional expectation <span class="math inline">\(E_{X_S|X_C}(\hat{f}(x)|x_S)\)</span> instead of the marginal expectation.
-The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero as shown by Sundararajan et al. (2019) <a href="#fn70" class="footnote-ref" id="fnref70"><sup>70</sup></a> and Janzing et al. (2019) <a href="#fn71" class="footnote-ref" id="fnref71"><sup>71</sup></a>.
+<p>TreeSHAP defines the value function using the conditional expectation <span class="math inline">\(E_{X_j|X_{-j}}(\hat{f}(x)|x_j)\)</span> instead of the marginal expectation.
+The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero as shown by Sundararajan et al. (2019) <a href="#fn71" class="footnote-ref" id="fnref71"><sup>71</sup></a> and Janzing et al. (2019) <a href="#fn72" class="footnote-ref" id="fnref72"><sup>72</sup></a>.
 The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.</p>
 <p>How much faster is TreeSHAP?
 Compared to exact KernelSHAP, it reduces the computational complexity from <span class="math inline">\(O(TL2^M)\)</span> to <span class="math inline">\(O(TLD^2)\)</span>, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.</p>
 <!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(\hat{f}(x)|x_S)$ for all possible feature value subsets S.-->
-<p>TreeSHAP uses the conditional expectation <span class="math inline">\(E_{X_S|X_C}(\hat{f}(x)|x_S)\)</span> to estimate effects.
+<p>TreeSHAP uses the conditional expectation <span class="math inline">\(E_{X_j|X_{-j}}(\hat{f}(x)|x_j)\)</span> to estimate effects.
 I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
 If we conditioned on all features – if S was the set of all features – then the prediction from the node in which the instance x falls would be the expected prediction.
 If we would not condition the prediction on any feature – if S was empty – we would use the weighted average of predictions of all terminal nodes.
@@ -827,7 +827,7 @@ TreeSHAP changes the value function by relying on the conditional expected predi
 With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.</p>
 <p>The disadvantages of Shapley values also apply to SHAP:
 Shapley values <strong>can be misinterpreted</strong> and access to data is needed to compute them for new data (except for TreeSHAP).</p>
-<p>It is <strong>possible to create intentionally misleading interpretations</strong> with SHAP, which can hide biases <a href="#fn72" class="footnote-ref" id="fnref72"><sup>72</sup></a>.
+<p>It is <strong>possible to create intentionally misleading interpretations</strong> with SHAP, which can hide biases <a href="#fn73" class="footnote-ref" id="fnref73"><sup>73</sup></a>.
 If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations).
 For the receivers of a SHAP explanation, it is a disadvantage: they cannot be sure about the truthfulness of the explanation.</p>
 </div>
@@ -847,9 +847,10 @@ SHAP is also included in the R <a href="https://rdrr.io/cran/xgboost/man/xgb.plo
 <hr />
 <ol start="69">
 <li id="fn69"><p>Lundberg, Scott M., and Su-In Lee. “A unified approach to interpreting model predictions.” Advances in Neural Information Processing Systems (2017).<a href="shap.html#fnref69" class="footnote-back">↩︎</a></p></li>
-<li id="fn70"><p>Sundararajan, Mukund, and Amir Najmi. “The many Shapley values for model explanation.” arXiv preprint arXiv:1908.08474 (2019).<a href="shap.html#fnref70" class="footnote-back">↩︎</a></p></li>
-<li id="fn71"><p>Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. “Feature relevance quantification in explainable AI: A causal problem.” International Conference on Artificial Intelligence and Statistics. PMLR (2020).<a href="shap.html#fnref71" class="footnote-back">↩︎</a></p></li>
-<li id="fn72"><p>Slack, Dylan, Sophie Hilgard, Emily Jia, Sameer Singh, and Himabindu Lakkaraju. “Fooling lime and shap: Adversarial attacks on post hoc explanation methods.” In Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society, pp. 180-186 (2020).<a href="shap.html#fnref72" class="footnote-back">↩︎</a></p></li>
+<li id="fn70"><p>Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. “Consistent individualized feature attribution for tree ensembles.” arXiv preprint arXiv:1802.03888 (2018).<a href="shap.html#fnref70" class="footnote-back">↩︎</a></p></li>
+<li id="fn71"><p>Sundararajan, Mukund, and Amir Najmi. “The many Shapley values for model explanation.” arXiv preprint arXiv:1908.08474 (2019).<a href="shap.html#fnref71" class="footnote-back">↩︎</a></p></li>
+<li id="fn72"><p>Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. “Feature relevance quantification in explainable AI: A causal problem.” International Conference on Artificial Intelligence and Statistics. PMLR (2020).<a href="shap.html#fnref72" class="footnote-back">↩︎</a></p></li>
+<li id="fn73"><p>Slack, Dylan, Sophie Hilgard, Emily Jia, Sameer Singh, and Himabindu Lakkaraju. “Fooling lime and shap: Adversarial attacks on post hoc explanation methods.” In Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society, pp. 180-186 (2020).<a href="shap.html#fnref73" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
             </section>
@@ -926,9 +927,6 @@ gitbook.start({
     document.getElementsByTagName("head")[0].appendChild(script);
   })();
 </script>
-
-<img src="https://vg05.met.vgwort.de/na/9dddafb4311c4cfd960d93dce08802d2" width="1" height="1" alt="">
 </body>
-
 
 </html>
