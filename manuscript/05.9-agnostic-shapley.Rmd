@@ -114,32 +114,31 @@ The value of the j-th feature contributed $\phi_j$ to the prediction of this par
 
 The Shapley value works for both classification (if we are dealing with probabilities) and regression.
 
-We use the Shapley value to analyze the predictions of a random forest model predicting [cervical cancer](#cervical):
+We use the Shapley value to analyze the predictions of a random forest model predicting [penguin species](#penguins):
 
-```{r shapley-cervical-prepare}
-data("cervical")
+```{r shapley-penguins-prepare}
 library("caret")
 library("iml")
-
+library(palmerpenguins)
 
 ntree = 30
-cervical.x = cervical[names(cervical) != 'Biopsy']
+penguins.x = penguins[names(penguins) != 'species']
 
-model <- caret::train(cervical.x,
-               cervical$Biopsy,
+model <- caret::train(penguins.x,
+               penguins$species,
                method = 'rf', ntree=ntree, maximise = FALSE)
-predictor = Predictor$new(model, class = "Cancer", data = cervical.x, type = "prob")
+predictor = Predictor$new(model, class = "Adelie", data = penguins.x, type = "prob")
 
-instance_indices = 326
-x.interest = cervical.x[instance_indices,]
+instance_indices = 10
+x.interest = penguins.x[instance_indices,]
 
-avg.prediction = mean(predict(model, type = 'prob')[,'Cancer'])
-actual.prediction = predict(model, newdata = x.interest, type = 'prob')['Cancer']
+avg.prediction = mean(predict(model, type = 'prob')[,'Adelie'])
+actual.prediction = predict(model, newdata = x.interest, type = 'prob')['Adelie']
 diff.prediction = actual.prediction - avg.prediction
 ```
 
 
-```{r shapley-cervical-plot, fig.cap = sprintf("Shapley values for a woman in the cervical cancer dataset. With a prediction of %.2f, this woman's cancer probability is %.2f above the average prediction of %.2f. The number of diagnosed STDs increased the probability the most. The sum of contributions yields the difference between actual and average prediction (%.2f).", actual.prediction,diff.prediction, avg.prediction, diff.prediction)}
+```{r shapley-penguins-plot, fig.cap = sprintf("Shapley values for a penguin in the penguins dataset. With a prediction of %.2f, this penguin's probability of being Adelie is %.2f above the average prediction of %.2f. The short bill length contributed most to the probability of being an Adelie penguin. The sum of contributions yields the difference between actual and average prediction (%.2f).", actual.prediction,diff.prediction, avg.prediction, avg.prediction)}
 shapley2 = Shapley$new(predictor, x.interest = x.interest, sample.size = 100)
 plot(shapley2) +
   scale_y_continuous("Feature value contribution") +

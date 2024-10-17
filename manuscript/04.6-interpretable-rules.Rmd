@@ -133,6 +133,7 @@ The following table shows an artificial dataset about houses with information ab
 We are interested in learning a simple model to predict the value of a house.
 
 ```{r OneR-freq-table1}
+library(kableExtra)
 value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
 
 df = data.frame(
@@ -182,14 +183,15 @@ OneR solves ties by either taking the first feature with the lowest error or the
 **Example**
 
 Let us try OneR with real data.
-We use the [cervical cancer classification task](#cervical) to test the OneR algorithm. 
+We use the [palmer penguins data](#penguins) to test the OneR algorithm. 
 All continuous input features were discretized into their 5 quantiles.
 The following rules are created:
 
-```{r oner-cervical}
+```{r oner-penguins}
 library("OneR")
-data("cervical")
-rule = OneR::OneR(Biopsy ~ ., data = cervical)
+library("palmerpenguins")
+penguins = na.omit(penguins)
+rule = OneR::OneR(species ~ ., data = penguins)
 
 rule.to.table = function(rule){
   dt = data.frame(x = names(rule$rules), prediction = unlist(rule$rules))
@@ -200,23 +202,35 @@ rule.to.table = function(rule){
 kable(rule.to.table(rule), row.names = FALSE, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
-The age feature was chosen by OneR as the best predictive feature. 
-Since cancer is rare, for each rule the majority class and therefore the predicted label is always Healthy, which is rather unhelpful.
-It does not make sense to use the label prediction in this unbalanced case.
-The cross table between the 'Age' intervals and Cancer/Healthy together with the percentage of women with cancer is more informative:
+The flipper length feature (`flipper_lengh_mm`) was chosen by OneR as the best predictive feature.
+To get a better feel for how this one rule performs, let's look into the cross table:
 
-```{r oner-cervical-confusion}
-tt = table(paste0("Age=", bin(cervical$Age)), cervical$Biopsy)
-cn = colnames(tt)
-tt = data.frame(matrix(tt, ncol = 2), row.names = rownames(tt))
-colnames(tt) = cn 
-tt$p.cancer = round(tt[,"Cancer"]/(tt[,"Cancer"] + tt[,"Healthy"]), 2)
-kable(tt[c("Cancer", "Healthy", "p.cancer")], col.names = c("# Cancer", "# Healthy", "P(Cancer)"),  booktabs = TRUE) %>% kable_styling(position = "center")
+```{r oner-penguin-confusion, eval=TRUE}
+# Create the table with counts and probabilities
+tt <- penguins %>%
+  mutate(flipper_length_bin = bin(penguins$flipper_length_mm)) %>%
+  group_by(flipper_length_bin, species) %>%
+  summarise(count = n()) %>%
+  group_by(flipper_length_bin) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup() %>%
+  mutate(display = sprintf("%.1f%% (%d)", percentage, count)) %>%
+  pivot_wider(id_cols = flipper_length_bin, 
+              names_from = species, 
+              values_from = display, 
+              values_fill = "0% (0)")
+
+# Rename the first column
+colnames(tt)[1] <- "flipper_length_mm"
+
+# Create the table with kable and kable_styling
+kable(tt, booktabs = TRUE, align = "c") %>%
+  kable_styling(position = "center")
 ```
 
-But before you start interpreting anything:
-Since the prediction for every feature and every value is Healthy, the total error rate is the same for all features.
-The ties in the total error are, by default, resolved by using the first feature from the ones with the lowest error rates (here, all features have 55/858), which happens to be the Age feature.
+We can see that especially for very short and very long flippers the feature is useful for classification.
+With a flipper length above 219, we can be sure it's a Gentoo penguin and between 207 and 2019, it's at least likely. Below 184 mm, it's likely (90%) to be the Adelie species.
+However, inbetween these extremes, relying on the flipper length alone doesn't give us as much clarity on the species.
 
 OneR does not support regression tasks.
 But we can turn a regression task into a classification task by cutting the continuous outcome into intervals.
@@ -351,28 +365,28 @@ RIPPER can run in ordered or unordered mode and generate either a decision list 
 
 **Examples**
 
-We will use RIPPER for the examples.
-
-The RIPPER algorithm does not find any rule in the classification task for [cervical cancer](#cervical).
-```{r jrip-cervical, include = FALSE}
+```{r jrip-preparation}
 library("RWeka")
 library(rJava)
 
 extract.rules.jrip = function (rule) {
-rules = scan(text=.jcall(rule$classifier, "S", "toString"), sep="\n", what="")
-# removes text
-rules = rules[-c(1, 2, length(rules))]
-rules = gsub("\\([0-9]*\\.[0-9]\\/[0-9]*\\.[0-9]\\)", "", rules)
-rules = as.matrix(rules)[-c(1:2, 6), ,drop=FALSE]
-rules  = data.frame(rules)
-if (nrow(rules) == 0) {
-  return(NULL)
-} else {
-  kable(rules,  booktabs = TRUE) %>% kable_styling(position = "center")
-}
+  rules = scan(text=.jcall(rule$classifier, "S", "toString"), sep="\n", what="")
+  # removes text
+    rules = rules[-c(1, 2, length(rules))]
+    rules = gsub("\\([0-9]*\\.[0-9]\\/[0-9]*\\.[0-9]\\)", "", rules)
+    rules = as.matrix(rules)[-c(1:2, 6), ,drop=FALSE]
+    rules  = data.frame(rules)
+    if (nrow(rules) == 0) {
+      return(NULL)
+    } else {
+      kable(rules,  booktabs = TRUE) %>% kable_styling(position = "center")
+    }
 }
 
-rule = JRip(Biopsy ~ ., data = cervical)
+```
+
+```{jrip-penguins, include=FALSE, eval=FALSE}
+rule = JRip(species ~ ., data = penguins)
 extract.rules.jrip(rule)
 ```
 
@@ -538,19 +552,20 @@ The BRL algorithm selects the decision list of the samples with the highest post
 
 That is it with the theory, now let's see the BRL method in action.
 The examples use a faster variant of BRL called Scalable Bayesian Rule Lists (SBRL) by Yang et al. (2017) [^sbrl].
-We use the SBRL algorithm to predict the [risk for cervical cancer](#cervical).
-I first had to discretize all input features for the SBRL algorithm to work. 
+We use the SBRL algorithm to predict the [penguins species](#penguins).
+Since there are 3 possible species in the palmers penguin data, but SBRL needs binary labels, I simplified the task to classifying Adelie versus other (Gentoo/Chinstrap). 
+Also, I first had to discretize all input features for the SBRL algorithm to work. 
 For this purpose I binned the continuous features based on the frequency of the values by quantiles.
 
 We get the following rules:
 
 <!-- Set eval = TRUE to recompute the rules -->
-```{r sbrl-cervical, results = "hide", eval = FALSE}
+```{r sbrl-penguins,results = "hide", eval = TRUE}
 library("sbrl")
 library("arules")
-data("cervical")
+library("palmerpenguins")
 
-cervical2 = as.data.frame(lapply(cervical, function(x) {
+penguins2 = as.data.frame(lapply(penguins, function(x) {
   if(is.factor(x) || length(unique(x)) < 3) {
     as.factor(x)
   } else {
@@ -574,30 +589,28 @@ get.sbrl.rules = function(x) {
 }
 
 
-cervical2$label = cervical2$Biopsy
-cervical2$Biopsy = NULL
-rules = sbrl(cervical2, pos_sign = "Cancer", neg_sign = "Healthy", rule_maxlen = 2)
+penguins2$label = ifelse(penguins$species == "Adelie", "Adelie", "Gentoo/Chinstrap")
+penguins2$species= NULL
+rules = sbrl(penguins2, pos_sign = "Adelie", neg_sign = "Gentoo/Chinstrap", rule_maxlen = 2)
 rn = rules$rulenames
 rl = get.sbrl.rules(rules)
-saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-cervical.RDS")
+saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-penguins.RDS")
 ```
 
 
-```{r sbrl-cervical-show}
-rules = readRDS("../data/cached-sbrl-cervical.RDS")
+```{r sbrl-penguins-show}
+rules = readRDS("../data/cached-sbrl-penguins.RDS")
 tab = kable(rules$rules, booktabs = TRUE) %>% kable_styling(position = "center")
 if (is.pdf) tab = tab %>%  column_spec(1, "10cm")
 tab
 ```
-
-Note that we get sensible rules, since the prediction on the THEN-part is not the class outcome, but the predicted probability for cancer.
 
 The conditions were selected from patterns that were pre-mined with the FP-Growth algorithm. 
 The following table displays the pool of conditions the SBRL algorithm could choose from for building a decision list.
 The maximum number of feature values in a condition I allowed as a user was two.
 Here is a sample of ten patterns:
 
-```{r sbrl-cervical-premined}
+```{r sbrl-penguins-premined}
 set.seed(1)
 conditions = sample(rules$rulenames, size = 10)
 conditions = gsub("\\{|\\}", "", conditions)
@@ -605,7 +618,6 @@ conditions = gsub(",", ", ", conditions)
 tab = kable(conditions, col.names = "pre-mined conditions",  booktabs = TRUE) %>% kable_styling(position = "center")
 if (is.pdf) tab = tab %>%  column_spec(1, "10cm")
 tab
-
 ```
 
 Next, we apply the SBRL algorithm to the [bike rental prediction task](#bike-data).

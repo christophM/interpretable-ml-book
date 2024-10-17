@@ -64,6 +64,10 @@ Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line
 All notable changes to the book will be documented here.
 
 ### v2.0 (IN PROGRESS) [html version]
+
+- Using Palmer penguins for classification examples (instead of cancer data). Turns out I encoded the cancer class wrongly, so interpretation was actually the opposite for e.g. feature effects. Over the years I felt this particular cancer data not a good match for this book, and now with the discovery of the error, I expedited the switch to a more playful dataset. 
+
+### v2.0 [Print version, ebook version]
 - Added "Preface by the Author" chapter
 - Started section on neural network interpretation
 - Added chapter on feature visualization
@@ -80,7 +84,7 @@ All notable changes to the book will be documented here.
         - Chapter RuleFit: The importance of the linear term in the total importance formulate was indexed with an $l$ instead of $j$.
 - Updated images
 
-### v1.1 (2019-03-23) [Print version, ebook version]
+### v1.1 (2019-03-23) 
 - Fixes wrong index in Cooks Distance summation (i -> j)
 - fixed boxplot formula (1.5 instead of 1.58)
 - Change to colorblind-friendly color palettes (viridis)

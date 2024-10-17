@@ -190,37 +190,52 @@ The interpretation of the intercept weight is usually not relevant.
 
 ### Example
 
-We use the logistic regression model to predict [cervical cancer](#cervical) based on some risk factors.
+We use the logistic regression model to predict [whether a penguin is male](#penguins) based on penguin characteristics.
 The following table shows the estimate weights, the associated odds ratios, and the standard error of the estimates.
 
 ```{r logistic-example}
-data("cervical")
-neat_cervical_names = c('Intercept', 'Hormonal contraceptives y/n',
-  'Smokes y/n', 'Num. of pregnancies',
-  'Num. of diagnosed STDs',
-  'Intrauterine device y/n')
+library('palmerpenguins')
 
-# Fit logistic model for probability of cancer, use few features that are interesting
-mod = glm(Biopsy ~ Hormonal.Contraceptives + Smokes + Num.of.pregnancies + STDs..Number.of.diagnosis + IUD,
-  data = cervical, family = binomial())
+penguins_binary <- penguins %>%
+    drop_na() %>%
+    mutate(
+        is_adelie = ifelse(species == "Adelie", 1, 0),
+	is_gentoo = ifelse(species == "Gentoo", 1, 0),
+	is_chinstrap = ifelse(species == "Chinstrap", 1, 0),
+        island = factor(island),
+        # Define chonkiness - let's say top 25% of body mass are chonky
+        is_chonky = ifelse(body_mass_g > quantile(body_mass_g, 0.75), 1, 0),
+        # Also add a categorical chonk_level for fun
+        chonk_level = case_when(
+            body_mass_g <= quantile(body_mass_g, 0.25) ~ "Smol_Penguin",
+            body_mass_g <= quantile(body_mass_g, 0.75) ~ "Regular_Penguin",
+            TRUE ~ "Absolute_Unit"
+        )
+    )
+# Convert chonk_level to factor and set reference level
+penguins_binary$chonk_level <- factor(penguins_binary$chonk_level, levels = c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit"))
+penguins_binary$chonk_level <- relevel(penguins_binary$chonk_level, ref = "Smol_Penguin")
+
+levels(penguins_binary$chonk_level) <- c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit")
+mod <- glm(sex ~ bill_length_mm + chonk_level, data = penguins_binary, family = binomial)
+
 # Print table of coef, exp(coef), std, p-value
 coef.table = summary(mod)$coefficients[,c('Estimate', 'Std. Error')]
 coef.table = cbind(coef.table, 'Odds ratio' = as.vector(exp(round(coef.table[, c('Estimate')], 2))))
 # Interpret one numerical and one factor
-rownames(coef.table) = neat_cervical_names
+#rownames(coef.table) = TODO
 colnames(coef.table)[1] = 'Weight'
-kable(coef.table[, c('Weight', 'Odds ratio', 'Std. Error')], digits=2, caption='The results of fitting a logistic regression model on the cervical cancer dataset. Shown are the features used in the model, their estimated weights and corresponding odds ratios, and the standard errors of the estimated weights.', booktabs = TRUE) %>% kable_styling(position = "center")
+kable(coef.table[, c('Weight', 'Odds ratio', 'Std. Error')], digits=2, caption='The results of fitting a logistic regression model on the penguins dataset. Shown are the features used in the model, their estimated weights and corresponding odds ratios, and the standard errors of the estimated weights.', booktabs = TRUE) %>% kable_styling(position = "center")
 
 ```
 
-Interpretation of a numerical feature ("Num. of diagnosed STDs"):
-An increase in the number of diagnosed STDs (sexually transmitted diseases) changes (increases) the odds of cancer vs. no cancer by a factor of `r sprintf('%.2f', coef.table['Num. of diagnosed STDs', 'Odds ratio'])`, when all other features remain the same.
-Keep in mind that correlation does not imply causation.
+Interpretation of a numerical feature ("bill_length_mm"):
+An increase in a penguins bill length (increases) the odds of being a male penguin by a factor of `r sprintf('%.2f', coef.table['bill_length_mm', 'Odds ratio'])`, when all other features remain the same.
 
-Interpretation of a categorical feature ("Hormonal contraceptives y/n"):
-For women using hormonal contraceptives, the odds for cancer vs. no cancer are by a factor of `r sprintf('%.2f', coef.table['Hormonal contraceptives y/n', 'Odds ratio'])` lower, compared to women without hormonal contraceptives, given all other features stay the same.
-
-Like in the linear model, the interpretations always come with the clause that 'all other features stay the same'.
+Interpretation of a categorical feature ("chonk_level"):
+For penguins, the odds of being a male versus female are by a factor of `r sprintf('%.2f', coef.table['chonk_levelRegular_Penguin', 'Odds ratio'])`, compared to less chonky penguins (`Smol_Penguin`), given all other features remain the same.
+And the odds of being male is even `r sprintf('%.2f', coef.table['chonk_levelRegular_Penguin', 'Odds ratio'])` higher for the absolute units of penguins (25% heaviest) compared to the small penguins.
+Again, given all other features remain the same.
 
 
 
