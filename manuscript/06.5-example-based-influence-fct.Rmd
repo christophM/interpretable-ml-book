@@ -176,10 +176,10 @@ In the following example we will use these simple influence measures.
 
 **Deletion diagnostics example**
 
-In the following example, we train a support vector machine to predict whether a penguin is an [Adelie penguin](#penguins) given bodily measurements and measure which training instances were most influential overall and for a particular prediction.
+In the following example, we train a support vector machine to predict whether a penguin is an [Adelie penguin](#penguins) given body measurements and measure which training instances were most influential overall and for a particular prediction.
 Since this is a classification problem, we measure the influence as the difference in predicted probability for penguin species.
 An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
-The measurement of the influence for all `r nrow(penguins)` training instances requires to train the model once on all data and retrain it `r nrow(penguins)` times (= size of training data) with one of the instances removed each time.
+Measuring influence for all `r nrow(penguins)` training instances requires training the model once on all data and retraining it `r nrow(penguins)` times (= size of training data) with one of the instances removed each time.
 
 ```{r influence, eval = !file.exists(influence.matrix.filename)}
 #'@param predicted The predicted outcome of a model
@@ -214,9 +214,8 @@ df = df[order(df$influence, decreasing = TRUE),]
 ```
 
 The most influential instance has an influence measure of about `r sprintf("%.3f", abs(df[1,"influence"]))`.
-An influence of `r sprintf('%.2f', abs(df[1,"influence"]))` means that if we remove the `r df$id[1]`-th instance, the predicted probability changes by `r sprintf('%.1f', 100 * df[1,"influence"])` percentage point on average.
+An influence of `r sprintf('%.3f', abs(df[1,"influence"]))` means that if we remove the `r df$id[1]`-th instance, the predicted probability changes by `r sprintf('%.1f', 100 * df[1,"influence"])` percentage point on average.
 This is does not sound like much, but it's an average over the entire data coming from just removing 1 data point.
-From that perspective, I think it is quite substantial.
 Now we know which of the data instances were most influential for the model.
 This is already useful to know for debugging the data.
 Is there a problematic instance?
@@ -258,7 +257,6 @@ penguins.i$influence = unlist(obs)
 worst.case.index = which(abs(penguins.i$influence) == max(abs(penguins.i$influence), na.rm = TRUE))
 ```
 
-TODO: Change interpretation
 This first influence analysis revealed the *overall* most influential instance.
 Now we select one of the instances, namely the `r i`-th instance, for which we want to explain the prediction by finding the most influential training data instances.
 It is like a counterfactual question:
@@ -280,13 +278,13 @@ ct = as.party(ct)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE, id=FALSE), terminal_panel=node_boxplot(ct,id=FALSE))
 ```
 
-```{r influence-single-include, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from penguins with fippers shorter than 179 mm had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 1 percentage points of P(Adelie) and one of the penguins even 6 percentage points.", i, i)}
+```{r influence-single-include, fig.cap = sprintf("Decision tree explaining which instances were most influential in predicting the %i-th instance. Data from penguins with flippers shorter than 179 mm had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction of 1 percentage point of P(Adelie) and one of the penguins even 6 percentage points.", i, i)}
 knitr::include_graphics("images/influence-single-1.jpeg")
 ```
 
 Penguins with short flippers have a high influence on the prediction for the `r i`-th penguin.
-Penguins No. `r i` has a flipper length of `r penguins$flipper_length_mm[i]`, which is right on the edge of 179.
-And there are only 7 penguins with a flipper length shorter than 179 mm, which likely influences strongly how the prediction function is shaped at the tail.
+Penguins No. `r i` has a flipper length of `r penguins$flipper_length_mm[i]`, which is just on the edge of 179.
+And there are only 7 penguins with a flipper length shorter than 179 mm, which likely strongly influences the shape of the prediction function at the tail.
 
 These examples showed how useful it is to identify influential instances to check the robustness of the model.
 One problem with the proposed approach is that the model needs to be retrained for each training instance.

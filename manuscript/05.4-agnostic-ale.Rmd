@@ -519,28 +519,29 @@ In a scenario where two features have no interaction, the total effect plot of t
 The second-order effect would immediately show that there is no interaction.
 
 Enough bicycles for now, let's turn to a classification task.
-We train a random forest to predict the [penguins species](#penguins) based on bodily measurements.
+We train a random forest to predict the [penguin species](#penguins) based on body measurements.
 We visualize the accumulated local effects for two of the features:
 
-```{r ale-penguins-1D, fig.cap = "ALE plots for the effect of bill length and body mass on predicted probability of Adelie. Short bills are associated with a higher probability for Adelie and a lower probability for Chinstrap. This relation inverses for bill lengths over 45 mm. The probability of Gentoo doesn't change much with bill length. An increasing body mass increases P(Adelie) and P(Gentoo), but decreases P(Chinstrap).", fig.height = 4}
+```{r ale-penguins-1D, fig.cap = "ALE plots for the effect of bill length and body mass on predicted probability for each species. Short bills are associated with a higher probability for Adelie and a lower probability for Chinstrap. This relationship is reversed for bill lengths greater than 45 mm. The probability of Gentoo doesn't change much with bill length. Increasing body mass slightly increases P(Adelie) and P(Gentoo), but decreases P(Chinstrap).", fig.height = 4}
 
 penguins.task = makeClassifTask(data = penguins, target = "species")
 mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguins.task)
 
 pred.penguins = Predictor$new(mod, data = penguins)
 ale1 = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "ale")$plot() +
-  scale_x_continuous("Bill length") + 
+  scale_x_continuous("Bill length in millimeters") + 
   scale_y_continuous("", limits=c(-0.2, 0.25))
 ale2 = FeatureEffect$new(pred.penguins, "body_mass_g", method = "ale")$plot() +
-  scale_x_continuous("Body mass") +
+  scale_x_continuous("Body mass in grams") +
   scale_y_continuous("", limits=c(-0.2, 0.25))
 gridExtra::grid.arrange(ale1, ale2, ncol = 1)
 ```
-The effects are quite simiilar to the PDPs in [the PDP chapter](#pdp).
+
+The effects are quite similar to the PDPs in [the PDP chapter](#pdp).
 Only for Adelie the effect of body mass is different, since we can clearly see an increase in P(Adelie) with higher body mass.
 Next, we look at the interaction between body mass and bill length, but only for P(Adelie).
 
-```{r ale-penguins-2d, fig.cap = 'ALE plot of the 2nd-order effect of body mass and bill length. Both features interact with each other. For example, a bill length between 41 and 46 combined with a body mass below 4000g lowers predicted P(Adelie) by almost 0.2. However, the same bill length but for heavier penguins has increased predicted P(Adelie) by around 0.15. For other bill lengths, the body mass does not have the same effect, that is what makes it an interaction.'}
+```{r ale-penguins-2d, fig.cap = 'ALE plot of the 2nd order effect of body mass and bill length. Both features interact with each other. For example, a bill length between 41 and 46 combined with a body mass below 4000g decreases the predicted P(Adelie) by almost 0.2. However, the same bill length but for heavier penguins has increased the predicted P(Adelie) by about 0.15. For other bill lengths, the body mass does not have the same effect, making it an interaction.'}
 pred.penguins = Predictor$new(mod, data = penguins, class="Adelie")
 FeatureEffect$new(pred.penguins, c("bill_length_mm", "body_mass_g"), grid.size = 30)$plot(show.data = TRUE) + 
 scale_fill_gradient("ALE", low = "red", high = "yellow") + 
