@@ -60,14 +60,17 @@ Stuff that both works for leanpub and for bookdown:
 
 Printing for  proofreading with extra line spacing:
 Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line-height:1.7 to line-height:2.5, open local html with chrome, print to pdf with custom margin.
+
 ## Changelog
+
 All notable changes to the book will be documented here.
 
-### v2.0 (IN PROGRESS) [html version]
+### v3.0 (IN PROGRESS) [html version]
 
-- Using Palmer penguins for classification examples (instead of cancer data). Turns out I encoded the cancer class wrongly, so interpretation was actually the opposite for e.g. feature effects. Over the years I felt this particular cancer data not a good match for this book, and now with the discovery of the error, I expedited the switch to a more playful dataset. 
+- Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, less sensitive and more instructive since it's multi-class instead of binary classification.
 
 ### v2.0 [Print version, ebook version]
+
 - Added "Preface by the Author" chapter
 - Started section on neural network interpretation
 - Added chapter on feature visualization
