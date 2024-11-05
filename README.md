@@ -69,7 +69,7 @@ All notable changes to the book will be documented here.
 
 - Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, less sensitive and more instructive since it's multi-class instead of binary classification.
 
-### v2.0 [Print version, ebook version]
+### v2.0 [Print + ebook version]
 
 - Added "Preface by the Author" chapter
 - Started section on neural network interpretation
