@@ -60,10 +60,17 @@ Stuff that both works for leanpub and for bookdown:
 
 Printing for  proofreading with extra line spacing:
 Build HTML book, go to manuscript/_book/libs/gitbook*/css/style.css, change line-height:1.7 to line-height:2.5, open local html with chrome, print to pdf with custom margin.
+
 ## Changelog
+
 All notable changes to the book will be documented here.
 
-### v2.0 (IN PROGRESS) [html version]
+### v3.0 (IN PROGRESS) [html version]
+
+- Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, less sensitive and more instructive since it's multi-class instead of binary classification.
+
+### v2.0 [Print + ebook version]
+
 - Added "Preface by the Author" chapter
 - Started section on neural network interpretation
 - Added chapter on feature visualization
@@ -80,7 +87,7 @@ All notable changes to the book will be documented here.
         - Chapter RuleFit: The importance of the linear term in the total importance formulate was indexed with an $l$ instead of $j$.
 - Updated images
 
-### v1.1 (2019-03-23) [Print version, ebook version]
+### v1.1 (2019-03-23) 
 - Fixes wrong index in Cooks Distance summation (i -> j)
 - fixed boxplot formula (1.5 instead of 1.58)
 - Change to colorblind-friendly color palettes (viridis)

@@ -6,9 +6,12 @@
 ```{r, message = FALSE, warning = FALSE, echo = FALSE}
 devtools::load_all()
 set.seed(43)
+library(palmerpenguins)
+penguins = na.omit(penguins)
+penguins$is_adelie = penguins$species == "Adelie"
+penguins = penguins[c("is_adelie", "body_mass_g", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "sex")]
 
 influence.matrix.filename = "../data/influence-df.RData"
-data("cervical")
 ```
 
 <!-- Intro text -->
@@ -173,10 +176,10 @@ In the following example we will use these simple influence measures.
 
 **Deletion diagnostics example**
 
-In the following example, we train a support vector machine to predict [cervical cancer](#cervical) given risk factors and measure which training instances were most influential overall and for a particular prediction.
-Since the prediction of cancer is a classification problem, we measure the influence as the difference in predicted probability for cancer.
+In the following example, we train a support vector machine to predict whether a penguin is an [Adelie penguin](#penguins) given body measurements and measure which training instances were most influential overall and for a particular prediction.
+Since this is a classification problem, we measure the influence as the difference in predicted probability for penguin species.
 An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
-The measurement of the influence for all `r nrow(cervical)` training instances requires to train the model once on all data and retrain it `r nrow(cervical)` times (= size of training data) with one of the instances removed each time.
+Measuring influence for all `r nrow(penguins)` training instances requires training the model once on all data and retraining it `r nrow(penguins)` times (= size of training data) with one of the instances removed each time.
 
 ```{r influence, eval = !file.exists(influence.matrix.filename)}
 #'@param predicted The predicted outcome of a model
@@ -185,15 +188,15 @@ influence.v = function(predicted, predicted.without) {
   predicted - predicted.without
 }
 
-influence.matrix = matrix(NA, ncol = nrow(cervical), nrow = nrow(cervical))
+influence.matrix = matrix(NA, ncol = nrow(penguins), nrow = nrow(penguins))
 
 lrn = makeLearner("classif.svm", predict.type = "prob")
-tsk = makeClassifTask(data = cervical, target = "Biopsy")
+tsk = makeClassifTask(data = penguins, target = "is_adelie")
 mod = train(lrn, tsk)
-predicted.orig = getPredictionProbabilities(predict(mod, newdata = cervical))
-cs = lapply(1:nrow(cervical), function(to.remove.index) {
-  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(cervical), to.remove.index))
-  predict.removed = getPredictionProbabilities(predict(mod.2, newdata = cervical))
+predicted.orig = getPredictionProbabilities(predict(mod, newdata = penguins))
+cs = lapply(1:nrow(penguins), function(to.remove.index) {
+  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(penguins), to.remove.index))
+  predict.removed = getPredictionProbabilities(predict(mod.2, newdata = penguins))
   influence.v(predicted.orig, predict.removed)
 })
 
@@ -206,14 +209,13 @@ save(influence.df, predicted.orig, file = influence.matrix.filename)
 
 ```{r}
 load(influence.matrix.filename)
-df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nrow(cervical))
+df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nrow(penguins))
 df = df[order(df$influence, decreasing = TRUE),]
 ```
 
-The most influential instance has an influence measure of about `r sprintf("%.2f", abs(df[1,"influence"]))`.
-An influence of `r sprintf('%.2f', abs(df[1,"influence"]))` means that if we remove the `r df$id[1]`-th instance, the predicted probability changes by `r sprintf('%.0f', 100 * df[1,"influence"])` percentage point on average.
-This is quite substantial considering the average predicted probability for cancer is `r sprintf('%.1f', 100 *mean(predicted.orig))`%.
-The mean value of influence measures over all possible deletions is `r sprintf('%.1f', 100 * mean(abs(df$influence)))` percentage points.
+The most influential instance has an influence measure of about `r sprintf("%.3f", abs(df[1,"influence"]))`.
+An influence of `r sprintf('%.3f', abs(df[1,"influence"]))` means that if we remove the `r df$id[1]`-th instance, the predicted probability changes by `r sprintf('%.1f', 100 * df[1,"influence"])` percentage point on average.
+This is does not sound like much, but it's an average over the entire data coming from just removing 1 data point.
 Now we know which of the data instances were most influential for the model.
 This is already useful to know for debugging the data.
 Is there a problematic instance?
@@ -227,39 +229,33 @@ But we can better understand what kind of instances are influential when we ask:
 What distinguishes an influential instance from a non-influential instance?
 We can turn this question into a regression problem and model the influence of an instance as a function of its feature values. 
 We are free to choose any model from the chapter on [Interpretable Machine Learning Models](#simple).
-For this example I chose a decision tree (following figure) that shows that data from women of age 35 and older were the most influential for the support vector machine.
-Of all the women in the dataset  `r sum(cervical$Age >= 35)` out of `r nrow(cervical)` were older than 35.
-In the chapter on [Partial Dependence Plots](#pdp) we have seen that after 40 there is a sharp increase in the predicted probability of cancer and the [Feature Importance](#feature-importance) has also detected age as one of the most important features.
-The influence analysis tells us that the model becomes increasingly unstable when predicting cancer for higher ages.
-This in itself is valuable information. 
-This means that errors in these instances can have a strong effect on the model.
+For this example I chose a decision tree (following figure) that shows that data from penguins with short bills and short flippers were the most influential for the support vector machine.
+Penguins with long bills and a low body mass were the least influential.
 
-```{r cooks-analyzed, eval=TRUE, fig.cap = "A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2.", eval = FALSE}
+```{r cooks-analyzed, eval=FALSE, fig.height=8, fig.width=12, fig.show='hide'}
 # This code snippet causes problems on TravisCI.
 # Hack: save resulting figure locally, set eval to FALSE and load img in different chunk
-df.cervical  = cbind(df, cervical)
-ct = rpart(abs(influence) ~ . -id, data = df.cervical, control = rpart.control(maxdepth = 2))
+df.penguins= cbind(df, penguins[,setdiff(colnames(penguins), "is_adelie")])
+ct = rpart(abs(influence) ~ . -id, data = df.penguins, control = rpart.control(maxdepth = 2))
 ct = partykit::as.party.rpart(ct)
 partykit:::plot.constparty(ct,
      inner_panel = partykit::node_inner(ct, pval = FALSE, id=FALSE),
      terminal_panel = partykit::node_boxplot(ct, id = FALSE))
 ```
 
-```{r cooks-analyzed-include, eval=TRUE, fig.cap = "A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2."}
-knitr::include_graphics("images/cooks-analyzed-1.png")
+```{r cooks-analyzed-include, fig.cap = "A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2."}
+knitr::include_graphics("images/cooks-analyzed-1.jpeg")
 ```
 
 
 ```{r influence-single-prepare}
-i = which(predicted.orig == max(predicted.orig))
+i = which(predicted.orig == min(predicted.orig))
+i = 8
 obs = influence.df[i,]
-cervical.200 = cervical
-cervical.200$influence = unlist(obs)
-#cervical.200 = na.omit(cervical.200)
-worst.case.index = which(abs(cervical.200$influence) == max(abs(cervical.200$influence), na.rm = TRUE))
-
+penguins.i = penguins
+penguins.i$influence = unlist(obs)
+worst.case.index = which(abs(penguins.i$influence) == max(abs(penguins.i$influence), na.rm = TRUE))
 ```
-
 
 This first influence analysis revealed the *overall* most influential instance.
 Now we select one of the instances, namely the `r i`-th instance, for which we want to explain the prediction by finding the most influential training data instances.
@@ -267,44 +263,30 @@ It is like a counterfactual question:
 How would the prediction for instance `r i` change if we omit instance i from the training process?
 We repeat this removal for all instances.
 Then we select the training instances that result in the biggest change in the prediction of instance `r i` when they are omitted from the training and use them to explain the prediction of the model for that instance.
-I chose to explain the prediction for instance `r i` because it is the instance with the highest predicted probability of cancer (`r sprintf('%.2f', 100 * predicted.orig[i])`%), which I thought was an interesting case to analyze more deeply.
+I chose to explain the prediction for instance `r i` because for this penguin there were some highly influential other penguins.
 We could return the, say, top 10 most influential instances for predicting the `r i`-th instance printed as a table.
 Not very useful, because we could not see much.
 Again, it makes more sense to find out what distinguishes the influential instances from the non-influential instances by analyzing their features.
 We use a decision tree trained to predict the influence given the features, but in reality we misuse it only to find a structure and not to actually predict something.
 The following decision tree shows which kind of training instances were most influential for predicting the `r i`-th instance. 
 
-
-```{r influence-single, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from women who smoked for 18.5 years or longer had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability.", i, i), eval = FALSE}
+```{r influence-single, eval = FALSE, fig.height=8, fig.width=12, fig.show='hide'}
 # Also here TravisCI has a problem
 # Using same hack as in chunk above
-ct = rpart(abs(influence) ~ ., data = cervical.200, control = rpart.control(maxdepth = 2))
+ct = rpart(abs(influence) ~ ., data = penguins.i, control = rpart.control(maxdepth = 2))
 ct = as.party(ct)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE, id=FALSE), terminal_panel=node_boxplot(ct,id=FALSE))
 ```
 
-```{r influence-single-include, eval=TRUE, fig.cap = sprintf("Decision tree that explains which instances were most influential for predicting the %i-th instance. Data from women who smoked for 18.5 years or longer had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction by 11.7 percentage points of cancer probability.", i, i)}
-knitr::include_graphics("images/influence-single-1.png")
+```{r influence-single-include, fig.cap = sprintf("Decision tree explaining which instances were most influential in predicting the %i-th instance. Data from penguins with flippers shorter than 179 mm had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction of 1 percentage point of P(Adelie) and one of the penguins even 6 percentage points.", i, i)}
+knitr::include_graphics("images/influence-single-1.jpeg")
 ```
 
+Penguins with short flippers have a high influence on the prediction for the `r i`-th penguin.
+Penguins No. `r i` has a flipper length of `r penguins$flipper_length_mm[i]`, which is just on the edge of 179.
+And there are only 7 penguins with a flipper length shorter than 179 mm, which likely strongly influences the shape of the prediction function at the tail.
 
-Data instances of women who smoked or have been smoking for 18.5 years or longer have a high influence on the prediction of the `r i`-th instance.
-The woman behind the `r i`-th instance smoked for `r cervical$Smokes..years.[i]` years.
-In the data, `r sum(cervical$Smokes..years >= 18.5)` women (`r sprintf('%.2f', 100 * mean(cervical$Smokes..years >= 18.5))`%) smoked 18.5 years or longer.
-Any mistake made in collecting the number of years of smoking of one of these women will have a huge impact on the predicted outcome for the `r i`-th instance.
-
-The most extreme change in the prediction happens when we remove instance number `r worst.case.index`.
-The patient allegedly smoked for `r cervical$Smokes..years.[worst.case.index]` years, aligned with the results from the decision tree.
-The predicted probability for the `r i`-th instance changes from `r sprintf('%.2f', 100 * predicted.orig[i])`% to `r sprintf('%.2f', 100 * (predicted.orig[i]  - cervical.200$influence[worst.case.index]))`% if we remove the instance `r worst.case.index`!
-
-
-If we take a closer look at the features of the most influential instance, we can see another possible problem.
-The data say that the woman is 28 years old and has been smoking for 22 years. 
-Either it is a really extreme case and she really started smoking at 6, or this is a data error. 
-I tend to believe the latter.
-This is certainly a situation in which we must question the accuracy of the data.
-
-These examples showed how useful it is to identify influential instances to debug models.
+These examples showed how useful it is to identify influential instances to check the robustness of the model.
 One problem with the proposed approach is that the model needs to be retrained for each training instance.
 The whole retraining can be quite slow, because if you have thousands of training instances, you will have to retrain your model thousands of times.
 Assuming the model takes one day to train and you have 1000 training instances, then the computation of influential instances -- without parallelization -- will take almost 3 years.

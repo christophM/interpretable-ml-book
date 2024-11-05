@@ -131,37 +131,43 @@ ggplot(pdp$results) +
   scale_y_continuous('', limits = c(0, 5500))
 ```
 
-We also compute the partial dependence for [cervical cancer classification](#cervical).
-This time we fit a random forest to predict whether a woman might get cervical cancer based on risk factors.
-We compute and visualize the partial dependence of the cancer probability on different features for the random forest:
+We also compute the partial dependence for [penguin classification](#penguins).
+This time we fit a random forest to classify penguin species based on body measurements.
+We compute and visualize the partial dependence of the probability for the different species (Adelie, Gentoo, and Chinstrap) on bill length and body mass for the random forest:
 
-```{r pdp-cervical, fig.cap = 'PDPs of cancer probability based on age and years with hormonal contraceptives. For age, the PDP shows that the probability is low until 40 and increases after. The more years on hormonal contraceptives the higher the predicted cancer risk, especially after 10 years. For both features not many data points with large values were available, so the PD estimates are less reliable in those regions.', dev.args = list(pointsize = 5.5), fig.height = 4}
-data(cervical)
-cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
+```{r pdp-penguin, fig.cap = 'The longer the bill, the less likely it is to be an Adelie and the more likely it is to be a Chinstrap. A longer bill also slightly increases the probability of being a Gentoo. The effect of body mass is less pronounced: We see no effect of body mass on the Adelie probability (always around 50%). The probability of Chinstrap decreases slightly with increasing weight, while the probability for Gentoo increases.', dev.args = list(pointsize = 5.5), fig.height = 4}
+library(palmerpenguins)
+penguins = na.omit(penguins)
+penguins = penguins[c("species", "bill_length_mm", "bill_depth_mm", "body_mass_g", "flipper_length_mm", "sex")]
+penguin.task = makeClassifTask(data = penguins, target = "species")
+mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguin.task)
 
-pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
-pdp = FeatureEffect$new(pred.cervical, "Age", method = "pdp")
+pred.penguins = Predictor$new(mod, data = penguins)
+pdp = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "pdp")
 
 p1 = pdp$plot() +
-  scale_x_continuous(limits = c(0, NA)) +
-  scale_y_continuous('Predicted cancer probability', limits = c(0, 0.4))
-pdp$set.feature("Hormonal.Contraceptives..years.")
+  scale_x_continuous("Bill length in millimeters") +
+  scale_y_continuous('Predicted probability of being Adelie penguin', limits = c(0, NA))
+pdp$set.feature("body_mass_g")
 p2 = pdp$plot() +
-  scale_x_continuous("Years on hormonal contraceptives", limits = c(0, NA)) +
-  scale_y_continuous('', limits = c(0, 0.4))
+  scale_x_continuous("Body mass in grams") +
+  scale_y_continuous('', limits = c(0, NA))
 
-gridExtra::grid.arrange(p1, p2, ncol = 2)
+gridExtra::grid.arrange(p1, p2, ncol = 1)
 ```
 
 We can also visualize the partial dependence of two features at once:
 
-```{r pdp-cervical-2d, fig.cap = 'PDP of cancer probability and the interaction of age and number of pregnancies. The plot shows the increase in cancer probability at 45. For ages below 25, women who had 1 or 2 pregnancies have a lower predicted cancer risk, compared with women who had 0 or more than 2 pregnancies. But be careful when drawing conclusions: This might just be a correlation and not causal!'}
-pd = FeatureEffect$new(pred.cervical, c("Age", "Num.of.pregnancies"), method = "pdp")
-pd$plot() +
-  scale_fill_viridis(option = "D")
+```{r pdp-penguins-2d, fig.cap = 'PDP for P(Adelie) and the interaction between bill length and body mass. The dots show the ground truth: black for Adelie penguins, gray for Chinstrap and Gentoo. For bill length, the plot shows what we already knew: a sharp drop in P(Adelie) for bills longer than 40mm. Body mass shows an interesting interaction with bill length: For penguins with bill length > 50, we can see slight differences in P(Adelie) between lighter and heavier penguins, even though there are zero Adelie penguins with this bill length.'}
+pred.adelie = Predictor$new(mod, data = penguins, class="Adelie")
+pd = FeatureEffect$new(pred.adelie, c("bill_length_mm", "body_mass_g"), method = "pdp")
+pd$plot() + 
+  geom_point(data=penguins[penguins$species=="Adelie",]) +
+  geom_point(data=penguins[!(penguins$species=="Adelie"),], color="grey") +
+  scale_fill_viridis(option = "D") +
+  scale_x_continuous("Bill length in millimeters") +
+  scale_y_continuous("Body mass in grams")
 ```
-
 
 ### Advantages
 

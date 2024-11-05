@@ -149,40 +149,55 @@ I based the importance computation on the training data, because I had to choose
 
 I show examples for classification and regression.
 
-**Cervical cancer (classification)**
+**Penguin species (classification)**
 
-We fit a random forest model to predict [cervical cancer](#cervical).
-We measure the error increase by 1-AUC (1 minus the area under the ROC curve).
-Features associated with a model error increase by a factor of 1 (= no change) were not important for predicting cervical cancer.
+We fit a random forest model to predict [penguin species](#penguins), using 2/3 of the data for training, and 1/3 for computing the importance.
+We measure the error as classification error.
+Features associated with a model error increase by a factor of 1 (= no change) were not important for predicting penguin species.
 
-```{r}
+```{r importance-penguins-prep}
 library('mlr')
 library('iml')
-data("cervical")
-task = makeClassifTask(data = cervical, target = "Biopsy", positive = "Cancer")
+library(palmerpenguins)
+set.seed(1)
+
+# Data preparation
+penguins = na.omit(penguins)
+
+# Split data into training (2/3) and test (1/3) sets
+split = sample(c(TRUE, FALSE), nrow(penguins), replace=TRUE, prob=c(2/3, 1/3))
+penguins_train = penguins[split, ]
+penguins_test = penguins[!split, ]
+
+# Create task and learner
+task = makeClassifTask(data = penguins_train, target = "species")
 learner = makeLearner('classif.randomForest', predict.type = 'prob')
+
+# Train model
 mod = mlr::train(learner, task)
-predictor = Predictor$new(mod, data = cervical[-which(names(cervical) == "Biopsy")], y = (cervical$Biopsy == "Cancer"), class = "Cancer")
-auc_error = function(actual, predicted) 1 - Metrics::auc(actual, predicted)
-importance = FeatureImp$new(predictor, loss = auc_error)
+
+# Create predictor using the trained model and test data
+predictor = Predictor$new(mod, data = penguins_test)
+
+# Compute feature importance
+importance = FeatureImp$new(predictor, loss = "ce", compare="ratio")
+
+# Extract results
 imp.dat = data.frame(importance$results[c("feature", "permutation.error", "importance")])
 most_imp = imp.dat$feature[imp.dat$importance == max(imp.dat$importance)]
 ```
 
-```{r importance-cervical, fig.cap = sprintf("The importance of each of the features for predicting cervical cancer with a random forest. The most important feature was %s. Permuting %s resulted in an increase in 1-AUC by a factor of %.2f", most_imp, most_imp, max(imp.dat$importance))}
+```{r importance-penguins, fig.cap = sprintf("The importance of each of the features for predicting penguin species with a random forest. The most important feature was %s. Permuting %s resulted in an increase in classification error by a factor of %.2f", most_imp, most_imp, max(imp.dat$importance))}
 plot(importance) +
-  scale_x_continuous("Feature importance (loss: 1 - AUC)") +
+  scale_x_continuous("Feature importance (classification error)", limits=c(0.5, NA)) +
    scale_y_discrete("")
 ```
 
-
-The feature with the highest importance was `r imp.dat[1, 'feature']` associated with an error increase of `r round(imp.dat[1,'importance'], 2)` after permutation.
 
 **Bike sharing (regression)**
 
 We fit a support vector machine model to predict [the number of rented bikes](#bike-data), given weather conditions and calendar information.
 As error measurement we use the mean absolute error.
-
 
 ```{r}
 data("bike")
@@ -196,10 +211,10 @@ best = which(imp.dat$importance == max(imp.dat$importance))
 worst = which(imp.dat$importance == min(imp.dat$importance))
 ```
 
-
 ```{r importance-bike, fig.cap = sprintf("The importance for each of the features in predicting bike counts with a support vector machine. The most important feature was %s, the least important was %s.", imp.dat$feature[best], imp.dat$feature[worst])}
 plot(importance) +
-   scale_y_discrete("")
+   scale_y_discrete("") +
+   scale_x_continuous(limits = c(1, NA))
 ```
 
 

@@ -519,34 +519,39 @@ In a scenario where two features have no interaction, the total effect plot of t
 The second-order effect would immediately show that there is no interaction.
 
 Enough bicycles for now, let's turn to a classification task.
-We train a random forest to predict the probability of [cervical cancer](#cervical) based on risk factors.
+We train a random forest to predict the [penguin species](#penguins) based on body measurements.
 We visualize the accumulated local effects for two of the features:
 
-```{r ale-cervical-1D, fig.cap = "ALE plots for the effect of age and years with hormonal contraceptives on the predicted probability of cervical cancer. For the age feature, the ALE plot shows that the predicted cancer probability is low on average up to age 40 and increases after that. The number of years with hormonal contraceptives is associated with a higher predicted cancer risk after 8 years.", fig.height = 4}
-data(cervical)
-cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
+```{r ale-penguins-1D, fig.cap = "ALE plots for the effect of bill length and body mass on predicted probability for each species. Short bills are associated with a higher probability for Adelie and a lower probability for Chinstrap. This relationship is reversed for bill lengths greater than 45 mm. The probability of Gentoo doesn't change much with bill length. Increasing body mass slightly increases P(Adelie) and P(Gentoo), but decreases P(Chinstrap).", fig.height = 4}
 
-pred.cervical = Predictor$new(mod, data = cervical, class = "Cancer")
-ale1 = FeatureEffect$new(pred.cervical, "Age", method = "ale")$plot()
-ale2 = FeatureEffect$new(pred.cervical, "Hormonal.Contraceptives..years.", method = "ale")$plot() +
-  scale_x_continuous("Years with hormonal contraceptives") + 
-  scale_y_continuous("")
-gridExtra::grid.arrange(ale1, ale2, ncol = 2)
+penguins.task = makeClassifTask(data = penguins, target = "species")
+mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguins.task)
+
+pred.penguins = Predictor$new(mod, data = penguins)
+ale1 = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "ale")$plot() +
+  scale_x_continuous("Bill length in millimeters") + 
+  scale_y_continuous("", limits=c(-0.2, 0.25))
+ale2 = FeatureEffect$new(pred.penguins, "body_mass_g", method = "ale")$plot() +
+  scale_x_continuous("Body mass in grams") +
+  scale_y_continuous("", limits=c(-0.2, 0.25))
+gridExtra::grid.arrange(ale1, ale2, ncol = 1)
 ```
 
-Next, we look at the interaction between number of pregnancies and age.
+The effects are quite similar to the PDPs in [the PDP chapter](#pdp).
+Only for Adelie the effect of body mass is different, since we can clearly see an increase in P(Adelie) with higher body mass.
+Next, we look at the interaction between body mass and bill length, but only for P(Adelie).
 
-
-```{r ale-cervical-2d, fig.cap = 'ALE plot of the 2nd-order effect of number of pregnancies and age. The interpretation of the plot is a bit inconclusive, showing what seems like overfitting. For example, the plot shows an odd model behavior at age of 18-20 and more than 3 pregnancies (up to 5 percentage point increase in cancer probability). There are not many women in the data with this constellation of age and number of pregnancies (actual data are displayed as points), so the model is not severely penalized during the training for making mistakes for those women.'}
-FeatureEffect$new(pred.cervical, c("Age", "Num.of.pregnancies"), grid.size = 30)$plot(show.data = TRUE) + 
-    scale_fill_gradient("ALE", low = "red", high = "yellow") + 
-  scale_y_continuous("Number of pregnancies")  + 
-  scale_x_continuous("Age") +
+```{r ale-penguins-2d, fig.cap = 'ALE plot of the 2nd order effect of body mass and bill length. Both features interact with each other. For example, a bill length between 41 and 46 combined with a body mass below 4000g decreases the predicted P(Adelie) by almost 0.2. However, the same bill length but for heavier penguins has increased the predicted P(Adelie) by about 0.15. For other bill lengths, the body mass does not have the same effect, making it an interaction.'}
+pred.penguins = Predictor$new(mod, data = penguins, class="Adelie")
+FeatureEffect$new(pred.penguins, c("bill_length_mm", "body_mass_g"), grid.size = 30)$plot(show.data = TRUE) + 
+scale_fill_gradient("ALE", low = "red", high = "yellow") + 
+  scale_x_continuous("Bill length inn mm")  + 
+  scale_y_continuous("Body mass in g") +
   scale_fill_viridis(option = "D")
 
 ```
 
+The interaction plot shows really interesting effects that we couldn't see in the PDP, which is a nice property of the 2D-ALE, since it shows the pure interaction without the main effects.
 
 ### Advantages
 
@@ -600,7 +605,6 @@ As a result, all estimates have a different accuracy (but they are still the bes
 The problem exists in a less severe version for main effect ALE plots.
 The number of instances is the same in all intervals, thanks to the use of quantiles as grid, but in some areas there will be many short intervals and the ALE curve will consist of many more estimates.
 But for long intervals, which can make up a big part of the entire curve, there are comparatively fewer instances.
-This happened in the cervical cancer prediction ALE plot for high age for example.
 
 **Second-order effect plots can be a bit annoying to interpret**, as you always have to keep the main effects in mind.
 It is tempting to read the heat maps as the total effect of the two features, but it is only the additional effect of the interaction.

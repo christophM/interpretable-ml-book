@@ -27,27 +27,27 @@ In ICE plots, for each instance in $\{(x_{S}^{(i)},x_{C}^{(i)})\}_{i=1}^N$ the c
 
 ### Examples
 
-Let's go back to the [cervical cancer dataset](#cervical) and see how the prediction of each instance is associated with the feature "Age".
-We will analyze a random forest that predicts the probability of cancer for a woman given risk factors.
-In the [partial dependence plot](#pdp) we have seen that the cancer probability increases around the age of 50, but is this true for every woman in the dataset?
-The ICE plot reveals that for most women the age effect follows the average pattern of an increase at age 50, but there are some exceptions:
-For the few women that have a high predicted probability at a young age, the predicted cancer probability does not change much with age.
+Let's go back to the [penguin classification task](#penguins) and see how the prediction of each instance is related to the feature "bill_length_mm".
+We will analyze a random forest that predicts the probability of different species given body measurements.
+In the [partial dependence plot](#pdp) we saw that a larger bill length leads to a lower P(Adelie).
+But that was an average effect, now we can use ICE a look at individual instances.
 
-```{r ice-cervical, fig.cap="ICE plot of cervical cancer probability by age. Each line represents one woman. For most women there is an increase in predicted cancer probability with increasing age. For some women with a predicted cancer probability above 0.4, the prediction does not change much at higher age."}
+```{r ice-penguins, fig.cap="ICE plot of P(Adelie) by bill length. Each line represents a penguin. We can almost see two types of penguins. Some start with a high probability of being Adelie at a low bill length, and another segment starts with a probability of about 25%."}
 library("mlr")
 library("ggplot2")
-data(cervical)
+library("palmerpenguins")
+
 set.seed(43)
-cervical_subset_index = sample(1:nrow(cervical), size = 300)
-cervical_subset = cervical[cervical_subset_index, ]
-cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', predict.type = 'prob'), cervical.task)
-pred.cervical = Predictor$new(mod, cervical_subset, class = "Cancer")
-ice = FeatureEffect$new(pred.cervical, "Age", method = "ice")$plot() + 
+penguins.task = makeClassifTask(data = penguins, target = "species")
+mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguins.task)
+pred.penguins = Predictor$new(mod, penguins, class = "Adelie")
+ice = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "ice")$plot() + 
   scale_color_discrete(guide='none') + 
-  scale_y_continuous('Predicted cancer probability')
+  scale_y_continuous('P(Adelie)')
 ice
 ```
+
+The plot shows that the effect of bill length is not the same for each penguin.
 
 The next figure shows ICE plots for the [bike rental prediction](#bike-data).
 The underlying prediction model is a random forest.
@@ -86,14 +86,15 @@ where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions 
 
 #### Example
 
-For example, take the cervical cancer ICE plot for age and center the lines on the youngest observed age:
+For example, take the Adelie penguin ICE plot for body mass and center the lines on the penguin with the shortest bill length:
 
-```{r ice-cervical-centered, fig.cap=sprintf("Centered ICE plot for predicted  cancer probability by age. Lines are fixed to 0 at age %i. Compared to age %i, the predictions for most women remain unchanged until the age of 45 where the predicted probability increases.", min(cervical_subset$Age), min(cervical_subset$Age)), fig.height = 4}
+```{r ice-penguins-centered, fig.cap=sprintf("Centered ICE plot for predicted species probabilities by bill length. Lines are fixed to 0 at bill length %.0f. Compared to bill length %.0f, P(Adelie) gets lower for increasing bill length.", min(penguins$bill_length_mm), min(penguins$bill_length_mm)), fig.height = 4}
 library("iml")
-predictor = Predictor$new(mod, data = cervical_subset, class = "Cancer")
-ice = FeatureEffect$new(predictor, feature = "Age", center.at = min(cervical_subset$Age), method = "pdp+ice")
-ice$plot()  + scale_color_discrete(guide='none') +
-    scale_y_continuous(sprintf('Cancer probability difference to age %i', min(cervical_subset$Age))) 
+predictor = Predictor$new(mod, data = penguins, class = "Adelie")
+ice = FeatureEffect$new(predictor, feature = "bill_length_mm", center.at = min(penguins$bill_length_mm), method = "pdp+ice")
+ice$plot()  +
+  scale_color_discrete(guide='none') +
+  scale_y_continuous(sprintf('Difference in P(Adelie) to bill length %.0f', min(penguins$bill_length_mm))) 
 ```
 
 The centered ICE plots make it easier to compare the curves of individual instances.
@@ -101,20 +102,20 @@ This can be useful if we do not want to see the absolute change of a predicted v
 
 Let's have a look at centered ICE plots for the bicycle rental prediction:
 
-```{r ice-bike-centered, fig.cap='Centered ICE plots of predicted number of bikes by weather condition. The lines show the difference in prediction compared to the prediction with the respective feature value at its observed minimum.'}
+```{r ice-bike-centered, fig.cap='Centered ICE plots of predicted number of bikes by weather condition. The lines show the difference in prediction compared to the prediction with the respective feature value at its observed minimum.', fig.height=3.3}
 data(bike)
 set.seed(43)
 bike.subset.index = sample(1:nrow(bike), size = 100)
 bike.subset = bike[bike.subset.index,]
 
 predictor = Predictor$new(mod.bike, data = bike.subset)
-ytext1 = sprintf("Different to prediction at temp = %.2f", min(bike$temp))
+ytext1 = sprintf("Different to prediction at temp = %.1f", min(bike$temp))
 ice1 = FeatureEffect$new(predictor, feature = "temp", center.at = min(bike$temp), method = "pdp+ice")$plot() +
   scale_y_continuous(ytext1)
-ytext2 = sprintf("Different to prediction at hum = %.2f", min(bike$hum))
+ytext2 = sprintf("Different to prediction at hum = %.1f", min(bike$hum))
 ice2 = FeatureEffect$new(predictor, feature = "hum", center.at = min(bike$hum), method = "pdp+ice")$plot() +
   scale_y_continuous(ytext2)
-ytext3 = sprintf("Different to prediction at windspeed = %.2f", min(bike$windspeed))
+ytext3 = sprintf("Different to prediction at windspeed = %.1f", min(bike$windspeed))
 ice3 = FeatureEffect$new(predictor, feature = "windspeed", center.at = min(bike$windspeed), method = "pdp+ice")$plot() +
   scale_y_continuous(ytext3)
 gridExtra::grid.arrange(ice1, ice2, ice3, nrow = 1)

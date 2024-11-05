@@ -8,7 +8,7 @@ library(anchors)
 
 ## Scoped Rules (Anchors) {#anchors}
 
-*Authors: Tobias Goerke & Magdalena Lang*
+*Authors: Tobias Goerke & Magdalena Lang (with later edits from Christoph Molnar)*
 
 The anchors method explains individual predictions of any black box classification model by finding a decision rule that "anchors" the prediction sufficiently.
 A rule anchors a prediction if changes in other feature values do not affect the prediction.
@@ -211,62 +211,10 @@ All of the previous rules were generated for instances where the model decides c
 knitr::include_graphics("images/anchors2-1.png")
 ```
 
-
-
 While choosing the default perturbation space is a comfortable choice to make, it may have a great impact on the algorithm and can thus lead to biased results. For example, if the train set is unbalanced (there is an unequal number of instances of each class), the perturbation space is as well. This condition further affects the rule-finding and the result's precision.
-
-The [cervical cancer](#cervical) data set is an excellent example of this situation.
-Applying the anchors algorithm leads to one of the following situations: 
-
-+ Explaining instances labeled *healthy* yields empty rules as all generated neighbors evaluate to *healthy*.
-+ Explanations for instances labeled *cancer* are overly specific, i.e. comprise many feature predicates, since the perturbation space mostly covers values from *healthy* instances.
-
-```{r}
-load("../data/cervical.RData")
-cervical.sampled.healthy <- cervical[sample(which(cervical$Biopsy == "Healthy"), 20), ]
-cervical.balanced <- rbind(cervical[cervical$Biopsy == "Cancer", ], cervical.sampled.healthy)
-```
-
-
-```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide',  eval = FALSE}
-set.seed(1)
-
-cervical.task = makeClassifTask(data = cervical, target = "Biopsy")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'cervical-rf', 
-                                  predict.type = 'prob'), cervical.task)
-cancer.explainer = anchors(cervical, mod, beams = 1)
-cancer.explanation = anchors::explain(cervical[c(1,7),], cancer.explainer)
-saveRDS(cancer.explanation, file = "../data/cached-anchors-cervical.RDS")
-
-
-set.seed(1)
-cancer.explainer.balanced = anchors(cervical.balanced, mod, tau = 1, beams = 2,
-                                    delta = 0.05, epsilon = 0.05, batchSize = 1000,
-                                    emptyRuleEvaluations = 1000)
-cancer.explanation.balanced = anchors::explain(cervical.sampled.healthy[2:5,], cancer.explainer.balanced)
-saveRDS(cancer.explanation.balanced, file = "../data/cached-anchors-cervical-balanced.RDS")
-```
-
-
-
-```{r anchors3, message=FALSE, warning=FALSE, echo=FALSE, fig.cap="Constructing anchors within unbalanced perturbation spaces leads to unexpressive results.", fig.height=10, fig.width=12}
-#cancer.explanation = readRDS("../data/cached-anchors-cervical.RDS")
-#plotExplanations(cancer.explanation, colPal = colPal)
-knitr::include_graphics("images/anchors3-1.png")
-```
-
-This outcome may be unwanted and can be approached in multiple ways. For example, a custom perturbation space can be defined.
+This may be unwanted and can be approached in multiple ways. For example, a custom perturbation space can be defined.
 This custom perturbation can sample differently, e.g. from an unbalanced data set or a normal distribution.
 This, however, comes with a side-effect: the sampled neighbors are not representative and change the coverage's scope. Alternatively, we could modify the MAB's confidence $\delta$ and error parameter values $\epsilon$. This would cause the MAB to draw more samples, ultimately leading to the minority being sampled more often in absolute terms.  
-
-For this example, we use a subset of the cervical cancer set in which the majority of cases are labeled *cancer*. We then have the framework to create a corresponding perturbation space from it. Perturbations are now more likely to lead to varying predictions, and the anchors algorithm can identify important features. However, one needs to take the coverage's definition into account: it is only defined within the perturbation space. In the previous examples, we used the train set as the perturbation space's basis. Since we only use a subset here, a high coverage does not necessarily indicate globally high rule importance. 
-
-```{r anchors4, message=FALSE, warning=FALSE, echo=FALSE, fig.cap="Balancing the data set before constructing anchors shows the model's reasoning for decisions in minority cases.", fig.height=10, fig.width=20}
-#cancer.explanation.balanced = readRDS("../data/cached-anchors-cervical-balanced.RDS")
-#table(cervical.balanced$Biopsy)
-#plotExplanations(cancer.explanation.balanced, colPal = colPal)
-knitr::include_graphics("images/anchors4-1.png")
-```
 
 
 ### Advantages
