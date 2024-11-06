@@ -5,26 +5,175 @@ set.seed(42)
 
 \newpage
 
-## What-If Plots {#what-if}
+## Ceterus Paribus Plots (what if analysis) {#what-if}
 
-What-If plots are the simplest analysis tool there is:
-How does the prediction of a data point change when we change one feature?
-They are also known under the name ceterus paribus analysis, which is latin for the other things equal.
+Ceterus Paribus Plots [ceteris-paribus] visualize how changes in a feature change the prediction of a data point.
+
+TODO: cite ceteris paribus paper
+
+<!-- introduction -->
+This is really the simplest possible way to interpret the prediction of a data point: Change one of the features and see how the prediction changes.
+We can learn from that how a feature influences the prediction of that data point, especially when we try a couple of values for that feature.
+It's the equivalent of making funny faces towards a Gorilla in the zoo to create a reaction.
+But really, why are we even talking about this simplistic approach?
+There are three reasons:
+
+- This simple approach done systematically, in the form of ceterus paribus profiles, can already give a lot of information about how the model makes predictions. And it is complementary to many other approaches, like SHAP.
+- We can compare the ceterus paribus profiles across different models, features, and data points, so this "simple" analysis provides a surprising amount of depth.
+- Changing a single feature is the prototype of model-agnostic methods. The cavemen painting that precedes modern art.
+
+<!-- Ceteris Paribus algorithm -->
+But anyways, let's get started with the "algorithm" ceteris paribus, if you want to call it that.
+Wait, the name is Latin and means "other things equal".
+I hate Latin, because I have been lied to in school.
+They promised me that learning Latin helps with learning other Latin-based languages, like Italian.
+But you no what even helps better when your goal is to learn Italian: That's right, you simply skip Latin and learn Italian.
+Anyways, back to ceteris paribus.
+Here is the algorithm:
+
+1. Pick a data point to explain.
+1. Pick a feature.
+1. Create a grid of feature values and create new data points that are copies of the original data points but the feature value is replaced with the grid values.
+1. Plot all the values as a line (for continuous feature) or dots (for categories) and highlight the current data points' value.
+
+This recipe is rather simplistic, but really if we combine multiple of these lines (also called profiles), we can get a lot of insight.
+
+Just some examples:
+
+- Compare the profiles side-by-side for multiple features
+- Within the same plot, you can compare the profiles for different models: Do different models work react differently to the what-ifs?
+- If you have a binary feature, you can easily visualize the combination of both changing a binar features and a continuous feature in the same plot
+- For multiclass you can show the lines in the same plot.
+- You can compare a couple of data points in the same plot, but this already moves us in the direciton of an ICE plot and the lines are really blurred
+
+It really is a versatile methjod for interpretability!
+
+### Examples
+
+Let's start with the regression example where we predict number of rented bikes based on weather and season with a random forest.
+We pick one of the data points, namely XXX and look at how changes in the wind speed feature would change the prediction.
+
+
+```{r whatif-bike, fig.cap='How changing wind speed changes the prediction. The x-axis shows the relative percentiles of the feature.', fig.height = 4}
+set.seed(42)
+data("bike")
+model <- randomForest(cnt~ ., data = bike)
+explainer_rf <- DALEX::explain(model, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
+wi_rf <- ceteris_paribus(explainer_rf, observation = bike[1,])
+plot(wi_rf, selected_variables='windspeed')
+```
+
+
+
+TODO: Interpretation
+The x-axis may seem a little odd, why don't we use here the absolute values for that feature, but rather the quantiles?
+
+And if we want to compare multiple features, we can with this type of analysis, as you can see in the next figure.
+
+```{r whatif-bike-allvars, fig.cap='', fig.height=4}
+wi_rf <- what_if(explainer_rf, observation = bike[1,])
+plot(wi_rf)
+```
+
+CONTINUE HERE 
+
+TODO: Interpretation
+
+Let's compare a couple of models next to the random forest, namely a linear model, and a single decision tree.
+
+```{r whatif-bike-models, fig.cap='', fig.height = 4}
+set.seed(42)
+data("bike")
+model_rf <- randomForest(cnt~ ., data = bike)
+model_cart <- rpart(cnt~ ., data = bike)
+model_lm <- lm(cnt~ ., data = bike)
+
+data_point =  bike[1,]
+
+explainer_rf <- DALEX::explain(model_rf, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
+explainer_cart <- DALEX::explain(model_cart, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
+explainer_lm <- DALEX::explain(model_lm, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
+cp_rf = ceteris_paribus(explainer_rf, data_point, y = data_point$cnt)
+cp_cart = ceteris_paribus(explainer_cart, data_point, y = data_point$cnt)
+cp_lm = ceteris_paribus(explainer_lm, data_point, y = data_point$cnt)
+
+
+plot(cp_rf, cp_cart, cp_lm, color = "_label_", selected_variables="temp")
+plot(wi_rf)
+```
+
+For the example, we train a random forest to classify penguins.
+Let's the "What-If" for the probability when we change some features, here focusing on all classes of the species (Adelie, Chinstrap, Gentoo).
+
+`
+```{r penguins2, fig.cap=""}
+library(DALEX)
+library(randomForest)
+library(ceterisParibus)
+library(palmerpenguins)
+
+set.seed(59)
+
+feature_set = c("body_mass_g", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "sex")
+penguins_sub = na.omit(penguins[c(feature_set, "species")])
+
+print(levels(penguins_sub$species))
+
+mod = randomForest(species ~ body_mass_g + bill_length_mm + bill_depth_mm + flipper_length_mm + sex, data = penguins_sub)
+
+pred1 <- function(m, x) predict(m, x, type = "prob")[,1] 
+pred2 <- function(m, x) predict(m, x, type = "prob")[,2]
+pred3 <- function(m, x) predict(m, x, type = "prob")[,3]
+
+
+chonky_penguin <- penguins_sub[1,feature_set]
+chonky_y = penguins_sub[1,]$species
+
+explainer_rf_adelie <- DALEX::explain(mod, data = penguins_sub[,feature_set],
+                              y = penguins_sub$species == "Adelie",
+                              predict_function = pred1, label = "Adelie", verbose=FALSE)
+explainer_rf_chinstrap <- DALEX::explain(mod, data = penguins_sub[, feature_set],
+                              y = penguins_sub$species == "Chinstrap",
+			      predict_function = pred2, label = "Chinstrap", verbose=FALSE)
+explainer_rf_gentoo <- DALEX::explain(mod, data = penguins_sub[, feature_set],
+                              y = penguins_sub$species == "Gentoo",
+                              predict_function = pred3, label = "Gentoo", verbose=FALSE)
+
+cp_rf1 <- ceteris_paribus(explainer_rf_adelie, chonky_penguin, y=chonky_y)
+cp_rf2 <- ceteris_paribus(explainer_rf_chinstrap, chonky_penguin, y=chonky_y)
+cp_rf3 <- ceteris_paribus(explainer_rf_gentoo, chonky_penguin, y=chonky_y)
+plot(cp_rf1, cp_rf2, cp_rf3, color="_label_", selected_variables="bill_length_mm")
+```
+
+### Connections to other methods
+
+
+
+They strongly tie in with this contrastive idea of explanations: I change some inputs of the original data point and see how the prediction changes.
+Just how I played video games as a kid: try out a few buttons and see what the character on the screen does.
 
 It's almost to simple to include in this book, or is it?
 Well, I figured it's the best way to get started as it is very intuitive, and bridges to many other methods, like ICE (LINK) or counterfactual explanations (LINK).
 And it can work well to fix problems with attribution-based techniques, like LIME and SHAP (LINK BOTH)
+Really, most model-agnostic methods from permutation feature importance to SHAP are just version of this what-if idea, or rather more systematic what-if scenarios that are aggregated.
+so this is the prototypical approach.
 
-Here is the algorithm:
+In sensitivity analysis, this would be called one-at-a-time change.
 
-- Pick a data point to explain
-- Pick a feature
-- Pick different values for the feature
-- Plot all the values as a line (for continuous feature) or dots and highlight the current data points' value
+However, we can also tie this to a more systematical what-if, and you'll find more in the ceterus paribus plots.
 
-For step 3 we can now of course try to find different scenarios, meaning certain values.
-But from a information and visualization stand point, it really makes more sense to use the entire range if you have a continuous feature, and all categories for categorical features.
-Unless, of course, there's just too many categories.
+Not a fan of the name, cause Latin creates such a distance to the streets.
+ceteris paribus means "all else equal".
+So it's all about keeping most features the same for a data point, and just changing one (or maybe two or three).
+
+cetrus paribus plots are useful for especially understanding also local effects, in the sense of what if I change the feature just a little bit.
+so it's about sensitivity.
+
+
+
+### Ceterus Paribus Plots
+
+
 
 What I love about this: it highlights how most of the model-agnostic methods work:
 We get information out of the model by manipulating the input data and observing how the output changes.
@@ -35,15 +184,14 @@ Of course what-if analysis is quite limited.
 Here are the connections to other methods:
 
 - The what-if analysis is basically the ICE curve (LINK) for just one data point, at least when we plot the entire range. And the ICE can then be extended to the PDP by averaging the lines. 
-- Also ALE plots are aggregations of what-if analysis
-- 
+- Also ALE (LINK) plots are aggregations of what-if analysis
+- Counteractual explanations are also What-If scenarios, although very particularly generated or searched ones. In a way, it's the reverse question: What-If plots first change the initial feature and see how the outcome changes, but Counterfactual Explanations start with a desired outcome and then we look for the changes to the features that would lead to that outcome.
 
 And there are cases where the what-if analysis, especially when looking at local changes around the data point can really compliment other interpretations:
 Some interpretation methods for explaining individual predictions assing values to the features and a pitfall is to misunderstand them as like coefficients.
 This is true for Shapley Values / SHAP, and also for Anchors (??), to a slight degree for LIME (especially when looking at the neighborhood issue).
 In fact, a combination of what-if analysis and shapley values won me a prize in an explainability competition.
 
-### Examples
 
 
 
@@ -65,3 +213,5 @@ In fact, a combination of what-if analysis and shapley values won me a prize in 
 
 - The [ceterisParibus R package](https://cran.r-project.org/web/packages/ceterisParibus/index.html) implements Ceteris Paribus Profiles, which are What-If Plots for the entire feature range (as I also recommended to do in this chapter, which was actually inspired by this package)  
 - Google offers a [What-If Tool](https://pair-code.github.io/what-if-tool/), however this is about.
+
+[^ceteris-paribus]: Kuźba et al., (2019). pyCeterisParibus: explaining Machine Learning models with Ceteris Paribus Profiles in Python. Journal of Open Source Software, 4(37), 1389, https://doi.org/10.21105/joss.01389
