@@ -1,0 +1,226 @@
+\newpage
+
+## Partial Dependence Plot (PDP) {#pdp}
+
+{{< include _setup.qmd >}}
+
+The partial dependence plot (short PDP or PD plot) shows the marginal effect one or two features have on the predicted outcome of a machine learning model (J. H. Friedman 2001[^Friedman2001]).
+A partial dependence plot can show whether the relationship between the target and a feature is linear, monotonic or more complex.
+For example, when applied to a linear regression model, partial dependence plots always show a linear relationship.
+
+<!-- *Keywords: partial dependence plots, PDP, PD plot, marginal means, predictive margins, marginal effects* -->
+
+The partial dependence function for regression is defined as:
+
+$$\hat{f}_S(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int\hat{f}(x_S,X_C)d\mathbb{P}(X_C)$$
+
+The $x_S$ are the features for which the partial dependence function should be plotted and $X_C$ are the other features used in the machine learning model $\hat{f}$, which are here treated as random variables.
+Usually, there are only one or two features in the set S.
+The feature(s) in S are those for which we want to know the effect on the prediction.
+The feature vectors $x_S$ and $x_C$ combined make up the total feature space x.
+Partial dependence works by marginalizing the machine learning model output over the distribution of the features in set C, so that the function shows the relationship between the features in set S we are interested in and the predicted outcome.
+By marginalizing over the other features, we get a function that depends only on features in S, interactions with other features included.
+
+The partial function $\hat{f}_S$ is estimated by calculating averages in the training data, also known as Monte Carlo method:
+
+$$\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})$$
+The partial function tells us for given value(s) of features S what the average marginal effect on the prediction is.
+In this formula, $x^{(i)}_{C}$ are actual feature values from the dataset for the features in which we are not interested, and n is the number of instances in the dataset.
+An assumption of the PDP is that the features in C are not correlated with the features in S.
+If this assumption is violated, the averages calculated for the partial dependence plot will include data points that are very unlikely or even impossible (see disadvantages).
+
+For classification where the machine learning model outputs probabilities, the partial dependence plot displays the probability for a certain class given different values for feature(s) in S.
+An easy way to deal with multiple classes is to draw one line or plot per class.
+
+
+The partial dependence plot is a global method:
+The method considers all instances and gives a statement about the global relationship of a feature with the predicted outcome.
+
+
+
+**Categorical features**
+
+So far, we have only considered numerical features.
+For categorical features, the partial dependence is very easy to calculate.
+For each of the categories, we get a PDP estimate by forcing all data instances to have the same category.
+For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season,  we get four numbers, one for each season.
+To compute the value for "summer", we replace the season of all data instances with "summer" and average the predictions.
+
+### PDP-based Feature Importance
+
+Greenwell et al. (2018) [^pdp-importance] proposed a simple partial dependence-based feature importance measure.
+The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
+For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
+
+$$I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(\hat{f}_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K \hat{f}_S({x^{(k)}_S))^2}}$$
+
+Note that here the $x^{(k)}_S$ are the K unique values of feature the $X_S$.
+For categorical features we have:
+
+$$I(x_S) = (max_k(\hat{f}_S(x^{(k)}_S)) - min_k(\hat{f}_S(x^{(k)}_S)))/4$$
+
+This is the range of the PDP values for the unique categories divided by four.
+This strange way of calculating the deviation is called the range rule.
+It helps to get a rough estimate for the deviation when you only know the range.
+And the denominator four comes from the standard normal distribution:
+In the normal distribution, 95\% of the data are minus two and plus two standard deviations around the mean.
+So the range divided by four gives a rough estimate that probably underestimates the actual variance.
+
+This PDP-based feature importance should be interpreted with care.
+It captures only the main effect of the feature and ignores possible feature interactions.
+A feature could be very important based on other methods such as [permutation feature importance](#feature-importance), but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
+Another drawback of this measure is that it is defined over the unique values.
+A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.
+
+
+
+### Examples
+
+In practice, the set of features S usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
+Everything beyond that is quite tricky.
+Even 3D on a 2D paper or monitor is already challenging.
+
+Let us return to the regression example, in which we predict the number of [bikes that will be rented on a given day](#bike-data).
+First we fit a machine learning model, then we analyze the partial dependencies.
+In this case, we have fitted a random forest to predict the number of bicycles and use the partial dependence plot to visualize the relationships the model has learned.
+The influence of the weather features on the predicted bike counts is visualized in the following figure.
+
+```{r pdp-bike, fig.cap = 'PDPs for the bicycle count prediction model and temperature, humidity and wind speed. The largest differences can be seen in the temperature. The hotter, the more bikes are rented. This trend goes up to 20 degrees Celsius, then flattens and drops slightly at 30. Marks on the x-axis indicate the data distribution.', fig.height = 3}
+data(bike)
+library("mlr")
+library("iml")
+library("ggplot2")
+
+bike.task = makeRegrTask(data = bike, target = "cnt")
+mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
+
+pred.bike = Predictor$new(mod.bike, data = bike)
+pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp")
+p1 = pdp$plot() +
+  scale_x_continuous('Temperature', limits = c(0, NA)) +
+  scale_y_continuous('Predicted number of bikes', limits = c(0, 5500))
+pdp$set.feature("hum")
+p2 = pdp$plot() +
+  scale_x_continuous('Humidity', limits = c(0, NA)) +
+  scale_y_continuous('', limits = c(0, 5500))
+pdp$set.feature("windspeed")
+p3 = pdp$plot() +
+  scale_x_continuous('Wind speed', limits = c(0, NA)) +
+  scale_y_continuous('', limits = c(0, 5500))
+
+gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
+```
+
+For warm but not too hot weather, the model predicts on average a high number of rented bicycles.
+Potential bikers are increasingly inhibited in renting a bike when humidity exceeds 60%.
+In addition, the more wind the fewer people like to cycle, which makes sense.
+Interestingly, the predicted number of bike rentals does not fall when wind speed increases from 25 to 35 km/h, but there is not much training data, so the machine learning model could probably not learn a meaningful prediction for this range.
+At least intuitively, I would expect the number of bicycles to decrease with increasing wind speed, especially when the wind speed is very high.
+
+To illustrate a partial dependence plot with a categorical feature, we examine the effect of the season feature on the predicted bike rentals.
+
+```{r pdp-bike-cat, fig.cap = 'PDPs for the bike count prediction model and the season. Unexpectedly all seasons show similar effect on the model predictions, only for winter the model predicts fewer bicycle rentals.', fig.height = 4}
+
+pdp = FeatureEffect$new(pred.bike, "season", method = "pdp")
+ggplot(pdp$results) +
+  geom_col(aes(x = season, y = .value), fill = default_color, width = 0.3) +
+  scale_x_discrete('Season') +
+  scale_y_continuous('', limits = c(0, 5500))
+```
+
+We also compute the partial dependence for [penguin classification](#penguins).
+This time we fit a random forest to classify penguin species based on body measurements.
+We compute and visualize the partial dependence of the probability for the different species (Adelie, Gentoo, and Chinstrap) on bill length and body mass for the random forest:
+
+```{r pdp-penguin, fig.cap = 'The longer the bill, the less likely it is to be an Adelie and the more likely it is to be a Chinstrap. A longer bill also slightly increases the probability of being a Gentoo. The effect of body mass is less pronounced: We see no effect of body mass on the Adelie probability (always around 50%). The probability of Chinstrap decreases slightly with increasing weight, while the probability for Gentoo increases.', dev.args = list(pointsize = 5.5), fig.height = 4}
+library(palmerpenguins)
+penguins = na.omit(penguins)
+penguins = penguins[c("species", "bill_length_mm", "bill_depth_mm", "body_mass_g", "flipper_length_mm", "sex")]
+penguin.task = makeClassifTask(data = penguins, target = "species")
+mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguin.task)
+
+pred.penguins = Predictor$new(mod, data = penguins)
+pdp = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "pdp")
+
+p1 = pdp$plot() +
+  scale_x_continuous("Bill length in millimeters") +
+  scale_y_continuous('Predicted probability of being Adelie penguin', limits = c(0, NA))
+pdp$set.feature("body_mass_g")
+p2 = pdp$plot() +
+  scale_x_continuous("Body mass in grams") +
+  scale_y_continuous('', limits = c(0, NA))
+
+gridExtra::grid.arrange(p1, p2, ncol = 1)
+```
+
+We can also visualize the partial dependence of two features at once:
+
+```{r pdp-penguins-2d, fig.cap = 'PDP for P(Adelie) and the interaction between bill length and body mass. The dots show the ground truth: black for Adelie penguins, gray for Chinstrap and Gentoo. For bill length, the plot shows what we already knew: a sharp drop in P(Adelie) for bills longer than 40mm. Body mass shows an interesting interaction with bill length: For penguins with bill length > 50, we can see slight differences in P(Adelie) between lighter and heavier penguins, even though there are zero Adelie penguins with this bill length.'}
+pred.adelie = Predictor$new(mod, data = penguins, class="Adelie")
+pd = FeatureEffect$new(pred.adelie, c("bill_length_mm", "body_mass_g"), method = "pdp")
+pd$plot() + 
+  geom_point(data=penguins[penguins$species=="Adelie",]) +
+  geom_point(data=penguins[!(penguins$species=="Adelie"),], color="grey") +
+  scale_fill_viridis(option = "D") +
+  scale_x_continuous("Bill length in millimeters") +
+  scale_y_continuous("Body mass in grams")
+```
+
+### Advantages
+
+The computation of partial dependence plots is **intuitive**:
+The partial dependence function at a particular feature value represents the average prediction if we force all data points to assume that feature value.
+In my experience, lay people usually understand the idea of PDPs quickly.
+
+If the feature for which you computed the PDP is not correlated with the other features, then the PDPs perfectly represent how the feature influences the prediction on average.
+In the uncorrelated case, the **interpretation is clear**:
+The partial dependence plot shows how the average prediction in your dataset changes when the j-th feature is changed.
+It is more complicated when features are correlated, see also disadvantages.
+
+Partial dependence plots are **easy to implement**.
+
+The calculation for the partial dependence plots has a **causal interpretation**.
+We intervene on a feature and measure the changes in the predictions.
+In doing so, we analyze the causal relationship between the feature and the prediction.[^pdpCausal]
+The relationship is causal for the model -- because we explicitly model the outcome as a function of the features -- but not necessarily for the real world!
+
+### Disadvantages
+
+The realistic **maximum number of features** in a partial dependence function is two.
+This is not the fault of PDPs, but of the 2-dimensional representation (paper or screen) and also of our inability to imagine more than 3 dimensions.
+
+Some PD plots do not show the **feature distribution**.
+Omitting the distribution can be misleading, because you might overinterpret regions with almost no data.
+This problem is easily solved by showing a rug (indicators for data points on the x-axis) or a histogram.
+
+The **assumption of independence** is the biggest issue with PD plots.
+It is assumed that the feature(s) for which the partial dependence is computed are not correlated with other features.
+For example, suppose you want to predict how fast a person walks, given the person's weight and height.
+For the partial dependence of one of the features, e.g. height, we assume that the other features (weight) are not correlated with height, which is obviously a false assumption.
+For the computation of the PDP at a certain height (e.g. 200 cm), we average over the marginal distribution of weight, which might include a weight below 50 kg, which is unrealistic for a 2 meter person.
+In other words:
+When the features are correlated, we create new data points in areas of the feature distribution where the actual probability is very low (for example it is unlikely that someone is 2 meters tall but weighs less than 50 kg).
+One solution to this problem is [Accumulated Local Effect plots](#ale) or short ALE plots that work with the conditional instead of the marginal distribution.
+
+**Heterogeneous effects might be hidden** because PD plots only show the average marginal effects.
+Suppose that for a feature half your data points have a positive association with the prediction -- the larger the feature value the larger the prediction -- and the other half has a negative association -- the smaller the feature value the larger the prediction.
+The PD curve could be a horizontal line, since the effects of both halves of the dataset could cancel each other out.
+You then conclude that the feature has no effect on the prediction.
+By plotting the [individual conditional expectation curves](#ice) instead of the aggregated line, we can uncover heterogeneous effects.
+
+
+### Software and Alternatives
+
+There are a number of R packages that implement PDPs.
+I used the `iml` package for the examples, but there is also `pdp` or `DALEX`.
+In Python, partial dependence plots are built into `scikit-learn` and you can use `PDPBox`.
+
+Alternatives to PDPs presented in this book are [ALE plots](#ale) and [ICE curves](#ice).
+
+
+
+[^Friedman2001]: Friedman, Jerome H. "Greedy function approximation: A gradient boosting machine." Annals of statistics (2001): 1189-1232.
+
+[^pdpCausal]: Zhao, Qingyuan, and Trevor Hastie. "Causal interpretations of black-box models." Journal of Business & Economic Statistics, to appear. (2017).
+
+[^pdp-importance]: Greenwell, Brandon M., Bradley C. Boehmke, and Andrew J. McCarthy. "A simple and effective model-based variable importance measure." arXiv preprint arXiv:1805.04755 (2018).

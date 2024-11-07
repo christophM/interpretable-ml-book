@@ -1,0 +1,275 @@
+```{r, message = FALSE, warning = FALSE, echo = FALSE}
+devtools::load_all()
+set.seed(42)
+```
+
+\newpage
+
+## Logistic Regression {#logistic}
+
+{{< include _setup.qmd >}}
+
+Logistic regression models the probabilities for classification problems with two possible outcomes.
+It's an extension of the linear regression model for classification problems.
+
+
+::: {.content-visible when-format="html:js"}
+
+```{block2, type = "rmdnote"}
+Just looking for the correct interpretation of logistic regression models?
+Save yourself time and headaches (log odds, anyone?) and check out my [logistic regression interpretation cheat sheet](https://christophmolnar.gumroad.com/l/logistic-regression).
+```
+
+:::
+
+
+
+### What is Wrong with Linear Regression for Classification?
+
+The  linear regression model can work well for regression, but fails for classification.
+Why is that?
+In case of two classes, you could label one of the classes with 0 and the other with 1 and use linear regression.
+Technically it works and most linear model programs will spit out weights for you.
+But there are a few problems with this approach:
+
+A linear model does not output probabilities, but it treats the classes as numbers (0 and 1) and fits the best hyperplane (for a single feature, it is a line) that minimizes the distances between the points and the hyperplane.
+So it simply interpolates between the points, and you cannot interpret it as probabilities.
+
+A linear model also extrapolates and gives you values below zero and above one.
+This is a good sign that there might be a smarter approach to classification.
+
+Since the predicted outcome is not a probability, but a linear interpolation between points, there is no meaningful threshold at which you can distinguish one class from the other.
+A good illustration of this issue has been given on [Stackoverflow](https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression).
+
+Linear models do not extend to classification problems with multiple classes.
+You would have to start labeling the next class with 2, then 3, and so on.
+The classes might not have any meaningful order, but the linear model would force a weird structure on the relationship between the features and your class predictions.
+The higher the value of a feature with a positive weight, the more it contributes to the prediction of a class with a higher number, even if classes that happen to get a similar number are not closer than other classes.
+
+
+```{r linear-class-threshold, fig.cap="A linear model classifies tumors as malignant (1) or benign (0) given their size. The lines show the prediction of the linear model. For the data on the left, we can use 0.5 as classification threshold. After introducing a few more malignant tumor cases, the regression line shifts and a threshold of 0.5 no longer separates the classes. Points are slightly jittered to reduce over-plotting. "}
+library("ggplot2")
+df = data.frame(x = c(1,2,3,8,9,10,11,9),
+  y = c(0,0,0,1,1,1,1, 0),
+  case = '1) 0.5 threshold ok')
+
+df_extra  = data.frame(x=c(df$x, 7, 7, 7, 20, 19, 5, 5, 4, 4.5),
+  y=c(df$y, 1,1,1,1, 1, 1, 1, 1, 1),
+  case = '2) 0.5 threshold not ok')
+
+df.lin.log = rbind(df, df_extra)
+p1 = ggplot(df.lin.log, aes(x=x,y=y)) +
+  geom_point(position = position_jitter(width=0, height=0.02)) +
+  geom_smooth(method='lm', se=FALSE) +
+  my_theme() +
+  scale_y_continuous('', breaks = c(0, 0.5, 1), labels = c('benign tumor', '0.5',  'malignant tumor'), limits = c(-0.1,1.3)) +
+  scale_x_continuous('Tumor size') +
+  facet_grid(. ~ case) +
+  geom_hline(yintercept=0.5, linetype = 3)
+
+p1
+```
+
+
+### Theory
+
+A solution for classification is logistic regression.
+Instead of fitting a straight line or hyperplane, the logistic regression model uses the logistic function to squeeze the output of a linear equation between 0 and 1.
+The logistic function is defined as:
+
+$$\text{logistic}(\eta)=\frac{1}{1+exp(-\eta)}$$
+
+And it looks like this:
+
+```{r, logistic-function, fig.cap="The logistic function. It outputs numbers between 0 and 1. At input 0, it outputs 0.5."}
+logistic = function(x){1 / (1 + exp(-x))}
+
+x = seq(from=-6, to = 6, length.out = 100)
+df = data.frame(x = x,
+  y = logistic(x))
+ggplot(df) + geom_line(aes(x=x,y=y)) + my_theme()
+```
+
+The step from linear regression  to logistic regression is kind of straightforward.
+In the linear regression model, we have modelled the relationship between outcome and features with a linear equation:
+
+$$\hat{y}^{(i)}=\beta_{0}+\beta_{1}x^{(i)}_{1}+\ldots+\beta_{p}x^{(i)}_{p}$$
+
+For classification, we prefer probabilities between 0 and 1, so we wrap the right side of the equation into the logistic function.
+This forces the output to assume only values between 0 and 1.
+
+$$P(y^{(i)}=1)=\frac{1}{1+exp(-(\beta_{0}+\beta_{1}x^{(i)}_{1}+\ldots+\beta_{p}x^{(i)}_{p}))}$$
+
+Let us revisit the tumor size example again.
+But instead of the linear regression model, we use the logistic regression model:
+
+```{r logistic-class-threshold, fig.cap="The logistic regression model finds the correct decision boundary between malignant and benign depending on tumor size. The line is the logistic function shifted and squeezed to fit the data."}
+logistic1 = glm(y ~ x, family = binomial(), data = df.lin.log[df.lin.log$case == '1) 0.5 threshold ok',])
+logistic2 = glm(y ~ x, family = binomial, data = df.lin.log)
+
+lgrid = data.frame(x = seq(from=0, to=20, length.out=100))
+lgrid$y1_pred = predict(logistic1, newdata = lgrid, type='response')
+lgrid$y2_pred = predict(logistic2 , newdata = lgrid, type='response')
+lgrid.m = data.frame(data.table::melt(lgrid, measure.vars = c("y1_pred", "y2_pred")))
+colnames(lgrid.m) = c("x", "case", "value")
+lgrid.m$case = as.character(lgrid.m$case)
+lgrid.m$case[lgrid.m$case == "y1_pred"] = '1) 0.5 threshold ok'
+lgrid.m$case[lgrid.m$case == "y2_pred"] = '2) 0.5 threshold ok as well'
+df.lin.log$case = as.character(df.lin.log$case)
+df.lin.log$case[df.lin.log$case == "2) 0.5 threshold not ok"] = '2) 0.5 threshold ok as well'
+
+
+
+p1 = ggplot(df.lin.log, aes(x=x,y=y)) +
+  geom_line(aes(x=x, y=value), data = lgrid.m, color='blue', size=1) +
+  geom_point(position = position_jitter(width=0, height=0.02)) +
+  my_theme() +
+  scale_y_continuous('Tumor class', breaks = c(0, 0.5, 1), labels = c('benign tumor', '0.5',  'malignant tumor'), limits = c(-0.1,1.3)) +
+  scale_x_continuous('Tumor size') +
+  facet_grid(. ~ case) +
+  geom_hline(yintercept=0.5, linetype = 3)
+
+p1
+```
+
+Classification works better with logistic regression and we can use 0.5 as a threshold in both cases. The inclusion of additional points does not really affect the estimated curve.
+
+### Interpretation
+
+The interpretation of the weights in logistic regression differs from the interpretation of the weights in linear regression, since the outcome in logistic regression is a probability between 0 and 1.
+The weights do not influence the probability linearly any longer.
+The weighted sum is transformed by the logistic function to a probability.
+Therefore we need to reformulate the equation for the interpretation so that only the linear term is on the right side of the formula.
+
+$$ln\left(\frac{P(y=1)}{1-P(y=1)}\right)=log\left(\frac{P(y=1)}{P(y=0)}\right)=\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}$$
+
+We call the term in the ln() function "odds" (probability of event divided by probability of no event) and wrapped in the logarithm it is called log odds.
+
+This formula shows that the logistic regression model is a linear model for the log odds.
+Great!
+That does not sound helpful!
+With a little shuffling of the terms, you can figure out how the prediction changes when one of the features $x_j$ is changed by 1 unit.
+To do this, we can first apply the exp() function to both sides of the equation:
+
+$$\frac{P(y=1)}{1-P(y=1)}=odds=exp\left(\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{p}x_{p}\right)$$
+
+Then we compare what happens when we increase one of the feature values by 1.
+But instead of looking at the difference, we look at the ratio of the two predictions:
+
+$$\frac{odds_{x_j+1}}{odds{x_j}}=\frac{exp\left(\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{j}(x_{j}+1)+\ldots+\beta_{p}x_{p}\right)}{exp\left(\beta_{0}+\beta_{1}x_{1}+\ldots+\beta_{j}x_{j}+\ldots+\beta_{p}x_{p}\right)}$$
+
+We apply the following rule:
+
+$$\frac{exp(a)}{exp(b)}=exp(a-b)$$ 
+
+And we remove many terms:
+
+$$\frac{odds_{x_j+1}}{odds{x_j}}=exp\left(\beta_{j}(x_{j}+1)-\beta_{j}x_{j}\right)=exp\left(\beta_j\right)$$
+
+In the end, we have something as simple as exp() of a feature weight.
+A change in a feature by one unit changes the odds ratio (multiplicative) by a factor of $\exp(\beta_j)$.
+We could also interpret it this way:
+A change in $x_j$ by one unit increases the log odds ratio by the value of the corresponding weight.
+Most people interpret the odds ratio because thinking about the ln() of something is known to be hard on the brain.
+Interpreting the odds ratio already requires some getting used to.
+For example, if you have odds of 2, it means that the probability for y=1 is twice as high as y=0.
+If you have a weight (= log odds ratio) of 0.7, then increasing the respective feature by one unit multiplies the odds by exp(0.7) (approximately 2) and the odds change to 4.
+But usually you do not deal with the odds and interpret the weights only as the odds ratios.
+Because for actually calculating the odds you would need to set a value for each feature, which only makes sense if you want to look at one specific instance of your dataset.
+
+These are the interpretations for the logistic regression model with different feature types:
+
+- Numerical feature:
+If you increase the value of feature $x_{j}$ by one unit, the estimated odds change by a factor of $\exp(\beta_{j})$
+- Binary categorical feature:
+One of the two values of the feature is the reference category (in some languages, the one encoded in 0).
+Changing the feature $x_{j}$ from the reference category to the other category changes the estimated odds by a factor of $\exp(\beta_{j})$.
+- Categorical feature with more than two categories:
+One solution to deal with multiple categories is one-hot-encoding, meaning that each category has its own column.
+You only need L-1 columns for a categorical feature with L categories, otherwise it is over-parameterized.
+The L-th category is then the reference category.
+You can use any other encoding that can be used in linear regression.
+The interpretation for each category then is equivalent to the interpretation of binary features.
+- Intercept $\beta_{0}$:
+When all numerical features are zero and the categorical features are at the reference category, the estimated odds are $\exp(\beta_{0})$.
+The interpretation of the intercept weight is usually not relevant.
+
+### Example
+
+We use logistic regression to predict [whether a penguin is male](#penguins) based on penguin characteristics.
+The following table shows the estimated weights, associated odds ratios, and standard errors of the estimates.
+
+```{r logistic-example}
+
+penguins_binary <- penguins %>%
+    drop_na() %>%
+    mutate(
+        is_adelie = ifelse(species == "Adelie", 1, 0),
+	is_gentoo = ifelse(species == "Gentoo", 1, 0),
+	is_chinstrap = ifelse(species == "Chinstrap", 1, 0),
+        island = factor(island),
+        # Define chonkiness - let's say top 25% of body mass are chonky
+        is_chonky = ifelse(body_mass_g > quantile(body_mass_g, 0.75), 1, 0),
+        # Also add a categorical chonk_level for fun
+        chonk_level = case_when(
+            body_mass_g <= quantile(body_mass_g, 0.25) ~ "Smol_Penguin",
+            body_mass_g <= quantile(body_mass_g, 0.75) ~ "Regular_Penguin",
+            TRUE ~ "Absolute_Unit"
+        )
+    )
+# Convert chonk_level to factor and set reference level
+penguins_binary$chonk_level <- factor(penguins_binary$chonk_level, levels = c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit"))
+penguins_binary$chonk_level <- relevel(penguins_binary$chonk_level, ref = "Smol_Penguin")
+
+levels(penguins_binary$chonk_level) <- c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit")
+mod <- glm(sex ~ bill_length_mm + chonk_level, data = penguins_binary, family = binomial)
+
+# Print table of coef, exp(coef), std, p-value
+coef.table = summary(mod)$coefficients[,c('Estimate', 'Std. Error')]
+coef.table = cbind(coef.table, 'Odds ratio' = as.vector(exp(round(coef.table[, c('Estimate')], 2))))
+# Interpret one numerical and one factor
+#rownames(coef.table) = TODO
+colnames(coef.table)[1] = 'Weight'
+kableExtra::kbl(coef.table[, c('Weight', 'Odds ratio', 'Std. Error')], digits=2, caption='The results of fitting a logistic regression model to the penguin dataset.', booktabs = TRUE) %>% kable_styling(position = "center")
+
+```
+
+The feature "chonk_level" is a discretization of the feature "body mass": Light penguins (0% to 25% quantile) are categorized as "Smol_Penguin", most penguins are "Regular_Penguin", and those with the highest body mass (75% to 100%) are categorized as "Absolute_Unit".
+Normally, I don't recommend discretizing continuous features because you lose information.
+In this case, I used binarization to illustrate the interpretation of a categorical feature with logistic regression, and I also love the word "chonky" and wanted to use it in a textbook.
+
+Interpretation of a numerical feature ("bill_length_mm"):
+An increase in a penguins bill length increases the odds of being a male penguin by a factor of `r sprintf('%.2f', coef.table['bill_length_mm', 'Odds ratio'])`, when all other features remain the same.
+
+Interpretation of a categorical feature ("chonk_level"):
+For regular penguins, the odds of being male versus female are increased by a factor of `r sprintf('%.2f', coef.table['chonk_levelRegular_Penguin', 'Odds ratio'])`, compared to lightweight penguins ("Smol_Penguin"), given all other features remain the same.
+And for the absolute units among the penguins, the odds of being male is `r sprintf('%.2f', coef.table['chonk_levelRegular_Penguin', 'Odds ratio'])` compared to the small penguins.
+Again, given all other features remain the same.
+
+
+
+### Advantages and Disadvantages
+
+Many of the pros and cons of the [linear regression model](#limo) also apply to the logistic regression model.
+Logistic regression has been widely used by many different people, but it struggles with its restrictive expressiveness (e.g. interactions must be added manually) and other models may have better predictive performance.
+
+Another disadvantage of the logistic regression model is that the interpretation is more difficult because the interpretation of the weights is multiplicative and not additive.
+
+Logistic regression can suffer from **complete separation**. 
+If there is a feature that would perfectly separate the two classes, the logistic regression model can no longer be trained.
+This is because the weight for that feature would not converge, because the optimal weight would be infinite.
+This is really a bit unfortunate, because such a feature is really useful. 
+But you do not need machine learning if you have a simple rule that separates both classes.
+The problem of complete separation can be solved by introducing penalization of the weights or defining a prior probability distribution of weights.
+
+On the good side, the logistic regression model is not only a classification model, but also gives you probabilities. 
+This is a big advantage over models that can only provide the final classification.
+Knowing that an instance has a 99% probability for a class compared to 51% makes a big difference.
+
+Logistic regression can also be extended from binary classification to multi-class classification.
+Then it is called Multinomial Regression.
+
+### Software
+
+I used the `glm` function in R for all examples.
+You can find logistic regression in any programming language that can be used for performing data analysis, such as Python, Java, Stata, Matlab, ...
