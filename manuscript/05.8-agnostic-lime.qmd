@@ -1,5 +1,3 @@
-\newpage
-
 ## Local Surrogate (LIME) {#lime}
 
 {{< include _setup.qmd >}}
@@ -236,7 +234,11 @@ But it increases the probability that the result for some of the sample points p
 
 It is best to visually explain how sampling and local model training works:
 
-```{r lime-fitting, fig.cap='LIME algorithm for tabular data. A) Random forest predictions given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and data sampled from a normal distribution (small dots). C) Assign higher weight to points near the instance of interest. D) Signs of the grid show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(class=1) = 0.5).', fig.height=9, fig.width=9}
+```{r}
+#| label: lime-fitting
+#| fig-cap: "'LIME algorithm for tabular data. A) Random forest predictions given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and data sampled from a normal distribution (small dots). C) Assign higher weight to points near the instance of interest. D) Signs of the grid show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(class=1) = 0.5).'"
+#| fig-height: 9
+#| fig-width: 9
 ## Creating dataset ###########################################################
 library("dplyr")
 library("ggplot2")
@@ -438,7 +440,9 @@ We go back to the [bike rental data](#bike-data) and turn the prediction problem
 After taking into account the trend that the bicycle rental has become more popular over time, we want to know on a certain day whether the number of bicycles rented will be above or below the trend line.
 You can also interpret "above" as being above the average number of bicycles, but adjusted for the trend.
 
-```{r lime-tabular-example-train-black-box, cache = TRUE}
+```{r}
+#| label: lime-tabular-example-train-black-box
+#| cache: true
 data("bike")
 ntree = 100
 bike.train.resid = factor(resid(lm(cnt ~ days_since_2011, data = bike)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
@@ -456,7 +460,9 @@ On what day will the number of rental bikes be above the trend-free average, bas
 The explanations are created with `r n_features_lime` features.
 The results of the sparse local linear models trained for two instances with different predicted classes:
 
-```{r lime-tabular-example-explain-plot-1, fig.cap=sprintf('LIME explanations for two instances of the bike rental dataset. Warmer temperature and good weather situation have a positive effect on the prediction. The x-axis shows the feature effect: The weight times the actual feature value.') }
+```{r}
+#| label: lime-tabular-example-explain-plot-1
+#| fig-cap: "sprintf('LIME explanations for two instances of the bike rental dataset. Warmer temperature and good weather situation have a positive effect on the prediction. The x-axis shows the feature effect: The weight times the actual feature value.')"
 library("iml")
 library("gridExtra")
 instance_indices = c(295, 8)
@@ -501,13 +507,15 @@ Short decision trees are easy to understand, but in this case the tree is very d
 Also in place of this tree there could have been a recurrent neural network or a support vector machine trained on word embeddings (abstract vectors).
 Let us look at the two comments of this dataset and the corresponding classes (1 for spam, 0 for normal comment):
 
-```{r load-text-classification-lime}
+```{r}
+#| label: load-text-classification-lime
 data("ycomments")
 example_indices = c(267, 173)
 texts = ycomments$CONTENT[example_indices]
 ```
 
-```{r show--data-TubeSpam}
+```{r}
+#| label: show--data-TubeSpam
 kableExtra::kbl(ycomments[example_indices, c('CONTENT', 'CLASS')], booktabs = TRUE)  %>% kable_styling(position = "center")
 
 ```
@@ -515,7 +523,8 @@ kableExtra::kbl(ycomments[example_indices, c('CONTENT', 'CLASS')], booktabs = TR
 The next step is to create some variations of the datasets used in a local model.
 For example, some variations of one of the comments:
 
-```{r lime-text-variations}
+```{r}
+#| label: lime-text-variations
 library("tm")
 
 labeledTerms = prepare_data(ycomments$CONTENT)
@@ -531,7 +540,9 @@ colnames(variations) = c(tokenized, 'prob', 'weight')
 example_sentence = paste(colnames(variations)[variations[2, ] == 1], collapse = ' ')
 ```
 
-```{r lime-text-variations-output, results='asis'}
+```{r}
+#| label: lime-text-variations-output
+#| results: asis
 kableExtra::kbl(variations, row.names = FALSE, booktabs = TRUE)  %>% kable_styling(position = "center")
 
 ```
@@ -547,7 +558,9 @@ The "weight" column shows the proximity of the variation to the original sentenc
 
 Here are the two sentences (one spam, one no spam) with their estimated local weights found by the LIME algorithm:
 
-```{r lime-text-explanations, fig.cap = "LIME explanations for text classification."}
+```{r}
+#| label: lime-text-explanations
+#| fig-cap: "LIME explanations for text classification."
 set.seed(42)
 ycomments.predict = get.ycomments.classifier(ycomments)
 explanations  = data.table::rbindlist(lapply(seq_along(texts), function(i) {

@@ -1,10 +1,8 @@
-\newpage
-
 ## Influential Instances {#influential}
 
 {{< include _setup.qmd >}}
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE}
+```{r}
 penguins$is_adelie = penguins$species == "Adelie"
 penguins = penguins[c("is_adelie", "body_mass_g", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "sex")]
 
@@ -45,7 +43,10 @@ In a dataset of newborns, a newborn weighting 6 kg would be considered an outlie
 In a dataset of bank accounts with mostly checking accounts, a dedicated loan account (large negative balance, few transactions) would be considered an outlier.
 The following figure shows an outlier for a 1-dimensional distribution.
 
-```{r outlier, fig.cap = "Feature x follows a Gaussian distribution with an outlier at x=8."}
+```{r}
+#| label: outlier
+#| fig.cap: "Feature x follows a Gaussian distribution with an outlier at x=8."
+
 set.seed(42)
 n = 50
 x = rnorm(mean = 1, n = n)
@@ -69,7 +70,9 @@ The more the model parameters or predictions change when the model is retrained 
 The following figure shows an influential instance for a linear regression model.
 
 
-```{r influential-point, fig.cap = "A linear model with one feature. Trained once on the full data and once without the influential instance. Removing the influential instance changes the fitted slope (weight/coefficient) drastically."}
+```{r}
+#| label: influential-point
+#| fig.cap: "A linear model with one feature. Trained once on the full data and once without the influential instance. Removing the influential instance changes the fitted slope (weight/coefficient) drastically."
 
 df2 = df[-nrow(df),]
 df3 = rbind(df2, data.frame(x = 8, y = 0))
@@ -100,10 +103,7 @@ A learner, that is, the algorithm that generates the machine learning model, is 
 For example, the learner of a decision tree is an algorithm that selects the split features and the values at which to split. 
 A learner for a neural network uses backpropagation to find the best weights.
 
-
-```{r learner, fig.cap = "A learner learns a model from training data (features plus target). The model makes predictions for new data.", out.width = "0.5\\textwidth"}
-knitr::include_graphics("images/learner.png")
-```
+![A learner learns a model from training data (features plus target). The model makes predictions for new data.](./images/learner.png){width: 50%}
 
 We ask how the model parameters or the predictions would change if we removed instances from the training data in the training process.
 This is in contrast to other interpretability approaches that analyze how the prediction changes when we manipulate the features of the instances to be predicted, such as [partial dependence plots](#pdp) or [feature importance](#feature-importance).
@@ -178,7 +178,13 @@ Since this is a classification problem, we measure the influence as the differen
 An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
 Measuring influence for all `r nrow(penguins)` training instances requires training the model once on all data and retraining it `r nrow(penguins)` times (= size of training data) with one of the instances removed each time.
 
-```{r influence, eval = !file.exists(influence.matrix.filename)}
+```{r}
+#| label: influence
+#| eval: false
+
+# TODO: replace eval: false with !file.exists(influence.matrix.filename)
+
+
 #'@param predicted The predicted outcome of a model
 #'@param predicted.without The predicted outcome of a model with a data point removed
 influence.v = function(predicted, predicted.without) {
@@ -229,7 +235,13 @@ We are free to choose any model from the chapter on [Interpretable Machine Learn
 For this example I chose a decision tree (following figure) that shows that data from penguins with short bills and short flippers were the most influential for the support vector machine.
 Penguins with long bills and a low body mass were the least influential.
 
-```{r cooks-analyzed, eval=FALSE, fig.height=8, fig.width=12, fig.show='hide'}
+```{r}
+#| label: cooks-analyzed
+#| fig.height: 8 
+#| fig.width: 12
+#| fig.show: hide
+#| eval: false
+
 # This code snippet causes problems on TravisCI.
 # Hack: save resulting figure locally, set eval to FALSE and load img in different chunk
 df.penguins= cbind(df, penguins[,setdiff(colnames(penguins), "is_adelie")])
@@ -240,12 +252,12 @@ partykit:::plot.constparty(ct,
      terminal_panel = partykit::node_boxplot(ct, id = FALSE))
 ```
 
-```{r cooks-analyzed-include, fig.cap = "A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2."}
-knitr::include_graphics("images/cooks-analyzed-1.jpeg")
-```
+![A decision tree that models the relationship between the influence of the instances and their features. The maximum depth of the tree is set to 2.](./images/cooks-analyzed-1.jpeg)
 
 
-```{r influence-single-prepare}
+```{r}
+#| label: influence-single-prepare
+
 i = which(predicted.orig == min(predicted.orig))
 i = 8
 obs = influence.df[i,]
@@ -267,7 +279,16 @@ Again, it makes more sense to find out what distinguishes the influential instan
 We use a decision tree trained to predict the influence given the features, but in reality we misuse it only to find a structure and not to actually predict something.
 The following decision tree shows which kind of training instances were most influential for predicting the `r i`-th instance. 
 
-```{r influence-single, eval = FALSE, fig.height=8, fig.width=12, fig.show='hide'}
+
+
+
+```{r}
+#| label: influence-single
+#| eval: false
+#| fig.height: 8
+#| fig.width: 12
+#| fig.show: hide
+
 # Also here TravisCI has a problem
 # Using same hack as in chunk above
 ct = rpart(abs(influence) ~ ., data = penguins.i, control = rpart.control(maxdepth = 2))
@@ -275,9 +296,7 @@ ct = as.party(ct)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE, id=FALSE), terminal_panel=node_boxplot(ct,id=FALSE))
 ```
 
-```{r influence-single-include, fig.cap = sprintf("Decision tree explaining which instances were most influential in predicting the %i-th instance. Data from penguins with flippers shorter than 179 mm had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction of 1 percentage point of P(Adelie) and one of the penguins even 6 percentage points.", i, i)}
-knitr::include_graphics("images/influence-single-1.jpeg")
-```
+![Decision tree explaining which instances were most influential in predicting the %i-th instance. Data from penguins with flippers shorter than 179 mm had a large influence on the prediction of the %i-th instance, with an average change in absolute prediction of 1 percentage point of P(Adelie) and one of the penguins even 6 percentage points.](./images/influence-single-1.jpeg)
 
 Penguins with short flippers have a high influence on the prediction for the `r i`-th penguin.
 Penguins No. `r i` has a flipper length of `r penguins$flipper_length_mm[i]`, which is just on the edge of 179.
@@ -363,7 +382,10 @@ The model parameter here is 1-dimensional for demonstration purposes, but in rea
 We move only 1 over n into the direction of improvement of the loss for instance z.
 We do not know how the loss would really change when we delete z, but with the first and second derivative of the loss, we create this quadratic approximation around our current model parameter and pretend that this is how the real loss would behave.
 
-```{r quadratic-expansion, fig.cap="Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and moving 1/n into the direction in which the loss with upweighted instance z (y-axis) improves most. This upweighting of instance z in the loss approximates the parameter changes if we delete z and train the model on the reduced data."}
+```{r}
+#| label: quadratic-expansion
+#| fig.cap: "Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and moving 1/n into the direction in which the loss with upweighted instance z (y-axis) improves most. This upweighting of instance z in the loss approximates the parameter changes if we delete z and train the model on the reduced data."
+
 x = seq(from = -1.2, to = 1.2, length.out = 100)
 y.fun = function(x) {
   -x - 2*x^2 - x^3 + 2 * x^4

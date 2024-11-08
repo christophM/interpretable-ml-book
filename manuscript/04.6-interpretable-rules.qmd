@@ -1,10 +1,8 @@
-\newpage
-
 ## Decision Rules {#rules}
 
 {{< include _setup.qmd >}}
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE}
+```{r}
 if(!require("sbrl")) install.packages("../pkg/sbrl_1.2.tar.gz", repos = NULL, type = "source")
 ```
 
@@ -131,8 +129,9 @@ Let us look at an example how the best feature is chosen by OneR.
 The following table shows an artificial dataset about houses with information about its value, location, size and whether pets are allowed. 
 We are interested in learning a simple model to predict the value of a house.
 
-```{r OneR-freq-table1}
-library(kableExtra)
+```{r}
+#| label: OneR-freq-table1
+
 value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
 
 df = data.frame(
@@ -148,7 +147,8 @@ kableExtra::kbl(df,  booktabs = TRUE) %>% kable_styling(position = "center")
 
 OneR creates the cross tables between each feature and the outcome:
 
-```{r OneR-freq-table2}
+```{r}
+#| label: OneR-freq-table2
 kableExtra::kbl(table(paste0("location=", df[,"location"]), value.f), booktabs = TRUE) %>% kable_styling(position = "center")
 kableExtra::kbl(table(paste0("size=", df[,"size"]), value.f),  booktabs = TRUE) %>% kable_styling(position = "center")
 kableExtra::kbl(table(paste0("pets=", df[,"pets"]), value.f),  booktabs = TRUE) %>% kable_styling(position = "center")
@@ -186,7 +186,8 @@ We use the [palmer penguins data](#penguins) to test the OneR algorithm.
 All continuous input features were discretized into their 5 quantiles.
 The following rules are created:
 
-```{r oner-penguins}
+```{r}
+#| label: oner-penguins
 library("OneR")
 library("palmerpenguins")
 penguins = na.omit(penguins)
@@ -204,7 +205,9 @@ kableExtra::kbl(rule.to.table(rule), row.names = FALSE, booktabs = TRUE) %>% kab
 The flipper length feature (`flipper_lengh_mm`) was chosen by OneR as the best predictive feature.
 To get a better feel for how this one rule performs, let's look into the cross table between the (discretized) flipper length feature and the penguin species:
 
-```{r oner-penguin-confusion, eval=TRUE}
+```{r}
+#| label: oner-penguin-confusion
+#| eval: true
 # Create the table with counts and probabilities
 tt <- penguins %>%
   mutate(flipper_length_bin = bin(penguins$flipper_length_mm)) %>%
@@ -236,7 +239,8 @@ But we can turn a regression task into a classification task by cutting the cont
 We use this trick to predict the number of [rented bikes](#bike-data) with OneR by cutting the number of bikes into its four quartiles (0-25%, 25-50%, 50-75% and 75-100%).
 The following table shows the selected feature after fitting the OneR model:
 
-```{r oner-bike}
+```{r}
+#| label: oner-bike
 data("bike")
 bike2 = bike
 bike2$days_since_2011 = max(0, bike2$days_since_2011)
@@ -279,7 +283,10 @@ The sequential covering algorithm for two classes (one positive, one negative) w
     - Learn another rule on the remaining data.
 - Return the decision list.
 
-```{r covering-algo, fig.cap = "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. For visualization purposes, the features x1 and x2 are continuous, but most rule learning algorithms require categorical features."}
+```{r}
+#| label: covering-algo
+#| fig.cap: "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. For visualization purposes, the features x1 and x2 are continuous, but most rule learning algorithms require categorical features."
+
 set.seed(42)
 n = 100
 dat = data.frame(x1 = rnorm(n), x2 = rnorm(n))
@@ -348,9 +355,7 @@ the path leading to that node is used as the rule condition.
 
 The following figure illustrates the beam search in a tree:
 
-```{r learn-one-rule, fig.cap = "Learning a rule by searching a path through a decision tree. A decision tree is grown to predict the target of interest. We start at the root node, greedily and iteratively follow the path which locally produces the purest subset (e.g. highest accuracy) and add all the split values to the rule condition. We end up with: If `location=good` and `size=big`, then `value=high`."}
-knitr::include_graphics("images/learn-one-rule.png")
-```
+![Learning a rule by searching a path through a decision tree. A decision tree is grown to predict the target of interest. We start at the root node, greedily and iteratively follow the path which locally produces the purest subset (e.g. highest accuracy) and add all the split values to the rule condition. We end up with: If `location=good` and `size=big`, then `value=high`.](./images/learn-one-rule.png)
 
 Learning a single rule is a search problem, where the search space is the space of all possible rules. 
 The goal of the search is to find the best rule according to some criteria.
@@ -364,7 +369,8 @@ RIPPER can run in ordered or unordered mode and generate either a decision list 
 
 **Examples**
 
-```{r jrip-preparation}
+```{r}
+#| label: jrip-preparation
 library("RWeka")
 library(rJava)
 
@@ -390,7 +396,10 @@ extract.rules.jrip = function (rule) {
 First we extract the rules for the [penguin species classification task](#penguins).
 Here we get these 5 rules plus the default rule.
 
-```{r jrip-penguins, include=TRUE, eval=TRUE}
+```{r}
+#| label: jrip-penguins
+#| include: true
+#| eval: true
 rule = JRip(species ~ . - island, data = penguins)
 extract.rules.jrip(rule)
 ```
@@ -406,7 +415,8 @@ I achieved this by cutting the bike counts into the quartiles.
 For example (4548, 5956) is the interval covering predicted bike counts between 4548 and 5956.
 The following table shows the decision list of learned rules. 
 
-```{r jrip-bike}
+```{r}
+#| label: jrip-bike
 bike2 = bike
 bike2$cnt = round(bike2$cnt)
 bike2$cnt =  cut(bike$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
@@ -565,7 +575,10 @@ To do this, I binned the continuous features based on the frequency of the value
 We get the following rules:
 
 <!-- Set eval = TRUE to recompute the rules -->
-```{r sbrl-penguins,results = "hide", eval = TRUE}
+```{r}
+#| label: sbrl-penguins
+#| results: "hide"
+#| eval: true
 library("sbrl")
 library("arules")
 library("palmerpenguins")
@@ -604,7 +617,8 @@ saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-penguins.R
 ```
 
 
-```{r sbrl-penguins-show}
+```{r}
+#| label: sbrl-penguins-show
 rules = readRDS("../data/cached-sbrl-penguins.RDS")
 tab = kableExtra::kbl(rules$rules, booktabs = TRUE) %>% kable_styling(position = "center")
 #if (is.pdf) tab = tab %>%  column_spec(1, "10cm")
@@ -616,7 +630,8 @@ The following table displays the pool of conditions the SBRL algorithm could cho
 The maximum number of feature values in a condition I allowed as a user was two.
 Here is a sample of ten patterns:
 
-```{r sbrl-penguins-premined}
+```{r}
+#| label: sbrl-penguins-premined
 set.seed(1)
 conditions = sample(rules$rulenames, size = 10)
 conditions = gsub("\\{|\\}", "", conditions)
@@ -633,7 +648,10 @@ I have arbitrarily created a classification task by creating a label that is 1 i
 The following list was learned by SBRL:
 
 <!-- Set eval = TRUE to recompute the rules -->
-```{r sbrl-bike, results = "hide", eval = FALSE}
+```{r}
+#| label: sbrl-bike
+#| results: "hide"
+#| eval: false
 library("sbrl")
 library("arules")
 data("bike")
@@ -654,7 +672,8 @@ rules = get.sbrl.rules(rules)
 saveRDS(rules, file = "../data/cached-sbrl-bike.RDS")
 ```
 
-```{r sbrl-bike-show}
+```{r}
+#| label: sbrl-bike-show
 rules = readRDS("../data/cached-sbrl-bike.RDS")
 tab = kableExtra::kbl(rules, booktabs = TRUE) %>% kable_styling(position = "center")
 #if (is.pdf) tab = tab %>% column_spec(1, width = "10cm")

@@ -1,5 +1,3 @@
-\newpage
-
 ## GLM, GAM and more {#extend-lm}
 
 {{< include _setup.qmd >}}
@@ -29,7 +27,9 @@ But a simple weighted sum is too restrictive for many real world prediction prob
 In this chapter we will learn about three problems of the classical linear regression model and how to solve them.
 There are many more problems with possibly violated assumptions, but we will focus on the three shown in the following figure:
 
-```{r three-lm-problems, fig.cap = "Three assumptions of the linear model (left side): Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Reality usually does not adhere to those assumptions (right side): Outcomes might have non-Gaussian distributions, features might interact and the relationship might be nonlinear."}
+```{r}
+#| label: three-lm-problems
+#| fig.cap: "Three assumptions of the linear model (left side): Gaussian distribution of the outcome given the features, additivity (= no interactions) and linear relationship. Reality usually does not adhere to those assumptions (right side): Outcomes might have non-Gaussian distributions, features might interact and the relationship might be nonlinear."
 theme_blank = theme(axis.line=element_blank(),axis.text.x=element_blank(),
           axis.text.y=element_blank(),axis.ticks=element_blank(),
           axis.title.x=element_blank(),
@@ -173,7 +173,10 @@ I hope I did not spoil the story too much for you.
 
 Let us look at the distribution of the target variable, the number of coffees on a given day:
 
-```{r poisson-data, fig.cap = "Simulated distribution of number of daily coffees for 200 days."}
+```{r}
+#| label: poisson-data
+#| fig.cap: "Simulated distribution of number of daily coffees for 200 days."
+
 # simulate data where the normal linear model fails.
 n = 200
 df = data.frame(stress  = runif(n = n, min = 1, max = 10), 
@@ -196,7 +199,9 @@ What can go wrong when we falsely assume a Gaussian distribution?
 A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights. 
 A more obvious problem is that the predictions do not match the "allowed" domain of the true outcome, as the following figure shows.
 
-```{r failing-linear-model, fig.cap = "Predicted number of coffees dependent on stress, sleep and work. The linear model predicts negative values."}
+```{r}
+#| label: failing-linear-model
+#| fig.cap: Predicted number of coffees dependent on stress, sleep and work. The linear model predicts negative values.
 mod.gaus = glm(y ~ ., data = df, x = TRUE)
 pred.gauss = data.frame(pred = predict(mod.gaus), actual = df$y)
 ggplot(pred.gauss) + 
@@ -215,7 +220,9 @@ Since the outcome is a count, the Poisson distribution is a natural choice, alon
 In this case, the data was even generated with the Poisson distribution, so the Poisson GLM is the perfect choice.
 The fitted Poisson GLM leads to the following distribution of predicted values:
 
-```{r linear-model-positive, fig.cap = "Predicted number of coffees dependent on stress, sleep and work. The GLM with Poisson assumption and log link is an appropriate model for this dataset."}
+```{r}
+#| label: linear-model-positive
+#| fig.cap: "Predicted number of coffees dependent on stress, sleep and work. The GLM with Poisson assumption and log link is an appropriate model for this dataset."
 mod.pois = glm(y ~ ., data = df, x = TRUE, family = poisson(link = "log"))
 pred.pois = data.frame(pred = predict(mod.pois, type = "response"), actual = df$y)
 ggplot(pred.pois)  + 
@@ -241,7 +248,8 @@ Since all the weights are in the exponential function, the effect interpretation
 The last ingredient for the interpretation is the actual weights of the toy example.
 The following table lists the estimated weights and exp(weights) together with the 95% confidence interval:
 
-```{r poisson-model-params}
+```{r}
+#| label: poisson-model-params
 cc = data.frame(summary(mod.pois)$coefficients)
 cc = cc[,c("Estimate", "Std..Error")]
 colnames(cc) = c("beta", 'var.beta')
@@ -275,7 +283,8 @@ The solution is elegant in a way, since it does not require any change of the li
 In the working day and temperature example, we would add a new feature that has zeros for no-work days, otherwise it has the value of the temperature feature, assuming that working day is the reference category.
 Suppose our data looks like this:
 
-```{r data-frame}
+```{r}
+#| label: data-frame
 x = data.frame(work = c("Y", "N", "N", "Y"), temp = c(25, 12, 30, 5))
 kableExtra::kbl(x, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
@@ -284,7 +293,8 @@ The data matrix used by the linear model looks slightly different.
 The following table shows what the data prepared for the model looks like if we do not specify any interactions.
 Normally, this transformation is performed automatically by any statistical software.
 
-```{r data-frame-lm-no-interaction}
+```{r}
+#| label: data-frame-lm-no-interaction
 mod = lm(1:4 ~ ., data = x)
 model.tab = data.frame(model.matrix(mod))
 colnames(model.tab)[1] = "Intercept"
@@ -297,7 +307,8 @@ The third column contains the temperature.
 
 If we want the linear model to consider the interaction between temperature and the workingday feature, we have to add a column for the interaction:
 
-```{r data-frame-lm}
+```{r}
+#| label: data-frame-lm
 mod = lm(1:4 ~ work * temp, data = x)
 model.tab = data.frame(model.matrix(mod))
 colnames(model.tab)[1] = "Intercept"
@@ -316,7 +327,8 @@ The interaction of two categorical features works similarly.
 We create additional features which represent combinations of categories. 
 Here is some artificial data containing working day (work) and a categorical weather feature (wthr): 
 
-```{r data-frame-lm-cat}
+```{r}
+#| label: data-frame-lm-cat
 x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("2", "0", "1", "2"))
 kableExtra::kbl(x, booktabs = TRUE) %>% kable_styling(position = "center")
 
@@ -324,7 +336,8 @@ kableExtra::kbl(x, booktabs = TRUE) %>% kable_styling(position = "center")
 
 Next, we include interaction terms: 
 
-```{r data-frame-lm-cat2}
+```{r}
+#| label: data-frame-lm-cat2
 mod = lm(1:4 ~ work * wthr, data = x)
 model.tab = data.frame(model.matrix(mod))
 colnames(model.tab)[1] = c("Intercept")
@@ -351,7 +364,8 @@ Let us return to the [bike rental prediction task](#bike-data) which we have alr
 This time, we additionally consider an interaction between the temperature and the working day feature.
 This results in the following estimated weights and confidence intervals.
 
-```{r example-lm-interaction}
+```{r}
+#| label: example-lm-interaction
 data(bike)
 X = bike[bike.features.of.interest]
 y = bike[,'cnt']
@@ -389,7 +403,9 @@ The temperature slope for days on which people have to work ('WORKING DAY') is t
 The intercept of the 'NO WORKING DAY'-line at temperature = 0 is determined by the intercept term of the linear model (`r round(lm_summary_print['(Intercept)','Estimate'], 1)`).
 The intercept of the 'WORKING DAY'-line at temperature = 0 is determined by the intercept term + the effect of working day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workingdayWORKING DAY','Estimate'], 1)`).
 
-```{r interaction-plot, fig.cap = "The effect (including interaction) of temperature and working day on the predicted number of bikes for a linear model. Effectively, we get two slopes for the temperature, one for each category of the working day feature."}
+```{r}
+#| label: interaction-plot
+#| fig.cap: The effect (including interaction) of temperature and working day on the predicted number of bikes for a linear model. Effectively, we get two slopes for the temperature, one for each category of the working day feature. 
 interactions::interact_plot(mod, pred = "temp", modx = "workingday")
 ```
 
@@ -413,7 +429,9 @@ Before I go into the details of each method, let us start with an example that i
 I took the [bike rental dataset](#bike-data) and trained a linear model with only the temperature feature to predict the number of rental bikes.
 The following figure shows the estimated slope with: the standard linear model, a linear model with transformed temperature (logarithm), a linear model with temperature treated as categorical feature and using regression splines (GAM).
 
-```{r nonlinear-effects, fig.cap = "Predicting the number of rented bicycles using only the temperature feature. A linear model (top left) does not fit the data well. One solution is to transform the feature with e.g. the logarithm (top right), categorize it (bottom left), which is usually a bad decision, or use Generalized Additive Models that can automatically fit a smooth curve for temperature (bottom right)."}
+```{r}
+#| label: nonlinear-effects
+#| fig.cap: "Predicting the number of rented bicycles using only the temperature feature. A linear model (top left) does not fit the data well. One solution is to transform the feature with e.g. the logarithm (top right), categorize it (bottom left), which is usually a bad decision, or use Generalized Additive Models that can automatically fit a smooth curve for temperature (bottom right)."
 mod.simpel = lm(cnt ~ temp, data = bike)
 bike.plt = bike
 bike.plt$pred.lm = predict(mod.simpel)
@@ -514,8 +532,9 @@ Each row represents an individual instance from the data (one day).
 Each spline basis column contains the value of the spline basis function at the particular temperature values. 
 The following figure shows how these spline basis functions look like:
 
-```{r splines, fig.cap = "To smoothly model the temperature effect, we use 4 spline basis functions. Each temperature value is mapped to (here) 4 spline basis values. If an instance has a temperature of 30 °C, the value for the first spline basis feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7."}
-
+```{r}
+#| label: splines
+#| fig.cap: "To smoothly model the temperature effect, we use 4 spline basis functions. Each temperature value is mapped to (here) 4 spline basis values. If an instance has a temperature of 30 °C, the value for the first spline basis feature is -1, for the second 0.7, for the third -0.8 and for the 4th 1.7."
 mm = model.matrix(mod.gam)
 mm2 = data.table::melt(mm)
 mm2 = mm2[mm2$Var2 != "(Intercept)",]
@@ -527,13 +546,16 @@ ggplot(mm2) + geom_line(aes(x = rep(bike$temp, times = 4), y = value)) + facet_w
 
 The GAM assigns weights to each temperature spline basis feature:
 
-```{r splines-weights}
+```{r}
+#| label: splines-weights
 kableExtra::kbl(coef(mod.gam), digits = 2, col.names = "weight", booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
 And the actual spline curve, which results from the sum of the spline basis functions weighted with the estimated weights, looks like this:
 
-```{r splines-curve, fig.cap = "GAM feature effect of the temperature for predicting the number of rented bikes (temperature used as the only feature)."}
+```{r}
+#| label: splines-curve
+#| fig.cap: "GAM feature effect of the temperature for predicting the number of rented bikes (temperature used as the only feature)."
 plot(mod.gam)
 ```
 
