@@ -22,7 +22,7 @@ download.spam.data = function(){
   write.csv( x = ycomments, file = sprintf('%s/TubeSpam.csv', data_dir),row.names=FALSE)
 }
 
-
+data_dir = "../data/"
 
 ycomments = get.ycomments.data(data_dir)
 save(ycomments, file = sprintf('%sycomments.RData', data_dir))

@@ -62,6 +62,10 @@ html/epub.css :
 	curl https://raw.githubusercontent.com/jgm/pandoc/main/data/epub.css --output html/epub.css
 	sed -i '' 's/background-color: #fdfdfd;/background-color: transparent;/g' html/epub.css
 
-sbrl:
+install-sbrl-deps:
 	sudo apt install -y libgsl10-dev open-cobol
 
+
+data:
+	Rscript ../scripts/get-bike-sharing-dataset.R
+	Rscript ../scripts/get-SpamTube-dataset.R
