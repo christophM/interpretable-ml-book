@@ -1,45 +1,67 @@
-.PHONY : sbrl
+.PHONY : ebook html kindle pdf preview sbrl
 
-all : html pdf epub
-
-html : _book/index.html
-
-pdf : _book/interpretable-ml.pdf
-
-epub : _book/interpretable-ml.epub
-
-amazon : _book/amazon.pdf
-
-_book/amazon.pdf : _book/interpretable-ml.pdf
-	gs -dPDFX -dBATCH -dNOPAUSE -dUseCIEColor -sProcessColorModel=DeviceCMYK -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile=_book/amazon.pdf _book/interpretable-machine-learning.pdf
+bookname = iml
 
 
-package: ../DESCRIPTION ../R/*.R
-	Rscript  -e "devtools::install('../')"
-
-_book/index.html :  *.Rmd
-	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
-	rm -f interpretable-ml.Rmd
-	Rscript  -e "bookdown::render_book('./', 'bookdown::gitbook')"
 
 
-%.md : %.Rmd
-	R --no-save --args $< < ../scripts/process-rmd-leanpub.R
-	R --no-save --args $@ < ../scripts/fix-leanpub.R
+all :  kindle print ebook pdf html
+kindle : output/kindle-$(bookname).epub
+print: output/print-$(bookname).pdf
+ebook: output/ebook-$(bookname).epub
+pdf: output/pdf-$(bookname).pdf
 
-_book/interpretable-ml.pdf : *.Rmd latex/*
-	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
-	rm -f interpretable-ml.Rmd
+
+COMMON_BOOK_FILES = $(wildcard *.qmd) $(wildcard *.qmd) references.bib _quarto.yml
+
+
+html: *.qmd html/*.html
+	quarto render --to html
+
+docx : $(COMMON_BOOK_FILES)
+	quarto render --to docx --profile beta-reader
+
+output/ebook-$(bookname).epub :  $(COMMON_BOOK_FILES) _quarto-ebook.yml html/epub.css
+	quarto render --profile ebook --to epub
+	mv _book/$(bookname).epub output/ebook-$(bookname).epub
+
+output/kindle-$(bookname).epub :  $(COMMON_BOOK_FILES) _quarto-kindle.yml html/epub.css
+	quarto render --profile kindle --to epub
+	mv _book/$(bookname).epub output/kindle-$(bookname).epub
+
+output/print-$(bookname).pdf : $(COMMON_BOOK_FILES) _quarto-print.yml latex/
 	git rev-parse --short HEAD > latex/hash.tex
-	Rscript  -e "bookdown::render_book('./', 'bookdown::pdf_book')"
+	quarto render --profile print --to pdf
+	mv _book/$(bookname).pdf output/print-$(bookname).pdf 
 
-_book/interpretable-ml.epub : *.Rmd
-	# When build fails interpretable-ml.Rmd is created and not removed. Next build will fail when file exists.
-	rm -f interpretable-ml.Rmd
-	Rscript  -e "bookdown::render_book('./', 'bookdown::epub_book')"
+output/pdf-$(bookname).pdf : $(COMMON_BOOK_FILES) _quarto-pdf.yml  latex/
+	git rev-parse --short HEAD > latex/hash.tex
+	quarto render --profile pdf --to pdf
+	mv _book/$(bookname).pdf output/pdf-$(bookname).pdf 
 
-11-references.Rmd : *.Rmd ../scripts/references.R
-	Rscript ../scripts/references.R
+
+output/leanpub/sample-$(bookname).pdf: output/leanpub/$(bookname).pdf
+	pdftk output/pdf-$(bookname).pdf cat 1-40 output output/leanpub/sample-pdf-$(bookname).pdf
+
+
+editing: *.qmd _quarto-editing.yml latex _quarto.yml
+	mkdir -p output/editing
+	git rev-parse --short HEAD > latex/hash.tex
+	quarto render --profile editing --to pdf
+	mv _book/$(bookname).pdf output/editing.pdf
+
+check-epub-leanpub:
+	java -jar ../scripts/epubcheck-5.0.0/epubcheck.jar output/ebook-$(bookname).epub
+
+check-epub-amazon:
+	java -jar ../scripts/epubcheck-5.0.0/epubcheck.jar output/kindle-$(bookname).epub
+
+check-epubs: check-epub-leanpub check-epub-amazon
+ 
+html/epub.css :
+	curl https://raw.githubusercontent.com/jgm/pandoc/main/data/epub.css --output html/epub.css
+	sed -i '' 's/background-color: #fdfdfd;/background-color: transparent;/g' html/epub.css
 
 sbrl:
 	sudo apt install -y libgsl10-dev open-cobol
+
