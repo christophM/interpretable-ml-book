@@ -1,0 +1,88 @@
+# Leave-one-covariate-out {#loco}
+
+{{< include _setup.qmd >}}
+
+Leave-one-covariate-out, or short LOCO, is an importance method that retrains a model without a feature and measurs the difference in performance.
+
+TODO: Cite the paper
+
+LOCO is still a model-agnostic method, but very different from the others since they don't touch the model in terms of training.
+Arguably it's still post-hoc, since the retrained models don't affect the trained model.
+
+
+The algorithm is quickly explained:
+
+- Measure the performance of the models
+- For all features $j \in 1, \ldots, p$ do the following
+  - Remove $x_j$ from the dataset
+  - Train the model with reduced dataset
+  - Measure performance again
+  - Compare new performance with standard performance
+
+Just like with [permutation feature importace](#pfi), to compare the performance you ca use the difference, or the ratio.
+
+To train and retrain the model you should be using the training data, and for measuring the performance you should use the test data.
+This sounds like common sense, but for other interpretation methods that don't rely on performance measurements (like the PDP) it's not necessarily so clear that you have to and you can use training data as well.
+
+The big question: Why would you do LOCO instead of PFI?
+At first they sound very similar: In both cases we kind of remove the feature's information from the model and compare the differences.
+But actually removing the feature and only permuting the feature makes for very different interpretations.
+
+
+In LOCO the feature is removed before retraining, therefore the model can learn to rely on other features more.
+In PFI, that's not the case.
+Let's say we train a tree, and it only picks feature $X_1$ for all splits because we didn't allow it to grow to deep, and let's say the tree is well-tuned and doesn't overfit.
+PFI would say: Feature $X_1$ is very important, because shuffling the feature will drop the performance all the way to the baseline; all others have importance of zero.
+LOCO would say something different, depending on how well the tree would compensate with the other features.
+Because with retraining the tree inducer can now find a different model that is better than the baseline.
+So the drop in performance will be less stark typically compared to PFI.
+However, that's for the marginal version of PFI.
+Then we also have the conditional version of PFI, where we permute the feature conditional on the other features.
+
+LOCO also has a conditional interpretation:
+It's about the importance of the features GIVEN we already have the information of the other features.
+But is then maybe LOCO the same as conditional PFI?
+Not necessarily, because the retraining is still different from conditional permutation.
+For example, some machine learning algorithm have inductive biases like spreading importance across correlated features (e.g. random forest), and then removing one of those features for retraining impacts this.
+
+
+When removing one of the features, the model might actually be very different.
+Especially for tree-based models:
+If that feature was in the first split of that tree, the newly trained tree will look rather different.
+
+
+## Examples 
+
+TODO: Produce examples
+
+
+
+## Advantages
+
+Implementing this is super simple.
+You can do it yourself, you don't actually need any package for that.
+However, there are also a couple of options.
+
+
+It bridges interpretability and features selection: While permutation features importance and other post-hoc methods that don't retrain the model seem to give valuable insights also in terms of feature selection, LOCO actually does.
+A feature with low LOCO importance can be safely removed from the model, while you can't make that same move with PFI. 
+
+LOCO avoids the correlation problem:
+By removing the feature alltogether instead of permuting it, we don't generate new data points that might extrapolate.
+
+LOCO makes sense when your goal of interpretation is about the phenomenon (and less about the model itself). 
+
+## Disadvantages
+
+If you compute LOCO importance for all features, you have to retrain the model $p$ times.
+This can be costly, especially when compared to Permutation Feature Importance.
+
+
+Once you remove a feature and retrain the model, it's unclear what this model exactly represents.
+Because the new model that we use to 
+
+
+TODO: think about implications for causal models. e.g. confounder, mediator, effect, cause
+
+
+## Software and Alternatives
