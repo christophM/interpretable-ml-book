@@ -55,6 +55,90 @@ If that feature was in the first split of that tree, the newly trained tree will
 
 TODO: Produce examples
 
+```{r}
+#|label: loco-penguins
+# Split the data into training and testing sets
+set.seed(1)
+train_index <- sample(1:nrow(penguins2), 2/3 * nrow(penguins2))
+train_data <- penguins2[train_index, ]
+test_data <- penguins2[-train_index, ]
+
+# Train the random forest model
+rf_model <- randomForest(species ~ ., data = train_data)
+
+# Evaluate the model on the test set
+test_prediction <- predict(rf_model, newdata = test_data)
+test_accuracy <- mean(test_data$species == test_prediction)
+
+# Compute LOCO feature importance
+feature_importances <- data.frame(feature = setdiff(names(penguins2), 'species'), importance = 0)
+
+for (feature in feature_importances$feature) {
+  new_train_data <- train_data %>% select(-!!sym(feature))
+  new_rf_model <- randomForest(species ~ ., data = new_train_data)
+  new_test_prediction <- predict(new_rf_model, newdata = test_data %>% select(-!!sym(feature)))
+  new_test_accuracy <- mean(test_data$species == new_test_prediction)
+  feature_importances$importance[feature_importances$feature == feature] <- test_accuracy - new_test_accuracy
+}
+
+
+# Order the features by importance
+feature_importances <- feature_importances %>%
+  arrange(desc(importance))
+
+# Visualize the feature importances
+ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(x = "Feature", y = "LOCO Importance") +
+  my_theme()
+
+```
+
+
+Now for the bike sharing data
+
+```{r}
+#|label: loco-penguins
+# Split the data into training and testing sets
+train_index <- sample(1:nrow(bike), 2/3 * nrow(bike))
+train_data <- bike[train_index, ]
+test_data <- bike[-train_index, ]
+
+data("bike")
+task = makeRegrTask(data = train_data, target = "cnt")
+learner = makeLearner('regr.svm')
+mod = mlr::train(learner, task)
+
+# Evaluate the model on the test set
+test_prediction <- data.frame(predict(mod, newdata = test_data))$response
+test_mae <- mean(abs(test_data$cnt - test_prediction))
+
+# Compute LOCO feature importance
+feature_importances <- data.frame(feature = setdiff(names(bike), 'cnt'), importance = 0)
+
+for (feature in feature_importances$feature) {
+  new_train_data <- train_data %>% select(-!!sym(feature))
+  new_task = makeRegrTask(data = new_train_data, target = "cnt")
+  new_mod = mlr::train(learner, new_task)
+  new_test_prediction <- data.frame(predict(new_mod, newdata = test_data %>% select(-!!sym(feature))))$response
+  new_test_mae <- mean(abs(test_data$cnt - new_test_prediction))
+  feature_importances$importance[feature_importances$feature == feature] <- test_mae - new_test_mae
+}
+
+# Order the features by importance
+feature_importances <- feature_importances %>%
+  arrange(desc(importance))
+
+# Visualize the feature importances
+ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(x = "Feature", y = "LOCO Importance") +
+  my_theme()
+
+```
+
 
 
 ## Advantages
