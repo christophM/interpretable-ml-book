@@ -67,10 +67,15 @@ All notable changes to the book will be documented here.
 
 ### v3.0 (IN PROGRESS) [html version]
 
-- Added the ceteris paribus chapter
-- Added LOCO chapter
-- Moved short stories to the end of the book
-- Update lots of references (and move them from footnotes to proper bibtex references).
+- Strongly shortened the text between first word and first method:
+  - removed preface by the author and moved relevant parts into about the book and introduction
+  - moved chapters "Datasets", "Terminology", "What is Machine Learning" into appendix
+  - Moved short stories to the end of the book
+- Combined all the intro texts (e.g. global methods) into an overview chapter 
+- New method chapters:
+  - ceteris paribus 
+  - LOCO 
+- Updated lots of references (and move them from footnotes to proper bibtex references).
 - Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, less sensitive and more instructive since it's multi-class instead of binary classification.
 
 ### v2.0 [Print + ebook version]
