@@ -1,0 +1,203 @@
+# Leave-one-covariate-out (LOFO) {#lofo}
+
+{{< include _setup.qmd >}}
+
+Leave-one-covariate-out, short LOFO, is simple method to compute the importance of a feature by retraining the model without the feature and measuring the drop in performance (or increase in loss).
+The first more formal description I'm aware of is by @lei2018distributionfree where they called it LOFO, leave-one-covariate-out, but I guess already many people naturally used this idea of importance and it's probably also part of many other papers.
+
+The intuition is that when dropping a feature makes the performance much worse, then this feature can be seen as important.
+If dropping a feature and retraining the model doesn't change performance at all, then it was not important.
+Think of a decision tree that only relies on a couple of featurs.
+And dropping one of the features the ML algorithm didn't use to split the data obviously won't change the performance of the resulting model, since the model will simply be identical to the model before. 
+Note that how we define importance is kind of given by the method itself, which highlights how you should really understand what the methods are doing so you can pick the right one. 
+That's already the intuition behind the method, but as we will see, the interpretation is not as clear cut and the devil is again in the details.
+But first, let's formalize the algorithm
+
+
+
+The algorithm is quickly explained.
+
+Input: Trained model $\hat{f}$, features $X$, target $Y$, and some error measure $L$: 
+
+- Measure the original model error: $e_{orig} = \frac{1}{n_test}\sum_{i=1}^{n_{test}} L(y, \hat{f}(X))$
+- For each feature $j \in 1, \ldots, p$ do: 
+  - Remove $X_j$ from the dataset, which creates new dataset $X_{-j}$.
+  - Train on the data $(y, X_{-j})$ to get model $\hat{f}_{-j}$
+  - Estimate the new error: $e_{-j} =  \frac{1}{n_test} \sum_{i=1}^{n_{test}} L(y, \hat{f}_{-h}(X_{-j}))$
+  - Calculate LOFO importance as quotient $FI_j= e_{-j}/e_{orig}$ or difference $FI_j = e_{-j}- e_{orig}$
+- Sort by descending LOFO importance and visualize 
+
+Just like with [permutation feature importace](#pfi), to compare the performance you can use the difference, or the ratio.
+
+To train and retrain the model you should be using the training data, and for measuring the performance you should use the test data.
+This sounds like common sense, but for other interpretation methods that don't rely on performance measurements (like the PDP) it's not necessarily so clear that you have to and you can use training data as well.
+
+
+## How LOFO relates to other methods 
+
+LOFO differs from the other methods, since most of the other methods in this book don't require to retrain the model.
+Arguably, it still follows a classic post-hoc, model-agnostic method patterns, since it can be applied to any model and retraining the model doesn't affect the original model that we want to interpret.
+
+The way LOFO works, you don't just have to train 1 model, but 1 + p, the number of features.
+Is it different from PFI?
+Cause if not, I'm sure not going to use it.
+
+
+<!-- LOFO has a conditional interpretation -->
+Comparing PFI and LOFO only from a computational runtime perspective isn't enough, we have to look at the interpretation.
+LOFO has a conditional interpretation, which is similar to the conditional version of PFI.
+But for LOFO it is more obvious:
+Removing a feature and retraining a model allows the algorithm to create a new model and potentially offset the missing feature with other features.
+So the importance is conditional on the inforformation in other features.
+Take the extreme case that a feature is just a copy of another feature (100% correlation), then removing that copied feature might not change the loss at all.
+How the LOFO importance plays out also depends on the type of algorithm used.
+But this also leads to a potential pitfall: A feature with a LOFO importance of zero might actually play an important role in the current model.
+And if you have two strongly correlated features that are heavily relied on by the model, both features will have LOFO importance near zero or at least low.
+And it seems that these features are not important at all.
+Which is **not wrong**, since LOFO measures a conditional importance: Removing one of the correlated features doesn't affect the model performance much.
+
+
+<!-- Difference between conditional PFI and LOFO -->
+Alright, we have established that LOFO is different from marginal PFI, since it has a conditional interpretation.
+PFI has a conditional version where you sample the feature conditional on the other features, so the question that remains is how LOFO differs from conditional PFI.
+And this is where things get more tricky, as now it is highly dependent on the ML algorithm and the model $\hat{f}$:
+
+- Scenario: Model $\hat{f}$ is a decision tree and $X_1$ is not even used by the model. LOFO, marginal PFI and conditional PFI will agree on importance of 0.
+- Scenario: Random forest with features $X_1$ and $X_2$ are the exact same and have predictive value. Due to the nature of column sampling, we know that the random forest will use both features equally. Marginal PFI will say both features are important (equally). For LOFO, it depends. Imagine you have thousands of features with zero predictive value. By doubling that one relevant feature, the random forest is more likely to sample a relevant feature. So removing a feature will drop the importance. And for conditional PFI, a similar result.
+
+But I just said you can simply use conditional PFI.
+The problem with conditional PFI is that you need a conditional sampling algorithm for each of the feature.
+That's a more complex problem as the initial ML model that you are training.
+So with LOFO we get that much simpler algorithmically.
+
+## Examples 
+
+We test LOFO by predicting penguins species from body measurements.
+For this I have trained a random forest on 2/3 of the data, leaving 1/3 of the data for error estimation. 
+
+```{r}
+#| label: fig-lofo-penguins
+#| fig-cap: "LOFO importances for the penguin data."
+test_prediction <- predict(penguins_rf, newdata = penguins_test)
+test_accuracy <- mean(penguins_test$species == test_prediction)
+
+# Compute LOFO feature importance
+feature_importances <- data.frame(feature = setdiff(names(penguins2), 'species'), importance = 0)
+
+for (feature in feature_importances$feature) {
+  new_train_data <- penguins_train %>% select(-!!sym(feature))
+  new_rf_model <- randomForest(species ~ ., data = new_train_data)
+  new_test_prediction <- predict(new_rf_model, newdata = penguins_test %>% select(-!!sym(feature)))
+  new_test_accuracy <- mean(penguins_test$species == new_test_prediction)
+  feature_importances$importance[feature_importances$feature == feature] <- test_accuracy - new_test_accuracy
+}
+
+# Order the features by importance
+feature_importances <- feature_importances %>%
+  arrange(desc(importance))
+
+# Visualize the feature importances
+ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(x = "Feature", y = "LOFO Importance (accuracy difference)") +
+  my_theme()
+
+```
+
+@fig-lofo-penguins shows that the bill length was the most important feature according to LOFO, leading to an error increase of over 15 percentage points in accuracy.
+Note that because of using accuracy here, where larger is better, I multiplied the importance by minus one.
+
+
+Now for the bike sharing data, where we predict number of rented bikes based on weather and calendar information.
+For this I trained a support vector machine on 2/3 of the bike rental data.
+
+```{r}
+#| label: fig-lofo-bike
+#| fig-cap: "LOFO feature importances for the bike rental data."
+# Split the data into training and testing sets
+test_prediction <- predict(bike_rf, newdata = bike_test)
+test_mae <- mean(abs(bike_test$cnt - test_prediction))
+
+# Compute LOFO feature importance
+feature_importances <- data.frame(feature = setdiff(names(bike_train), 'cnt'), importance = 0)
+
+for (feature in feature_importances$feature) {
+  new_train_data <- bike_train %>% select(-!!sym(feature))
+  new_mod = randomForest(cnt ~ ., data = new_train_data)
+  new_test_prediction <- predict(new_mod, newdata = bike_test %>% select(-!!sym(feature)))
+  new_test_mae <- mean(abs(bike_test$cnt - new_test_prediction))
+  feature_importances$importance[feature_importances$feature == feature] <- new_test_mae - test_mae 
+}
+
+
+# Order the features by importance
+feature_importances <- feature_importances %>%
+  arrange(desc(importance))
+
+# Visualize the feature importances
+ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(x = "Feature", y = "LOFO Importance (MAE difference)") +
+  my_theme()
+
+```
+
+@fig-lofo-bike shows that temperature and humidity are the most important features.
+Interestingly the month has a negative importance, which has implications for feature selection.
+Because how LOFO works algorithmically, we now know that removing the feature increases the model performance.
+
+
+## Advantages
+
+**Implementing LOFO is simple**.
+For the examples here I did just that.
+You can do it yourself, you don't actually need any package for that.
+
+LOFO bridges interpretability and features selection: While permutation features importance and other post-hoc methods that don't retrain the model seem to give valuable insights also in terms of feature selection, LOFO actually does.
+A feature with low LOFO importance can be safely removed from the model, while you can't make that same move with PFI. 
+
+LOFO assigns negative importance to features that hurt performance.
+
+LOFO avoids the correlation problem:
+By removing the feature alltogether instead of permuting it, we don't generate new data points that might extrapolate.
+
+LOFO makes sense when your goal of interpretation is about the phenomenon (and less about the model itself). 
+
+You can also gropu features.
+
+
+## Disadvantages
+
+If you compute LOFO importance for all features, you have to retrain the model $p$ times.
+This can be costly, especially when compared to Permutation Feature Importance.
+
+
+Once you remove a feature and retrain the model, it's unclear what this model exactly represents.
+Because the new model that we use to 
+
+
+TODO: think about implications for causal models. e.g. confounder, mediator, effect, cause
+
+A bit unclear whether to just train the same model with exact same hyperparameters, or run hyperparameter optim again.
+For the examples I used the exact same settings.
+If you would also do hyperparameter optimization again, you will have a different interpretation.
+So insight really is more into the learner than a specific model.
+
+The model
+
+If you have two highly correlated features, they will both get a low LOFO importance.
+It's to be expected from the method, but can be highly misleading for LOFO users who don't no this.
+You always have to know the dependences between features before interpreting LOFO. 
+A "fix" to this would be to group highly correlated features and only compute a shared importance for them.
+
+## Software and Alternatives
+
+cONTINUE HERE
+
+- Python implementation: https://github.com/aerdem4/lofo-importance
+
+- Knockoffs are indistunguishable copies of the variables, at least basedon distribution, but which are independent of X.
+
+- In general overlap with feature selection techniques.

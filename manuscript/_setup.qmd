@@ -1,6 +1,5 @@
 ```{r}
-#| message: False
-#| echo: False
+#| label: load R packages
 
 library("dplyr")
 library("kableExtra")
@@ -18,17 +17,55 @@ library('iml')
 library('patchwork')
 library('grid')
 library('gridExtra')
+library('ranger')
+```
 
-set.seed(42)
-
-
-## Load datasets
-load("../data/bike.RData")
-load("../data/ycomments.RData")
+```{r}
+#| label: penguin data and models
+set.seed(2)
 penguins = na.omit(penguins)
 penguins_col_selection = c('species', 'bill_depth_mm', 'bill_length_mm', 'flipper_length_mm', 'sex', 'body_mass_g') 
 penguins2 = penguins[penguins_col_selection] 
-# define ggplot graphics theme
+penguin_train_index <- sample(1:nrow(penguins2), 2/3 * nrow(penguins2))
+penguins_train <- penguins2[penguin_train_index, ]
+penguins_test <- penguins2[-penguin_train_index, ]
+penguins_rf = randomForest(species ~ ., data = penguins_train)
+```
+
+```{r}
+#| label: bike data and models
+set.seed(42)
+load("../data/bike.RData")
+
+bike_train_index <- sample(1:nrow(bike), 2/3 * nrow(bike))
+bike_train <- bike[bike_train_index, ]
+bike_test <- bike[-bike_train_index, ]
+bike_rf = randomForest(cnt~ ., data = bike_train, ntree = 500)
+bike_tree = rpart(cnt ~ ., data = bike_train)
+bike_rf_overfitting = randomForest(cnt~ ., data = bike_train, ntree = 100)
+bike_svm = e1071::svm(cnt ~ ., data = bike_train)
+
+mae = function(actual, predicted){ mean(abs(actual - predicted)) }
+
+#print("MAE SVM")
+#print(mae(bike_test$cnt, predict(bike_svm, bike_test)))
+#print("MAE tree")
+#print(mae(bike_test$cnt, predict(bike_tree, bike_test)))
+#print("MAE random forest")
+#print(mae(bike_test$cnt, predict(bike_rf, bike_test)))
+
+```
+
+
+```{r}
+#| label: load data
+set.seed(42)
+
+## Load datasets
+load("../data/ycomments.RData")
+```
+
+```{r}
 my_theme = function(legend.position='right'){
   theme_bw() %+replace%
     theme(legend.position=legend.position)
