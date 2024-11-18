@@ -157,30 +157,7 @@ Features associated with a model error increase by a factor of 1 (= no change) w
 
 ```{r}
 #| label: importance-penguins-prep
-
-library('mlr')
-library('iml')
-library(palmerpenguins)
-set.seed(1)
-
-# Data preparation
-penguins = na.omit(penguins)
-
-# Split data into training (2/3) and test (1/3) sets
-split = sample(c(TRUE, FALSE), nrow(penguins), replace=TRUE, prob=c(2/3, 1/3))
-penguins_train = penguins[split, ]
-penguins_test = penguins[!split, ]
-
-# Create task and learner
-task = makeClassifTask(data = penguins_train, target = "species")
-learner = makeLearner('classif.randomForest', predict.type = 'prob')
-
-# Train model
-mod = mlr::train(learner, task)
-
-# Create predictor using the trained model and test data
-predictor = Predictor$new(mod, data = penguins_test)
-
+predictor = Predictor$new(penguins_rf, data = penguins_test)
 # Compute feature importance
 importance = FeatureImp$new(predictor, loss = "ce", compare="ratio")
 
@@ -190,9 +167,11 @@ most_imp = imp.dat$feature[imp.dat$importance == max(imp.dat$importance)]
 ```
 
 ```{r importance-penguins, fig.cap = sprintf("The importance of each of the features for predicting penguin species with a random forest. The most important feature was %s. Permuting %s resulted in an increase in classification error by a factor of %.2f", most_imp, most_imp, max(imp.dat$importance))}
+
 plot(importance) +
   scale_x_continuous("Feature importance (classification error)", limits=c(0.5, NA)) +
-   scale_y_discrete("")
+   scale_y_discrete("") +
+  my_theme()
 ```
 
 
@@ -299,7 +278,7 @@ Even though the importance values might make sense at the level of model behavio
 ## Alternatives
 
 An algorithm called [PIMP](https://academic.oup.com/bioinformatics/article/26/10/1340/193348) adapts the permutation feature importance algorithm to provide p-values for the importances.
-Another loss-based alternative is to omit the feature from the training data, retrain the model and measuring the increase in loss.
+Another loss-based alternative is [LOFO](#lofo), which omit the feature from the training data, retrains the model and measures the increase in loss.
 Permuting a feature and measuring the increase in loss is not the only way to measure the importance of a feature.
 The different importance measures can be divided into model-specific and model-agnostic methods.
 The Gini importance for random forests or standardized regression coefficients for regression models are examples of model-specific importance measures.

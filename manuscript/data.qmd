@@ -1,5 +1,7 @@
 # Datasets {#data}
 
+{{< include _setup.qmd >}}
+
 Throughout the book, all models and techniques are applied to real datasets that are freely available online.
 We will use different datasets for different tasks:
 Classification, regression and text classification.
@@ -35,6 +37,38 @@ This feature was introduced to take account of the trend over time.
 
 For the examples in this book, the data has been slightly processed.
 You can find the processing R-script in the book's [GitHub repository](https://github.com/christophM/interpretable-ml-book/blob/master/R/get-bike-sharing-dataset.R) together with the [final RData file](https://github.com/christophM/interpretable-ml-book/blob/master/data/bike.RData).
+
+Let's have a look at the correlations in the data.
+
+```{r}
+#| label: fig-bike-correlations
+#| fig.cap: Pearson correlation between the bike data features.
+# Select numerical columns and remove rows with NA values
+bike_clean <- bike[, sapply(bike, is.numeric)]
+bike_clean$cnt = NULL
+
+# Compute the correlation matrix
+cor_matrix <- cor(bike_clean)
+
+# Melt the correlation matrix for visualization
+cor_melt <- melt(cor_matrix)
+
+# Visualize the correlations using ggplot2 with labels
+ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_label(aes(label = round(value, 2)), color = "black", size = 5, fill="white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +
+  my_theme()
+  labs(
+    title = "Correlation Matrix of Bike REntal Data",
+    x = "",
+    y = "",
+    fill = "Correlation"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+As the correlation plot in @fig-bike-correlations shows, the correlations between the variables is not very strong, so creating unrealistic features is not as big as a concern.
 
 
 <!--{pagebreak}-->
@@ -98,3 +132,44 @@ Each row represents a penguin and contains the following information:
 11 penguins had missing data.
 Since the purpose of this data is to demonstrate interpretable machine learning methods and not an in-depth study of penguins, I simply dropped the missing values.
 
+
+For the data examples, I trained the following models, using a simple split into training (2/3) and holdout test data (1/3):
+print("MAE SVM")
+#print()
+
+- Random forest with accuracy `r penguins_rf_logloss`
+- Decision tree with test performance `r penguins_rpart_logloss`
+
+We also need to look at the correlations:
+
+```{r}
+#| label: fig-penguins-correlations
+#| fig.cap: Pearson correlation between the penguin features.
+library(reshape2)
+
+# Select numerical columns and remove rows with NA values
+penguins_clean <- na.omit(penguins[, sapply(penguins, is.numeric)])
+
+# Compute the correlation matrix
+cor_matrix <- cor(penguins_clean)
+
+# Melt the correlation matrix for visualization
+cor_melt <- melt(cor_matrix)
+
+# Visualize the correlations using ggplot2 with labels
+ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_label(aes(label = round(value, 2)), color = "black", size = 5, fill="white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +
+  my_theme() +
+  labs(
+    title = "Correlation Matrix of Palmer Penguins Data",
+    x = "",
+    y = "",
+    fill = "Correlation"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+@fig-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
+But also other feature pairs are strongly (negatively) correlated, like flipper length and bill length or flipper length and bill depth.

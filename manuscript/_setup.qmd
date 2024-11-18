@@ -1,6 +1,5 @@
 ```{r}
 #| label: load R packages
-
 library("dplyr")
 library("kableExtra")
 library("ggplot2")
@@ -18,18 +17,30 @@ library('patchwork')
 library('grid')
 library('gridExtra')
 library('ranger')
+library('reshape2')
 ```
 
 ```{r}
 #| label: penguin data and models
 set.seed(2)
 penguins = na.omit(penguins)
+penguins_orig = penguins
 penguins_col_selection = c('species', 'bill_depth_mm', 'bill_length_mm', 'flipper_length_mm', 'sex', 'body_mass_g') 
-penguins2 = penguins[penguins_col_selection] 
-penguin_train_index <- sample(1:nrow(penguins2), 2/3 * nrow(penguins2))
-penguins_train <- penguins2[penguin_train_index, ]
-penguins_test <- penguins2[-penguin_train_index, ]
+penguins = penguins[penguins_col_selection] 
+penguin_train_index <- sample(1:nrow(penguins), 2/3 * nrow(penguins))
+penguins_train <- penguins[penguin_train_index, ]
+penguins_test <- penguins[-penguin_train_index, ]
 penguins_rf = randomForest(species ~ ., data = penguins_train)
+penguins_rpart = randomForest(species ~ ., data = penguins_train)
+
+penguins_rf_acc = mean(penguins_test$species == predict(penguins_rf, penguins_test))
+penguins_rpart_acc = mean(penguins_test$species == predict(penguins_rpart, penguins_test))
+
+
+
+library('MLmetrics')
+penguins_rf_logloss = MultiLogLoss(y_pred = predict(penguins_rf, penguins_test, type="prob"), y_true = penguins_test$species)
+penguins_rpart_logloss = MultiLogLoss(y_pred = predict(penguins_rpart, penguins_test, type="prob"), y_true = penguins_test$species)
 ```
 
 ```{r}
