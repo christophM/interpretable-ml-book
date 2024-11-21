@@ -189,9 +189,7 @@ The following rules are created:
 ```{r}
 #| label: oner-penguins
 library("OneR")
-library("palmerpenguins")
-penguins = na.omit(penguins)
-rule = OneR::OneR(species ~ ., data = penguins)
+rule = OneR::OneR(sex ~ ., data = penguins_train)
 
 rule.to.table = function(rule){
   dt = data.frame(x = names(rule$rules), prediction = unlist(rule$rules))
@@ -202,36 +200,37 @@ rule.to.table = function(rule){
 kableExtra::kbl(rule.to.table(rule), row.names = FALSE, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
-The flipper length feature (`flipper_lengh_mm`) was chosen by OneR as the best predictive feature.
-To get a better feel for how this one rule performs, let's look into the cross table between the (discretized) flipper length feature and the penguin species:
+The bill depth feature was chosen by OneR as the best predictive feature.
+To get a better feel for how this one rule performs, let's look into the cross table between the (discretized) bill depth feature and the penguin species:
 
 ```{r}
 #| label: oner-penguin-confusion
 # Create the table with counts and probabilities
 tt <- penguins %>%
-  mutate(flipper_length_bin = bin(penguins$flipper_length_mm)) %>%
-  group_by(flipper_length_bin, species) %>%
+  mutate(bill_depth_bin = bin(penguins$bill_depth_mm)) %>%
+  group_by(bill_depth_bin, sex) %>%
   summarise(count = n()) %>%
-  group_by(flipper_length_bin) %>%
+  group_by(bill_depth_bin) %>%
   mutate(percentage = count / sum(count) * 100) %>%
   ungroup() %>%
   mutate(display = sprintf("%.1f%% (%d)", percentage, count)) %>%
-  pivot_wider(id_cols = flipper_length_bin, 
-              names_from = species, 
+  pivot_wider(id_cols = bill_depth_bin, 
+              names_from = sex, 
               values_from = display, 
               values_fill = "0% (0)")
 
 # Rename the first column
-colnames(tt)[1] <- "flipper_length_mm"
+colnames(tt)[1] <- "bill_depth_mm"
 
 # Create the table with kable and kable_styling
 kableExtra::kbl(tt, booktabs = TRUE, align = "c") %>%
   kable_styling(position = "center")
 ```
 
-We can see that this feature is particularly useful for classifying penguins with very short and very long flippers.
-With a flipper length above 219 we can be sure it is a Gentoo and between 207 and 219 it is at least likely. Below 184 mm, it's likely (90%) to be the Adelie species.
-However, in between these extremes, relying on flipper length alone doesn't give us as much clarity about the species.
+We can see that this feature is particularly useful for classifying penguins with deep bills.
+Penguins with bills with a depth of over 1.98 cm are most likely to be male.
+Very short bills make it likely that we are dealing with a female penguin.
+Caveat: This model ignores the species, or rather bundles them all together.
 
 OneR does not support regression tasks.
 But we can turn a regression task into a classification task by cutting the continuous outcome into intervals.
@@ -240,7 +239,6 @@ The following table shows the selected feature after fitting the OneR model:
 
 ```{r}
 #| label: oner-bike
-data("bike")
 bike2 = bike
 bike2$days_since_2011 = max(0, bike2$days_since_2011)
 bike2$cnt =  cut(bike2$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
@@ -374,31 +372,32 @@ library("RWeka")
 library(rJava)
 
 extract.rules.jrip = function (rule) {
-# Get the rules as text
+  # Get the rules as text
   rules = scan(text = .jcall(rule$classifier, "S", "toString"), sep = "\n", what = "")
-# Remove the initial description lines and the summary at the end
-    rules = rules[-c(1, 2, length(rules))]
-# Clean up the confidence numbers from each rule (e.g., "(69.0/2.0)")
-    rules = gsub("\\([0-9]+\\.[0-9]+/[0-9]+\\.[0-9]+\\)", "", rules)
-# Convert to a data frame for better formatting in the output
-    rules_df = data.frame(rules = rules, stringsAsFactors = FALSE)
-# Display the rules in a formatted table
-    if (nrow(rules_df) == 0) {
-      return(NULL)
-    } else {
-      kableExtra::kbl(rules_df, booktabs = TRUE) %>%
-	kableExtra::kable_styling(position = "center")
-    }
+  # Remove the initial description lines and the summary at the end
+  rules = rules[-c(1, 2, length(rules))]
+  # Clean up the confidence numbers from each rule (e.g., "(69.0/2.0)")
+  rules = gsub("\\([0-9]+\\.[0-9]+/[0-9]+\\.[0-9]+\\)", "", rules)
+  # Convert to a data frame for better formatting in the output
+  rules_df = data.frame(rules = rules, stringsAsFactors = FALSE)
+  # Display the rules in a formatted table
+  if (nrow(rules_df) == 0) {
+    return(NULL)
+  } else {
+    kableExtra::kbl(rules_df, booktabs = TRUE) %>%
+      kableExtra::kable_styling(position = "center")
+  }
 }
 
 ```
-First we extract the rules for the [penguin species classification task](#penguins).
-Here we get these 5 rules plus the default rule.
+
+First we extract the rules for the [penguin sex classification task](#penguins).
+Here we get these rules plus the default rule.
 
 ```{r}
 #| label: jrip-penguins
 #| include: true
-rule = JRip(species ~ . - island, data = penguins)
+rule = JRip(sex~ ., data = penguins)
 extract.rules.jrip(rule)
 ```
 The interpretation is simple:
@@ -579,7 +578,6 @@ We get the following rules:
 #| eval: true
 library("sbrl")
 library("arules")
-library("palmerpenguins")
 
 options(scipen = 999)
 penguins2 = as.data.frame(lapply(penguins, function(x) {
@@ -587,28 +585,26 @@ penguins2 = as.data.frame(lapply(penguins, function(x) {
     as.factor(x)
   } else {
     discretize(x, method = "interval", 3)
-    #discretize(x, breaks = max(length(unique(x))-1, 5))
   }
 }))
 
 get.sbrl.rules = function(x) {
     res = lapply(1:nrow(x$rs), function(i) {
         if (i == 1) 
-            sprintf("If      %s (rule[%d]) then positive probability = %.8f\n", 
+            sprintf("If      %s (rule[%d]) then positive probability = %.3f\n", 
                 x$rulenames[x$rs$V1[i]], x$rs$V1[i], x$rs$V2[i])
         else if (i == nrow(x$rs)) 
-            sprintf("else  (default rule)  then positive probability = %.8f\n", 
+            sprintf("else  (default rule)  then positive probability = %.3f\n", 
                 x$rs$V2[nrow(x$rs)])
-        else sprintf("else if %s (rule[%d]) then positive probability = %.8f\n", 
+        else sprintf("else if %s (rule[%d]) then positive probability = %.3f\n", 
             x$rulenames[x$rs$V1[i]], x$rs$V1[i], x$rs$V2[i])
     })
     data.frame(rules = unlist(res))
 }
 
-penguins2$island = NULL
-penguins2$label = ifelse(penguins$species == "Adelie", "Adelie", "Gentoo/Chinstrap")
-penguins2$species= NULL
-rules = sbrl(penguins2, pos_sign = "Adelie", neg_sign = "Gentoo/Chinstrap", rule_maxlen = 2)
+penguins2$label = penguins2$sex 
+penguins2$sex = NULL
+rules = sbrl(penguins2, pos_sign = "female", neg_sign = "male", rule_maxlen = 2)
 rn = rules$rulenames
 rl = get.sbrl.rules(rules)
 saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-penguins.RDS")
@@ -649,10 +645,9 @@ The following list was learned by SBRL:
 ```{r}
 #| label: sbrl-bike
 #| results: "hide"
-#| eval: false
+#| eval: false 
 library("sbrl")
 library("arules")
-data("bike")
 
 bike2 = bike
 bike2$label = bike2$cnt > 4000

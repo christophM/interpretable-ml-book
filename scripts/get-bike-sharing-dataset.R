@@ -4,7 +4,7 @@ day_diff = function(date1, date2){
   as.numeric(difftime(as.Date(date1), as.Date(date2), units = 'days'))
 }
 
-get.bike.data = function(data_dir){
+get.bike.data <- function(data_dir) {
   bike = read.csv(sprintf('%s/bike-sharing-daily.csv', data_dir), stringsAsFactors = FALSE)
   # See http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
 

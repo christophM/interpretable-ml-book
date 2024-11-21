@@ -110,63 +110,66 @@ The following plot shows the feature interaction H-statistic:
 ```{r}
 #| label: interaction-bike
 #| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a support vector machine predicting bicycle rentals. Overall, the interaction effects between the features are very weak (below 10\\% of variance explained per feature).
-data(bike)
-library("mlr")
-library("iml")
-library("ggplot2")
-
-bike.task = makeRegrTask(data = bike, target = "cnt")
-mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.svm', id = 'bike-rf'), bike.task)
-
-pred.bike = Predictor$new(mod.bike, data = bike[setdiff(colnames(bike), "cnt")])
+pred.bike = Predictor$new(bike_svm, data = bike_test)
 ia = Interaction$new(pred.bike, grid.size = 50) 
 plot(ia) +
  scale_y_discrete("")
 ```
 
 In the next example, we calculate the interaction statistic for a classification problem.
-We analyze the interactions between features in a random forest trained to predict [penguin species](#penguins), given body measurements.
+We analyze the interactions between features in a random forest trained to predict [penguin sex](#penguins), given body measurements.
 
-```{r}
-#| label: interaction-penguins-prep
-penguins.task = makeClassifTask(data = penguins, target = "species")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguins.task)
-```
 
 ```{r}
 #| label: interaction-penguins
-#| eval: false
-#| fig-show: "hide"
+#| eval: true 
+#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a random forest by species predicting P(female). The body mass has the highest interaction strength.
+
 # Due to long running time and timeouts on TravisCI, this has to be run locally. 
 # And image has to be added to git repo manually.
-pred.penguins = Predictor$new(mod, data = penguins, class = "Adelie")
-ia1 = Interaction$new(pred.penguins, grid.size = 100) 
+pred.penguins = Predictor$new(pengu_rf, data = penguins, class = "female")
+ia1 = Interaction$new(pred.penguins, grid.size = 30) 
 plot(ia1) +
  scale_y_discrete("")
 ```
 
-```{r}
-#| label: interaction-penguins-include
-#| fig-cap: "'The interaction strength (H-statistic) for each feature with all other features for a random forest predicting the probability of penguin species. The feature with the overall the strongest interactions is the bill length.'"
-knitr::include_graphics("images/interaction-penguins-1.jpeg")
-```
-
-After looking at the feature interactions of each feature with all other features, we can select one of the features and dive deeper into all the 2-way interactions between the selected feature and the other features.
-Since the bill length has the strongest interactions with other features, we look more deeply into it.
-
+We are interested in how this behaves by species. 
 
 ```{r}
-#| label: interaction2-penguins-bill
-#| eval: false
-#| fig-show: "hide"
+#| label: interaction-penguins-by-species
+#| eval: true 
+#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a random forest by species predicting P(female). Especially for body mass, the interaction strengths differ between species.
+
 # Due to long running time and timeouts on TravisCI, this has to be run locally. 
 # And image has to be added to git repo manually.
-ia2 = Interaction$new(pred.penguins, grid.size = 100, feature = "bill_length_mm") 
-plot(ia2)
+ias = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
+  pred.penguins = Predictor$new(pengu_rf, data = penguins[penguins$species == species,], class="female")
+  dat = Interaction$new(pred.penguins, grid.size = 30)$results
+  dat$species = species
+  dat
+})
+
+ia_data = do.call(rbind, ias)
+ia_data = ia_data[ia_data$.feature != "species", ]
+
+ggplot(ia_data) +
+  geom_point(aes(x = .interaction, y = .feature, shape=species, color=species), size =3) +
+  scale_x_continuous("Interaction Strength", limits = c(0, NA))
 ```
 
-```{r interaction2-penguins-bill-include, fig.cap = 'The 2-way interaction strengths (H-statistic) between bill length and each other feature. There is a strong interaction with body mass, but also with flipper length and bill depth.'}
-knitr::include_graphics("images/interaction2-penguins-bill-1.jpeg")
+
+After looking at the feature interactions of each feature with all other features, we can select one of the features and dive deeper into all the 2-way interactions between the selected feature and the other features.
+Body mass has the strongest interaction, so let's take a deeper look here:
+
+```{r}
+#| label: interaction2-penguins
+#| eval: true 
+#| fig-cap: The 2-way interaction strengths (H-statistic) between body mass and all other features. 
+
+# Due to long running time and timeouts on TravisCI, this has to be run locally. 
+# And image has to be added to git repo manually.
+ia2 = Interaction$new(pred.penguins, grid.size = 50, feature = "body_mass_g") 
+plot(ia2)
 ```
 
 ## Advantages 

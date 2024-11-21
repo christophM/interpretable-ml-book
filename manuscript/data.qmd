@@ -17,13 +17,11 @@ The data can be downloaded from the [UCI Machine Learning Repository](http://arc
 New features were added to the dataset and not all original features were used for the examples in this book.
 Here is the list of features that were used:
 
-- Count of bicycles including both casual and registered users.
-The count is used as the target in the regression task.
+- Count of bicycles including both casual and registered users. The count is used as the target in the regression task.
 - The season, either spring, summer, fall or winter.
 - Indicator whether the day was a holiday or not.
 - The year, either 2011 or 2012.
-- Number of days since the 01.01.2011 (the first day in the dataset).
-This feature was introduced to take account of the trend over time.
+- Number of days since the 01.01.2011 (the first day in the dataset). This feature was introduced to take account of the trend over time.
 - Indicator whether the day was a working day or weekend.
 - The weather situation on that day. One of:
     - clear, few clouds, partly cloudy, cloudy
@@ -60,7 +58,7 @@ ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +
   my_theme()
   labs(
-    title = "Correlation Matrix of Bike REntal Data",
+    title = "Correlation Matrix of Bike Rental Data",
     x = "",
     y = "",
     fill = "Correlation"
@@ -70,42 +68,81 @@ ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
 
 As the correlation plot in @fig-bike-correlations shows, the correlations between the variables is not very strong, so creating unrealistic features is not as big as a concern.
 
-
-<!--{pagebreak}-->
-
-## YouTube Spam Comments (Text Classification) {#spam-data}
-
-As an example for text classification we work with 1956 comments from 5 different YouTube videos.
-Thankfully, the authors who used this dataset in an article on spam classification made the data  [freely available](https://archive.ics.uci.edu/ml/datasets/YouTube+Spam+Collection) [@alberto2015tubespam].
-
-The comments were collected via the YouTube API from five of the ten most viewed videos on YouTube in the first half of 2015. 
-All 5 are music videos.
-One of them is "Gangnam Style" by Korean artist Psy. 
-The other artists were Katy Perry, LMFAO, Eminem, and Shakira.
-
-
-Checkout some of the comments. 
-The comments were manually labeled as spam or legitimate.
-Spam was coded with a "1" and legitimate comments with a "0".
+<!-- TODO: Remove or update
+Let us look at the correlation between temperature, humidity and wind speed and all other features.
+Since the data also contains categorical features, we cannot only use the Pearson correlation coefficient, which only works if both features are numerical.
+Instead, I train a linear model to predict, for example, temperature based on one of the other features as input.
+Then I measure how much variance the other feature in the linear model explains and take the square root. 
+If the other feature was numerical, then the result is equal to the absolute value of the standard Pearson correlation coefficient.
+But this model-based approach of "variance-explained" (also called ANOVA, which stands for ANalysis Of VAriance) works even if the other feature is categorical. 
+The "variance-explained" measure lies always between 0 (no association) and 1 (temperature can be perfectly predicted from the other feature).
+We calculate the explained variance of temperature, humidity and wind speed with all the other features.
+The higher the explained variance (correlation), the more (potential) problems with PD plots.
+The following figure visualizes how strongly the weather features are correlated with other features.
+-->
 
 ```{r}
-#| label: show-dating-data-TubeSpam
-library(kableExtra)
-load("../data/ycomments.RData")
-tab = kableExtra::kbl(ycomments[1:10, c('CONTENT', 'CLASS')], booktabs = TRUE, caption = "Sample of comments from the YouTube Spam dataset")
-#if (is.pdf) tab = tab %>% column_spec(1, width = "10cm")
-tab
+#| label: ale-bike-cor
+#| eval: false
+#| fig.cap: "The strength of the correlation between temperature, humidity and wind speed with all features, measured as the amount of variance explained, when we train a linear model with e.g. temperature to predict and season as feature. For temperature we observe -- not surprisingly -- a high correlation with season and month. Humidity correlates with weather situation."
+
+mycor = function(cnames, dat) {
+  x.num = dat[cnames[1]][[1]]
+  x.cat = dat[cnames[2]][[1]]
+  av = anova(lm(x.num ~ x.cat))
+  sqrt(av$`Sum Sq`[1] / sum(av$`Sum Sq`))
+}
+
+cnames = c("temp", "hum", "windspeed")
+combs = expand.grid(y = cnames, x = setdiff(colnames(bike), "cnt"))
+combs$cor = apply(combs, 1, mycor, dat = bike)
+combs$lab = sprintf("%.2f", combs$cor)
+forder = c(cnames, setdiff(unique(combs$x), cnames))
+combs$x = factor(combs$x, levels = forder)
+combs$y = factor(combs$y, levels = rev(cnames))
+ggplot(combs, aes(x = x, y = y, fill = cor, label = lab)) + 
+  geom_tile() + 
+  geom_label(fill = "white", size = 3) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  + 
+  scale_x_discrete("") + 
+  scale_y_discrete("") + 
+  scale_fill_viridis("Variance\nexplained", begin = 0.2)
 ```
 
-You can also go to YouTube and take a look at the comment section.
-But please do not get caught in YouTube hell and end up watching videos of monkeys stealing and drinking cocktails from tourists on the beach.
-The Google Spam detector has also probably changed a lot since 2015.
 
-[Watch the view-record breaking video "Gangnam Style" here](https://www.youtube.com/watch?v=9bZkp7q19f0&feature=player_embedded).
+I trained four different models, using 2/3 of the data for training, and 1/3 for holdout.
+The ML algorithms were: random forest, CART decision tree, support vector machine, and linear regression.
 
-If you want to play around with the data, you can find the [RData file](https://github.com/christophM/interpretable-ml-book/blob/master/data/ycomments.RData) along with the [R-script](https://github.com/christophM/interpretable-ml-book/blob/master/R/get-SpamTube-dataset.R) with some convenience functions in the book's GitHub repository.
+```{r}
+library(Metrics)
+rf_preds = predict(bike_rf, bike_test)
+rf_rmse = rmse(bike_test$cnt, rf_preds)
+rf_mae = mae(bike_test$cnt, rf_preds)
 
-<!--{pagebreak}-->
+tree_preds = predict(bike_tree, bike_test)
+tree_rmse = rmse(bike_test$cnt, tree_preds)
+tree_mae = mae(bike_test$cnt, tree_preds)
+
+
+svm_preds = predict(bike_svm, bike_test)
+svm_rmse = rmse(bike_test$cnt, svm_preds)
+svm_mae = mae(bike_test$cnt, svm_preds)
+
+lm_preds = predict(bike_lm, bike_test)
+lm_rmse = rmse(bike_test$cnt, lm_preds)
+lm_mae = mae(bike_test$cnt, lm_preds)
+
+# Create a markdown table
+results = data.frame(
+  Model = c("Random Forest", "Decision Tree", "SVM", "Linear Regression"),
+  RMSE = c(rf_rmse, tree_rmse, svm_rmse, lm_rmse),
+  MAE = c(rf_mae, tree_mae, svm_mae, lm_mae)
+)
+
+results = results[order(results$RMSE), ]
+kable(results, caption = "Comparison of Model Performance")
+```
+
 
 ## Palmer Penguins (Classification) {#penguins}
 
@@ -134,18 +171,45 @@ Since the purpose of this data is to demonstrate interpretable machine learning 
 
 
 For the data examples, I trained the following models, using a simple split into training (2/3) and holdout test data (1/3):
-print("MAE SVM")
-#print()
 
-- Random forest with accuracy `r penguins_rf_logloss`
-- Decision tree with test performance `r penguins_rpart_logloss`
+```{r}
+library(Metrics)
+# Predictions for random forest 
+rf_probs = predict(pengu_rf, penguins_test, type = "prob")[,"female"]
+rf_preds = predict(pengu_rf, penguins_test)
+rf_log_loss = logLoss(predicted = rf_probs, actual = penguins_test$sex == "female")
+rf_accuracy = sum(rf_preds == penguins_test$sex) / nrow(penguins_test)
+
+# Predictions for decision tree
+tree_probs = predict(pengu_tree, penguins_test, type = "prob")
+tree_preds = predict(pengu_tree, penguins_test, type = "class")
+tree_log_loss = logLoss(predicted = tree_probs, actual = penguins_test$sex == "female")
+tree_accuracy = sum(tree_preds == penguins_test$sex) / nrow(penguins_test)
+
+# Predictions for multinomial logistic regression
+logreg_probs = predict(pengu_logreg, penguins_test, type = "response")
+logreg_preds = ifelse(logreg_probs > 0.5, "female", "male")  
+logreg_log_loss = logLoss(predicted = logreg_probs, actual = penguins_test$sex == "female")
+logreg_accuracy = sum(logreg_preds == penguins_test$sex) / nrow(penguins_test)
+
+
+results = data.frame(
+  Model = c("Random Forest", "Decision Tree", "Logistic Regression"),
+  Log_Loss = c(rf_log_loss, tree_log_loss, logreg_log_loss),
+  Accuracy = c(rf_accuracy, tree_accuracy, logreg_accuracy)
+)
+
+kable(results, caption = "Comparison of Model Performance")
+```
+
+[^worse-than-paper]
 
 We also need to look at the correlations:
 
 ```{r}
 #| label: fig-penguins-correlations
 #| fig.cap: Pearson correlation between the penguin features.
-library(reshape2)
+
 
 # Select numerical columns and remove rows with NA values
 penguins_clean <- na.omit(penguins[, sapply(penguins, is.numeric)])
@@ -173,3 +237,39 @@ ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
 
 @fig-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
 But also other feature pairs are strongly (negatively) correlated, like flipper length and bill length or flipper length and bill depth.
+
+## YouTube Spam Comments (Text Classification) {#spam-data}
+
+As an example for text classification we work with 1956 comments from 5 different YouTube videos.
+Thankfully, the authors who used this dataset in an article on spam classification made the data  [freely available](https://archive.ics.uci.edu/ml/datasets/YouTube+Spam+Collection) [@alberto2015tubespam].
+
+The comments were collected via the YouTube API from five of the ten most viewed videos on YouTube in the first half of 2015. 
+All 5 are music videos.
+One of them is "Gangnam Style" by Korean artist Psy. 
+The other artists were Katy Perry, LMFAO, Eminem, and Shakira.
+
+Checkout some of the comments. 
+The comments were manually labeled as spam or legitimate.
+Spam was coded with a "1" and legitimate comments with a "0".
+
+```{r}
+#| label: show-dating-data-TubeSpam
+library(kableExtra)
+load("../data/ycomments.RData")
+tab = kableExtra::kbl(ycomments[1:10, c('CONTENT', 'CLASS')], booktabs = TRUE, caption = "Sample of comments from the YouTube Spam dataset")
+#if (is.pdf) tab = tab %>% column_spec(1, width = "10cm")
+tab
+```
+
+You can also go to YouTube and take a look at the comment section.
+But please do not get caught in YouTube hell and end up watching videos of monkeys stealing and drinking cocktails from tourists on the beach.
+The Google Spam detector has also probably changed a lot since 2015.
+
+[Watch the view-record breaking video "Gangnam Style" here](https://www.youtube.com/watch?v=9bZkp7q19f0&feature=player_embedded).
+
+If you want to play around with the data, you can find the [RData file](https://github.com/christophM/interpretable-ml-book/blob/master/data/ycomments.RData) along with the [R-script](https://github.com/christophM/interpretable-ml-book/blob/master/R/get-SpamTube-dataset.R) with some convenience functions in the book's GitHub repository.
+
+<!--{pagebreak}-->
+
+
+[^worse-than-paper]: These results are worse than in the original paper, since I don't fit by species. Simple reason is I just wanted one model.

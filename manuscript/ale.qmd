@@ -322,9 +322,9 @@ If "spring" and "summer" have very different temperatures and weather, the total
 We repeat the procedure with the other seasonal pairs and reduce the resulting distance matrix to a single dimension by multi-dimensional scaling.
 
 
-## Examples
+## ALE where PDP disappoints 
 
-Let us see ALE plots in action. 
+Let's see ALE plots in action. 
 I have constructed a scenario in which partial dependence plots fail.
 The scenario consists of a prediction model and two strongly correlated features.
 The prediction model is mostly a linear regression model, but does something weird at a combination of the two features for which we have never observed instances.
@@ -387,29 +387,19 @@ But it has to be a conscious decision to include areas where we have not observe
 If you suspect that the model will later be used with differently distributed data, I recommend to use ALE plots and simulate the distribution of data you are expecting.
 
 
+## Examples
+
 Turning to a real dataset, let us predict the [number of rented bikes](#bike-data) based on weather and day and check if the ALE plots really work as well as promised.
 We train a regression tree to predict the number of rented bicycles on a given day and use ALE plots to analyze how temperature, relative humidity and wind speed influence the predictions.
 Let us look at what the ALE plots say: 
 
+
 ```{r}
-#| label: ale-bike-train
-data(bike)
-library("mlr")
-library("ggplot2")
-
-set.seed(42)
-bike.task = makeRegrTask(data = bike, target = "cnt")
-mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.ctree'), bike.task)$learner.model
-
-pred.bike = Predictor$new(mod.bike, data = bike, y = "cnt")
-```
-
-
-
-```{r , }
 #| label: ale-bike
 #| fig.cap: "ALE plots for the bike prediction model by temperature, humidity and wind speed. The temperature has a strong effect on the prediction. The average prediction rises with increasing temperature, but falls again above 25 degrees Celsius. Humidity has a negative effect: When above 60\\%, the higher the relative humidity, the lower the prediction. The wind speed does not affect the predictions much."
 #| fig.height: 4
+
+pred.bike = Predictor$new(bike_rf, data = bike_test, y = "cnt")
 limits = c(-1500, 800)
 
 ale1 = FeatureEffect$new(pred.bike, "temp", method = "ale")$plot() +
@@ -422,48 +412,9 @@ ale3 = FeatureEffect$new(pred.bike, "windspeed", method = "ale")$plot() +
 gridExtra::grid.arrange(ale1, ale2, ale3, ncol = 3)
 ```
 
-Let us look at the correlation between temperature, humidity and wind speed and all other features.
-Since the data also contains categorical features, we cannot only use the Pearson correlation coefficient, which only works if both features are numerical.
-Instead, I train a linear model to predict, for example, temperature based on one of the other features as input.
-Then I measure how much variance the other feature in the linear model explains and take the square root. 
-If the other feature was numerical, then the result is equal to the absolute value of the standard Pearson correlation coefficient.
-But this model-based approach of "variance-explained" (also called ANOVA, which stands for ANalysis Of VAriance) works even if the other feature is categorical. 
-The "variance-explained" measure lies always between 0 (no association) and 1 (temperature can be perfectly predicted from the other feature).
-We calculate the explained variance of temperature, humidity and wind speed with all the other features.
-The higher the explained variance (correlation), the more (potential) problems with PD plots.
-The following figure visualizes how strongly the weather features are correlated with other features.
-
-```{r}
-#| label: ale-bike-cor
-#| fig.cap: "The strength of the correlation between temperature, humidity and wind speed with all features, measured as the amount of variance explained, when we train a linear model with e.g. temperature to predict and season as feature. For temperature we observe -- not surprisingly -- a high correlation with season and month. Humidity correlates with weather situation."
-mycor = function(cnames, dat) {
-  x.num = dat[cnames[1]][[1]]
-  x.cat = dat[cnames[2]][[1]]
-  av = anova(lm(x.num ~ x.cat))
-  sqrt(av$`Sum Sq`[1] / sum(av$`Sum Sq`))
-}
-
-cnames = c("temp", "hum", "windspeed")
-combs = expand.grid(y = cnames, x = setdiff(colnames(bike), "cnt"))
-combs$cor = apply(combs, 1, mycor, dat = bike)
-combs$lab = sprintf("%.2f", combs$cor)
-forder = c(cnames, setdiff(unique(combs$x), cnames))
-combs$x = factor(combs$x, levels = forder)
-combs$y = factor(combs$y, levels = rev(cnames))
-ggplot(combs, aes(x = x, y = y, fill = cor, label = lab)) + 
-  geom_tile() + 
-  geom_label(fill = "white", size = 3) + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))  + 
-  scale_x_discrete("") + 
-  scale_y_discrete("") + 
-  scale_fill_viridis("Variance\nexplained", begin = 0.2)
-```
-
-This correlation analysis reveals that we may encounter problems with partial dependence plots, especially for the temperature feature.
-Well, see for yourself:
-
 ```{r}
 #| label: pdp-bike-compare
+#| eval: false
 #| fig.cap: 'PDPs for temperature, humidity and wind speed. Compared to the ALE plots, the PDPs show a smaller decrease in predicted number of bikes for high temperature or high humidity. The PDP uses all data instances to calculate the effect of high temperatures, even if they are, for example, instances with the season "winter". The ALE plots are more reliable.'
 #| fig.height: 4
 pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp") 
@@ -474,7 +425,7 @@ pdp$set.feature("windspeed")
 p3 = pdp$plot() + scale_x_continuous('Wind speed') + scale_y_continuous('', limits = c(3000, 5500))
 
 gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
-```
+``
 
 Next, let us see ALE plots in action for a categorical feature.
 The month is a categorical feature for which we want to analyze the effect on the predicted number of bikes.
@@ -484,11 +435,11 @@ The months are ordered by the similarity of days of each month based on the othe
 
 ```{r}
 #| label: ale-bike-cat
-#| fig.cap: 'ALE plot for the categorical feature month. The months are ordered by their similarity to each other, based on the distributions of the other features by month. We observe that January, March and April, but especially December and November, have a lower effect on the predicted number of rented bikes compared to the other months.'
-alecat1 = FeatureEffect$new(pred.bike, "mnth", method = "ale") 
-
+#| fig.cap: ALE plot for the categorical feature weather situation. The weather situations are ordered by their similarity to each other, based on the distributions of the other features by weather situation. We observe that "GOOD" has a positive effect, while "MISTY" and especially "RAIN/SNOW/STORM" have negative effects.
+alecat1 = FeatureEffect$new(pred.bike, "weathersit", method = "ale") 
 ggplot(alecat1$results) + 
-  geom_col(aes(x = mnth, y = .value), fill = default_color, width = 0.3) + 
+  geom_col(aes(x = weathersit, y = .value), fill = default_color, width = 0.3) + 
+  geom_hline(yintercept=0) +
   scale_x_discrete('') + 
   scale_y_continuous("ALE of predicted bike rentals")
 ```
@@ -536,40 +487,64 @@ In a scenario where two features have no interaction, the total effect plot of t
 The second-order effect would immediately show that there is no interaction.
 
 Enough bicycles for now, let's turn to a classification task.
-We train a random forest to predict the [penguin species](#penguins) based on body measurements.
+We train a random forest to predict the [penguin sex](#penguins) based on body measurements.
 We visualize the accumulated local effects for two of the features:
 
 ```{r}
-#| label: ale-penguins-1D
-#| fig.cap: "ALE plots for the effect of bill length and body mass on predicted probability for each species. Short bills are associated with a higher probability for Adelie and a lower probability for Chinstrap. This relationship is reversed for bill lengths greater than 45 mm. The probability of Gentoo doesn't change much with bill length. Increasing body mass slightly increases P(Adelie) and P(Gentoo), but decreases P(Chinstrap)."
+#| label: fig-ale-penguin
+#| fig.cap: The heavier the penguin, the less likely it is female. We see a similar pattern for bill depth, but the probability doesn't go to zero for deep bills.
 #| fig.height: 4
-penguins.task = makeClassifTask(data = penguins, target = "species")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguins.task)
+pred.penguins = Predictor$new(pengu_rf, data = penguins, class="female")
+ale = FeatureEffect$new(pred.penguins, "bill_depth_mm", method = "ale", grid.size = 20)
 
-pred.penguins = Predictor$new(mod, data = penguins)
-ale1 = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "ale")$plot() +
-  scale_x_continuous("Bill length in millimeters") + 
-  scale_y_continuous("", limits=c(-0.2, 0.25))
-ale2 = FeatureEffect$new(pred.penguins, "body_mass_g", method = "ale")$plot() +
+p1 = ale$plot() +
+  scale_x_continuous("Bill depth in millimeters") +
+  scale_y_continuous('P(female)', limits = c(-0.45, 0.45))
+ale$set.feature("body_mass_g")
+p2 = ale$plot() +
   scale_x_continuous("Body mass in grams") +
-  scale_y_continuous("", limits=c(-0.2, 0.25))
-gridExtra::grid.arrange(ale1, ale2, ncol = 1)
+  scale_y_continuous('', limits = c(-0.45, 0.45))
+
+p2 + p1
 ```
 
 The effects are quite similar to the PDPs in [the PDP chapter](#pdp).
-Only for Adelie the effect of body mass is different, since we can clearly see an increase in P(Adelie) with higher body mass.
-Next, we look at the interaction between body mass and bill length, but only for P(Adelie).
 
-```{r , }
-#| label: ale-penguins-2d
-#| fig.cap: 'ALE plot of the 2nd order effect of body mass and bill length. Both features interact with each other. For example, a bill length between 41 and 46 combined with a body mass below 4000g decreases the predicted P(Adelie) by almost 0.2. However, the same bill length but for heavier penguins has increased the predicted P(Adelie) by about 0.15. For other bill lengths, the body mass does not have the same effect, making it an interaction.'
-pred.penguins = Predictor$new(mod, data = penguins, class="Adelie")
-FeatureEffect$new(pred.penguins, c("bill_length_mm", "body_mass_g"), grid.size = 30)$plot(show.data = TRUE) + 
-scale_fill_gradient("ALE", low = "red", high = "yellow") + 
-  scale_x_continuous("Bill length inn mm")  + 
-  scale_y_continuous("Body mass in g") +
-  scale_fill_viridis(option = "D")
+```{r}
+#| label: fig-ale-penguin-by-species
+#| fig.cap: ALE by penguin species. A more nuanced interpretation emerges. For Adelie, more weight means less likely to be female. For Chinstrap the weight doesn't affect P(female). Gentoo penguins are in general heavier, but also show the "males are more heavy" pattern.
+#| fig.height: 4
+ale_data = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
+  pred.penguins = Predictor$new(pengu_rf, data = penguins[penguins$species == species,], class="female")
+  ale = FeatureEffect$new(pred.penguins, "body_mass_g", method = "ale")
+  dat = ale$results
+  dat$species = species
+  dat
+})
 
+ale_data = do.call(rbind, ale_data)
+
+ggplot(ale_data) +
+  geom_line(aes(x = body_mass_g, y = .value, group=species, color=species, lty=species)) + 
+  scale_x_continuous("Body mass in grams") +
+  scale_y_continuous("ALE for P(female)")
+```
+
+
+
+Next, we look at the interaction between body mass and bill length.
+
+```{r}
+#| label: fig-ale-penguins-2d
+#| fig-cap: PDP for P(female) and the interaction between bill depth and bill length. The dots are black for female penguins, gray for male.
+pred.adelie = Predictor$new(pengu_rf, data = penguins, class="female")
+p = FeatureEffect$new(pred.adelie, c("bill_depth_mm", "bill_length_mm"), method = "ale")
+p$plot() + 
+  geom_point(data=penguins[penguins$sex =="female",]) +
+  geom_point(data=penguins[penguins$sex =="male",], color="grey") +
+  scale_fill_viridis("ALE of P(female)", option = "D") +
+  scale_x_continuous("Bill depth in millimeters") +
+  scale_x_continuous("Bill length in millimeters")
 ```
 
 The interaction plot shows really interesting effects that we couldn't see in the PDP, which is a nice property of the 2D-ALE, since it shows the pure interaction without the main effects.

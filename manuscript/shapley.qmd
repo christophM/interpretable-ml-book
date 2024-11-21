@@ -123,36 +123,28 @@ The value of the j-th feature contributed $\phi_j$ to the prediction of this par
 
 The Shapley value works for both classification (if we are dealing with probabilities) and regression.
 
-We use the Shapley value to analyze the predictions of a random forest model predicting [penguin species](#penguins), more specifically the probability of Adelie:
+We use the Shapley value to analyze the predictions of a random forest model predicting [penguin sex](#penguins).
 
 ```{r}
 #| label: shapley-penguins-prepare
-library("caret")
-library("iml")
-library(palmerpenguins)
+predictor = Predictor$new(pengu_rf, data = penguins_test, type = "prob", class="female")
 
-ntree = 30
-penguins.x = penguins[names(penguins) != 'species']
+instance_indices = 7 
+x.interest = penguins_test[instance_indices,]
 
-model <- caret::train(penguins.x,
-               penguins$species,
-               method = 'rf', ntree=ntree, maximise = FALSE)
-predictor = Predictor$new(model, class = "Adelie", data = penguins.x, type = "prob")
-
-instance_indices = 10
-x.interest = penguins.x[instance_indices,]
-
-avg.prediction = mean(predict(model, type = 'prob')[,'Adelie'])
-actual.prediction = predict(model, newdata = x.interest, type = 'prob')['Adelie']
+avg.prediction = mean(predict(pengu_rf, type = 'prob')[,'female'])
+actual.prediction = predict(pengu_rf, newdata = x.interest, type = 'prob')[,'female']
 diff.prediction = actual.prediction - avg.prediction
 ```
 
 
-```{r shapley-penguins-plot, fig.cap = sprintf("Shapley values for penguin classification. This penguin's predicted probability for P(Adelie)=%.2f is %.2f above the average probability for Adelie of %.2f. The short bill length contributed most to the probability of being Adelie. The sum of the contributions yields the difference between actual and average prediction. (%.2f).", actual.prediction,diff.prediction, avg.prediction, avg.prediction)}
+```{r}
+#| label: shapley-penguins-plot
+#| fig-cap: !expr sprintf("Shapley values for penguin male vs female classification. This penguin's predicted P(female)=%.2f is %.2f above the average probability for P(female) of %.2f. The bill length contributed most to the probability of being female, but most factors where (correctly) pointing to male. The sum of the contributions yields the difference between actual and average prediction. (%.2f).", actual.prediction,diff.prediction, avg.prediction, avg.prediction)
 shapley2 = Shapley$new(predictor, x.interest = x.interest, sample.size = 100)
 plot(shapley2) +
   scale_y_continuous("Feature value contribution") +
-  ggtitle(sprintf("Actual prediction: %.2f\nAverage prediction: %.2f\nDifference: %.2f", actual.prediction, avg.prediction, diff.prediction)) +
+  ggtitle(sprintf("Actual class: %s\nActual prediction: %.2f\nAverage prediction: %.2f\nDifference: %.2f", x.interest$sex, actual.prediction, avg.prediction, diff.prediction)) +
  scale_x_discrete("")
 ```
 

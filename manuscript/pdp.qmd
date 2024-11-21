@@ -87,15 +87,7 @@ The influence of the weather features on the predicted bike counts is visualized
 #| label: pdp-bike,
 #| fig.cap: 'PDPs for the bicycle count prediction model and temperature, humidity and wind speed. The largest differences can be seen in the temperature. The hotter, the more bikes are rented. This trend goes up to 20 degrees Celsius, then flattens and drops slightly at 30. Marks on the x-axis indicate the data distribution.'
 #| fig.height: 3
-data(bike)
-library("mlr")
-library("iml")
-library("ggplot2")
-
-bike.task = makeRegrTask(data = bike, target = "cnt")
-mod.bike = mlr::train(mlr::makeLearner(cl = 'regr.randomForest', id = 'bike-rf'), bike.task)
-
-pred.bike = Predictor$new(mod.bike, data = bike)
+pred.bike = Predictor$new(bike_rf, data = bike_test)
 pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp")
 p1 = pdp$plot() +
   scale_x_continuous('Temperature', limits = c(0, NA)) +
@@ -132,47 +124,65 @@ ggplot(pdp$results) +
 ```
 
 We also compute the partial dependence for [penguin classification](#penguins).
-This time we fit a random forest to classify penguin species based on body measurements.
-We compute and visualize the partial dependence of the probability for the different species (Adelie, Gentoo, and Chinstrap) on bill length and body mass for the random forest:
+This time we fit a random forest to classify penguin sex based on body measurements.
+We compute and visualize the partial dependence of the probability for being female based on body mass and bill depth for the random forest:
 
 ```{r}
-#| label: pdp-penguin
-#| fig.cap: 'The longer the bill, the less likely it is to be an Adelie and the more likely it is to be a Chinstrap. A longer bill also slightly increases the probability of being a Gentoo. The effect of body mass is less pronounced: We see no effect of body mass on the Adelie probability (always around 50%). The probability of Chinstrap decreases slightly with increasing weight, while the probability for Gentoo increases.'
+#| label: fig-pdp-penguin
+#| fig.cap: The heavier the penguin, the less likely it is female. We see a similar pattern for bill depth, but the probability doesn't go to zero for deep bills.
 #| fig.height: 4
-
-library(palmerpenguins)
-penguins = na.omit(penguins)
-penguins = penguins[c("species", "bill_length_mm", "bill_depth_mm", "body_mass_g", "flipper_length_mm", "sex")]
-penguin.task = makeClassifTask(data = penguins, target = "species")
-mod = mlr::train(mlr::makeLearner(cl = 'classif.randomForest', id = 'penguins-rf', predict.type = 'prob'), penguin.task)
-
-pred.penguins = Predictor$new(mod, data = penguins)
-pdp = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "pdp")
+pred.penguins = Predictor$new(pengu_rf, data = penguins, class="female")
+pdp = FeatureEffect$new(pred.penguins, "bill_depth_mm", method = "pdp")
 
 p1 = pdp$plot() +
-  scale_x_continuous("Bill length in millimeters") +
-  scale_y_continuous('Predicted probability of being Adelie penguin', limits = c(0, NA))
+  scale_x_continuous("Bill depth in millimeters") +
+  scale_y_continuous('P(female)', limits = c(0, 1))
 pdp$set.feature("body_mass_g")
 p2 = pdp$plot() +
   scale_x_continuous("Body mass in grams") +
-  scale_y_continuous('', limits = c(0, NA))
+  scale_y_continuous('', limits = c(0, 1))
 
-gridExtra::grid.arrange(p1, p2, ncol = 1)
+p2 + p1
 ```
 
-We can also visualize the partial dependence of two features at once:
+@fig-pdp-penguin has a big problem: It throws all penguin species together.
+But we can easily compute the PDP by species.
+For this we only have to compute the individual PDPs by subsetting the data and plot the curves in the same plot, as I did in @fig-pdp-penguin-by-species.
+
 
 ```{r}
-#| label: pdp-penguins-2d
-#| fig.cap: 'PDP for P(Adelie) and the interaction between bill length and body mass. The dots show the ground truth: black for Adelie penguins, gray for Chinstrap and Gentoo. For bill length, the plot shows what we already knew: a sharp drop in P(Adelie) for bills longer than 40mm. Body mass shows an interesting interaction with bill length: For penguins with bill length > 50, we can see slight differences in P(Adelie) between lighter and heavier penguins, even though there are zero Adelie penguins with this bill length.'
-pred.adelie = Predictor$new(mod, data = penguins, class="Adelie")
-pd = FeatureEffect$new(pred.adelie, c("bill_length_mm", "body_mass_g"), method = "pdp")
+#| label: fig-pdp-penguin-by-species
+#| fig.cap: PDP by penguin species. A more nuanced interpretation emerges. For Adelie, more weight means less likely to be female. For Chinstrap the weight doesn't affect the probability very much. Gentoo penguins are in general heavier, but also show the "males are more heavy" pattern.
+#| fig.height: 4
+
+pdp_data = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
+  pred.penguins = Predictor$new(pengu_rf, data = penguins[penguins$species == species,], class="female")
+  pdp = FeatureEffect$new(pred.penguins, "body_mass_g", method = "pdp")
+  dat = pdp$results
+  dat$species = species
+  dat
+})
+pdp_data = do.call(rbind, pdp_data)
+ggplot(pdp_data) +
+  geom_line(aes(x = body_mass_g, y = .value, group=species, color=species, lty=species)) + 
+  scale_x_continuous("Body mass in grams") +
+  scale_y_continuous('P(female)', limits = c(0, 1))
+```
+
+
+We can also visualize the partial dependence of two features at once (@fig-pdp-penguins-2d), here bill depth and bill length:
+
+```{r}
+#| label: fig-pdp-penguins-2d
+#| fig-cap: PDP for P(female) and the interaction between bill depth and bill length. The dots are black for female penguins, gray for male. There is an interaction between the two, because at small bill depths, bill length doesn't make a difference, but for longer bills, P(female) becomes smaller.
+pred.adelie = Predictor$new(pengu_rf, data = penguins, class="female")
+pd = FeatureEffect$new(pred.adelie, c("bill_depth_mm", "bill_length_mm"), method = "pdp")
 pd$plot() + 
-  geom_point(data=penguins[penguins$species=="Adelie",]) +
-  geom_point(data=penguins[!(penguins$species=="Adelie"),], color="grey") +
-  scale_fill_viridis(option = "D") +
-  scale_x_continuous("Bill length in millimeters") +
-  scale_y_continuous("Body mass in grams")
+  geom_point(data=penguins[penguins$sex =="female",]) +
+  geom_point(data=penguins[penguins$sex =="male",], color="grey") +
+  scale_fill_viridis("P(female)", option = "D") +
+  scale_x_continuous("Bill depth in millimeters") +
+  scale_x_continuous("Bill length in millimeters")
 ```
 
 ## Advantages

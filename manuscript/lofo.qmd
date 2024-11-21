@@ -66,6 +66,7 @@ for (feature in feature_importances$feature) {
   new_test_prediction <- predict(new_mod, newdata = bike_test %>% select(-!!sym(feature)))
   new_test_mae <- mean(abs(bike_test$cnt - new_test_prediction))
   feature_importances$importance[feature_importances$feature == feature] <- new_test_mae - test_mae 
+
 }
 
 # Order the features by importance
@@ -82,7 +83,7 @@ ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance
 ```
 
 @fig-lofo-bike shows that temperature and humidity are the most important features accoriding to LOFO.
-Interestingly the month has a negative importance, which has implications for feature selection.
+Interestingly the holiday feature has a negative importance, which has implications for feature selection.
 Because how LOFO works algorithmically, we now know that removing the feature increases the model performance.
 
 
@@ -95,8 +96,8 @@ Let's see what happens to the LOFO importances.
 ```{r}
 #| label: fig-lofo-bike-correlated
 #| fig-cap: "LOFO feature importances for the bike rental data."
-# Split the data into training and testing sets
 bike2 = bike
+
 bike2$temp_copy = bike$temp
 bike2_train <- bike2[bike_train_index, ]
 bike2_test <- bike2[-bike_train_index, ]
@@ -130,7 +131,7 @@ ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance
 ```
 
 @fig-lofo-bike-correlated shows an interesting phenomenon: 
-The LOFO importances of both temperature features are now slightly negative.
+The LOFO importances of both temperature features are now almost zero.
 But if we e.g. remove `temp_copy`, we end up with the original model, for which we knew that `temp` was the most important feature.
 Clearly it would be wrong to conclude that this new model doesn't rely on temperature at all.
 Both `temp` and `temp_copy` get a low importance, because by the definition of LOFO importance they are not important.
@@ -142,59 +143,14 @@ Two conclusions:
 - LOFO Importance of strongly correlated features is always low potentially even negative[^learner-ability], since LOFO importance is to be interpreted conditionally on the information provided by the other features. And if you already have a temperature feature in the data, the perfect copy of that same feature is not an important additional information.
 - When you use LOFO Importance as information for feature selection, beware of the interpretation: LOFO only indicates how the model performance reacts to *individually* removing features. As @fig-lofo-bike-correlated showed, LOFO doesn't give us the information how the performance changes when removing 2 or more features at once. 
 
-With that knowledge, let's try LOFO for a random forest predicting penguins species from body measurements.
+With that knowledge, let's try LOFO for a random forest predicting penguins sex from body measurements.
 For this I have trained a random forest on 2/3 of the data, leaving 1/3 of the data for error estimation.
 
 ```{r}
 #| label: fig-lofo-penguins
 #| fig-cap: "LOFO importances for the penguin data."
-test_prediction <- predict(penguins_rf, newdata = penguins_test)
-test_accuracy <- mean(penguins_test$species == test_prediction)
-
-# Compute LOFO feature importance
-feature_importances <- data.frame(feature = setdiff(names(penguins), 'species'), importance = 0)
-
-for (feature in feature_importances$feature) {
-  new_train_data <- penguins_train %>% select(-!!sym(feature))
-  new_rf_model <- randomForest(species ~ ., data = new_train_data)
-  new_test_prediction <- predict(new_rf_model, newdata = penguins_test %>% select(-!!sym(feature)))
-  new_test_accuracy <- mean(penguins_test$species == new_test_prediction)
-  feature_importances$importance[feature_importances$feature == feature] <- test_accuracy - new_test_accuracy
-}
-
-# Order the features by importance
-feature_importances <- feature_importances %>%
-  arrange(desc(importance))
-
-# Visualize the feature importances
-ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance)) +
-  geom_bar(stat = "identity") +
-  coord_flip() +
-  labs(x = "Feature", y = "LOFO Importance (accuracy difference)") +
-  my_theme()
-
-```
-
-@fig-lofo-penguins shows that the bill length was the most important feature according to LOFO, leading to an error increase of over 15 percentage points in accuracy.
-Note that because of using accuracy here, where larger is better, I multiplied the importance by minus one.
-LOFO also tells us that we could safely remove each of the feature sex, flipper_length_mm, and body_mass_g without affecting model performance.
-However, from the [data chapter](#penguins), we know that flipper length and body mass are highly correlated, so it might be that they actually were important.
-If we compare it to their [marginal permutation feature importance](#pfi), we could see that flipper_length_mm is a little bit important to the model.
-Again, be aware that these are different ideas of "importance".
-
-
-```{r}
-#| label: fig-lofo-penguins-sex
-#| fig-cap: "LOFO importances for the penguin data."
-#| eval: false
-penguins_rf_sex = randomForest(sex ~ ., data = penguins_train)
-test_prediction <- predict(penguins_rf_sex, newdata = penguins_test)
+test_prediction <- predict(pengu_rf, newdata = penguins_test)
 test_accuracy <- mean(penguins_test$sex == test_prediction)
-
-print(test_accuracy)
-
-test_rpart = rpart(sex ~ ., data = penguins_train)
-print(mean(penguins_test$sex == predict(test_rpart, penguins_test, type="class")))
 
 # Compute LOFO feature importance
 feature_importances <- data.frame(feature = setdiff(names(penguins), 'sex'), importance = 0)
@@ -217,7 +173,13 @@ ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance
   coord_flip() +
   labs(x = "Feature", y = "LOFO Importance (accuracy difference)") +
   my_theme()
+
 ```
+
+@fig-lofo-penguins shows that the bill depth was the most important feature according to LOFO.
+Note that because of using accuracy here, where larger is better, I multiplied the importance by minus one.
+LOFO also tells us that we could safely remove the feature species.
+However, we want to have it in their, because we the model to be able to distinguish between the species.
 
 
 ## LOFO versus PFI 

@@ -24,7 +24,7 @@ Save yourself time and headaches (log odds, anyone?) and check out my [logistic 
 :::
 
 
-## What is Wrong with Linear Regression for Classification?
+## Don't use linear regression for classification
 
 The  linear regression model can work well for regression, but fails for classification.
 Why is that?
@@ -47,8 +47,10 @@ The classes might not have any meaningful order, but the linear model would forc
 The higher the value of a feature with a positive weight, the more it contributes to the prediction of a class with a higher number, even if classes that happen to get a similar number are not closer than other classes.
 
 
-```{r linear-class-threshold, fig.cap="A linear model classifies tumors as malignant (1) or benign (0) given their size. The lines show the prediction of the linear model. For the data on the left, we can use 0.5 as classification threshold. After introducing a few more malignant tumor cases, the regression line shifts and a threshold of 0.5 no longer separates the classes. Points are slightly jittered to reduce over-plotting. "}
-library("ggplot2")
+```{r}
+#| label: linear-class-threshold
+#| fig-cap: A linear model classifies tumors as malignant (1) or benign (0) given their size. The lines show the prediction of the linear model. For the data on the left, we can use 0.5 as classification threshold. After introducing a few more malignant tumor cases, the regression line shifts and a threshold of 0.5 no longer separates the classes. Points are slightly jittered to reduce over-plotting.
+
 df = data.frame(x = c(1,2,3,8,9,10,11,9),
   y = c(0,0,0,1,1,1,1, 0),
   case = '1) 0.5 threshold ok')
@@ -81,7 +83,9 @@ $$\text{logistic}(\eta)=\frac{1}{1+exp(-\eta)}$$
 
 And it looks like this:
 
-```{r, logistic-function, fig.cap="The logistic function. It outputs numbers between 0 and 1. At input 0, it outputs 0.5."}
+```{r}
+#| label: logistic-function
+#| fig-cap: The logistic function outputs numbers between 0 and 1. At input 0, it outputs 0.5.
 logistic = function(x){1 / (1 + exp(-x))}
 
 x = seq(from=-6, to = 6, length.out = 100)
@@ -198,58 +202,54 @@ The interpretation of the intercept weight is usually not relevant.
 
 ## Example
 
-We use logistic regression to predict [whether a penguin is male](#penguins) based on penguin characteristics.
-The following table shows the estimated weights, associated odds ratios, and standard errors of the estimates.
-
-```{r}
-#| label: logistic-example
-
-penguins_binary <- penguins %>%
-    drop_na() %>%
-    mutate(
-        is_adelie = ifelse(species == "Adelie", 1, 0),
-	is_gentoo = ifelse(species == "Gentoo", 1, 0),
-	is_chinstrap = ifelse(species == "Chinstrap", 1, 0),
-        island = factor(island),
-        # Define chonkiness - let's say top 25% of body mass are chonky
-        is_chonky = ifelse(body_mass_g > quantile(body_mass_g, 0.75), 1, 0),
-        # Also add a categorical chonk_level for fun
-        chonk_level = case_when(
-            body_mass_g <= quantile(body_mass_g, 0.25) ~ "Smol_Penguin",
-            body_mass_g <= quantile(body_mass_g, 0.75) ~ "Regular_Penguin",
-            TRUE ~ "Absolute_Unit"
-        )
-    )
-# Convert chonk_level to factor and set reference level
-penguins_binary$chonk_level <- factor(penguins_binary$chonk_level, levels = c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit"))
-penguins_binary$chonk_level <- relevel(penguins_binary$chonk_level, ref = "Smol_Penguin")
-
-levels(penguins_binary$chonk_level) <- c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit")
-mod <- glm(sex ~ bill_length_mm + chonk_level, data = penguins_binary, family = binomial)
-
-# Print table of coef, exp(coef), std, p-value
-coef.table = summary(mod)$coefficients[,c('Estimate', 'Std. Error')]
-coef.table = cbind(coef.table, 'Odds ratio' = as.vector(exp(round(coef.table[, c('Estimate')], 2))))
-# Interpret one numerical and one factor
-#rownames(coef.table) = TODO
-colnames(coef.table)[1] = 'Weight'
-kableExtra::kbl(coef.table[, c('Weight', 'Odds ratio', 'Std. Error')], digits=2, caption='The results of fitting a logistic regression model to the penguin dataset.', booktabs = TRUE) %>% kable_styling(position = "center")
-
-```
-
+We use logistic regression to predict [whether a penguin is female](#penguins) for Chinstrap[^not-all-penguins] penguins based on penguin characteristics.
 The feature "chonk_level" is a discretization of the feature "body mass": Light penguins (0% to 25% quantile) are categorized as "Smol_Penguin", most penguins are "Regular_Penguin", and those with the highest body mass (75% to 100%) are categorized as "Absolute_Unit".
 Normally, I don't recommend discretizing continuous features because you lose information.
 In this case, I used binarization to illustrate the interpretation of a categorical feature with logistic regression, and I also love the word "chonky" and wanted to use it in a textbook.
 
-Interpretation of a numerical feature ("bill_length_mm"):
-An increase in a penguins bill length increases the odds of being a male penguin by a factor of `r sprintf('%.2f', coef.table['bill_length_mm', 'Odds ratio'])`, when all other features remain the same.
+The following table shows the estimated weights, associated odds ratios, and standard errors of the estimates.
 
-Interpretation of a categorical feature ("chonk_level"):
-For regular penguins, the odds of being male versus female are increased by a factor of `r sprintf('%.2f', coef.table['chonk_levelRegular_Penguin', 'Odds ratio'])`, compared to lightweight penguins ("Smol_Penguin"), given all other features remain the same.
-And for the absolute units among the penguins, the odds of being male is `r sprintf('%.2f', coef.table['chonk_levelRegular_Penguin', 'Odds ratio'])` compared to the small penguins.
+```{r}
+#| label: logistic-example
+chinstrap = penguins %>%
+  filter(species=="Chinstrap") %>%
+  mutate(
+    chonkiness= factor(case_when(
+      body_mass_g <= quantile(body_mass_g, 0.25) ~ "Smol_Penguin",
+      body_mass_g <= quantile(body_mass_g, 0.75) ~ "Regular_Penguin",
+      TRUE ~ "Absolute_Unit"
+    ), levels = c("Smol_Penguin", "Regular_Penguin", "Absolute_Unit"))
+  ) %>%
+  select(-species, -body_mass_g)
+
+chinstrap$chonkiness <- factor(chinstrap$chonkiness, levels = )
+mod <- glm(sex ~ ., data = chinstrap, family = binomial(link="logit"))
+
+# Print table of coef, exp(coef), std, p-value
+coef.table = summary(mod)$coefficients[,c('Estimate', 'Std. Error')]
+coef.table = round(coef.table, 2)
+coef.table = cbind(coef.table, 'Odds ratio' = as.vector(exp(coef(mod))))
+#rownames(coef.table) = TODO
+colnames(coef.table)[1] = 'Weight'
+coef.table[,'Odds ratio'] = round(coef.table[,'Odds ratio'], 2)
+coef.table[1,'Odds ratio'] = format(coef.table[1,'Odds ratio'], scientific = TRUE)
+coef.table[,'Odds ratio'] = format(coef.table[,'Odds ratio'], scientific = FALSE)
+kableExtra::kbl(coef.table[, c('Weight', 'Std. Error', 'Odds ratio')], digits=2, caption='The results of fitting a logistic regression model to the penguin dataset.', booktabs = TRUE) %>% kable_styling(position = "center")
+
+```
+
+Interpretation of a numerical feature ("bill_length_mm"):
+An increase in a penguins bill length increases the odds of being a female vs a male penguin by a factor of `r coef.table['bill_length_mm', 'Odds ratio']`, when all other features remain the same.
+
+Interpretation of a categorical feature ("chonkiness"):
+For the mid chonky penguins, the odds of being female versus male are increased by a factor of `r coef.table['chonkinessRegular_Penguin', 'Odds ratio']`, compared to lightweight penguins , given all other features remain the same.
+For the chonkiest penguins, the odds of being female versus male are decreased (factor of `r coef.table['chonkinessAbsolute_Unit', 'Odds ratio']`), compared to lightweight penguins , given all other features remain the same.
 Again, given all other features remain the same.
 
-
+The intercept is a very large value.
+This is because it is to be interpreted as odds of being female when all numerical features are set to zero and all categorical features to the reference level.
+This would be a non-chonky penguin with flipper length, bill length and depth all at zero -- not a meaningful data point.
+You could standardize the features, then the intercept would be more meaningful, but you can also just ignore the intercept.
 
 ## Advantages and Disadvantages
 
@@ -276,3 +276,4 @@ Then it is called Multinomial Regression.
 
 I used the `glm` function in R for all examples.
 You can find logistic regression in any programming language that can be used for performing data analysis, such as Python, Java, Stata, Matlab, ...
+

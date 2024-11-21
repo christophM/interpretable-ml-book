@@ -53,13 +53,9 @@ We pick one of the data points, namely January 1st 2011 and look at how changes 
 #| label: whatif-bike
 #| fig-cap: "'How changing individual features changes the predicted number of bike rentals.'"
 #| fig-height: 4
-set.seed(42)
-data("bike")
+explainer_rf <- DALEX::explain(bike_rf, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
 
-model <- randomForest::randomForest(cnt~ ., data = bike)
-explainer_rf <- DALEX::explain(model, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
-
-observation = bike[1,]
+observation = bike_test[1,]
 
 wi_rf <- ceteris_paribus(explainer_rf, observation = observation)
 p = plot(wi_rf) +
@@ -81,17 +77,11 @@ For this I trained a random forest, a linear regression model and a single decis
 We only look at temperature here:
 
 ```{r whatif-bike-models, fig.cap='', fig.height = 4}
-set.seed(42)
-data("bike")
-model_rf <- randomForest::randomForest(cnt~ ., data = bike)
-model_cart <- rpart(cnt~ ., data = bike)
-model_lm <- lm(cnt~ ., data = bike)
-
 data_point =  bike[1,]
 
-explainer_rf <- DALEX::explain(model_rf, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
-explainer_cart <- DALEX::explain(model_cart, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
-explainer_lm <- DALEX::explain(model_lm, data = bike[colnames(bike) != "cnt"], y = bike$cnt, verbose=FALSE)
+explainer_rf <- DALEX::explain(bike_rf, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
+explainer_cart <- DALEX::explain(bike_tree, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
+explainer_lm <- DALEX::explain(bike_lm, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
 cp_rf = ceteris_paribus(explainer_rf, data_point, y = data_point$cnt)
 cp_cart = ceteris_paribus(explainer_cart, data_point, y = data_point$cnt)
 cp_lm = ceteris_paribus(explainer_lm, data_point, y = data_point$cnt)
@@ -112,41 +102,27 @@ Teh random forest models an S-form relation between temperature and prediction w
 
 For classification, plotting multiple lines at once, one for each class is also helpful to better understand how thue model work
 
-For this example, we train a random forest to classify penguins.
-Let's the "What-If" for the probability when we change the bill length, here focusing on all classes of the species (Adelie, Chinstrap, Gentoo).
+For this example, we train a random forest to classify penguins into male versus female.
+Let's the "What-If" for the probability when we change the bill length.
 Simply done with the first penguin in the dataset, an Adelie penguin with a bill length of 39 millimeters.
 
-```{r penguins2, fig.cap="Increasing the bill length from 35 decreases the chance of this penguin being Adelie, while the probability of Chinstrap increases. The probability of Gentoo remains flatly at zero."}
-
-feature_set = c("body_mass_g", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "sex")
-penguins_sub = na.omit(penguins[c(feature_set, "species")])
-
-mod = randomForest::randomForest(species ~ body_mass_g + bill_length_mm + bill_depth_mm + flipper_length_mm + sex, data = penguins_sub)
-
-pred1 <- function(m, x) predict(m, x, type = "prob")[,1] 
+```{r}
+#| label: ceteris-penguins
+#| fig-cap: Increasing the bill length from 35 decreases the chance of this penguin being Adelie, while the probability of Chinstrap increases. The probability of Gentoo remains flatly at zero.
 pred2 <- function(m, x) predict(m, x, type = "prob")[,2]
-pred3 <- function(m, x) predict(m, x, type = "prob")[,3]
 
 
-chonky_penguin <- penguins_sub[1,feature_set]
-chonky_y = penguins_sub[1,]$species
+data_point <- penguins_test[1,]
+data_point_y = penguins_test[1,]$sex
 
-explainer_rf_adelie <- DALEX::explain(mod, data = penguins_sub[,feature_set],
-                              y = penguins_sub$species == "Adelie",
-                              predict_function = pred1, label = "Adelie", verbose=FALSE)
-explainer_rf_chinstrap <- DALEX::explain(mod, data = penguins_sub[, feature_set],
-                              y = penguins_sub$species == "Chinstrap",
-			      predict_function = pred2, label = "Chinstrap", verbose=FALSE)
-explainer_rf_gentoo <- DALEX::explain(mod, data = penguins_sub[, feature_set],
-                              y = penguins_sub$species == "Gentoo",
-                              predict_function = pred3, label = "Gentoo", verbose=FALSE)
+explainer <- DALEX::explain(pengu_rf, data = penguins_test,
+                              y = penguins_test$sex == "female",
+			      predict_function = pred2, label = "female", verbose=FALSE)
 
-cp_rf1 <- ceteris_paribus(explainer_rf_adelie, chonky_penguin, y=chonky_y)
-cp_rf2 <- ceteris_paribus(explainer_rf_chinstrap, chonky_penguin, y=chonky_y)
-cp_rf3 <- ceteris_paribus(explainer_rf_gentoo, chonky_penguin, y=chonky_y)
-plot(cp_rf1, cp_rf2, cp_rf3, color="_label_", selected_variables="bill_length_mm") +
+cp_rf <- ceteris_paribus(explainer, data_point, y = data_point_y )
+plot(cp_rf, color="_label_", selected_variables="bill_length_mm") +
   xlab("Bill length in mm") +
-  ylab("P(species)")
+  ylab("P(female)")
 ```
 
 ## Connections to other interpretation methods

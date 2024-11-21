@@ -76,7 +76,7 @@ All notable changes to the book will be documented here.
   - ceteris paribus 
   - LOCO 
 - Updated lots of references (and move them from footnotes to proper bibtex references).
-- Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, less sensitive and more instructive since it's multi-class instead of binary classification.
+- Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, and less sensitive.
 
 ### v2.0 [Print + ebook version]
 

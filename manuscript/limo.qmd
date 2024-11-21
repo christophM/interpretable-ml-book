@@ -2,6 +2,79 @@
 
 {{< include _setup.qmd >}}
 
+```{r}
+#| label: define lm functions
+
+get_reference_dataset = function(dat){
+  df = lapply(dat, function(feature){
+    if(class(feature) == 'factor'){
+      factor(levels(feature)[1], levels = levels(feature))
+    } else {
+      0
+    }
+  })
+  data.frame(df)
+}
+
+
+get_effects = function(mod, dat){
+
+  X = data.frame(predict(mod, type = 'terms', newdata=dat))
+
+  # Nicer colnames
+  colnames(X) = gsub('^X\\.', '', colnames(X))
+  colnames(X) = gsub('\\.', ' ', colnames(X))
+
+  # predict with type='terms' centers the results, so we have to add the mean again
+  reference_X = predict(mod, newdata=get_reference_dataset(dat), type='terms')
+  X_star = data.frame(t(apply(X, 1, function(x){ x - reference_X[1,names(X)]})))
+  X_star
+}
+
+
+#' Plot coefficients of a linear model
+coef_plot = function(mod, alpha = 0.05, remove_intercept = TRUE){
+  lm_summary = summary(mod)$coefficients
+  rownames(lm_summary) = pretty_rownames(rownames(lm_summary))
+
+  df = data.frame(Features = rownames(lm_summary),
+    Estimate = lm_summary[,'Estimate'],
+    std_error = lm_summary[,'Std. Error'])
+  df$lower = df$Estimate - qnorm(alpha/2) * df$std_error
+  df$upper = df$Estimate + qnorm(alpha/2) * df$std_error
+
+
+  if(remove_intercept){
+    df = df[!(df$Features == '(Intercept)'),]
+  }
+  require("ggplot2")
+  ggplot(df) +
+    geom_vline(xintercept=0, linetype=4) +
+    geom_point(aes(x=Estimate, y=Features)) +
+    geom_segment(aes(y=Features, yend=Features, x=lower, xend=upper), arrow = arrow(angle=90, ends='both', length = unit(0.1, 'cm'))) +
+    scale_x_continuous('Weight estimate') +
+    my_theme()
+}
+
+#' Plot effects of linear model
+effect_plot = function(mod, dat, feature_names=NULL){
+  X = get_effects(mod, dat)
+  if(!missing(feature_names)){
+    rownames(X) = feature_names
+  }
+  X = tidyr::gather(X)
+  require("ggplot2")
+  ggplot(X) +
+    geom_hline(yintercept=0, linetype=4) +
+    geom_boxplot(aes(x=key, y=value, group=key)) +
+    coord_flip() +
+    scale_y_continuous('Feature effect') +
+    my_theme()
+}
+```
+
+
+
 A linear regression model predicts the target as a weighted sum of the feature inputs.
 The linearity of the learned relationship makes the interpretation easy.
 Linear regression models have long been used by statisticians, computer scientists and other people who tackle quantitative problems.
@@ -168,13 +241,7 @@ For each feature, the table shows the estimated weight, the standard error of th
 
 ```{r}
 #| label: load-linear-model
-load("../data/bike.RData")
-X = bike[bike.features.of.interest]
-y = bike[,'cnt']
-dat = cbind(X, y)
-
-mod = lm(y ~ ., data = dat, x = TRUE)
-lm_summary = summary(mod)$coefficients
+lm_summary = summary(bike_lm)$coefficients
 
 lm_summary_print = lm_summary
 lm_summary_print[,'t value'] = abs(lm_summary_print[,'t value'])
@@ -183,12 +250,14 @@ rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 kableExtra::kbl(lm_summary_print[,c('Estimate', 'Std. Error', 't value')], digits = 1, col.names = c('Weight', 'SE', "|t|"), booktabs = TRUE, center = TRUE) %>% kable_styling(position = "center")
 ```
 
+
 Interpretation of a numerical feature (temperature):
 An increase of the temperature by 1 degree Celsius increases the predicted number of bicycles by `r sprintf('%.1f', lm_summary_print['temp', 'Estimate'])`, when all other features remain fixed.
 
 Interpretation of a categorical feature ("weathersit"):
 The estimated number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitRAIN/SNOW/STORM', 'Estimate'])` lower when it is raining, snowing or stormy, compared to good weather -- again assuming that all other features do not change.
 When the weather is misty, the predicted number of bicycles is `r sprintf('%.1f', lm_summary_print['weathersitMISTY', 'Estimate'])` lower compared to good weather, given all other features remain the same.
+
 
 All the interpretations always come with the footnote that "all other features remain the same".
 This is because of the nature of linear regression models.
@@ -211,7 +280,7 @@ The following plot shows the results from the previous linear regression model.
 ```{r}
 #| label: linear-weights-plot
 #| fig-cap: "Weights are displayed as points and the 95% confidence intervals as lines."
-coef_plot(mod) + scale_y_discrete("")
+coef_plot(bike_lm) + scale_y_discrete("")
 ```
 
 The weight plot shows that rainy/snowy/stormy weather has a strong negative effect on the predicted number of bikes.
@@ -244,7 +313,7 @@ The categorical feature effects can be summarized in a single boxplot, compared 
 ```{r}
 #| label: linear-effects
 #| fig-cap: "The feature effect plot shows the distribution of effects (= feature value times feature weight) across the data per feature."
-effect_plot(mod, dat) + scale_x_discrete("")
+effect_plot(bike_lm, bike_test) + scale_x_discrete("")
 ```
 
 The largest contributions to the expected number of rented bicycles comes from the temperature feature and the days feature, which captures the trend of bike rentals over time.
@@ -254,13 +323,14 @@ This means that the effect increases with each day and is highest for the last d
 Note that for effects with a negative weight, the instances with a positive effect are those that have a negative feature value.
 For example, days with a high negative effect of windspeed are the ones with high wind speeds.
 
+
 ## Explain Individual Predictions
 
 ```{r}
 #| label: linear-effects-single-preparation
 i = 6
-effects = get_effects(mod, dat)
-predictions = predict(mod)
+effects = get_effects(bike_lm, bike_test)
+predictions = predict(bike_lm, newdata=bike_test)
 
 effects_i = tidyr::gather(effects[i, ])
 predictions_mean = mean(predictions)
@@ -277,23 +347,26 @@ The instance has the following feature values.
 
 ```{r}
 #| label: linear-effects-single-table
-df = data.frame(feature = colnames(bike), value = t(bike[i,]))
+df = data.frame(feature = colnames(bike_test), value = t(bike_test[i,]))
 colnames(df) = c("feature", "value")
 kableExtra::kbl(df, col.names = c("Feature", "Value"), row.names = FALSE, booktabs = TRUE, caption = sprintf("Feature values for instance %i", i)) %>% kable_styling(position = "center")
 ```
 
 To obtain the feature effects of this instance, we have to multiply its feature values by the corresponding weights from the linear regression model.
-For the value "`r df["workingday", "value"]`" of feature "`r df["workingday", "feature"]`", the effect is, `r round(lm_summary_print[paste(df["workingday", "feature"], df["workingday", "value"], sep = ""), "Estimate"], 1)`.
+<!-- re-add 
+For the value "`r df["workingday", "value"]`" of feature "`r df["workingday", "feature"]`", the effect is, `round(lm_summary_print[paste(df["workingday", "feature"], df["workingday", "value"], sep = ""), "Estimate"], 1)`.
+-->
 For a temperature of `r round(as.numeric(as.character(df["temp", "value"])), 1)` degrees Celsius, the effect is `r round(as.numeric(as.character(df["temp", "value"])) * lm_summary_print[as.character(df["temp", "feature"]), "Estimate"], 1)`.
 We add these individual effects as crosses to the effect plot, which shows us the distribution of the effects in the data.
 This allows us to compare the individual effects with the distribution of effects in the data. 
+
 
 ```{r}
 #| label: linear-effects-single
 #| fig-cap: "The effect plot for one instance shows the effect distribution and highlights the effects of the instance of interest."
 i = 6
-effects = get_effects(mod, dat)
-predictions = predict(mod)
+effects = get_effects(bike_lm, bike_test)
+predictions = predict(bike_lm, newdata=bike_test)
 
 effects_i = tidyr::gather(effects[i, ])
 predictions_mean = mean(predictions)
@@ -301,18 +374,18 @@ predictions_mean = mean(predictions)
 names(predictions) = NULL
 pred_i = predictions[i]
 
-effect_plot(mod, dat) +
+effect_plot(bike_lm, bike_test) +
   geom_point(aes(x=key, y=value), color = 'red', data = effects_i, shape = 4, size=4) +
   scale_x_discrete("") +
-  ggtitle(sprintf('Predicted value for instance: %.0f\nAverage predicted value: %.0f\nActual value: %.0f', pred_i, predictions_mean, y[i]))
+  ggtitle(sprintf('Predicted value for instance %i: %.0f\nAverage predicted value: %.0f\nActual value: %.0f', i, pred_i, predictions_mean, bike_test$cnt[i]))
 ```
 
-If we average the predictions for the training data instances, we get an average of `r round(predictions_mean, 0)`. 
+If we average the predictions for the test data instances, we get an average of `r round(predictions_mean, 0)`. 
 In comparison, the prediction of the `r i`-th instance is small, since only `r round(pred_i, 0)` bicycle rents are predicted.
 The effect plot reveals the reason why.
 The boxplots show the distributions of the effects for all instances of the dataset, the crosses show the effects for the `r i`-th instance.
-The `r i`-th instance has a low temperature effect because on this day the temperature was `r round(X[i, 'temp'],0)` degrees, which is low compared to most other days (and remember that the weight of the temperature feature is positive).
-Also, the effect of the trend feature "days_since_2011" is small compared to the other data instances because this instance is from early 2011 (`r  X[i, 'days_since_2011']` days) and the trend feature also has a positive weight.
+The `r i`-th instance has a low temperature effect because on this day the temperature was `r round(bike_test[i, 'temp'],0)` degrees, which is low compared to most other days (and remember that the weight of the temperature feature is positive).
+Also, the effect of the trend feature "days_since_2011" is small compared to the other data instances because this instance is from early 2011 (`r  bike_test[i, 'days_since_2011']` days) and the trend feature also has a positive weight.
 
 
 ## Encoding of Categorical Features {#cat-code}
@@ -410,8 +483,8 @@ Each feature weight is represented by a curve in the following figure.
 #| label: lasso-path
 #| fig-cap: "With increasing penalty of the weights, fewer and fewer features receive a non-zero weight estimate. These curves are also called regularization paths. The number above the plot is the number of non-zero weights."
 library("glmnet")
-X.d = model.matrix(y ~ . -1, data = X)
-l.mod = glmnet(X.d, y)
+X.d = model.matrix(cnt ~ . -1, data = bike_train)
+l.mod = glmnet(X.d, bike_train$cnt)
 plot(l.mod,  xvar = "lambda", ylab="Weights")
 ```
 
@@ -441,7 +514,11 @@ Now, let us select 5 features:
 
 ```{r}
 #| label: lasso_effects2
-kableExtra::kbl(extract.glmnet.effects(l.mod$beta, max(which(n.features == 5))), col.names = "Weight", digits = 2, booktabs = TRUE, center = TRUE) %>% kable_styling(position = "center")
+extract.glmnet.effects(l.mod$beta, max(which(n.features == 5))) %>%
+  kableExtra::kbl(col.names = "Weight", digits = 2) %>%
+ # kable_styling(position = "center") +
+  kable_paper(full_width=FALSE)
+
 ```
 
 
