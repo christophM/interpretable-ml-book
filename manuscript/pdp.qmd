@@ -123,26 +123,67 @@ ggplot(pdp$results) +
   scale_y_continuous('', limits = c(0, 5500))
 ```
 
-We also compute the partial dependence for [penguin classification](#penguins).
-This time we fit a random forest to classify penguin sex based on body measurements.
+We also compute the partial dependence for [penguin classification](#penguins) (male/female).
+To mix things up a little bit, we analyze both the random forest and the logistic regression approach.
+Both predict P(female) based on body measurements.
 We compute and visualize the partial dependence of the probability for being female based on body mass and bill depth for the random forest:
 
 ```{r}
 #| label: fig-pdp-penguin
 #| fig.cap: The heavier the penguin, the less likely it is female. We see a similar pattern for bill depth, but the probability doesn't go to zero for deep bills.
 #| fig.height: 4
-pred.penguins = Predictor$new(pengu_rf, data = penguins, class="female")
-pdp = FeatureEffect$new(pred.penguins, "bill_depth_mm", method = "pdp")
+pred_logreg <- Predictor$new(pengu_logreg, data = penguins, class = "female")
+pred_rf <- Predictor$new(pengu_rf, data = penguins, class = "female")
 
-p1 = pdp$plot() +
-  scale_x_continuous("Bill depth in millimeters") +
-  scale_y_continuous('P(female)', limits = c(0, 1))
-pdp$set.feature("body_mass_g")
-p2 = pdp$plot() +
-  scale_x_continuous("Body mass in grams") +
-  scale_y_continuous('', limits = c(0, 1))
+# Function to get PDP data
+get_pdp_data <- function(predictor, feature) {
+  pdp <- FeatureEffect$new(predictor, feature, method = "pdp")
+  data <- as.data.frame(pdp$results)
+  data$feature <- feature
+  data$model <- class(predictor$model)[1]
+  names(data)[names(data) == ".value"] <- "probability"
+  names(data)[names(data) == feature] <- "value"
+  return(data)
+}
 
-p2 + p1
+# Collect all PDP data
+pdp_data <- rbind(
+  get_pdp_data(pred_logreg, "bill_depth_mm"),
+  get_pdp_data(pred_logreg, "body_mass_g"),
+  get_pdp_data(pred_rf, "bill_depth_mm"),
+  get_pdp_data(pred_rf, "body_mass_g")
+)
+
+# Create labels for features
+feature_labels <- c(
+  bill_depth_mm = "Bill depth in millimeters",
+  body_mass_g = "Body mass in grams"
+)
+
+# Create labels for models
+model_labels <- c(
+  `pengu_logreg` = "Logistic Regression",
+  `randomForest.formula` = "Random Forest"
+)
+
+# Create the plot
+ggplot(pdp_data, aes(x = value, y = probability)) +
+  geom_line() +
+  facet_grid(
+    model ~ feature,
+    scales = "free_x",
+    labeller = labeller(
+      feature = feature_labels,
+      model = model_labels
+    )
+  ) +
+  scale_y_continuous("P(female)", limits = c(0, 1)) +
+  theme_bw() +
+  theme(
+    strip.text = element_text(size = 10),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(size = 10)
+  )
 ```
 
 @fig-pdp-penguin has a big problem: It throws all penguin species together.
@@ -152,25 +193,56 @@ For this we only have to compute the individual PDPs by subsetting the data and 
 
 ```{r}
 #| label: fig-pdp-penguin-by-species
-#| fig.cap: PDP by penguin species. A more nuanced interpretation emerges. For Adelie, more weight means less likely to be female. For Chinstrap the weight doesn't affect the probability very much. Gentoo penguins are in general heavier, but also show the "males are more heavy" pattern.
+#| fig.cap: PDP split by penguin species, comparing logistic regression and random forest. A more nuanced interpretation emerges. For Adelie, more weight means less likely to be female. For Chinstrap the weight doesn't affect the probability very much. Gentoo penguins are in general heavier, but also show the "males are more heavy" pattern. Also logistic regression is, suprise, surprise, more smooth, and the random forest probabilities are drawn to the mean.
 #| fig.height: 4
-
 pdp_data = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
-  pred.penguins = Predictor$new(pengu_rf, data = penguins[penguins$species == species,], class="female")
+  pred.penguins = Predictor$new(pengu_logreg, 
+                               data = penguins[penguins$species == species,], 
+                               class="female")
   pdp = FeatureEffect$new(pred.penguins, "body_mass_g", method = "pdp")
   dat = pdp$results
   dat$species = species
+  dat$model = "Logistic Regression"
   dat
 })
 pdp_data = do.call(rbind, pdp_data)
-ggplot(pdp_data) +
-  geom_line(aes(x = body_mass_g, y = .value, group=species, color=species, lty=species)) + 
+
+# Create the second dataset (Random Forest)
+pdp_data2 = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
+  pred.penguins = Predictor$new(pengu_rf, 
+                               data = penguins[penguins$species == species,], 
+                               class="female")
+  pdp = FeatureEffect$new(pred.penguins, "body_mass_g", method = "pdp")
+  dat = pdp$results
+  dat$species = species
+  dat$model = "Random Forest"
+  dat
+})
+pdp_data2 = do.call(rbind, pdp_data2)
+
+# Combine both datasets
+combined_data = rbind(pdp_data, pdp_data2)
+
+# Create the faceted plot
+ggplot(combined_data) +
+  geom_line(aes(x = body_mass_g, 
+                y = .value, 
+                group = species, 
+                color = species, 
+                linetype = species)) +
+  facet_grid(. ~ model) +
   scale_x_continuous("Body mass in grams") +
-  scale_y_continuous('P(female)', limits = c(0, 1))
+  scale_y_continuous('P(female)', limits = c(0, 1)) +
+  theme(
+    legend.position = "bottom",
+    strip.text = element_text(size = 12, face = "bold"),
+    panel.spacing = unit(2, "lines")
+  )
 ```
 
 
-We can also visualize the partial dependence of two features at once (@fig-pdp-penguins-2d), here bill depth and bill length:
+We can also visualize the partial dependence of two features at once (@fig-pdp-penguins-2d) here bill depth and bill length.
+The analyzed model is the random forest.
 
 ```{r}
 #| label: fig-pdp-penguins-2d

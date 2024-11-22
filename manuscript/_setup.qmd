@@ -37,7 +37,43 @@ penguins_test <- penguins[-penguin_train_index, ]
 penguins$sex <- relevel(penguins$sex, ref = "male")
 pengu_rf = randomForest(sex ~ ., data = penguins_train)
 pengu_tree = rpart(sex ~ ., data = penguins_train)
-pengu_logreg = glm(sex ~ ., data = penguins_train, trace = FALSE, family = binomial(link="logit"))
+
+# Split the data by species
+species_models <- lapply(split(penguins_train, penguins_train$species), function(data) {
+  data$species = NULL
+  # ensuring the right levels
+  data$sex <- relevel(data$sex, ref = "male")
+  glm(sex ~ ., data = data, trace = FALSE, family = binomial(link = "logit"))
+})
+
+pengu_logreg <- list(models = species_models)
+class(pengu_logreg) <- "pengu_logreg"
+
+predict.pengu_logreg <- function(object, newdata, ...) {
+  predictions <- numeric(nrow(newdata))
+  
+  for (species in names(object$models)) {
+    # Filter test data for this species
+    species_data <- newdata[newdata$species == species, ]
+    if (nrow(species_data) > 0) {
+      # Predict using the appropriate model
+      model <- object$models[[species]]
+      species_predictions <- predict(model, newdata = species_data, type = "response", ...)
+      
+      # Create temporary data frame with predictions
+      pred_df <- data.frame(
+        row_id = seq_len(nrow(newdata))[newdata$species == species],
+        pred = species_predictions
+      )
+      
+      # Update predictions using merge matching
+      predictions[pred_df$row_id] <- pred_df$pred
+    }
+  }
+  
+  return(predictions)
+}
+
 ```
 
 
@@ -46,11 +82,13 @@ pengu_logreg = glm(sex ~ ., data = penguins_train, trace = FALSE, family = binom
 #| label: bike data and models
 set.seed(42)
 load("../data/bike.RData")
-bike_features =  c('season','holiday', 'workingday', 'weathersit', 'temp', 'hum', 'windspeed',  "days_since_2011")
+bike = na.omit(bike)
+bike_features =  c('season','holiday', 'workingday', 'weathersit', 'temp', 'hum', 'windspeed',  "count_2days_before")
 bike = bike[c(bike_features, "cnt")]
 bike_train_index <- sample(1:nrow(bike), 2/3 * nrow(bike))
 bike_train <- bike[bike_train_index, ]
 bike_test <- bike[-bike_train_index, ]
+
 bike_rf = randomForest(cnt~ ., data = bike_train)
 bike_tree = rpart(cnt ~ ., data = bike_train)
 bike_svm = e1071::svm(cnt ~ ., data = bike_train)

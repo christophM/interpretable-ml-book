@@ -67,14 +67,21 @@ All notable changes to the book will be documented here.
 
 ### v3.0 (IN PROGRESS) [html version]
 
+
+- Unified and improved the examples:
+  - Train models just once
+  - Measure and report performance (in Data chapter)
 - Strongly shortened the text between first word and first method:
   - removed preface by the author and moved relevant parts into about the book and introduction
   - moved chapters "Datasets", "Terminology", "What is Machine Learning" into appendix
   - Moved short stories to the end of the book
 - Combined all the intro texts (e.g. global methods) into an overview chapter 
-- New method chapters:
-  - ceteris paribus 
-  - LOCO 
+- New content: 
+  - overview chapter
+  - new method chapter:
+    - ceteris paribus 
+    - LOCO
+  - penguins data exmaple
 - Updated lots of references (and move them from footnotes to proper bibtex references).
 - Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, and less sensitive.
 
