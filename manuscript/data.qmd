@@ -2,7 +2,83 @@
 
 {{< include _setup.qmd >}}
 
-Throughout the book, there's two datasets that you will encounter often.
+
+```{r}
+compute_and_plot_mi <- function(data, bins = 10) {
+  # Input validation
+  if (!is.data.frame(data)) stop("Input must be a data frame")
+  if (ncol(data) < 2) stop("Data must have at least 2 columns")
+  if (bins < 2) stop("Number of bins must be at least 2")
+  
+  require("infotheo")
+  require("ggplot2")
+  require("reshape2")
+  
+  # Discretize data
+  data_discretized <- data
+  for (col in colnames(data)) {
+    if (is.numeric(data[[col]])) {
+      data_discretized[[col]] <- discretize(data[[col]], disc = "equalfreq", nbins = bins)
+    }
+  }
+  
+  # Compute MI matrix
+  mi_matrix <- matrix(0, ncol = ncol(data), nrow = ncol(data),
+                     dimnames = list(colnames(data), colnames(data)))
+  entropy_vec <- sapply(data_discretized, function(col) entropy(col))
+  
+  for (i in 1:ncol(data)) {
+    for (j in 1:ncol(data)) {
+      if (j < i) {  # Only compute for lower triangle
+        mi_value <- mutinformation(data_discretized[[i]], data_discretized[[j]])
+        # Ensure no division by zero
+        if (entropy_vec[i] == 0 || entropy_vec[j] == 0) {
+          mi_matrix[i, j] <- 0
+        } else {
+          mi_matrix[i, j] <- mi_value / sqrt(entropy_vec[i] * entropy_vec[j])  # Normalized MI
+        }
+      } else {
+        mi_matrix[i, j] <- NA  # Set upper triangle including diagonal to NA
+      }
+    }
+  }
+  
+  # Convert MI matrix to a long format for plotting
+  mi_long <- melt(mi_matrix)
+  colnames(mi_long) <- c("Feature1", "Feature2", "MutualInformation")
+  
+  # Remove NA values (upper triangle)
+  mi_long <- mi_long[!is.na(mi_long$MutualInformation), ]
+  
+  # Plot MI heatmap
+  p <- ggplot(mi_long, aes(x = Feature1, y = Feature2, fill = MutualInformation)) +
+    geom_tile() +
+    geom_label(aes(label = sprintf("%.2f", MutualInformation)), 
+               size = 3,
+               fill = "white",
+               alpha = 0.7) +
+    scale_fill_viridis_c(
+      limits = c(0, 1),  # Fix scale limits
+      oob = scales::squish  # Handle any out-of-bounds values
+    ) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    labs(title = "Mutual Information Heatmap", 
+         fill = "Normalized MI")  # Updated legend title to be more specific
+  
+  print(p)
+  
+  # Optionally return the MI matrix invisibly for further analysis
+  invisible(mi_matrix)
+}
+```
+
+
+
+
+
+
+kThroughout the book, there's two datasets that you will encounter often.
 One about bikes, the other about penguins.
 I love them both.
 This chapter presents these datasets, the associated prediction tasks and the models I trained and that we will interpret through the book.
@@ -14,7 +90,6 @@ The data was kindly made openly available by Capital-Bikeshare.
 [@fanaeet2014event] added weather data and season information.
 The goal is to predict how many bikes will be rented depending on the weather and the day.
 The data can be downloaded from the [UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset).
-
 
 I didn't use all the features and did some feature engineering myself, so here is the list of features I used for training models:
 
@@ -35,18 +110,18 @@ I didn't use all the features and did some feature engineering myself, so here i
 
 ### Predicting Bike Rentals
 
-Since this is just for showcasing the interpretability methods, I'm taking some liberties.
+Since this example is just for showcasing the interpretability methods, I'm taking some liberties.
 I pretend that the weather features are forecasts (they are not).
 That means our prediction task has the following shape:
 We predict tomorrows number of rented bikes based on weather forecasts, seasonal information, and how many bikes were rented yesterday.
 
 ## Bike count regression models
 
-I trained all regression models, using a simple holdout strategy: 2/3 of the data for training, and 1/3 for testing.
+I trained all regression models using a simple holdout strategy: 2/3 of the data for training, and 1/3 for testing.
 The ML algorithms were: random forest, CART decision tree, support vector machine, and linear regression.
 
 ```{r}
-#| label: tab-performance-bike
+#| label: fig-performance-bike
 library(Metrics)
 rf_preds = predict(bike_rf, bike_test)
 rf_rmse = rmse(bike_test$cnt, rf_preds)
@@ -76,7 +151,7 @@ results = results[order(results$RMSE), ]
 kable(results, caption = "Comparison of Model Performance")
 ```
 
-@tab-performance-bike shows that the support vector machine performed the best, since it had the lowest root mean squared error (RMSE) and the lowest mean absolute error (MAE).
+@fig-performance-bike shows that the support vector machine performed best, since it had the lowest root mean squared error (RMSE) and the lowest mean absolute error (MAE).
 The random forest was slightly worse, and the linear regression model even more.
 Trailing very far behind is the decision tree, which didn't work out so well at all.
 
@@ -120,7 +195,7 @@ The higher the explained variance (correlation), the more potential problems wit
 @fig-ale-bike-cor visualizes how strongly the weather features are correlated with other features.
 
 ```{r}
-#| label: fig-ale-bike-cor
+#| label: fig-bike-cor
 #| eval: true 
 #| fig.cap: "The strength of the correlation between temperature, humidity and wind speed with all features, measured as the amount of variance explained, when we train a linear model with e.g. temperature to predict and season as feature. For temperature we observe -- not surprisingly -- a high correlation with season and month. Humidity correlates with weather situation."
 compute_variance_explained <- function(train_data, test_data) {
@@ -156,16 +231,19 @@ ggplot(results_df, aes(x = reorder(Feature, Variance_Explained), y = Variance_Ex
   theme_minimal()
 ```
 
+```{r}
+compute_and_plot_mi(bike)
+```
+
 
 
 ## Palmer Penguins (Classification) {#penguins}
 
 For classification, we will use the Palmer penguin data.
 This cute dataset contains measurements from hundreds of penguins from the Palmer Archipelago in Antarctica.
-The dataset was collected and published by Gorman et al. (2014) [@gorman2014ecological] land the Palmer Station in Antarctica, which is part of the Long Term Ecological Research Network.
+The dataset was collected and published by Gorman et al. (2014) [@gorman2014ecological] and the Palmer Station in Antarctica, which is part of the Long Term Ecological Research Network.
 The paper studies difference in appearance between male and female, among other things.
-That's why the prediction target is a penguin's sex, based on body measurements. 
-
+That's why we'll use as prediction target a penguin's sex and predict it based on body measurements. 
 
 ![The 3 penguin species in the data: Chinstrap, Gentoo, and Adelie. Artwork by \@allison_horst.](./images/lter_penguins.png){width=80%}
 
@@ -173,13 +251,13 @@ That's why the prediction target is a penguin's sex, based on body measurements.
 Each row represents a penguin and contains the following information:
 
 - Sex of the penguin (male/female).
-- Species of penguin (Chinstrap/Gentoo/Adelie) that we will use as the output for classification for the examples in this book.
+- Species of penguin (Chinstrap/Gentoo/Adelie).
 - Body mass of the penguin, measured in grams.
-- Length of the bill (the beak) measured in millimeters (see also the following Figure).
+- Length of the bill (the beak) measured in millimeters (see also the following @fig-bill-measurements).
 - Depth of the bill, measured in millimeters.
 - Length of the flipper (the "tail"), measured in millimeters.
 
-![Bill measurements. Artwork by \@allison_horst.](./images/culmen_depth.png){width=70%}
+![Bill measurements. Artwork by \@allison_horst.](./images/culmen_depth.png){#fig-bill-measurements width=70%}
 
 
 11 penguins had missing data.
@@ -223,12 +301,11 @@ kable(results, caption = "Comparison of Model Performance")
 
 ### Correlations
 
-We also need to look at the correlations:
+Let's have a look at how the features in the data are correlated (Pearson correlation) with @fig-penguins-correlations.
 
 ```{r}
 #| label: fig-penguins-correlations
 #| fig.cap: Pearson correlation between the penguin features.
-
 
 # Select numerical columns and remove rows with NA values
 penguins_clean <- na.omit(penguins[, sapply(penguins, is.numeric)])
@@ -239,11 +316,21 @@ cor_matrix <- cor(penguins_clean)
 # Melt the correlation matrix for visualization
 cor_melt <- melt(cor_matrix)
 
+# Keep only lower triangle of the correlation matrix
+cor_melt <- cor_melt[which(as.numeric(cor_melt$Var1) >= as.numeric(cor_melt$Var2)), ]
+
 # Visualize the correlations using ggplot2 with labels
 ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
   geom_tile(color = "white") +
-  geom_label(aes(label = round(value, 2)), color = "black", size = 5, fill="white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +
+  geom_label(aes(label = round(value, 2)), 
+             color = "black", 
+             size = 5, 
+             fill = "white") +
+  scale_fill_gradient2(low = "blue", 
+                      high = "red", 
+                      mid = "white", 
+                      midpoint = 0, 
+                      limit = c(-1, 1)) +
   my_theme() +
   labs(
     title = "Correlation Matrix of Palmer Penguins Data",
@@ -251,11 +338,19 @@ ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
     y = "",
     fill = "Correlation"
   ) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_fixed()  # Make the plot square
 ```
+
+
+
+@fig-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
+But also other features are strongly  correlated, like flipper length and bill length or flipper length and bill depth.
+Again, we look at variance explained:
 
 ```{r}
 #| label: variance explained penguins
+#| fig-cap: Variance explained by predicting each of the features from the other features. The species is almost fully determined by the other features.
 results_df <- compute_variance_explained(penguins_train %>% select(-sex), penguins_test %>% select(-sex))
 
 # Visualize results
@@ -267,7 +362,11 @@ ggplot(results_df, aes(x = reorder(Feature, Variance_Explained), y = Variance_Ex
 ```
 
 
-@fig-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
-But also other feature pairs are strongly (negatively) correlated, like flipper length and bill length or flipper length and bill depth.
+
+```{r}
+compute_and_plot_mi(penguins)
+```
+
+
 
 [^problem-with-test-data]: In a perfect setting we wouldn't use the test data for this, but keep it perfectly untouched for the test evaluation.

@@ -9,17 +9,19 @@ bike = read.csv(sprintf('%s/bike-sharing-daily.csv', data_dir), stringsAsFactors
 # See http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset
 
 bike$weekday = factor(bike$weekday, levels=0:6, labels = c('SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'))
-bike$holiday = factor(bike$holiday, levels = c(0,1), labels = c('NO HOLIDAY', 'HOLIDAY'))
-bike$workingday = factor(bike$workingday, levels = c(0,1), labels = c('NO WORKING DAY', 'WORKING DAY'))
+bike$holiday = factor(bike$holiday, levels = c(0,1), labels = c('N', 'Y'))
+bike$workday = factor(bike$workingday, levels = c(0,1), labels = c('N', 'Y'))
+bike$workingday = NULL
 bike$season = factor(bike$season, levels = 1:4, labels = c('WINTER', 'SPRING', 'SUMMER', 'FALL'))
-bike$weathersit = factor(bike$weathersit, levels = 1:3, labels = c('GOOD', 'MISTY', 'RAIN/SNOW/STORM'))
+bike$weather = factor(bike$weathersit, levels = 1:3, labels = c('GOOD', 'MISTY', 'BAD'))
+bike$weathersit = NULL
 bike$mnth = factor(bike$mnth, levels = 1:12, labels = c('JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'))
 bike$yr[bike$yr == 0] <- 2011
 bike$yr[bike$yr == 1] <- 2012
 bike$yr <- factor(bike$yr)
 bike$days_since_2011 = day_diff(bike$dteday, min(as.Date(bike$dteday)))
 bike <- bike[order(bike$days_since_2011), ]
-bike$count_2days_before <- c(NA, NA, head(bike$cnt, -2))
+bike$cnt_2d_bfr <- c(NA, NA, head(bike$cnt, -2))
 
 # denormalize weather features:
 # temp : Normalized temperature in Celsius. The values are derived via (t-t_min)/(t_max-t_min), t_min=-8, t_max=+39 (only in hourly scale)
