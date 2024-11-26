@@ -67,7 +67,7 @@ All notable changes to the book will be documented here.
 
 ### v3.0 (IN PROGRESS) [html version]
 
-
+- Switched the order of global and local: Now local model-agnostic methods come before global methods.
 - Unified and improved the examples:
   - Train models just once
   - Measure and report performance (in Data chapter)
