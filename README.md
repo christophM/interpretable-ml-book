@@ -67,6 +67,8 @@ All notable changes to the book will be documented here.
 
 ### v3.0 (IN PROGRESS) [html version]
 
+
+- Deleted "Scope of Interpretability" from Interpretability chapter, because it was partially redundant and not useful.
 - Switched the order of global and local: Now local model-agnostic methods come before global methods.
 - Unified and improved the examples:
   - Train models just once
