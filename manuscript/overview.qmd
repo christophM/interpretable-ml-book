@@ -1,18 +1,6 @@
 # Methods Overview
 
-<!-- 
-
-TODOs:
-
-- Link each to the goals of interpretability
-0 
-
--->
-
-
-This chapter will get more into the weeds of what options we have to make machine learning more interpretable, while the previous chapter was a more general primer on interpretability.
-The goal of this chapter is to provide a map of approaches so that when diving into the individual methods, you still realize you are in a forest when looking at an individual trees. 
-
+This chapter provides a map of interpretability approaches so that when diving into the individual models and methods, you still realize you are in a forest when looking at an individual trees. 
 @fig-taxonomy provides a taxonomy of the different approaches.
 
 ```{mermaid}
@@ -32,12 +20,11 @@ graph TD
 In general, we can distinguish between interpretability by design and post hoc interpretability.
 **Interpretability by design** means that we train inherently interpretable models, like using logistic regression instead of a random forest.
 **Post-hoc interpretability** means that we use an interpretability method after the model has been trained.
-Post-hoc interpretation methods can be **model-agnostic**, like permutation feature importance or **model-specific**, like analyzing the features learned by a neural network.
-Model-agnostic methods can be further divided into **local** methods which focus on individual predictions, and **global** methods which focus on datasets.
-This book focuses on post-hoc model-agnostic methods, but also covers basic models that are interpretable by design and model-specific methods for neural networks.
+Post-hoc interpretation methods can be **model-agnostic**, like permutation feature importance, or **model-specific**, like analyzing the features learned by a neural network.
+Model-agnostic methods can be further divided into **local** methods which focus on explaining individual predictions, and **global** methods which focus on datasets.
+This book focuses on post-hoc model-agnostic methods, but also covers basic models interpretable by design and model-specific methods for neural networks.
 
-Let's look into each category of interpretability, understand what makes them different, learn about theirs strengths and weaknesses, and ultimately see that it's not an either-or decision.
-Strengths and weaknesses strongly depends on the [goal of interpretation](#goals).
+Let's look into each category of interpretability and also understand their strengths and weaknesses which are connected to your [interpretation goals](#goals).
 
 ## Interpretable models by design 
 
@@ -60,191 +47,98 @@ This book covers the most basic interpretability by design approaches:
 
 
 <!-- more than completely interpretable models -->
-But these are only the most basic ones.
-Since interpretability is such a fluffy concept, the section of interpretable models is huge and the models can be very different.
-Just a few examples:
+Besides these basic ones, there are many more approaches to interpretable models ranging from extensions of these basic approaches to very specialized approaches.
+These would easily break the scope of this book, so I'll just give you a few examples:
 
 
-- Prototype-based neural network for image classification [@ma2024interpretable]. Here the interpretable part is that a classification is a weighted sum of prototype images with highlighted sections of the image. An example of case-based reasoning.
-- @yang2024inherently and suggest "inherently interpretable tree ensemble" and one part is to adjust hyperparameters (like maximum tree depth of only 2 or 3) and adding monotonicity constraint among others to make them more interpretable by design. The paper also introduces other pruning steps to reduce number of effects. 
-- TODO: more examples here
+- Prototype-based neural network for image classification, called ProtoViT [@ma2024interpretable]. These neural networks are trained so that the image classification is a weighted sum of prototypes (special images from the training data) and sub-prototypes.
+- @yang2024inherently and suggest "inherently interpretable tree ensemble" which is basically boosted trees (with, for example, XGBoost), but adjusted hyperparameters, such as low max depth, a different representation (feature effects are sorted into main effects and interactions) and pruning of effects. Arguably, this mixes both interpretability by-design and leveraging post-hoc interpretability.
+-   TODO: Add a few examples here
+-  TODO: Maybe move  @yang2024inherently  as example of mixing stuff up
+
+But really, the approaches are so varied here.
+Some interpretability-by-design methods make it easy to write down the entire logic of the model into a little table, like you can do for linear regression models.
+While other claim interpretability, but it's only for individual predictions.
+An example would be a decision rule lists with hundreds of rules, which is difficult to grasp as a whole, but for a single prediction, we might have a simple rule we can interpret.
+
+<!-- Strengths and Limitations -->
+To argue whether or not the by-design approach furthers your specific interpretability goals therefore depends on the actual ML approach.
+
+Interpretable models are much easier to debug and improve, since the decision-making mechanisms are laid bare.
+You can rather easily see when a coefficient is zero, or when a rule doesn't make any sense.
+Or when one of the prototypes is actually a wrongly coded data instance.
+And as is typical in many areas with established models, you gain a lot more expertise with a certain kind of interpretable model, making you learn the ins and outs of the pitfalls of this particular model class.
+
+In many fields there are established interpretable models.
+For example, medical research is big in e.g. logistic regression and other regression methods.
+Depending on the research journal / community, using a decision rule list may be more difficult to justify.
+The justification is so very strong that they are seen as given.
+
+Justification really depends on whether you can make the relevant stakeholders understand the prediction mechanism of the model.
+
+When it comes to discovering insights, interpretable models are a bit of a mixed bag.
+They often make it easy to read out information:
+For a linear regression model, we can easily say how a feature affects the prediction.
+But to make conclusions about the data, we need more:
+Does this feature REALLY influnce the outcome linearly?
+Because we kind of forced the feature to do so by using linear regression.
+That means in order to interpret the model in place of the data / the world, we have to argue why the model is a good representation of it -- including all the constraints we have put on the model.
+This is aggravated for cases where we might find much better performing "black box" models:
+What if the proto-type based image classifier has much less performance than the convolutional neural network?
+How far does it help us understanding the data?
+
+There is another price to be paid: By reducing the model search to a subset interpretable models, you exclude many other especially flexible models.
+And searching only a subset of the models may cost you a lot in performance.
 
 
-All interpretability-by-design approaches have in common that they affect how the final model looks like.
-It relies to using specific constraints in the training process so that at the end of the process "interpretable" models come out.
-What is then interpretable is very broad and very different across proposed ML algorithms.
+## Post-hoc interpretability
 
-<!-- Strengths -->
-
-CONTINUE HERE
-
-Strong on these goals: Insight into the model, justification as long as there is a match between interpretability of the model towards target audience.
-Justification is very strong, especially, by definition, for the established things like, logistic regression in medical research.
-But since the models are so diverse and their interpretability mode as well, can't give definit answer on how well they match the goals, just some general thoughts.
-
-Often well-established, like logistic regression in clinical research.
-
-However, interpretability-by-design is itself bigger than just intepretability.
-Since when you can design for interpretability, you typically also design for other things, like robustness and infusion of domain knowledge.
-
-
-<!-- Limitations -->
-Not so strong on these goals:
-Insight into the data is only given when the model structure and assumptions reflect reality.
-Is your true outcome in reality a weighted sum of the inputs?
-
-
-
-Not agreed upon if its really interpretable.
-
-Has a cost: restricting to interrpetable models may exclude models that have way better predictive performance.
-For example, winners of Kaggle are typically xgboost for tabular dta and neural networks for image.
-Adding constraints has the potential of making the model less performant.
-In terms of a search, it makes the search space smaller.
-Let's say that the optimal model would be a support vector machine, but if you only allow linear regression mdoels, you will have a sub-optimal model.
-So there is typically a trade-off between interpretability by design and predictive performance.
-
-
-Conceptual problem: When it comes to discovery, we kind of rely on the the model being a good representation of reality.
-Difficutl to argue when there are more predictive models.
-And often relies on assumptions
-When used for answering questions, they rely on assumptions that the model reflects reality ("Is the ")
-
-Rashomon effect:
-
-
-## Post-Hoc Interpretability
-
-Post-hoc methods are all methods that are applied after the model was trained.
-This means they don't affect the model training.
-
-::: {.callout-tip}
-
-You can apply post-hoc methods to models that are interprerable by-design.
-
-:::
-
-How does this work?
+Post-hoc methods are applied after the model was trained.
+These methods can be either model-agnostic or model-specific: 
 There's two routes to this:
 
-- Model-agnostic: We ignore what's *inside* the model and only analyze howthe prediction function behaves. 
-- Model-specific: We take some parts of the model and try to analyze them to better understand the model. This can work by assigning meaning to parts of the model, like trying to see what a neuron in a neural network responds most to, but also give us feature-based summaries like feature importance (e.g. Gini importance in random forests).
+- Model-agnostic: We ignore what's *inside* the model and only analyze how model output changes with regard to changes in the feature inputs. For example, permuting a feature and measuring how much the model error increases.
+- Model-specific: We analyze parts of the model them to better understand it. This can analyzing which types of images a neuron in a neural network responds most to, or Gini importance in random forests.
 
+### Model-agnostic methods {#agnostic}
 
+Model-agnostic methods work by the SIPA principle: **sample** from the data, do some kind of **intervention** on the data, get the **predictions** for the manipulated data, and **aggregate** the results. [@scholbeck2020sampling]
+An example is permutation feature importance:
+We take the data (in this case we sample all), intervene on the data by permuting it, get the model predictions, and compute again the model error and compare it with the original loss (aggregation).
 
-### Model-Agnostic Methods {#agnostic}
-
-Separating the explanations from the machine learning model (= model-agnostic interpretation methods) has some advantages (Ribeiro, Singh, and Guestrin 2016 [@ribeiro2016model]).
-The great advantage of model-agnostic interpretation methods over model-specific ones is their flexibility.
-Machine learning developers are free to use any machine learning model they like when the interpretation methods can be applied to any model.
-Anything that builds on an interpretation of a machine learning model, such as a graphic or user interface, also becomes independent of the underlying machine learning model.
-Typically, not just one, but many types of machine learning models are evaluated to solve a task, and when comparing models in terms of interpretability, it is easier to work with model-agnostic explanations, because the same method can be used for any type of model.
 
 ![](./images/agnostic-black-box.png)
 
-Desirable aspects of a model-agnostic explanation system are (Ribeiro, Singh, and Guestrin 2016):
 
-- **Model flexibility:**
-The interpretation method can work with any machine learning model, such as random forests and deep neural networks.
-- **Explanation flexibility:**
-You are not limited to a certain form of explanation.
-In some cases it might be useful to have a linear formula, in other cases a graphic with feature importances.
-- **Representation flexibility:**
-The explanation system should be able to use a different feature representation as the model being explained.
-For a text classifier that uses abstract word embedding vectors, it might be preferable to use the presence of individual words for the explanation.
-
-However, some argue we shouldn't try to explain black-box algorithms at all, at least not when it comes to high-stakes decisions. [@rudin2019stop]
-
-
-**The bigger picture**
-
-Let's take a high level look at model-agnostic interpretability.
-We capture the world by collecting data, and abstract it further by learning to predict the data (for the task) with a machine learning model.
-Interpretability is just another layer on top that helps humans understand.
+Model-agnostic interpretation separates the model interpretation / explanation from the model training. 
+Looking at this from a more high-level point of view, the modeling process gains another layer: It starts from the world which we capture in form of data, from which we learn a a model.
+On top of that model we pack interpretability methods humans.
+See @fig-big-picture.
+For model-agnostic methods, we have this separation, while for interpretability by-design, we have model and interpretability layers merged into one.
 
 
 ![The big picture of explainable machine learning. The real world goes through many layers before it reaches the human in the form of explanations.](./images/big-picture.png){#fig-big-picture}
 
-The lowest layer is the **World**.
-This could literally be nature itself, like the biology of the human body and how it reacts to medication, but also more abstract things like the real estate market.
-The World layer contains everything that can be observed and is of interest.
-Ultimately, we want to learn something about the World and interact with it.
+Separating explanations from the machine learning model (= model-agnostic interpretation methods) has some advantages [@ribeiro2016model].
 
-The second layer is the **Data** layer.
-We have to digitize the World in order to make it processable for computers and also to store information.
-The Data layer contains anything from images, texts, tabular data and so on.
-
-By fitting machine learning models based on the Data layer, we get the **Black Box Model** layer.
-Machine learning algorithms learn with data from the real world to make predictions or find structures.
-
-Above the Black Box Model layer is the **Interpretability Methods** layer, which helps us deal with the opacity of machine learning models.
-What were the most important features for a particular diagnosis?
-Why was a financial transaction classified as fraud?
-
-The last layer is occupied by a **Human**.
-Look! This one waves to you because you are reading this book and helping to provide better explanations for black box models!
-Humans are ultimately the consumers of the explanations.
-
-This multi-layered abstraction also helps to understand the differences in approaches between statisticians and machine learning practitioners.
-Statisticians deal with the Data layer, such as planning clinical trials or designing surveys.
-They skip the Black Box Model layer and go right to the Interpretability Methods layer.
-Machine learning specialists also deal with the Data layer, such as collecting labeled samples of skin cancer images or crawling Wikipedia.
-Then they train a black box machine learning model.
-The Interpretability Methods layer is skipped and humans directly deal with the black box model predictions.
-It's great that interpretable machine learning fuses the work of statisticians and machine learning specialists.
-
-Of course this graphic does not capture everything:
-Data could come from simulations.
-Black box models also output predictions that might not even reach humans, but only supply other machines, and so on.
-But overall it is a useful abstraction to understand how interpretability becomes this new layer on top of machine learning models.
+The greatest strength is flexibility both in choice of model and in choice of interpretation method.
+Let's say you visualize feature effects of an XGBoost model with the PDP, then you can even swap out the underlying model and still use the same type of interpretation.
+Or if you no longer like the PDP, you can use ALE without having to change the underlying XGBoost model.
+But if you are using a linear regression model and interpret the coefficients, switching to a rule-based classifier also changes the means of interpretation.
+Some methods even allow you flexibility for the feature representation used for creating the explanations: For example you may use image patches instead of pixels.
 
 Model-agnostic interpretation methods can be further distinguished into local and global methods.
 The book is also organized according to this distinction.
 [Global methods](#global-methods) describe how features affect the prediction **on average**.
 In contrast, [local methods](#local-methods) aim to explain **individual predictions**.
 
-
-#### Global Model-Agnostic Methods {#global-methods}
-
-Global methods describe the average behavior of a machine learning model.
-The counterpart to global methods are [local methods](#local-methods).
-Global methods are often expressed as expected values based on the distribution of the data.
-For example, the [partial dependence plot](#pdp), a feature effect plot, is the expected prediction when all other features are marginalized out.
-Since global interpretation methods describe average behavior, they are particularly useful when the modeler wants to understand the general mechanisms in the data or debug a model.
-
-In this book, you will learn about the following model-agnostic global interpretation techniques:
-
-* The [partial dependence plot](#pdp) is a feature effect method.
-* [Accumulated local effect plots](#ale) is another feature effect method that works when features are dependent.
-* [Feature interaction (H-statistic)](#interaction) quantifies to what extent the prediction is the result of joint effects of the features.
-* [Functional decomposition](#decomposition) is a central idea of interpretability and a technique that decomposes the complex prediction function into smaller parts.
-* [Permutation feature importance](#feature-importance) measures the importance of a feature as an increase in loss when the feature is permuted.
-* [Global surrogate models](#global) replaces the original model with a simpler model for interpretation.
-* [Prototypes and criticisms](#proto) are representative data point of a distribution and can be used to enhance interpretability.
-
-
-
-<!-- strengths and limitations -->
-For the goal of model improvements, global methods are king.
-For justification of the model, they may also be very useful, but of course less so when it comes to justifying individual predictions, that's what local methods are for.
-
-
-::: {.callout-tip}
-
-Model-agnostic interpretation methods are for entire datasets.
-But you are typically free to modify that dataset before e.g. computing feature importance or plotting an effect.
-By subsetting your data, you can turn these "global" methods into "group-wise" methods, which also bridge the divide between global and local methods.
-We will see this in action in the examples in this book.
-
-:::
-
-
-#### Local Model-Agnostic Methods {#local-methods}
+#### Local model-agnostic post-hoc methods {#local-methods}
 
 Local interpretation methods explain individual predictions.
-In this chapter, you will learn about the following local explanation methods:
+The approaches are rather diverse in this category:
 
-* [Individual conditional expectation curves](#ice) are the building blocks for [partial dependence plots](#pdp) and describe how changing a feature changes the prediction.
+* [Ceteris paribus](#ceteris-paribus) describe how changing a feature changes a data points prediction.
+* [Individual conditional expectation curves](#ice) describe how changing a feature changes the prediction of multiple data-points.
 * [Local surrogate models (LIME)](#lime) explain a prediction by replacing the complex model with a locally interpretable surrogate model.
 * [Scoped rules (anchors)](#anchors) are rules that describe which feature values anchor a prediction, in the sense that they lock the prediction in place.
 * [Counterfactual explanations](#counterfactual) explain a prediction by examining which features would need to be changed to achieve a desired prediction.
@@ -252,21 +146,71 @@ In this chapter, you will learn about the following local explanation methods:
 * [SHAP](#shap) is another computation method for Shapley values, but also proposes global interpretation methods based on combinations of Shapley values across the data.
 
 LIME and Shapley values are attribution methods, so that the prediction of a single instance is described as the sum of feature effects.
-Other methods, such as [counterfactual explanations](#counterfactual), are example-based.
+Other methods, like ceteris paribus and ICE focus on individual features.
+Methods like counterfactual and Anchors find themselves somewhere in the middle of explaining the predictions with a subset of the features. 
 
 <!-- Strengths and Limitations -->
-When it comes to debugging the model, local methods are not the first pick.
-But they can be helpful in identifying specific ways in which your model has problems, especially if they are only for certain subsets of the data.
-You can also randomly sample data points, explain their predictions, and get an idea of how to improve the model.
+For model debugging, local methods provide rather "zoomed in" views, which can be useful for understanding edge cases or studying unusual predictions.
+For example, you can look into explanations for the prediction with the worst prediction error and see whether it's just a difficult prediction, or whether maybe your model isn't good enough or the data point is wrongly labelled.
+
+When it comes to using local interpretation methods for justifying individual predictions, the usefulness is rather mixed:
+Methods like ceteris paribus and counterfactual explanations can be very useful for justifying model predictions, since faithfully reflect the raw model predictions.
+Attribution methods, however, like SHAP or LIME don't are kind of "models" (or at least more complex estimations) on top of the model and therefore might not be as useful for some high-stakes justification purposes [@rudin2019stop].
+
+Local methods shine for data insights.
+Attribution methods like Shapley values work with a reference dataset, and therefore allow comparing the current prediction with different subsets allowing to ask different questions.
 
 
-### Model-specific methods
+::: {.callout-tip}
 
-As the name says, these are 
+You can apply post-hoc methods to models that are interpretable by-design.
+
+:::
+
+#### Global model-agnostic post-hoc methods {#global-methods}
+
+Global methods describe the average behavior of a machine learning model across a dataset.
+In this book, you will learn about the following model-agnostic global interpretation techniques:
+
+* The [partial dependence plot](#pdp) is a feature effect method.
+* [Accumulated local effect plots](#ale) is another feature effect method that works when features are dependent.
+* [Feature interaction (H-statistic)](#interaction) quantifies to what extent the prediction is the result of joint effects of the features.
+* [Functional decomposition](#decomposition) is a central idea of interpretability and a technique that decomposes the complex prediction function into smaller parts.
+* [Permutation feature importance](#feature-importance) measures the importance of a feature as an increase in loss when the feature is permuted.
+* [Leave one feature out (LOFO)](#lofo) removes a feature and measures the increase in loss.
+* [Surrogate models](#global) replaces the original model with a simpler model for interpretation.
+* [Prototypes and criticisms](#proto) are representative data point of a distribution and can be used to enhance interpretability.
+
+<!-- goals -->
+Since global interpretation methods describe average behavior, they are particularly useful when the modeler wants to debug a model.
+LOFO is related to feature selection methods and particularly suitable for model improvements. 
+
+For justifying the models to stakeholders, global interpretation methods can deliver some of the broad strokes, in terms of which features were relevant and how, on average, features affect the predictions.
+You can also use them in combination with inherently interpretable models.
+Because while decision rule lists may make it easy to justify individual predictions, you may want to also justify the model itself, by showing which features were important and so on.
+
+Global methods are often expressed as expected values based on the distribution of the data.
+For example, the [partial dependence plot](#pdp), a feature effect plot, is the expected prediction when all other features are marginalized out.
+This makes these methods so useful to understand the general mechanisms in the data.
+
+
+::: {.callout-tip}
+
+By applying global methods to subsets of your data, you can turn these global methods into "group-wise" or "regional" methods.
+We will see this in action in the examples in this book.
+
+:::
+
+
+
+### Model-specific post-hoc methods
+
+As the name says, these are methods applied after model training which only work for specific types of models.
 
 ![](./images/specific-black-box.png)
 
-Like Gini importance etc.
+There are many such example ranging from Gini importance for random forests to computing odds ratios for logistic regression.
+This book focuses on post-hoc interpretation methods for neural networks.
 
 <!-- Why not interpretable -->
 To make predictions with a neural network, the data input is passed through many layers of multiplication with the learned weights and through non-linear transformations.
@@ -274,21 +218,11 @@ A single prediction can involve millions of mathematical operations depending on
 There is no chance that we humans can follow the exact mapping from data input to prediction.
 We would have to consider millions of weights that interact in a complex way to understand a prediction by a neural network.
 To interpret the behavior and predictions of neural networks, we need specific interpretation methods.
-The chapters assume that you are  familiar with deep learning, including convolutional neural networks.
 
 <!-- Why specific interpretation -->
-We can certainly use [model-agnostic methods](#agnostic), such as [local models](#lime) or [partial dependence plots](#pdp), but there are two reasons why it makes sense to consider interpretation methods developed specifically for neural networks:
-First, neural networks learn features and concepts in their hidden layers and we need special tools to uncover them.
-Second, the gradient can be utilized to implement interpretation methods that are more computationally efficient than model-agnostic methods that look at the model "from the outside".
-Also most other methods in this book are intended for the interpretation of models for tabular data.
-Image and text data require different methods.
-
-<!-- Strengths and Limitations -->
-The biggest strength of these methods is to discover insights about the models themselves.
-This may also help for improving the model and justifying it towards other people.
-Model-specific methods can be helpful for debugging and improving the models, but it's difficult to make general statements as these may do so
-
-
+Neural networks are an interesting interpretation target, since neural networks learn features and concepts in their hidden layers.
+We can leverage that they are gradient-based for computationally efficient methods.
+Since they are gradient-based we can leverage many 
 
 The neural network chapters cover the following techniques that answer different questions:
 
@@ -299,10 +233,13 @@ The neural network chapters cover the following techniques that answer different
 -  [Influential Instances](#influential) is a more general approach with a fast implementation for gradient-based methods such as neural networks: How influential was a training data point for a certain prediction?
 
 
+The biggest strength of these methods is to discover insights about the models themselves.
+This may also help for improving the model and justifying it towards other people.
+Model-specific methods can be helpful for debugging and improving the models.
+When it comes to insights, model-specific draw the interpretation a lot to the internals of the models, and we again have to assume somehow that these internal mechanisms reflect reality for making such a leap.
 
-
-
-## Combine them 
+<!--
+## The lines are blurred
 
 Don't think you have decide for one approach.
 Be flexible.
@@ -351,4 +288,4 @@ These are typically not cited as interpretable, since it only works when you can
 
 
 
-
+-->
