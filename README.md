@@ -68,6 +68,8 @@ All notable changes to the book will be documented here.
 ### v3.0 (IN PROGRESS) [html version]
 
 
+- Renamed chapter "Local Surrogate (LIME)" to "LIME"
+- Renamed chapter "Global Surrogate" to "Surrogate Models"
 - Deleted "Scope of Interpretability" from Interpretability chapter, because it was partially redundant and not useful.
 - Switched the order of global and local: Now local model-agnostic methods come before global methods.
 - Unified and improved the examples:
@@ -86,6 +88,9 @@ All notable changes to the book will be documented here.
   - penguins data exmaple
 - Updated lots of references (and move them from footnotes to proper bibtex references).
 - Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, and less sensitive.
+- Smaller errors fixed:
+  - in chapter Learned Features -> Network Dissection -> Step 2: Retrieve network activations, quantile level was corrected to not depend on x, i.e.g T_k instead of T_k(x).
+
 
 ### v2.0 [Print + ebook version]
 
