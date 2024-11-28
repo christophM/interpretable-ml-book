@@ -157,12 +157,12 @@ This decomposition would not be very meaningful and quite misleading if you were
 
 <!-- Solutions -->
 The ambiguity can be avoided by specifying further constraints or specific methods for computing the components.
-In this chapter, we will discuss three methods that approach the functional decomposition in different ways:
+In this chapter, we will discuss different approaches to functional decomposition:
 
-- (Generalized) Functional ANOVA
+- (Generalized) functional ANOVA
 - [Accumulated Local Effects](#ale)
 - Statistical regression models
-
+- Decomposing tree ensembles
 
 
 ## Functional ANOVA
@@ -226,7 +226,7 @@ In contrast, a two-dimensional partial dependence plot for $X_1$ and $X_2$ would
 The functional ANOVA component for $\hat{f}_{1,2}(x_1,x_2)$ contains only the pure interaction.
 
 Variance decomposition allows us to divide the variance of the function $\hat{f}$ among the components, and guarantees that it adds up the total variance of the function in the end.
-The variance decomposition property can also explain to us why the method is called ``functional ANOVA''.
+The variance decomposition property can also explain to us why the method is called functional ANOVA.
 In statistics, ANOVA stands for ANalysis Of VAriance.
 ANOVA refers to a collection of methods that analyze differences in the mean of a target variable.
 ANOVA works by dividing the variance and attributing it to the variables.
@@ -293,6 +293,28 @@ Or in mathematical terms, the ALE operator maps functions to orthogonal subspace
 As Apley and Zhu (2020) note, pseudo-orthogonality may be more desirable than hierarchical orthogonality, because it does not entangle marginal effects of the features.
 Furthermore, ALE does not require estimation of the joint distribution; the components can be estimated in a hierarchical manner, which means that calculating the 2D ALE for features 1 and 2 requires only the calculations of individual ALE components of 1 and 2 and the intercept term in addition.
 
+
+## Decomposing Tree Ensembles
+
+@yang2024inherently proposed functional decomposition of tree ensembles, for example trained with XGBoost.
+Their proposal consists of two parts: a decomposition procedure and a set of training constraints to make the decomposition more interpretable.
+
+The strategy to get from an ensemble of trees to the functional composition involves aggregation, purification, and attribution.
+First each tree is decomposed into decision rules, with each leaf node becoming a decision rule.
+These rules are then sorted by the features they use.
+For example, all rules using only feature $X_1$ are collected and used to estimate the main effect $f_1$.
+The same is done for all other main effects and interactions.
+However, this decomposition wouldn't be unique since, for example, you could absorb the main effect of $X_1$ into the interaction term of $X_1$ and $X_2$.
+They "purify" the components to enforce zero-means and orthogonality constraints (should sound familiar by now).
+In the attribution step  feature contributions for each data point are computed and aggregated across the data to get global importance values for each feature.
+The individual contributions are the same as the [Shapley values](#shapley).
+
+The other suggestion in the paper is to add constraints to the training so that the functional decomposition can be better interpreted.
+This includes simple things like setting the maximum tree depth low so that you control the maximum number of features that can interact.
+For example, setting the maximum depth to two makes the model have only main effects and two-way interactions, but no higher-order interactions.
+Other suggestions include monotonicity constraints, reduced number of bins, and interaction constraints.
+They also introduce a post-processing step for pruning effects from the functional decomposition.
+
 ## Statistical Regression Models
 
 This approach ties in with [interpretable models](#simple), in particular [generalized additive models](#extend-lm).
@@ -311,7 +333,7 @@ Viewing the linear regression model through the lens of functional decomposition
 
 The generalized additive model relaxes the second assumption by allowing more flexible functions $\hat{f}_j$ through the use of splines.
 Interactions can also be added, but this process is rather manual.
-Approaches such as GA2M attempt to add 2-way interactions automatically to a GAM. [@caruana2015intelligiblea]
+Approaches such as GA2M attempt to add 2-way interactions automatically to a GAM. [@caruana2015intelligible]
 
 Thinking of a linear regression model or a GAM as functional decomposition can also lead to confusion.
 If you apply the decomposition approaches from earlier in the chapter (generalized functional ANOVA and accumulated local effects), you may get components that are different from the components read directly from the GAM.
@@ -372,6 +394,9 @@ As a consequence, adding all PDPs for all subsets does not yield the original fu
 But could we adjust the PDP, perhaps by removing all lower effects?
 Yes, we could, but we would get something similar to the functional ANOVA.
 However, instead of integrating over a uniform distribution, the PDP integrates over the marginal distribution of $X_{-S}$, which is estimated using Monte Carlo sampling.
+
+
+
 
 ## Strengths
 
