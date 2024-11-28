@@ -1,10 +1,22 @@
 # Methods Overview
 
-The previous chapters were very theoretical.
-We will soon get into the actual methods, but before that I want to give you a "map" of the approaches for interpretable machine learning.
+<!-- 
+
+TODOs:
+
+- Link each to the goals of interpretability
+0 
+
+-->
+
+
+This chapter will get more into the weeds of what options we have to make machine learning more interpretable, while the previous chapter was a more general primer on interpretability.
+The goal of this chapter is to provide a map of approaches so that when diving into the individual methods, you still realize you are in a forest when looking at an individual trees. 
+
+@fig-taxonomy provides a taxonomy of the different approaches.
 
 ```{mermaid}
-%%| label: taxonomy
+%%| label: fig-taxonomy
 %%| fig-cap: Short taxonomy of IML methods which also reflects the structure of the book.
 %%| fig-align: center
 graph TD
@@ -17,65 +29,88 @@ graph TD
     D --> G[global]
 ```
 
+In general, we can distinguish between interpretability by design and post hoc interpretability.
+**Interpretability by design** means that we train inherently interpretable models, like using logistic regression instead of a random forest.
+**Post-hoc interpretability** means that we use an interpretability method after the model has been trained.
+Post-hoc interpretation methods can be **model-agnostic**, like permutation feature importance or **model-specific**, like analyzing the features learned by a neural network.
+Model-agnostic methods can be further divided into **local** methods which focus on individual predictions, and **global** methods which focus on datasets.
+This book focuses on post-hoc model-agnostic methods, but also covers basic models that are interpretable by design and model-specific methods for neural networks.
 
-In general we can distinguish between interpretability by design and post-hoc interpretability.
-By design means that we already incorporate interpretability when training the model, like using logistic regression instead of a random forest, or using constraints for xgboost to only model monotonic relations.
-Post-hoc interpretability means that we apply some IML method after the model was trained.
-Post-hoc methods can be model-agnostic, like computing permutation feature importance or specific to a certain type of model, like analyzing the features learned by a neural network.
-I will introduce these categories separately, but its useful to think of them as complementary, not "either-or".
-
-When it comes to this book, here is how the categories are weighted:
-
-- "by-design": Only the basic ones
-- "model-agnostic": Clearly the focus of the book
-- "model-specific": Only containing methods specific to neural networks.
-
-<!-- 
-
-TODO: Include the 3 images
-
--->
-
-
+Let's look into each category of interpretability, understand what makes them different, learn about theirs strengths and weaknesses, and ultimately see that it's not an either-or decision.
+Strengths and weaknesses strongly depends on the [goal of interpretation](#goals).
 
 ## Interpretable models by design 
 
-With "by-design", I mean ML algorithms that have constraints to produce interpretable models.
-That's why this approach may also be called **intrinsically** or **inherently** interpretable models.
-Interpretability by design is a spectrum:
-Let's call these two ends "inherently interpretable" and "enhanced interpretability". TODO: find better names.
-One one end, you have ML algorithms like linear regression which only produces linear models and which may be seen as completely interpretable (not everyone would agree, though).
-On the other end of interpretability-by-design, you have slight modifications of complex models to make them more interpretable, like restricting the tree depth of a tree ensemble so that it only contains main effects and interactions between two features.
-So this other end of the spectrum kind of incldues "interpretability by accident" or rather "interpretability because this simple model was good enough".
-No matter where on the spectrum, interprebaility by design is all about setting constraints already dureing the model training, it therefore is a modification of the ML algorithm or training process (can also mean making features more interpretable).
-This can range from making sure that somehow the entire model is interpretable to just "increasing" interpretability by only allowing monotonic relations to be modeled.
+Interpretability by design is decided on the level of the machine learning *algorithm*.
+If you want an ML algorithm that produces interpretable models, the algorithm has to constrain the search of models to those that are interpretable.
+The simplest example is linear regression:
+When you use ordinary least squares to fit/train a linear regression model, you are using an algorithm that will only find models that are linear in the input features.
+Models that are interpretable by design are also called **intrinsically** or **inherently** interpretable models.
 
-![](./images/specific-black-box.png)
+![](./images/interpretable-box.png)
 
-This book covers the most basic interpretability by design approaches: [linear regression](#limo), [logistic regression](#logistic), [other linear model extensions](#extend-lm), [decision trees](#tree), [decision rules](#rules), and [RuleFit](#rulefit).
-This field is much, much bigger than I represent in the book, and purpose is rather to introduce the basics, since many approaches are building upon these standard versions presented here.
+This book covers the most basic interpretability by design approaches:
 
-In general interpretability-by-design means there are coefficients to interpret, or decions-rule structures or prototypes to understand the prediction with, like  Interpretability by design can get fairly complex and stretch as far as the interpretation of the word "interpretation" can go.
-What they have in common is that they have a prescribed way of how to interpret them.
-Often described by the authors of the methods themselves.
+- [Linear regression](#limo)
+- [Logistic regression](#logistic)
+- [Linear model extensions](#extend-lm)
+- [Decision trees](#tree)
+- [Decision rules](#rules)
+- [RuleFit](#rulefit)
 
-What's currently completely missing from the book are the new and the shiny, and the ones where it's even harder to clearly say yes to whether they are truly interpretable. 
-Some examples:
 
-- Prototype-based neural network for image classification [@ma2024interpretable]
+<!-- more than completely interpretable models -->
+But these are only the most basic ones.
+Since interpretability is such a fluffy concept, the section of interpretable models is huge and the models can be very different.
+Just a few examples:
+
+
+- Prototype-based neural network for image classification [@ma2024interpretable]. Here the interpretable part is that a classification is a weighted sum of prototype images with highlighted sections of the image. An example of case-based reasoning.
 - @yang2024inherently and suggest "inherently interpretable tree ensemble" and one part is to adjust hyperparameters (like maximum tree depth of only 2 or 3) and adding monotonicity constraint among others to make them more interpretable by design. The paper also introduces other pruning steps to reduce number of effects. 
+- TODO: more examples here
 
 
-But it is a spectrum, there is no magical cut-off between an "inherently" interpretable model and a complex model made more interpretable by designing it a bit differently.
-But what is clear: Interpretability-by-design is "bought" by adding constraints that forces the models to take on an interpretable shape.:e 
+All interpretability-by-design approaches have in common that they affect how the final model looks like.
+It relies to using specific constraints in the training process so that at the end of the process "interpretable" models come out.
+What is then interpretable is very broad and very different across proposed ML algorithms.
+
+<!-- Strengths -->
+
+CONTINUE HERE
+
+Strong on these goals: Insight into the model, justification as long as there is a match between interpretability of the model towards target audience.
+Justification is very strong, especially, by definition, for the established things like, logistic regression in medical research.
+But since the models are so diverse and their interpretability mode as well, can't give definit answer on how well they match the goals, just some general thoughts.
+
+Often well-established, like logistic regression in clinical research.
+
+However, interpretability-by-design is itself bigger than just intepretability.
+Since when you can design for interpretability, you typically also design for other things, like robustness and infusion of domain knowledge.
+
+
+<!-- Limitations -->
+Not so strong on these goals:
+Insight into the data is only given when the model structure and assumptions reflect reality.
+Is your true outcome in reality a weighted sum of the inputs?
+
+
+
+Not agreed upon if its really interpretable.
+
+Has a cost: restricting to interrpetable models may exclude models that have way better predictive performance.
+For example, winners of Kaggle are typically xgboost for tabular dta and neural networks for image.
 Adding constraints has the potential of making the model less performant.
 In terms of a search, it makes the search space smaller.
 Let's say that the optimal model would be a support vector machine, but if you only allow linear regression mdoels, you will have a sub-optimal model.
 So there is typically a trade-off between interpretability by design and predictive performance.
-By definition it has to be smaller or equal.
 
-However, interpretability-by-design is itself bigger than just intepretability.
-Since when you can design for interpretability, you typically also design for other things, like robustness and infusion of domain knowledge.
+
+Conceptual problem: When it comes to discovery, we kind of rely on the the model being a good representation of reality.
+Difficutl to argue when there are more predictive models.
+And often relies on assumptions
+When used for answering questions, they rely on assumptions that the model reflects reality ("Is the ")
+
+Rashomon effect:
 
 
 ## Post-Hoc Interpretability
@@ -187,6 +222,23 @@ In this book, you will learn about the following model-agnostic global interpret
 * [Global surrogate models](#global) replaces the original model with a simpler model for interpretation.
 * [Prototypes and criticisms](#proto) are representative data point of a distribution and can be used to enhance interpretability.
 
+
+
+<!-- strengths and limitations -->
+For the goal of model improvements, global methods are king.
+For justification of the model, they may also be very useful, but of course less so when it comes to justifying individual predictions, that's what local methods are for.
+
+
+::: {.callout-tip}
+
+Model-agnostic interpretation methods are for entire datasets.
+But you are typically free to modify that dataset before e.g. computing feature importance or plotting an effect.
+By subsetting your data, you can turn these "global" methods into "group-wise" methods, which also bridge the divide between global and local methods.
+We will see this in action in the examples in this book.
+
+:::
+
+
 #### Local Model-Agnostic Methods {#local-methods}
 
 Local interpretation methods explain individual predictions.
@@ -202,7 +254,10 @@ In this chapter, you will learn about the following local explanation methods:
 LIME and Shapley values are attribution methods, so that the prediction of a single instance is described as the sum of feature effects.
 Other methods, such as [counterfactual explanations](#counterfactual), are example-based.
 
-
+<!-- Strengths and Limitations -->
+When it comes to debugging the model, local methods are not the first pick.
+But they can be helpful in identifying specific ways in which your model has problems, especially if they are only for certain subsets of the data.
+You can also randomly sample data points, explain their predictions, and get an idea of how to improve the model.
 
 
 ### Model-specific methods
@@ -228,13 +283,22 @@ Second, the gradient can be utilized to implement interpretation methods that ar
 Also most other methods in this book are intended for the interpretation of models for tabular data.
 Image and text data require different methods.
 
-The next chapters cover the following techniques that answer different questions:
+<!-- Strengths and Limitations -->
+The biggest strength of these methods is to discover insights about the models themselves.
+This may also help for improving the model and justifying it towards other people.
+Model-specific methods can be helpful for debugging and improving the models, but it's difficult to make general statements as these may do so
+
+
+
+The neural network chapters cover the following techniques that answer different questions:
 
 - [Learned Features](#feature-visualization): What features has the neural network learned?
 - [Pixel Attribution (Saliency Maps)](#pixel-attribution): How did each pixel contribute to a particular prediction?
 - [Concepts](#neural-concepts): Which more abstract concepts has the neural network learned?
 -  [Adversarial Examples](#adversarial) are closely related to [counterfactual explanations](#counterfactual): How can we trick the neural network?
 -  [Influential Instances](#influential) is a more general approach with a fast implementation for gradient-based methods such as neural networks: How influential was a training data point for a certain prediction?
+
+
 
 
 
@@ -252,7 +316,8 @@ The lines are blurry anyways:
 
 - Many wouldn't hesitate to put "logistic regression" as interpretability-by-design. But to get the log odds, we have to do post-hoc interpretation, in the sense that we have to compute the log odds. It's just a transfomration of the coefficients, but where is the transiation between that and e.g. neuraon activation maximization?  
 - [SHAP](#shap) is a "model-agnostic" method, but when applied to a linear regression model, it gives you pre-defined effect values that are centered by the expected effects. If you had calculated the centered effects, then you would call it still intepretable by-design.
-- 
+- There are also approach that make models more interpretable, but only if you apply some post-hoc processes to them, like tree ensembles with post-hoc.
+- By-design, you can enforce xgboost to only boost monotonic relationships. You wouldn't call this approach fully interpretable, but it still is interpretability by design, since now you can do something like giving a sign for each feature saying whether increases in teh feature are related to rising or lowering predictions.
 
 
 
@@ -270,6 +335,7 @@ Examples for weighted sums:
 - WE have the linear regression model
 - But also the logistic model is a weighted sum, just on another level
 - same goes for all the lm extensions
+
 
 The weighted sums allow us to assign a value to a feature (coefficient or weight)
 
