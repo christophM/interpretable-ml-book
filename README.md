@@ -67,27 +67,32 @@ All notable changes to the book will be documented here.
 
 ### v3.0 (IN PROGRESS) [html version]
 
-
-- Renamed chapter "Local Surrogate (LIME)" to "LIME"
-- Renamed chapter "Global Surrogate" to "Surrogate Models"
-- Deleted "Scope of Interpretability" from Interpretability chapter, because it was partially redundant and not useful.
+- Renamed chapters to reflect the more established names:
+  - Local Surrogate (LIME) -> LIME
+  - Global Surrogate -> Surrogate Models
+  - SHAP (SHapley Additive exPlanations) -> SHAP 
+  - Pixel Attribution (Saliency Maps) -> Saliency Maps
 - Switched the order of global and local: Now local model-agnostic methods come before global methods.
 - Unified and improved the examples:
   - Train models just once
   - Measure and report performance (in Data chapter)
+  - Study correlations and mutual information
+  - Made examples in each chapter much more 
 - Strongly shortened the text between first word and first method:
+  - Scope of interpretability: Now part of Overview chapter.
   - removed preface by the author and moved relevant parts into about the book and introduction
-  - moved chapters "Datasets", "Terminology", "What is Machine Learning" into appendix
+  - moved chapters "Terminology" and "What is Machine Learning" into appendix
   - Moved short stories to the end of the book
 - Combined all the intro texts (e.g. global methods) into an overview chapter 
-- New content: 
-  - overview chapter
-  - new method chapter:
-    - ceteris paribus 
-    - LOCO
-  - penguins data exmaple
+- New chapters:
+  - Methods Overview 
+  - Goals of interpretability
+  - Ceteris Paribus 
+  - LOFO
 - Updated lots of references (and move them from footnotes to proper bibtex references).
 - Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, and less sensitive.
+- Deleted chapter "Other interpretable models": only contained naive bayes and knn, but raised more question than it answered.
+- Replaced contribute chapter with links to repo
 - Smaller errors fixed:
   - in chapter Learned Features -> Network Dissection -> Step 2: Retrieve network activations, quantile level was corrected to not depend on x, i.e.g T_k instead of T_k(x).
 
