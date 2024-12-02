@@ -2,14 +2,15 @@
 
 {{< include _setup.qmd >}}
 
-Permutation feature importance measures the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome.
-
-## Theory
+Permutation feature importance (PFI) measures the increase in the prediction error of the model after we permuted the feature's values, which breaks the relationship between the feature and the true outcome.
 
 The concept is really straightforward:
 We measure the importance of a feature by calculating the increase in the model's prediction error after permuting the feature.
 A feature is "important" if shuffling its values increases the model error, because in this case the model relied on the feature for the prediction.
 A feature is "unimportant" if shuffling its values leaves the model error unchanged, because in this case the model ignored the feature for the prediction.
+
+## Theory
+
 The permutation feature importance measurement was introduced by Breiman (2001)[@breiman2001random] for random forests.
 Based on this idea, Fisher, Rudin, and Dominici (2018) [@fisher2019all] proposed a model-agnostic version of the feature importance and called it model reliance.
 They also introduced more advanced ideas about feature importance, for example a (model-specific) version that takes into account that many prediction models may predict the data well.
@@ -26,6 +27,14 @@ Input: Trained model $\hat{f}$, feature matrix $X$, target vector $y$, error mea
     - Calculate permutation feature importance as quotient $FI_j= e_{perm}/e_{orig}$ or difference $FI_j = e_{perm}- e_{orig}$
 3. Sort features by descending FI.
 
+
+::: {.callout-tip}
+
+You can also use PFI with metrics where larger is better, like accuracy or AUC.
+Just make sure to swap roles of $e_{perm}$ and $e_{orig}$ in the ratio/difference. 
+
+:::
+
 Fisher, Rudin, and Dominici (2018) suggest in their paper to split the dataset in half and swap the values of feature j of the two halves instead of permuting feature j.
 This is exactly the same as permuting feature j, if you think about it.
 If you want a more accurate estimate, you can estimate the error of permuting feature j by pairing each instance with the value of feature j of each other instance (except with itself).
@@ -36,19 +45,50 @@ I can only recommend using the `n(n-1)` -method if you are serious about getting
 
 ## Always use test data for PFI 
 
-You should always use test data when computing permutation feature importance.
-The reason: PFI is based on error estimates.
-If you were to use training data, these error estimates would be overly optimistic.
-Extreme scenario: Features have zero information about the target, but your model is completely overfitting.
-If you were to use training data to estimate PFI, then many of these features would show up as "important" because the model overfits the training data.
-But PFI based on test data would show that none of them are important.
+Use test data to compute permutation feature importance.
+The reason: PFI is based on error estimates and estimating errors using training data, we get overly optimistic results, especially when the model is overfitting.
+Extreme scenario: A feature may have zero information about the target, but your model is completely overfitting using this feature.
+In this case, PFI based on training data would show this feature to be very important.
+But PFI based on test data would show the feature is irrelevant.
 
-But what if you want to know what the model actually **used**?
+What if you want to know what the model actually **used**?
 For that case we have better options such as [SHAP importance](#shap) or [PDP importance](#pdp) which don't rely on the error measure.
 
 :::
 
-In the following examples, I used test data to compute permutation feature importance.
+In the examples, I used test data to compute permutation feature importance.
+
+## Conditional feature importance
+
+Like all the model-agnostic methods, permutation feature importance has a problem when feature are dependent.
+Shuffling produces unrealistic or at least unlikely data points.
+And the PFI algorithm just uses these unrealistic data to get model prediction, to compute the loss, and then to compute the importance.
+The problem is the *marginal* version of PFI ignores dependencies.
+But there is also a *conditional* version of PFI.
+The conditional version samples from the conditional distribution $P(X_j| X_{-j})$ instead of the marginal distribution $P(X_j)$ (shuffling is a way to sample from the marginal distribution).
+By conditional sampling, we sample more realistic data point.
+
+However, sampling from the conditional distribution is difficult.
+It's an even more difficult task than our original machine learning task.
+But it can be simplified by making assumptions such as assuming a feature is only linearly correlated with other features:
+Here are some options for conditional sampling:
+
+- Compute PFI in subgroups of the data and aggregate them. Subgroups are based on splitting in correlated features [@molnar2023modelagnostic].
+- Use matching and imputation techniques to generate samples from the conditional distribution [@fisher2019all]
+- Use knockoffs [@watson2021testing].
+- For random forests there is a model-specific implementation [@strobl2008conditional,@debeer2020conditional], based on the original random forest importance [@breiman2001random]
+
+Conditional feature importance has a different interpretation from marginal PFI:
+
+- PFI measures the loss increase due to losing the feature information. 
+- Conditional importance measures the loss increase due to losing the information *unique* to that feature, information not encoded in other features. 
+
+Conditional importance can be a bit more difficult to interpret, since you also need an understanding how features are dependent on each other.
+That's why I'm a big fan of the subgroups approach (and wrote a paper about it): Computing the PFI by group allows you to keep the marginal interpretation.
+
+::: {.callout-warning}
+
+Two strongly dependent features will have a low to zero conditional PFI even when they are used by the model.
 
 ## Example and Interpretation
 
@@ -77,10 +117,33 @@ plot(importance) +
 There is a problem with how we permute:
 Since PFI of, e.g. body mass, is computed by permuting across all data, we mix weights from different penguin species.
 But we can simply adapt PFI by splitting our data by species, and permuting for each subset separately, so that we get one PFI per feature AND species.
-The results are displayed in @fig-importance-penguins-by-species.
+@fig-cor-by-species shows that we can reduce the correlation by subsetting by species.
 
 ```{r}
-#| label: fig-importance-penuins-by-species 
+#| label: fig-cor-by-species
+#| fig-cap: Correlation between body mass and flipper length by species subsets (and all together). Subsetting by species reduces the correlation.
+penguins_by_species <- penguins %>%
+  mutate(subset = "all") %>%
+  bind_rows(penguins %>% mutate(subset = species))
+
+cor_data <- penguins_by_species %>%
+  group_by(subset) %>%
+  dplyr::summarize(cor = cor(flipper_length_mm, body_mass_g, use = "complete.obs")) %>%
+  mutate(cor_label = paste("r =", round(cor, 2)))
+
+ggplot(penguins_by_species) + 
+  geom_point(aes(x = flipper_length_mm, y = body_mass_g, color = species)) + 
+  facet_wrap(~subset, scales = "free") + 
+  geom_label(data = cor_data, aes(x = -Inf, y = Inf, label = cor_label), 
+             hjust = -0.1, vjust = 1.5, inherit.aes = FALSE) + 
+  theme_minimal()
+```
+
+The results are displayed in @fig-importance-penguins-by-species.
+
+
+```{r}
+#| label: fig-importance-penguins-by-species 
 #| fig-cap: PFI by species. The results are quite similar to overal PFI and don't differ much by species.
 dat = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
   pred.penguins = Predictor$new(pengu_rf, data = penguins_test[penguins_test$species == species,], class="female")
@@ -90,10 +153,27 @@ dat = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
 })
 
 dat = do.call(rbind, dat)
-ggplot(dat) +
-  geom_point(aes(x = importance, y = feature, shape=species, color=species), size =3) 
+
+ggplot(dat) + 
+  geom_point(aes(x = importance, y = feature, shape = species, color = species), 
+             size = 3, position = position_jitter(width = 0, height = 0.2))
 ```
 
+
+
+```{r}
+# eval: false
+features = setdiff(names(penguins), "species")
+
+lapply(features, function(fname){
+  # TODO: train rpart predicting fname from the other features (except species) using penguins_train, and maxdepth of two
+  # TODO: create new penguins dataset based on `penguins_test` with column "subgroup" which is the predicted leaf node ID 
+  # TODO: Implement groupby (leaf node ID) and within each group, permute the feature (fname) and compute both original logloss on the subgroup before and ater permutation 
+  #  
+  # return version of penguins data with:
+})
+
+```
 
 
 **Bike sharing (regression)**
@@ -114,6 +194,8 @@ plot(importance) +
    scale_y_discrete("") +
    scale_x_continuous(limits = c(1, NA))
 ```
+
+
 
 
 ## Strengths
