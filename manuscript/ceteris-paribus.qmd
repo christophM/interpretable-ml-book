@@ -83,6 +83,43 @@ explainer <- DALEX::explain(bike_svm, data = bike_test[colnames(bike) != "cnt"],
 observation = bike_test[1,]
 ```
 
+Again we have to keep in mind when making changes to the features that they might break the dependence with the other data.
+Looking at correlation and other dependence measures can be helpful.
+
+::: {.callout-warning}
+
+Looking only at pairwise dependencies may be insufficient.
+@fig-pairwise-not-enough shows an example where we artificially change the bill depth feature of the lightest Gentoo penguin.
+The data point is realistic when we only look at the combination of body mass and bill depth.
+It's also realistic when we only look at bill depth and species.
+However, it's unrealistic when considering the new bill depth, body mass and species together.
+
+```{r}
+#| label: fig-pairwise-not-enough
+#| fig-cap: Manipulating a penguins bill depth, can create an unrealistic data point but when only looking at pairwise dependencies, we will overlook it. 
+
+
+dtpt <- penguins %>%
+        filter(species == "Gentoo") %>%
+        filter(body_mass_g == min(body_mass_g))
+
+ggplot(data = penguins, aes(x = bill_depth_mm, y = body_mass_g, color = species)) +
+  annotate("segment", x = dtpt$bill_depth_mm, xend = dtpt$bill_depth_mm + 3.3,
+                      y = dtpt$body_mass_g, yend=dtpt$body_mass_g, size=1,
+           arrow = arrow(length = unit(0.5, "cm"))) +
+  geom_point(data = dtpt, color="red", fill="red", shape=21, size = 4) + 
+  geom_point() +
+  xlab("Bill depth in mm") +
+  ylab("Body mass in grams")
+
+```
+
+
+
+:::
+
+
+
 Next we study the SVM predicting the number of rented bikes based on weather and seasonal information. 
 We pick a `r tolower(observation$season)` day with `r tolower(observation$weather)` weather and see how changing the features would change the prediction. 
 But this time we visualize it for all of the numerical features:

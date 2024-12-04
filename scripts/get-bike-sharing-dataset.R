@@ -38,6 +38,8 @@ bike$hum = 100 * bike$hum
 # Throwing out the two first days
 bike = na.omit(bike)
 
+bike = bike[bike$hum != 0,]
+
 save(bike, file = sprintf('%sbike.RData', data_dir))
 write.csv(bike,file = sprintf('%sbike.csv', data_dir), row.names = FALSE)
 
