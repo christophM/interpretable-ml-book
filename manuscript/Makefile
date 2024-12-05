@@ -1,4 +1,4 @@
-.PHONY : ebook html kindle pdf preview sbrl
+.PHONY : ebook html kindle pdf print docx sbrl
 
 bookname = iml
 
@@ -10,6 +10,7 @@ kindle : output/kindle-$(bookname).epub
 print: output/print-$(bookname).pdf
 ebook: output/ebook-$(bookname).epub
 pdf: output/pdf-$(bookname).pdf
+beta-reader: output/beta-reader-$(bookname).docx
 
 
 COMMON_BOOK_FILES = $(wildcard *.qmd) $(wildcard *.qmd) references.bib _quarto.yml
@@ -39,10 +40,12 @@ output/pdf-$(bookname).pdf : $(COMMON_BOOK_FILES) _quarto-pdf.yml  latex/
 	quarto render --profile pdf --to pdf --no-cache
 	mv _book/$(bookname).pdf output/pdf-$(bookname).pdf 
 
-
-output/leanpub/sample-$(bookname).pdf: output/leanpub/$(bookname).pdf
+output/sample-$(bookname).pdf: output/pdf-$(bookname).pdf
 	pdftk output/pdf-$(bookname).pdf cat 1-40 output output/leanpub/sample-pdf-$(bookname).pdf
 
+output/beta-reader-$(bookname).docx: $(COMMON_BOOK_FILES)
+	quarto render --to docx --no-cache
+	mv _book/$(bookname).docx output/beta-reader-$(bookname).docx
 
 editing: *.qmd _quarto-editing.yml latex _quarto.yml
 	mkdir -p output/editing
