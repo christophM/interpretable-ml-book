@@ -36,7 +36,7 @@ Feature visualization for a unit of a neural network is done by finding the inpu
 
 "Unit" refers either to individual neurons, channels (also called feature maps), entire layers or the final class probability in classification (or the corresponding pre-softmax neuron, which is recommended).
 Individual neurons are atomic units of the network, so we would get the most information by creating feature visualizations for each neuron.
-But there is a problem: 
+But there is a problem:
 Neural networks often contain millions of neurons.
 Looking at each neuron's feature visualization would take too long.
 The channels (sometimes called activation maps) as units are a good choice for feature visualization.
@@ -155,7 +155,7 @@ We'll now look more closely at Network Dissection to find out how interpretable 
 
 ### Network Dissection Algorithm
 
-Network Dissection has three steps: 
+Network Dissection has three steps:
 
 1. Get images with human-labeled visual concepts, from stripes to skyscrapers.
 1. Measure the CNN channel activations for these images.
@@ -165,7 +165,7 @@ The following figure visualizes how an image is forwarded to a channel and match
 
 ![For a given input image and a trained network (fixed weights), we propagate the image forward to the target layer, upscale the activations to match the original image size and compare the maximum activations with the ground truth pixel-wise segmentation. Figure originally from http://netdissect.csail.mit.edu/.](./images/dissection-network.png)
 
-**Step 1: Broden dataset** 
+**Step 1: Broden dataset**
 
 The first difficult but crucial step is data collection.
 Network Dissection requires pixel-wise labeled images with concepts of different abstraction levels (from colors to street scenes).
@@ -203,7 +203,7 @@ $$IoU_{k,c}=\frac{\sum|M_k(x)\bigcap{}L_c(x)|}{\sum|M_k(x)\bigcup{}L_c(x)|}$$
 where $|\cdot|$ is the cardinality of a set.
 Intersection over union compares the alignment between two areas.
 $IoU_{k,c}$ can be interpreted as the accuracy with which unit k detects concept c.
-We call unit k a detector of concept c when $IoU_{k,c}>0.04$. 
+We call unit k a detector of concept c when $IoU_{k,c}>0.04$.
 This threshold was chosen by Bau & Zhou et al (2017).
 
 The following figure illustrates intersection and union of activation mask and concept mask for a single image:
@@ -219,14 +219,15 @@ The following figure shows a unit that detects dogs:
 ### Experiments
 
 The Network Dissection authors trained different network architectures (AlexNet, VGG, GoogleNet, ResNet) from scratch on different datasets (ImageNet, Places205, Places365).
-ImageNet contains 1.6 million images from 1000 classes that focus on objects. [@deng2009imagenet]
+ImageNet contains 1.6 million images from 1000 classes that focus on objects.
+[@deng2009imagenet]
 Places205 and Places365 contain 2.4 million / 1.6 million images from 205 / 365 different scenes.
 The authors additionally trained AlexNet on self-supervised training tasks such as predicting video frame order or colorizing images.
 For many of these different settings, they counted the number of unique concept detectors as a measure of interpretability.
 Here are some of the findings:
 
 - The networks detect lower-level concepts (colors, textures) at lower layers and higher-level concepts (parts, objects) at higher layers.
-  We've already seen this in the [Feature Visualizations](#feature-visualization).
+We've already seen this in the [Feature Visualizations](#feature-visualization).
 - Batch normalization reduces the number of unique concept detectors.
 - Many units detect the same concept.
 For example, there are 95 (!) dog channels in VGG trained on ImageNet when using $IoU \geq 0.04$ as detection cutoff (4 in conv4_3, 91 in conv5_3, see [project website](http://netdissect.csail.mit.edu/dissect/vgg16_imagenet/)).
@@ -238,18 +239,18 @@ For example, there are 95 (!) dog channels in VGG trained on ImageNet when using
 - Networks trained on self-supervised tasks have fewer unique detectors compared to networks trained on supervised tasks.
 - In transfer learning, the concept of a channel can change. For example, a dog detector became a waterfall detector. This happened in a model that was initially trained to classify objects and then fine-tuned to classify scenes.
 - In one of the experiments, the authors projected the channels onto a new rotated basis.
-  This was done for the VGG network trained on ImageNet.
-  "Rotated" does not mean that the image was rotated.
-  "Rotated" means that we take the 256 channels from the conv5 layer and compute 256 new channels as linear combinations of the original channels.
-  In the process, the channels get entangled.
-  Rotation reduces interpretability, i.e. the number of channels aligned with a concept decreases.
-  The rotation was designed to keep the performance of the model the same.
-  The first conclusion:
-  Interpretability of CNNs is axis-dependent.
-  This means that random combinations of channels are less likely to detect unique concepts.
-  The second conclusion:
-  Interpretability is independent of discriminative power.
-  The channels can be transformed with orthogonal transformations while the discriminative power remains the same, but interpretability decreases. 
+This was done for the VGG network trained on ImageNet.
+"Rotated" does not mean that the image was rotated.
+"Rotated" means that we take the 256 channels from the conv5 layer and compute 256 new channels as linear combinations of the original channels.
+In the process, the channels get entangled.
+Rotation reduces interpretability, i.e. the number of channels aligned with a concept decreases.
+The rotation was designed to keep the performance of the model the same.
+The first conclusion:
+Interpretability of CNNs is axis-dependent.
+This means that random combinations of channels are less likely to detect unique concepts.
+The second conclusion:
+Interpretability is independent of discriminative power.
+The channels can be transformed with orthogonal transformations while the discriminative power remains the same, but interpretability decreases.
 
 The authors also used Network Dissection for Generative Adversarial Networks (GANs).
 You can find Network Dissection for GANs on [the project's website](https://gandissect.csail.mit.edu/).
@@ -278,28 +279,28 @@ Finally, feature visualizations make **great desktop wallpapers and T-shirt prin
 ## Limitations
 
 **Many feature visualization images are not interpretable** at all, but contain some abstract features for which we have no words or mental concept.
-  The display of feature visualizations along with training data can help.
- The images still might not reveal what the neural network reacted to and only state something like "maybe there has to be yellow in the images".
+The display of feature visualizations along with training data can help.
+The images still might not reveal what the neural network reacted to and only state something like "maybe there has to be yellow in the images".
 Even with Network Dissection some channels are not linked to a human concept.
 For example, layer conv5_3 from VGG trained on ImageNet has 193 channels (out of 512) that could not be matched with a human concept.
 
 There are **too many units to look at**, even when "only" visualizing the channel activations.
-  For the Inception V1 architecture, for example, there are already over 5000 channels from nine convolutional layers.
+For the Inception V1 architecture, for example, there are already over 5000 channels from nine convolutional layers.
 If you also want to show the negative activations plus a few images from the training data that maximally or minimally activate the channel (let's say four positive, four negative images), then you must already display more than 50 000 images.
 At least we know -- thanks to Network Dissection -- that we do not need to investigate random directions.
 
 **Illusion of interpretability?**
-  The feature visualizations can convey the illusion that we understand what the neural network is doing.
-  But do we really understand what is going on in the neural network?
-  Even if we look at hundreds or thousands of feature visualizations, we cannot understand the neural network.
-  The channels interact in a complex way, positive and negative activations are unrelated, multiple neurons might learn very similar features and for many of the features we do not have equivalent human concepts.
-  We must not fall into the trap of believing we fully understand neural networks just because we believe we saw that neuron 349 in layer 7 is activated by daisies.
-  Network Dissection showed that architectures like ResNet or Inception have units that react to certain concepts.
-  But the IoU is not that great and often many units respond to the same concept and some to no concept at all.
-  The channels are not completely disentangled and we cannot interpret them in isolation.
+The feature visualizations can convey the illusion that we understand what the neural network is doing.
+But do we really understand what is going on in the neural network?
+Even if we look at hundreds or thousands of feature visualizations, we cannot understand the neural network.
+The channels interact in a complex way, positive and negative activations are unrelated, multiple neurons might learn very similar features and for many of the features we do not have equivalent human concepts.
+We must not fall into the trap of believing we fully understand neural networks just because we believe we saw that neuron 349 in layer 7 is activated by daisies.
+Network Dissection showed that architectures like ResNet or Inception have units that react to certain concepts.
+But the IoU is not that great and often many units respond to the same concept and some to no concept at all.
+The channels are not completely disentangled and we cannot interpret them in isolation.
 
 For Network Dissection, **you need datasets that are labeled on the pixel level** with the concepts.
-  These datasets take a lot of effort to collect, since each pixel needs to be labeled, which usually works by drawing segments around objects on the image.
+These datasets take a lot of effort to collect, since each pixel needs to be labeled, which usually works by drawing segments around objects on the image.
 
 Network Dissection only aligns human concepts with positive activations but not with negative activations of channels.
 As the feature visualizations showed, negative activations seem to be linked to concepts.

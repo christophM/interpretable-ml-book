@@ -4,12 +4,12 @@
 
 The biggest strength but also the biggest weakness of the [linear regression model](#limo) is that the prediction is modeled as a weighted sum of the features.
 In addition, the linear model comes with  many other assumptions.
-The bad news is (well, not really news) that all those assumptions are often violated in reality: 
+The bad news is (well, not really news) that all those assumptions are often violated in reality:
 The outcome given the features might have a non-Gaussian distribution, the features might interact and the relationship between the features and the outcome might be nonlinear.
 The good news is that the statistics community has developed a variety of modifications that transform the linear regression model from a simple blade into a Swiss knife.
 
 
-This chapter is definitely not your definite guide to extending linear models. 
+This chapter is definitely not your definite guide to extending linear models.
 Rather, it serves as an overview of extensions such as Generalized Linear Models (GLMs) and Generalized Additive Models (GAMs) and gives you a little intuition.
 After reading, you should have a solid overview of how to extend linear models.
 If you want to learn more about the linear regression model first, I suggest you read the [chapter on linear regression models](#limo), if you have not already.
@@ -74,17 +74,17 @@ gridExtra::grid.arrange(p.glm, p.interaction, p.gam)
 
 There's a solution to all these problems:
 
-**Problem**: The target outcome y given the features does not follow a Gaussian distribution.  
+**Problem**: The target outcome y given the features does not follow a Gaussian distribution.
 **Example**: Suppose I want to predict how many minutes I will ride my bike on a given day.
 As features I have the type of day, the weather and so on.
 If I use a linear model, it could predict negative minutes because it assumes a Gaussian distribution which does not stop at 0 minutes.
-Also if I want to predict probabilities with a linear model, I can get probabilities that are negative or greater than 1.  
+Also if I want to predict probabilities with a linear model, I can get probabilities that are negative or greater than 1.
 **Solution**: [Generalized Linear Models (GLMs)](#glm).
 
-**Problem**: The features interact.  
+**Problem**: The features interact.
 **Example**: On average, light rain has a slight negative effect on my desire to go cycling.
 But in summer, during rush hour, I welcome rain, because then all the fair-weather cyclists stay at home and I have the bicycle paths for myself!
-This is an interaction between time and weather that cannot be captured by a purely additive model.  
+This is an interaction between time and weather that cannot be captured by a purely additive model.
 **Solution**: [Adding interactions manually](#lm-interact).
 
 **Problem**: The true relationship between the features and y is not linear.  
@@ -106,11 +106,11 @@ The outcome can also be a category (cancer vs. healthy), a count (number of chil
 The linear regression model can be extended to model all these types of outcomes.
 This extension is called **Generalized Linear Models** or **GLMs** for short.
 Throughout this chapter, I'll use the name GLM for both the general framework and for particular models from that framework.
-The core concept of any GLM is: 
+The core concept of any GLM is:
 Keep the weighted sum of the features, but allow non-Gaussian outcome distributions and connect the expected mean of this distribution and the weighted sum through a possibly nonlinear function.
 For example, the logistic regression model assumes a Bernoulli distribution for the outcome and links the expected mean and the weighted sum using the logistic function.
 
-The GLM mathematically links the weighted sum of the features with the mean value of the assumed distribution using the link function g, which can be chosen flexibly depending on the type of outcome. 
+The GLM mathematically links the weighted sum of the features with the mean value of the assumed distribution using the link function g, which can be chosen flexibly depending on the type of outcome.
 
 $$g(E_Y(y|x))=\beta_0+\beta_1{}x_{1}+\ldots{}\beta_p{}x_{p}$$
 
@@ -119,7 +119,7 @@ The link function g, the weighted sum $X^T\beta$ (sometimes called linear predic
 
 The exponential family is a set of distributions that can be written with the same (parameterized) formula that includes an exponent, the mean and variance of the distribution and some other parameters.
 I will not go into the mathematical details because this is a very big universe of its own that I do not want to enter.
-Wikipedia has a neat [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions). 
+Wikipedia has a neat [list of distributions from the exponential family](https://en.wikipedia.org/wiki/Exponential_family#Table_of_distributions).
 Any distribution from this list can be chosen for your GLM.
 Based on the type of the outcome you want to predict, choose a suitable distribution.
 Is the outcome a count of something (e.g. number of children living in a household)?
@@ -151,7 +151,7 @@ $$P(y=1)=\frac{1}{1+exp(-x^{T}\beta)}$$
 Each distribution from the exponential family has a canonical link function that can be derived mathematically from the distribution.
 The GLM framework makes it possible to choose the link function independently of the distribution.
 How to choose the right link function?
-There's no perfect recipe. 
+There's no perfect recipe.
 You take into account knowledge about the distribution of your target, but also theoretical considerations and how well the model fits your actual data.
 For some distributions the canonical link function can lead to values that are invalid for that distribution.
 In the case of the exponential distribution, the canonical link function is the negative inverse, which can lead to negative predictions that are outside the domain of the exponential distribution.
@@ -165,10 +165,14 @@ If you do not like coffee, pretend it is about tea.
 Along with number of cups, you record your current stress level on a scale of 1 to 10, how well you slept the night before on a scale of 1 to 10 and whether you had to work on that day.
 The goal is to predict the number of coffees given the features stress, sleep and work.
 I simulated data for 200 days.
-Stress and sleep were drawn uniformly between 1 and 10 and work yes/no was drawn with a 50/50 chance (what a life!). 
+Stress and sleep were drawn uniformly between 1 and 10 and work yes/no was drawn with a 50/50 chance (what a life!).
 For each day, the number of coffees was then drawn from a Poisson distribution, modelling the intensity $\lambda$ (which is also the expected value of the Poisson distribution) as a function of the features sleep, stress and work.
 You can guess where this story will lead:
-*"Hey, let us model this data with a linear model ... Oh it does not work ... Let's try a GLM with Poisson distribution ... SURPRISE! Now it works!".*
+*"Hey, let us model this data with a linear model ...
+Oh it does not work ...
+Let's try a GLM with Poisson distribution ...
+SURPRISE!
+Now it works!".*
 I hope I did not spoil the story too much for you.
 
 Let's look at the distribution of the target variable, the number of coffees on a given day:
@@ -196,7 +200,7 @@ ggplot(tab) +
 On `r tab[1,2]` of the `r n` days you had no coffee at all and on the most extreme day you had `r tab[nrow(tab),1]`.
 Let's naively use a linear model to predict the number of coffees using sleep level, stress level and work yes/no as features.
 What can go wrong when we falsely assume a Gaussian distribution?
-A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights. 
+A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights.
 A more obvious problem is that the predictions do not match the "allowed" domain of the true outcome, as the following figure shows.
 
 ```{r}
@@ -212,11 +216,11 @@ ggplot(pred.gauss) +
 
 The linear model does not make sense, because it predicts negative number of coffees.
 This problem can be solved with Generalized Linear Models (GLMs).
-We can change the link function and the assumed distribution. 
+We can change the link function and the assumed distribution.
 One possibility is to keep the Gaussian distribution and use a link function that always leads to positive predictions such as the log-link (the inverse is the exp-function) instead of the identity function.
-Even better: 
-We choose a distribution that corresponds to the data generating process and an appropriate link function. 
-Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as link function. 
+Even better:
+We choose a distribution that corresponds to the data generating process and an appropriate link function.
+Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as link function.
 In this case, the data was even generated with the Poisson distribution, so the Poisson GLM is the perfect choice.
 The fitted Poisson GLM leads to the following distribution of predicted values:
 
@@ -240,7 +244,7 @@ In the coffee count example, I used a GLM with Poisson distribution and log link
 
 $$ln(E(\text{coffee}|\text{str},\text{slp},\text{wrk}))=\beta_0+\beta_{\text{str}}x_{\text{str}}+\beta_{\text{slp}}x_{\text{slp}}+\beta_{\text{wrk}}x_{\text{wrk}}$$
 
-To interpret the weights we invert the link function so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome. 
+To interpret the weights we invert the link function so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome.
 
 $$E(\text{coffee}|\text{str},\text{slp},\text{wrk})=exp(\beta_0+\beta_{\text{str}}x_{\text{str}}+\beta_{\text{slp}}x_{\text{slp}}+\beta_{\text{wrk}}x_{\text{wrk}})$$
 
@@ -260,12 +264,12 @@ cc$ci = sprintf("%.2f [%.2f, %.2f]", cc$exp.beta, cc$`2.5 %`, cc$`97.5 %`)
 kableExtra::kbl(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2, booktabs = TRUE, caption = "Weights in the Poisson model") %>% kable_styling(position = "center")
 ```
 
-Increasing the stress level by one point multiplies the expected number of coffees by the factor `r round(cc["stress", "exp.beta"], 2)`. 
+Increasing the stress level by one point multiplies the expected number of coffees by the factor `r round(cc["stress", "exp.beta"], 2)`.
 Increasing the sleep quality by one point multiplies the expected number of coffees by the factor `r round(cc["sleep", "exp.beta"], 2)`.
 The predicted number of coffees on a work day is on average `r round(cc["workYES", "exp.beta"], 2)` times the number of coffees on a day off.
 In summary, the more stress, the less sleep and the more work, the more coffee is consumed.
 
-In this section you learned a little about Generalized Linear Models that are useful when the target does not follow a Gaussian distribution. 
+In this section you learned a little about Generalized Linear Models that are useful when the target does not follow a Gaussian distribution.
 Next, we look at how to integrate interactions between two features into the linear regression model.
 
 ## Interactions {#lm-interact}
@@ -324,8 +328,8 @@ Without an interaction term, the combined effect of a categorical and a numerica
 If we include the interaction, we allow the effect of the numerical features (the slope) to have a different value in each category.
 
 The interaction of two categorical features works similarly.
-We create additional features which represent combinations of categories. 
-Here's some artificial data containing working day (work) and a categorical weather feature (wthr): 
+We create additional features which represent combinations of categories.
+Here's some artificial data containing working day (work) and a categorical weather feature (wthr):
 
 ```{r}
 #| label: data-frame-lm-cat
@@ -334,7 +338,7 @@ kableExtra::kbl(x, booktabs = TRUE) %>% kable_styling(position = "center")
 
 ```
 
-Next, we include interaction terms: 
+Next, we include interaction terms:
 
 ```{r}
 #| label: data-frame-lm-cat2
@@ -351,10 +355,10 @@ Columns three and four are for the weather feature, which requires two columns b
 The rest of the columns capture the interactions.
 For each category of both features (except for the reference categories), we create a new feature column that is 1 if both features have a certain category, otherwise 0.
 
-For two numerical features, the interaction column is even easier to construct: 
+For two numerical features, the interaction column is even easier to construct:
 We simply multiply both numerical features.
 
-There are approaches to automatically detect and add interaction terms. 
+There are approaches to automatically detect and add interaction terms.
 One of them can be found in the [RuleFit chapter](#rulefit).
 The RuleFit algorithm first mines interaction terms and then estimates a linear regression model including interactions.
 
@@ -394,7 +398,7 @@ But the interaction effect only adds to the main effect of the temperature.
 Suppose it is a working day and we want to know what would happen if the temperature were 1 degree warmer today.
 Then we need to sum both the weights for "temp" and "workdayY:temp" to determine how much the estimate increases.
 
-It's easier to understand the interaction visually. 
+It's easier to understand the interaction visually.
 By introducing an interaction term between a categorical and a numerical feature, we get two slopes for the temperature instead of one.
 The temperature slope for days on which people do not have to work ('NO Y') can be read directly from the table (`r round(lm_summary_print['temp','Estimate'], 1)`).
 The temperature slope for days on which people have to work ('Y') is the sum of both temperature weights (`r round(lm_summary_print['temp','Estimate'], 1)`  `r round(lm_summary_print['workdayY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workdayY:temp','Estimate'], 1)`).
@@ -473,7 +477,7 @@ Other examples for feature transformations are the square root, the square funct
 Using a feature transformation means that you replace the column of this feature in the data with a function of the feature, such as the logarithm, and fit the linear model as usual.
 Some statistical programs also allow you to specify transformations in the call of the linear model.
 You can be creative when you transform the feature.
-The interpretation of the feature changes according to the selected transformation. 
+The interpretation of the feature changes according to the selected transformation.
 If you use a log transformation, the interpretation in a linear model becomes:
 "If the logarithm of the feature is increased by one, the prediction is increased by the corresponding weight."
 When you use a GLM with a link function that is not the identity function, then the interpretation gets more complicated, because you have to incorporate both transformations into the interpretation (except when they cancel each other out, like log and exp, then the interpretation gets easier).
@@ -490,7 +494,7 @@ For example, to make the model comparable to another study.
 **Generalized Additive Models (GAMs)**
 
 Why not 'simply' allow the (generalized) linear model to learn nonlinear relationships?
-That's the motivation behind GAMs. 
+That's the motivation behind GAMs.
 GAMs relax the restriction that the relationship must be a simple weighted sum, and instead assume that the outcome can be modeled by  a sum of arbitrary functions of each feature.
 Mathematically, the relationship in a GAM looks like this:
 
@@ -513,8 +517,8 @@ For example, to model the temperature with splines, we remove the temperature fe
 Usually you would have more spline basis functions, I only reduced the number for illustration purposes.
 The value for each instance of these new spline basis features depends on the instances' temperature values.
 Together with all linear effects, the GAM then also estimates these spline weights.
-GAMs also introduce a penalty term for the weights to keep them close to zero. 
-This effectively reduces the flexibility of the splines and reduces overfitting. 
+GAMs also introduce a penalty term for the weights to keep them close to zero.
+This effectively reduces the flexibility of the splines and reduces overfitting.
 A smoothness parameter that is commonly used to control the flexibility of the curve is then tuned via cross-validation.
 Ignoring the penalty term, nonlinear modeling with splines is fancy feature engineering.
 
@@ -527,7 +531,7 @@ kableExtra::kbl(head(model.matrix(mod.gam)), digits = 2, booktabs = TRUE)  %>% k
 ```
 
 Each row represents an individual instance from the data (one day).
-Each spline basis column contains the value of the spline basis function at the particular temperature values. 
+Each spline basis column contains the value of the spline basis function at the particular temperature values.
 The following figure shows how these spline basis functions look like:
 
 ```{r}
@@ -565,11 +569,11 @@ For example, at 0 degrees Celsius, the predicted number of bicycles is 3000 lowe
 
 ## Strengths
 
-All these extensions of the linear model are a bit of a universe in themselves. 
+All these extensions of the linear model are a bit of a universe in themselves.
 Whatever problems you face with linear models, **you will probably find an extension that fixes it**.
 
 Most methods have been used for decades.
-For example, GAMs are almost 30 years old. 
+For example, GAMs are almost 30 years old.
 Many researchers and practitioners from industry are very **experienced** with linear models and the methods are **accepted in many communities as status quo for modeling**.
 
 In addition to making predictions, you can use the models to **do inference**, draw conclusions about the data -- given the model assumptions are not violated.
@@ -646,7 +650,7 @@ Search for **zero-inflated Poisson regression**, **hurdle model**.
 
 I'm not sure what features need to be included in the model to draw correct causal conclusions.  
 For example, I want to know the effect of a drug on the blood pressure.
-The drug has a direct effect on some blood value and this blood value affects the outcome. 
+The drug has a direct effect on some blood value and this blood value affects the outcome.
 Should I include the blood value into the regression model?  
 Search for **causal inference**, **mediation analysis**.
 
@@ -657,4 +661,5 @@ I want to integrate prior knowledge into my models.
 Search for **Bayesian inference**.
 
 I'm feeling a bit down lately.  
-Search for **"Amazon Alexa Gone Wild!!! Full version from beginning to end"**.
+Search for **"Amazon Alexa Gone Wild!!!
+Full version from beginning to end"**.
