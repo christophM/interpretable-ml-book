@@ -174,7 +174,10 @@ This procedure ensures that we average over the marginal distribution of the fea
 
 M-plots average the predictions over the conditional distribution.
 
-\begin{align*}\hat{f}_{S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_s\right]\\&=\int_{X_C}\hat{f}(x_S, X_C)d\mathbb{P}(X_C|X_S = x_S)\end{align*}
+\begin{align*}
+\hat{f}_{S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_S\right]\\
+&=\int_{X_C}\hat{f}(x_S, X_C)d\mathbb{P}(X_C|X_S = x_S)
+\end{align*}
 
 The only thing that changes compared to PDPs is that we average the predictions conditional on each grid value of the feature of interest, instead of assuming the marginal distribution at each grid value.
 In practice, this means that we have to define a neighborhood, for example for the calculation of the effect of 30 m^2^ on the predicted house value, we could average the predictions of all houses between 28 and 32 m^2^.
@@ -183,7 +186,7 @@ ALE plots average the changes in the predictions and accumulate them over the gr
 
 \begin{align*}
 \hat{f}_{S,ALE}(x_S)=&\int_{z_{0,S}}^{x_S}E_{X_C|X_S = x_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\
-= & \int_{z_{0,S}}^{x_S}(\int_{x_C}\hat{f}^S(z_s,X_c)d\mathbb{P}(X_C|X_S = z_S)d{})dz_S-\text{constant}
+= & \int_{z_{0,S}}^{x_S}(\int_{x_C}\hat{f}^S(z_s,X_c)d\mathbb{P}(X_C|X_S = z_S))dz_S-\text{constant}
 \end{align*}
 
 The formula reveals three differences to M-Plots.
@@ -237,7 +240,7 @@ This effect is centered so that the mean effect is zero.
 
 $$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x^{(i)}_{j})$$
 
-The value of the ALE can be interpreted as the main effect of the feature at a certain  value compared to the average prediction of the data.
+The value of the ALE can be interpreted as the main effect of the feature at a certain value compared to the average prediction of the data.
 For example, an ALE estimate of -2 at $x_j=3$ means that when the j-th feature has value 3, then the prediction is lower by 2 compared to the average prediction.
 
 The quantiles of the distribution of the feature are used as the grid that defines the intervals.
@@ -251,7 +254,7 @@ This can lead to some weird ALE plots if the feature of interest is very skewed,
 ALE plots can also show the interaction effect of two features.
 The calculation principles are the same as for a single feature, but we work with rectangular cells instead of intervals, because we have to accumulate the effects in two dimensions.
 In addition to adjusting for the overall mean effect, we also adjust for the main effects of both features.
-This means that ALE for two features estimate the second-order effect, which does not include the main effects of the features.
+This means that ALE for two features estimates the second-order effect, which does not include the main effects of the features.
 In other words, ALE for two features only shows the additional interaction effect of the two features.
 I spare you the formulas for 2D ALE plots because they are long and unpleasant to read.
 If you are interested in the calculation, I refer you to the paper, formulas (13) -- (16).
@@ -284,7 +287,7 @@ p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) +
 ```
 
 In the previous figure, many cells are empty due to the correlation.
-In the ALE plot this can be visualized with a grayed out or darkened box.
+In the ALE plot, this can be visualized with a grayed-out or darkened box.
 Alternatively, you can replace the missing ALE estimate of an empty cell with the ALE estimate of the nearest non-empty cell.
 
 Since the ALE estimates for two features only show the second-order effect of the features, the interpretation requires special attention.
@@ -292,10 +295,9 @@ The second-order effect is the additional interaction effect of the features aft
 Suppose two features do not interact, but each has a linear effect on the predicted outcome.
 In the 1D ALE plot for each feature, we would see a straight line as the estimated ALE curve.
 But when we plot the 2D ALE estimates, they should be close to zero, because the second-order effect is only the additional effect of the interaction.
-ALE plots and PD plots differ in this regard:
-PDPs always show the total effect, ALE plots show the first- or second-order effect.
+ALE plots and PD plots differ in this regard: PDPs always show the total effect, while ALE plots show the first- or second-order effect.
 These are design decisions that do not depend on the underlying math.
-You can subtract the lower-order effects in a partial dependence plot to get the pure main or second-order effects or, you can get an estimate of the total ALE plots by refraining from subtracting the lower-order effects.
+You can subtract the lower-order effects in a partial dependence plot to get the pure main or second-order effects, or you can get an estimate of the total ALE plots by refraining from subtracting the lower-order effects.
 
 The accumulated local effects could also be calculated for arbitrarily higher orders (interactions of three or more features), but as argued in the [PDP chapter](#pdp), only up to two features makes sense, because higher interactions cannot be visualized or even interpreted meaningfully.
 
@@ -304,12 +306,12 @@ The accumulated local effects could also be calculated for arbitrarily higher or
 
 The accumulated local effects method needs -- by definition -- the feature values to have an order, because the method accumulates effects in a certain direction.
 Categorical features do not have any natural order.
-To compute an ALE plot for a categorical feature we have to somehow create or find an order.
+To compute an ALE plot for a categorical feature, we have to somehow create or find an order.
 The order of the categories influences the calculation and interpretation of the accumulated local effects.
 
 One solution is to order the categories according to their similarity based on the other features.
 The distance between two categories is the sum over the distances of each feature.
-The feature-wise distance compares either the cumulative distribution in both categories, also called Kolmogorov-Smirnov distance (for numerical features) or the relative frequency tables (for categorical features).
+The feature-wise distance compares either the cumulative distribution in both categories, also called the Kolmogorov-Smirnov distance (for numerical features) or the relative frequency tables (for categorical features).
 Once we have the distances between all categories, we use multi-dimensional scaling to reduce the distance matrix to a one-dimensional distance measure.
 This gives us a similarity-based order of the categories.
 
@@ -330,8 +332,7 @@ We repeat the procedure with the other seasonal pairs and reduce the resulting d
 Let's see ALE plots in action.
 I've constructed a scenario in which partial dependence plots fail.
 The scenario consists of a prediction model and two strongly correlated features.
-The prediction model is mostly a linear regression model, but does something weird at a combination of the two features for which we have never observed instances.
-
+The prediction model is mostly a linear regression model but does something weird at a combination of the two features for which we have never observed instances.
 ```{r}
 #| label: correlation-problem
 #| fig.cap: "Two features and the predicted outcome. The model predicts the sum of the two features (shaded background), with the exception that if x1 is greater than 0.7 and x2 less than 0.3, the model always predicts 2. This area is far from the distribution of data (point cloud) and does not affect the performance of the model and also should not affect its interpretation."
@@ -393,7 +394,7 @@ If you suspect that the model will later be used with differently distributed da
 ## Examples
 
 Turning to a real dataset, let us predict the [number of rented bikes](#bike-data) based on weather and day and check if the ALE plots really work as well as promised.
-We train a regression tree to predict the number of rented bicycles on a given day and use ALE plots to analyze how temperature, relative humidity and wind speed influence the predictions.
+We train a regression tree to predict the number of rented bicycles on a given day and use ALE plots to analyze how temperature, relative humidity, and wind speed influence the predictions.
 Let's look at what the ALE plots say:
 
 
@@ -449,7 +450,7 @@ ggplot(alecat1$results) +
 
 Since many of the features are related to weather, the order of the months strongly reflects how similar the weather is between the months.
 All colder months are on the left side (February to April) and the warmer months on the right side (October to August).
-Keep in mind that non-weather features have also been included in the similarity calculation, for example relative frequency of holidays has the same weight as the temperature for calculating the similarity between the months.
+Keep in mind that non-weather features have also been included in the similarity calculation; for example, relative frequency of holidays has the same weight as the temperature for calculating the similarity between the months.
 
 Next, we consider the second-order effect of humidity and temperature on the predicted number of bikes.
 Remember that the second-order effect is the additional interaction effect of the two features and does not include the main effects.
@@ -550,8 +551,7 @@ p$plot() +
   scale_x_continuous("Bill length in millimeters")
 ```
 
-The interaction plot shows really interesting effects that we couldn't see in the PDP, which is a nice property of the 2D-ALE, since it shows the pure interaction without the main effects.
-
+The interaction plot shows really interesting effects that we couldn't see in the PDP, which is a nice property of the 2D-ALE since it shows the pure interaction without the main effects.
 ## Strengths
 
 **ALE plots are unbiased**, which means they still work when features are correlated.
@@ -602,7 +602,7 @@ For ALE plots you can only check per interval whether the effect is different be
 The reason for this is that each estimation of a local effect in a cell uses a different number of data instances.
 As a result, all estimates have a different accuracy (but they are still the best possible estimates).
 The problem exists in a less severe version for main effect ALE plots.
-The number of instances is the same in all intervals, thanks to the use of quantiles as grid, but in some areas there will be many short intervals and the ALE curve will consist of many more estimates.
+The number of instances is the same in all intervals, thanks to the use of quantiles as a grid, but in some areas there will be many short intervals and the ALE curve will consist of many more estimates.
 But for long intervals, which can make up a big part of the entire curve, there are comparatively fewer instances.
 
 **Second-order effect plots can be a bit annoying to interpret**, as you always have to keep the main effects in mind.
@@ -628,5 +628,4 @@ Did I mention that [partial dependence plots](#pdp) and [individual conditional 
 =)
 
 ALE plots are implemented in R in the [ALEPlot R package](https://cran.r-project.org/web/packages/ALEPlot/index.html) by the inventor himself and once in the [iml package](https://cran.r-project.org/web/packages/iml/index.html).
-ALE also has a couple of Python implementations: [ALEPython](https://github.com/blent-ai/ALEPython), [Alibi](https://docs.seldon.io/projects/alibi/en/stable/index.html) and [PiML](https://selfexplainml.github.io/PiML-Toolbox/_build/html/index.html).
-
+ALE also has a couple of Python implementations: [ALEPython](https://github.com/blent-ai/ALEPython), [Alibi](https://docs.seldon.io/projects/alibi/en/stable/index.html), and [PiML](https://selfexplainml.github.io/PiML-Toolbox/_build/html/index.html).

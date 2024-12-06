@@ -14,8 +14,8 @@ Pixel attribution methods can be found under various names: sensitivity map, sal
 <!-- General idea and distinction -->
 Pixel attribution is a special case of feature attribution, but for images.
 Feature attribution explains individual predictions by attributing each input feature according to how much it changed the prediction (negatively or positively).
-The features can be input pixels, tabular data or words.
-[SHAP](#shap), [Shapley values](#shapley) and [LIME](#lime) are examples of general feature attribution methods.
+The features can be input pixels, tabular data, or words.
+[SHAP](#shap), [Shapley values](#shapley), and [LIME](#lime) are examples of general feature attribution methods.
 
 We consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
 The output of the neural network for image I is called $S(I)=[S_1(I),\ldots,S_C(I)]$.
@@ -26,7 +26,7 @@ The c indicates the relevance for the c-th output $S_C(I)$.
 There's a confusing amount of pixel attribution approaches.
 It helps to understand that there are two different types of attribution methods:
 
-**Occlusion- or perturbation-based**: Methods like [SHAP](#shap}) and [LIME](#lime) manipulate parts of the image to generate explanations (model-agnostic).
+**Occlusion- or perturbation-based**: Methods like [SHAP](#shap) and [LIME](#lime) manipulate parts of the image to generate explanations (model-agnostic).
 
 **Gradient-based**: Many methods compute the gradient of the prediction (or classification score) with respect to the input features.
 The gradient-based methods (of which there are many) mostly differ in how the gradient is computed.
@@ -42,13 +42,13 @@ If I were to increase the color values of the pixel, the predicted class probabi
 The larger the absolute value of the gradient, the stronger the effect of a change of this pixel.
 
 **Path-attribution methods** compare the current image to a reference image, which can be an artificial "zero" image such as a completely grey image.
-The difference in actual and baseline prediction is divided  among the pixels.
+The difference in actual and baseline prediction is divided among the pixels.
 The baseline image can also be multiple images: a distribution of images.
 This category includes model-specific gradient-based methods such as Deep Taylor and Integrated Gradients [@sundararajan2017axiomatic], as well as model-agnostic methods such as LIME and SHAP.
-Some path-attribution methods are "complete", meaning that the sum of the relevance scores for all input features is the difference between the prediction of the image and the prediction of a reference image.
+Some path-attribution methods are "complete," meaning that the sum of the relevance scores for all input features is the difference between the prediction of the image and the prediction of a reference image.
 Examples are SHAP and Integrated Gradients.
 For path-attribution methods, the interpretation is always done with respect to the baseline:
-The difference between classification scores of the actual image and the baseline image are attributed to the pixels.
+The difference between classification scores of the actual image and the baseline image is attributed to the pixels.
 The choice of the reference image (distribution) has a big effect on the explanation.
 The usual assumption is to use a "neutral" image (distribution).
 Of course, it is perfectly possible to use your favorite selfie, but you should ask yourself if it makes sense in an application.
@@ -129,9 +129,9 @@ Vanilla Gradient has a saturation problem, as explained in Avanti et al. (2017) 
 When ReLU is used, and when the activation goes below zero, then the activation is capped at zero and does not change any more.
 The activation is saturated.
 For example: The input to the layer is two neurons with weights $-1$ and $-1$ and a bias of $1$.
-When passing through the ReLU layer, the activation will be neuron1 + neuron2 if the sum of both neurons is $<1$
-If the sum of both is greater than 1, the activation will remain saturated at an activation of 1
-Also the gradient at this point will be zero, and Vanilla Gradient will say that this neuron is not important.
+When passing through the ReLU layer, the activation will be neuron1 + neuron2 if the sum of both neurons is $<1$.
+If the sum of both is greater than 1, the activation will remain saturated at an activation of 1.
+Also, the gradient at this point will be zero, and Vanilla Gradient will say that this neuron is not important.
 
 And now, my dear readers, learn another method, more or less for free: DeconvNet
 
@@ -169,7 +169,7 @@ And, as the name suggests, it is based on the gradient of the neural networks.
 Grad-CAM, like other techniques, assigns each neuron a relevance score for the decision of interest.
 This decision of interest can be the class prediction (which we find in the output layer), but can theoretically be any other layer in the neural network.
 Grad-CAM backpropagates this information to the last convolutional layer.
-Grad-CAM can be used with different CNNs: with fully-connected layers, for structured output such as captioning and in multi-task outputs, and for reinforcement learning.
+Grad-CAM can be used with different CNNs: with fully connected layers, for structured output such as captioning and in multi-task outputs, and for reinforcement learning.
 
 <!-- An intuitive explanation -->
 Let's start with an intuitive consideration of Grad-CAM.
@@ -181,10 +181,10 @@ There are k feature maps in the last convolutional layer, and I will call them $
 How can we "see" from the feature maps how the convolutional neural network has made a certain classification?
 In the first approach, we could simply visualize the raw values of each feature map, average over the feature maps and overlay this over our image.
 This would not be helpful since the feature maps encode information for **all classes**, but we are interested in a particular class.
-Grad-CAM has to decide how important each of the k feature map was to our class c that we are interested in.
+Grad-CAM has to decide how important each of the k feature maps was to our class c that we are interested in.
 We have to weight each pixel of each feature map with the gradient before we average over the feature maps.
 This gives us a heatmap which highlights regions that positively or negatively affect the class of interest.
-This heatmap is send through the ReLU function, which is a fancy way of saying that we set all negative values to zero.
+This heatmap is sent through the ReLU function, which is a fancy way of saying that we set all negative values to zero.
 Grad-CAM removes all negative values by using a ReLU function, with the argument that we are only interested in the parts that contribute to the selected class c and not to other classes.
 The word pixel might be misleading here as the feature map is smaller than the image (because of the pooling units) but is mapped back to the original image.
 We then scale the Grad-CAM map to the interval [0,1] for visualization purposes and overlay it over the original image.
@@ -215,14 +215,14 @@ This means that the gradients are globally pooled.
 
 ## Guided Grad-CAM
 
-From the description of Grad-CAM you can guess that the localization is very coarse, since the last convolutional feature maps have a much coarser resolution compared to the input image.
+From the description of Grad-CAM, you can guess that the localization is very coarse, since the last convolutional feature maps have a much coarser resolution compared to the input image.
 In contrast, other attribution techniques backpropagate all the way to the input pixels.
 They are therefore much more detailed and can show you individual edges or spots that contributed most to a prediction.
 A fusion of both methods is called Guided Grad-CAM.
 And it is super simple.
 You compute for an image both the Grad-CAM explanation and the explanation from another attribution method, such as Vanilla Gradient.
-The Grad-CAM output is then upsampled with bilinear interpolation, then both maps are multiplied element-wise.
-Grad-CAM works like a lense that focuses on specific parts of the pixel-wise attribution map.
+The Grad-CAM output is then upsampled with bilinear interpolation, and then both maps are multiplied element-wise.
+Grad-CAM works like a lens that focuses on specific parts of the pixel-wise attribution map.
 
 ## SmoothGrad
 
@@ -238,7 +238,7 @@ SmoothGrad works in the following way:
 Yes, it is that simple.
 Why should this work?
 The theory is that the derivative fluctuates greatly at small scales.
-Neural networks have no incentive during training to keep the gradients smooth, their goal is to classify images correctly.
+Neural networks have no incentive during training to keep the gradients smooth; their goal is to classify images correctly.
 Averaging over multiple maps "smooths out" these fluctuations:
 
 $$R_{sg}(x)=\frac{1}{N}\sum_{i=1}^n{}R(x+g_i),$$
@@ -247,22 +247,22 @@ Here, $g_i\sim{}N(0,\sigma^2)$ are noise vectors sampled from the Gaussian distr
 The "ideal" noise level depends on the input image and the network.
 The authors suggest a noise level of 10%-20%, which means that $\frac{\sigma}{x_{max} - x_{min}}$ should be between 0.1 and 0.2.
 The limits $x_{min}$ and $x_{max}$ refer to minimum and maximum pixel values of the image.
-The other parameter is the number of samples n, for which was suggested to use n = 50, since there are diminishing returns above that.
+The other parameter is the number of samples n, for which it was suggested to use n = 50, since there are diminishing returns above that.
 
 
 ## Examples
 
 Let's see some examples of what these maps look like and how the methods compare qualitatively.
-The network under examination is VGG-16 (Simonyan et al. 2014 [@simonyan2015very]) which was trained on ImageNet and can therefore distinguish more than 20,000 classes.
-For the following images we will create explanations for the class with the highest classification score.
+The network under examination is VGG-16 (Simonyan et al. 2014 [@simonyan2015very]), which was trained on ImageNet and can therefore distinguish more than 20,000 classes.
+For the following images, we will create explanations for the class with the highest classification score.
 
 These are the images and their classification by the neural network:
 
 ![Images of a dog classified as greyhound, a ramen soup classified as soup bowl, and an octopus classified as eel.](./images/original-images-classification.png)
 
 
-The image on the left with the honorable dog guarding the Interpretable Machine Learning book was classified as "Greyhound" with a probability of 35\% (seems like "Interpretable Machine Learning book" was not one of the 20k classes).
-The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with a probability of 50\%.
+The image on the left with the honorable dog guarding the Interpretable Machine Learning book was classified as "Greyhound" with a probability of 35% (seems like "Interpretable Machine Learning book" was not one of the 20k classes).
+The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with a probability of 50%.
 The third image shows an octopus on the ocean floor, which is incorrectly classified as "Eel" with a high probability of 70%.
 
 And these are the pixel attributions that aim to explain the classification:
@@ -278,7 +278,7 @@ And from here on, it gets a bit messier.
 The Vanilla Gradient method seems to fail for both the soup bowl and the octopus (or, as the network thinks, eel).
 Both images look like afterimages from looking into the sun for too long.
 (Please do not look at the sun directly).
-SmoothGrad helps a lot, at least the areas are more defined.
+SmoothGrad helps a lot; at least the areas are more defined.
 In the soup example, some of the ingredients are highlighted, such as the eggs and the meat, but also the area around the chopsticks.
 In the octopus image, mostly the animal itself is highlighted.
 For the soup bowl, Grad-CAM highlights the egg part and, for some reason, the upper part of the bowl.
@@ -287,13 +287,13 @@ The octopus explanations by Grad-CAM are even messier.
 You can already see here the difficulties in assessing whether we trust the explanations.
 As a first step, we need to consider which parts of the image contain information that is relevant to the image's classification.
 But then we also need to think about what the neural network might have used for the classification.
-Perhaps the soup bowl was correctly classified based on the combination of eggs and chopstick, as SmoothGrad implies?
+Perhaps the soup bowl was correctly classified based on the combination of eggs and chopsticks, as SmoothGrad implies?
 Or maybe the neural network recognized the shape of the bowl plus some ingredients, as Grad-CAM suggests?
 We just do not know.
 
 And that is the big issue with all of these methods.
 We do not have a ground truth for the explanations.
-We can only, in a first step, reject explanations that obviously make no sense (and even in this step we do not have strong confidence.
+We can only, in a first step, reject explanations that obviously make no sense (and even in this step we do not have strong confidence).
 The prediction process in the neural network is very complicated).
 
 ## Strengths
@@ -323,7 +323,7 @@ The paper "Sanity checks for saliency maps" [@adebayo2018sanity] investigated wh
 Insensitivity is highly undesirable, because it would mean that the "explanation" is unrelated to model and data.
 Methods that are insensitive to model and training data are similar to edge detectors.
 Edge detectors simply highlight strong pixel color changes in images and are unrelated to a prediction model or abstract features of the image, and require no training.
-The methods tested were  Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with Vanilla Gradient).
+The methods tested were Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with Vanilla Gradient).
 Vanilla Gradient and Grad-CAM passed the insensitivity check, while Guided Backpropagation and Guided Grad-CAM failed.
 However, the sanity checks paper itself has found some criticism from Tomsett et al. (2020) [@tomsett2020sanity] with a paper called "Sanity checks for caliency metrics" (of course).
 They found that there is a lack of consistency for evaluation metrics (I know, it is getting pretty meta now).
