@@ -23,23 +23,82 @@ The underlying prediction model is a random forest.
 #| fig-height: 4
 pred.bike = Predictor$new(bike_rf, bike_test)
 
-p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() + scale_x_continuous("Temperature") + 
+p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() +
+  scale_x_continuous("Temperature") +
   scale_y_continuous("Predicted bicycle rentals")
-p2 = FeatureEffect$new(pred.bike, "hum", method = "ice")$plot() + scale_x_continuous("Humidity") + scale_y_continuous("")
-p3 = FeatureEffect$new(pred.bike, "windspeed", method = "ice")$plot() + scale_x_continuous("Windspeed")+ scale_y_continuous("")
-gridExtra::grid.arrange(p1, p2, p3, ncol = 3)
+
+p2 = FeatureEffect$new(pred.bike, "hum", method = "ice")$plot() +
+  scale_x_continuous("Humidity") +
+  scale_y_continuous("") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank())
+
+p3 = FeatureEffect$new(pred.bike, "windspeed", method = "ice")$plot() +
+  scale_x_continuous("Windspeed") +
+  scale_y_continuous("") +
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_blank())
+
+# Combine plots with reduced spacing
+(p1 | p2 | p3) + plot_layout(guides = "collect", widths = c(1, 1, 1))
 ```
 
 All curves seem to follow the same course, so there are no obvious interactions.
+But we can also explore possible interactions by modifying the ICE plot. 
 
 ::: {.callout-tip}
 
-By coloring the lines based on another feature's value, you can see study interactions.
+By coloring the lines based on another feature's value, you can study interactions.
 
 :::
 
+@fig-ice-bike-colored shows again the ICE plot for humidity, with the difference that the lines are now colored by the season.
+This shows a couple of things:
+First -- and that's not surprising -- different seasons have different "intercepts".
+Meaning that, for example, winter days have an in general lower prediction and summer the highest ones, and that's independent of the humidity.
+But @fig-ice-bike-colored also shows that the effect of the humidity differs for the seasons:
+In winter, and increase in humidity only slightly reduced the predicted number of bike rentals.
+And the effect is rather linear.
+For summer, the predicted bike rentals stay more or less flat between 20% and 60% relative humidity and above that drop by quite a chunk.
+Humidity effects for spring and fall seem to be a mix of the "winter flatness" and the "summer jump".
+However, as indicated by the boxplots in @fig-ice-bike-colored, we shouldn't over-interpret very low humidity effects for summer and fall.
 
-Let's go back to the [penguin classification task](#penguins) and see how the prediction of each instance is related to the feature "bill_length_mm".
+```{r}
+#| label: fig-ice-bike-colored
+#| fig-cap: ICE curves for the random forest predicting bike rentals. Lines are colored by the season. Above the ICE plots are boxplots showing the distributions of humidity per season.
+dat = FeatureEffect$new(pred.bike, "hum", method = "ice")$results
+bike2 = bike_test
+bike2$.id = 1:nrow(bike_test)
+
+dat = merge(bike2[c(".id", "season")], dat, by = ".id")
+iceplot = ggplot(dat) +
+  geom_line(aes(group=.id, x=hum, y=.value, color=season), alpha=0.5) +
+  scale_y_continuous("Predicted bicycle rentals", limits=c(0, NA)) +
+  scale_color_viridis(discrete=TRUE) +
+  scale_x_continuous("Humidity")
+
+boxplots <- ggplot(bike) + 
+  geom_boxplot(aes(y = season, x = hum), width = 0.1) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    panel.grid = element_blank(),
+    panel.border = element_blank()
+  ) + 
+  coord_fixed(3.6)
+
+(boxplots / iceplot)
+
+```
+
+
+
+Let's go back to the [penguin classification task](#penguins) and see how the prediction of each instance is related to the feature `bill_length_mm`.
 We'll analyze a random forest that predicts the probability of a penguin being female given body measurements.
 
 ```{r}
@@ -48,13 +107,22 @@ We'll analyze a random forest that predicts the probability of a penguin being f
 pred.penguins = Predictor$new(pengu_rf, penguins_test, class = "female")
 ice = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "ice")$plot() + 
   scale_color_discrete(guide='none') + 
-  scale_y_continuous('P(female)')
+  scale_y_continuous('P(female)') +
+  scale_x_continuous("Bill length in mm")
 ice
 ```
 
 @fig-ice-penguins is a rather ugly ICE plot.
 But sometimes that's the reality.
 The reason is that the model is rather sure for most penguins and quickly changes between 0 and 1.
+
+
+::: {.callout-tip}
+
+If lines overlap heavily in a boxplot you can try to make them slightly transparent.
+If that doesn't help, you may be better off with a [partial dependence plot](#pdp).
+
+:::
 
 ## Centered ICE Plot
 
@@ -71,7 +139,6 @@ where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions 
 
 ### Example
 
-
 Let's have a look at centered ICE plots for the bicycle rental prediction:
 
 ```{r}
@@ -80,36 +147,19 @@ Let's have a look at centered ICE plots for the bicycle rental prediction:
 #| fig-height: 3.3
 predictor = Predictor$new(bike_rf, data = bike_test)
 ytext1 = sprintf("Different to prediction at temp = %.1f", min(bike$temp))
-ice1 = FeatureEffect$new(predictor, feature = "temp", center.at = min(bike$temp), method = "pdp+ice")$plot() +
+ice1 = FeatureEffect$new(predictor, feature = "temp", center.at = min(bike$temp), method = "ice")$plot() +
   scale_y_continuous(ytext1)
 ytext2 = sprintf("Different to prediction at hum = %.1f", min(bike$hum))
-ice2 = FeatureEffect$new(predictor, feature = "hum", center.at = min(bike$hum), method = "pdp+ice")$plot() +
+ice2 = FeatureEffect$new(predictor, feature = "hum", center.at = min(bike$hum), method = "ice")$plot() +
   scale_y_continuous(ytext2)
 ytext3 = sprintf("Different to prediction at windspeed = %.1f", min(bike$windspeed))
-ice3 = FeatureEffect$new(predictor, feature = "windspeed", center.at = min(bike$windspeed), method = "pdp+ice")$plot() +
+ice3 = FeatureEffect$new(predictor, feature = "windspeed", center.at = min(bike$windspeed), method = "ice")$plot() +
   scale_y_continuous(ytext3)
 gridExtra::grid.arrange(ice1, ice2, ice3, nrow = 1)
 ```
 
 The centered ICE plots make it easier to compare the curves of individual instances.
 This can be useful if we do not want to see the absolute change of a predicted value, but the difference in the prediction compared to a fixed point of the feature range.
-
-For example, take the penguin ICE plot for bill length and center the lines on the penguin with the shortest bill length.
-
-```{r}
-#|label: ice-penguins-centered
-#| fig-cap: !expr sprintf("Centered ICE plot for predicted P(female) by bill length. Lines are fixed to 0 at bill length %.0f. Compared to bill length %.0f, P(female) gets lower for increasing bill length.", min(penguins$bill_length_mm), min(penguins$bill_length_mm))
-#| fig-height: 4 
-
-predictor = Predictor$new(pengu_rf, data = penguins_test, class = "female")
-ice = FeatureEffect$new(predictor, feature = "bill_length_mm", center.at = min(penguins$bill_length_mm), method = "ice")
-ice$plot()  +
-  scale_color_discrete(guide='none') +
-  scale_y_continuous(sprintf('Difference in P(female) to bill length %.0f', min(penguins$bill_length_mm))) 
-```
-
-But still, this model does not lend itself to ICE plots very much.
-At least we know thanks to the ICE curves that most probability are either 0 or 1.
 
 
 ## Derivative ICE Plot

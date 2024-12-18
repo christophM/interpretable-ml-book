@@ -6,11 +6,10 @@
 ```{r}
 #| label: define custom_correlation_plot
 custom_correlation_plot <- function(dat){
-
   dat_clean <- na.omit(dat[, sapply(dat, is.numeric)])
   cor_matrix <- cor(dat_clean)
   cor_melt <- melt(cor_matrix)
-  cor_melt <- cor_melt[which(as.numeric(cor_melt$Var1) <= as.numeric(cor_melt$Var2)), ]
+  cor_melt <- cor_melt[which(as.numeric(cor_melt$Var1) < as.numeric(cor_melt$Var2)), ]
   ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
     geom_tile(color = "white") +
     geom_label(aes(label = round(value, 2)), color = "black", size = 5, fill="white") +
@@ -21,7 +20,7 @@ custom_correlation_plot <- function(dat){
       y = "",
       fill = "Correlation"
     ) +
-    scale_y_discrete(limits = rev(levels(cor_melt$Var2)))  +
+    scale_y_discrete(limits = rev(levels(cor_melt$Var1)))  +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
 ```
@@ -95,7 +94,7 @@ I didn't use all the features and did some feature engineering myself, so here i
 - Count of bicycles including both casual and registered users. The count is used as the target in the regression task.
 - The season. Either spring, summer, fall, or winter.
 - Indicator whether the day was a holiday or not.
-- Indicator whether the day was a working day or weekend.
+- Indicator whether the day was a work day or weekend.
 - The weather situation on that day. One of: Good, Misty, Bad
 - Temperature in degrees Celsius.
 - Relative humidity in percent (0 to 100).
@@ -139,12 +138,12 @@ lm_mae = mae(bike_test$cnt, lm_preds)
 # Create a markdown table
 results = data.frame(
   Model = c("Random Forest", "Decision Tree", "SVM", "Linear Regression"),
-  RMSE = c(rf_rmse, tree_rmse, svm_rmse, lm_rmse),
-  MAE = c(rf_mae, tree_mae, svm_mae, lm_mae)
+  RMSE = round(c(rf_rmse, tree_rmse, svm_rmse, lm_rmse), 0),
+  MAE = round(c(rf_mae, tree_mae, svm_mae, lm_mae), 0)
 )
 
 results = results[order(results$RMSE), ]
-kable(results, caption = "Comparison of Model Performance")
+kable(results, caption = "Comparison of Model Performance", row.names=FALSE)
 ```
 
 @fig-performance-bike shows that the support vector machine performed best, since it had the lowest root mean squared error (RMSE) and the lowest mean absolute error (MAE).
@@ -159,6 +158,7 @@ Therefore, let's have a look at the Pearson correlation for the numerical featur
 
 ```{r}
 #| label: fig-bike-correlations
+#| fig-cap: Pairwise Pearson correlation between the numerical features in the bike sharing data example.
 custom_correlation_plot(bike %>% select(-cnt))
 ```
 
@@ -184,7 +184,7 @@ That's why we also don't rely on NMI alone, but visualize the raw data and analy
 
 ## Normalized Mutual Information
 
-The mutual information between two categorical features $X_j$ and $X_k$ is given by:
+Mutual information between two categorical features $X_j$ and $X_k$ is given by:
 
 $$
 MI(X_j, X_k) = \sum_{c \in X_j} \sum_{d \in X_k} \mathbb{P}(X_j=c, X_k=d) \log \left( \frac{\mathbb{P}(X_j=c, X_k=d)}{\mathbb{P}(X_j=c) \mathbb{P}(X_k=d)} \right),
@@ -276,13 +276,14 @@ logreg_accuracy = sum(logreg_preds == penguins_test$sex) / nrow(penguins_test)
 
 results = data.frame(
   Model = c("Random Forest", "Decision Tree", "Logistic Regression (by Species)"),
-  Log_Loss = c(rf_log_loss, tree_log_loss, logreg_log_loss),
-  Accuracy = c(rf_accuracy, tree_accuracy, logreg_accuracy)
+  Log_Loss = round(c(rf_log_loss, tree_log_loss, logreg_log_loss),2),
+  Accuracy = round(c(rf_accuracy, tree_accuracy, logreg_accuracy),2)
 )
 
 results = results[order(results$Log_Loss), ]
 
-kable(results, caption = "Comparison of Model Performance")
+
+kable(results, caption = "Comparison of Model Performance", row.names=FALSE)
 ```
 
 The logistic regression model is actually 3 models: I first split the data by species trained a logistic regression model and combined the performance results.
@@ -303,7 +304,8 @@ custom_correlation_plot(penguins %>% dplyr::select(-sex))
 
 @fig-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
 But also other features are correlated, like flipper length and bill length or flipper length and bill depth.
-Again, we look at scatter plots and normalized mutual information:
+However, Pearson correlation only tells half of the story, since it only measures linear dependence.
+Let's have a look at the pair plots of the features, along with the normalized mutual information.
 
 ```{r}
 #| label: fig-penguins-nmi

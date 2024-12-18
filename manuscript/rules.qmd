@@ -212,17 +212,27 @@ kableExtra::kbl(rule.to.table(rule), row.names = FALSE, booktabs = TRUE) %>% kab
 ```
 
 The bill depth feature was chosen by OneR as the best predictive feature.
-To get a better feel for how this one rule performs, let's look into the cross table between the (discretized) bill depth feature and the penguin species:
+To get a better feel for how this one rule performs, let's look into the cross table between the (discretized) bill depth feature and the penguin species, see @tbl-oner-penguin-confusion.
 
 ```{r}
-#| label: oner-penguin-confusion
-# Create the table with counts and probabilities
-tt <- penguins %>%
-  mutate(bill_depth_bin = bin(penguins$bill_depth_mm)) %>%
+#| label: tbl-oner-penguin-confusion
+#| fig-cap: Confusion matrix for penguin sex classification rule found by OneR.
+
+# make sure to use the same bins
+bin_edges <- levels(bin(penguins_train$bill_depth_mm))
+clean_edges = gsub("]", "", bin_edges)
+clean_edges = gsub("\\(", "", clean_edges)
+edges <- unique(as.numeric(unlist(strsplit(clean_edges, ","))))
+breaks = sort(edges)
+breaks[length(breaks)] = breaks[length(breaks)] + 0.01
+
+tt <- penguins_test %>%
+  mutate(bill_depth_bin = cut(bill_depth_mm, breaks = breaks, include.lowest = FALSE, right=FALSE)) %>%
   group_by(bill_depth_bin, sex) %>%
   summarise(count = n()) %>%
   group_by(bill_depth_bin) %>%
   mutate(percentage = count / sum(count) * 100) %>%
+  filter(!is.na(bill_depth_bin)) %>%
   ungroup() %>%
   mutate(display = sprintf("%.1f%% (%d)", percentage, count)) %>%
   pivot_wider(id_cols = bill_depth_bin, 
@@ -246,22 +256,19 @@ Caveat: This model ignores the species, or rather bundles them all together.
 OneR does not support regression tasks.
 But we can turn a regression task into a classification task by cutting the continuous outcome into intervals.
 We use this trick to predict the number of [rented bikes](#bike-data) with OneR by cutting the number of bikes into its four quartiles (0-25%, 25-50%, 50-75% and 75-100%).
-The following table shows the selected feature after fitting the OneR model:
+@tbl-oner-bike shows the selected feature after fitting the OneR model:
 
 ```{r}
-#| label: oner-bike
+#| label: tbl-oner-bike
+#| tbl-cap: OneR classification rule for the bike data.
 bike2 = bike
-bike2$days_since_2011 = max(0, bike2$days_since_2011)
 bike2$cnt =  cut(bike2$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
 rule = OneR::OneR(cnt ~ ., data = bike2)
 
 kableExtra::kbl(rule.to.table(rule), row.names = FALSE, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
-The selected feature is the month.
-The month feature has (surprise!) 12 feature levels, which is more than most other features have.
-So there is a danger of overfitting.
-On the more optimistic side: the month feature can handle the seasonal trend (e.g. less rented bikes in winter) and the predictions seem sensible.
+The selected feature is the previous bike rental count.
 
 Now we move from the simple OneR algorithm to a more complex procedure using rules with more complex conditions consisting of several features: Sequential Covering.
 
@@ -640,10 +647,11 @@ tab
 The conditions were selected from patterns that were pre-mined with the FP-Growth algorithm.
 The following table displays the pool of conditions the SBRL algorithm could choose from for building a decision list.
 The maximum number of feature values in a condition I allowed as a user was two.
-Here is a sample of ten patterns:
+@tbl-sbrl-penguins-premined shows a sample of ten patterns.
 
 ```{r}
 #| label: sbrl-penguins-premined
+#| tbl-cap: Premined rules for the penguin classification task.
 set.seed(1)
 conditions = sample(rules$rulenames, size = 10)
 conditions = gsub("\\{|\\}", "", conditions)
@@ -656,6 +664,14 @@ tab
 Next, we apply the SBRL algorithm to the [bike rental prediction task](#bike-data).
 This only works if the regression problem of predicting bike counts is converted into a binary classification task.
 I have arbitrarily created a classification task by creating a label that is 1 if the number of bikes exceeds 4000 on a day, else 0.
+
+::: {.callout-tip}
+
+Fewer and shorter rules make for better model interpretation 
+But there is a trade-off with complexity and therefore with predictive performance.
+
+:::
+
 
 The following list was learned by SBRL:
 

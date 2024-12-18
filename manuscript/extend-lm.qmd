@@ -172,7 +172,7 @@ Along with the number of cups, you record your current stress level on a scale o
 The goal is to predict the number of coffees given the features stress, sleep and work.
 I simulated data for 200 days.
 Stress and sleep were drawn uniformly between 1 and 10 and work yes/no was drawn with a 50/50 chance (what a life!).
-For each day, the number of coffees was then drawn from a Poisson distribution, modelling the intensity $\lambda$ (which is also the expected value of the Poisson distribution) as a function of the features sleep, stress and work.
+For each day, the number of coffees was then drawn from a Poisson distribution, modeling the intensity $\lambda$ (which is also the expected value of the Poisson distribution) as a function of the features sleep, stress and work.
 You can guess where this story will lead:
 *"Hey, let us model this data with a linear model ...
 Oh it does not work ...
@@ -282,29 +282,31 @@ Next, we look at how to integrate interactions between two features into the lin
 
 The linear regression model assumes that the effect of one feature is the same regardless of the values of the other features (= no interactions).
 But often there are interactions in the data.
-To predict the [number of bicycles](#bike-data) rented, there may be an interaction between temperature and whether it is a working day or not.
+To predict the [number of bicycles](#bike-data) rented, there may be an interaction between temperature and whether it is a workday or not.
 Perhaps, when people have to work, the temperature does not influence the number of rented bikes much, because people will ride the rented bike to work no matter what happens.
 On days off, many people ride for pleasure, but only when it is warm enough.
-When it comes to rental bicycles, you might expect an interaction between temperature and working day.
+When it comes to rental bicycles, you might expect an interaction between temperature and work day.
 
 How can we get the linear model to include interactions?
 Before you fit the linear model, add a column to the feature matrix that represents the interaction between the features and fit the model as usual.
 The solution is elegant in a way, since it does not require any change of the linear model, only additional columns in the data.
-In the working day and temperature example, we would add a new feature that has zeros for no-work days, otherwise it has the value of the temperature feature, assuming that working day is the reference category.
-Suppose our data looks like this:
+In the work day and temperature example, we would add a new feature that has zeros for no-work days, otherwise it has the value of the temperature feature, assuming that work day is the reference category.
+Suppose our data looks like in @tbl-data-frame.
 
 ```{r}
-#| label: data-frame
+#| label: tbl-data-frame
+#| tbl-cap: Work day and temperature features for 4 days. 
 x = data.frame(work = c("Y", "N", "N", "Y"), temp = c(25, 12, 30, 5))
 kableExtra::kbl(x, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
 The data matrix used by the linear model looks slightly different.
-The following table shows what the data prepared for the model looks like if we do not specify any interactions.
+@tbl-data-frame-lm-no-interaction shows what the data prepared for the model looks like if we do not specify any interactions.
 Normally, this transformation is performed automatically by any statistical software.
 
 ```{r}
-#| label: data-frame-lm-no-interaction
+#| label: tbl-data-frame-lm-no-interaction
+#| tbl-cap: The corresponding data for @tbl-data-frame for the linear regression model. 
 mod = lm(1:4 ~ ., data = x)
 model.tab = data.frame(model.matrix(mod))
 colnames(model.tab)[1] = "Intercept"
@@ -315,10 +317,11 @@ The first column is the intercept term.
 The second column encodes the categorical feature, with 0 for the reference category and 1 for the other.
 The third column contains the temperature.
 
-If we want the linear model to consider the interaction between temperature and the workday feature, we have to add a column for the interaction:
+If we want the linear model to consider the interaction between temperature and the workday feature, we have to add a column for the interaction as in @tbl-data-frame-lm.
 
 ```{r}
-#| label: data-frame-lm
+#| label: tbl-data-frame-lm
+#| tbl-cap: Model matrix for the linear regression model when including an interaction between temperature and workday feature.
 mod = lm(1:4 ~ work * temp, data = x)
 model.tab = data.frame(model.matrix(mod))
 colnames(model.tab)[1] = "Intercept"
@@ -326,8 +329,8 @@ kableExtra::kbl(model.tab, booktabs = TRUE) %>% kable_styling(position = "center
 
 ```
 
-The new column "workY.temp" captures the interaction between the features working day (work) and temperature (temp).
-This new feature column is zero for an instance if the work feature is at the reference category ("N" for no working day), otherwise it assumes the values of the instance's temperature feature.
+The new column "workY.temp" captures the interaction between the features work day (work) and temperature (temp).
+This new feature column is zero for an instance if the work feature is at the reference category ("N" for no work day), otherwise it assumes the values of the instance's temperature feature.
 With this type of encoding, the linear model can learn a different linear effect of temperature for both types of days.
 This is the interaction effect between the two features.
 Without an interaction term, the combined effect of a categorical and a numerical feature can be described by a line that is vertically shifted for the different categories.
@@ -335,19 +338,20 @@ If we include the interaction, we allow the effect of the numerical features (th
 
 The interaction of two categorical features works similarly.
 We create additional features which represent combinations of categories.
-Here's some artificial data containing working day (work) and a categorical weather feature (wthr):
+@tbl-data-frame-lm-cat shows some artificial data containing work day (work) and a categorical weather feature (wthr).
 
 ```{r}
-#| label: data-frame-lm-cat
-x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("2", "0", "1", "2"))
+#| label: tbl-data-frame-lm-cat
+#| fig-cap: Data example for bike data with features workday and weather for 4 days.
+x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("BAD", "GOOD", "MISTY", "BAD"))
 kableExtra::kbl(x, booktabs = TRUE) %>% kable_styling(position = "center")
-
 ```
 
-Next, we include interaction terms:
+Next, we include interaction terms to get @tbl-data-frame-lm-cat2.
 
 ```{r}
-#| label: data-frame-lm-cat2
+#| label: tbl-data-frame-lm-cat2
+#| fig-cap: Corresponding model matrix for @tbl-data-frame-lm-cat.
 mod = lm(1:4 ~ work * wthr, data = x)
 model.tab = data.frame(model.matrix(mod))
 colnames(model.tab)[1] = c("Intercept")
@@ -367,11 +371,12 @@ We simply multiply both numerical features.
 There are approaches to automatically detect and add interaction terms.
 One of them can be found in the [RuleFit chapter](#rulefit).
 The RuleFit algorithm first mines interaction terms and then estimates a linear regression model including interactions.
+Another option is GA2M [@caruana2015intelligible].
 
 **Example**
 
 Let's return to the [bike rental prediction task](#bike-data) which we have already modeled in the [linear model chapter](#limo).
-This time, we additionally consider an interaction between the temperature and the working day feature.
+This time, we additionally consider an interaction between the temperature and the work day feature.
 This results in the following estimated weights and confidence intervals.
 
 ```{r}
@@ -393,15 +398,16 @@ tab
 ```
 
 The additional interaction effect is negative (`r round(lm_summary_print['workdayY:temp','Estimate'], 1)`) and differs significantly from zero, as shown by the 95% confidence interval, which does not include zero.
-By the way, the data are not iid, because days that are close to each other are not independent from each other.
+By the way, the data it's debatable whether the data is IID, because days that are close to each other are not independent of each other.
+Conditioning on previous counts should alleviate the problem somewhat at least though. 
 Confidence intervals might be misleading, just take it with a grain of salt.
 The interaction term changes the interpretation of the weights of the involved features.
-Does the temperature have a negative effect given it is a working day?
+Does the temperature have a negative effect given it is a work day?
 The answer is no, even if the table suggests it to an untrained user.
 We cannot interpret the "workdayY:temp" interaction weight in isolation, since the interpretation would be:
-"While leaving all other feature values unchanged, increasing the interaction effect of temperature for working day decreases the predicted number of bikes."
+"While leaving all other feature values unchanged, increasing the interaction effect of temperature for work day decreases the predicted number of bikes."
 But the interaction effect only adds to the main effect of the temperature.
-Suppose it is a working day and we want to know what would happen if the temperature were 1 degree warmer today.
+Suppose it is a work day and we want to know what would happen if the temperature were 1 degree warmer today.
 Then we need to sum both the weights for "temp" and "workdayY:temp" to determine how much the estimate increases.
 
 ::: {.callout-tip}
@@ -412,16 +418,16 @@ Make sure to include both main effects and the interaction effect in a model. Th
 
 
 
-It's easier to understand the interaction visually.
+It's easier to understand the interaction visually, see @fig-interaction-plot.
 By introducing an interaction term between a categorical and a numerical feature, we get two slopes for the temperature instead of one.
-The temperature slope for days on which people do not have to work ('NO Y') can be read directly from the table (`r round(lm_summary_print['temp','Estimate'], 1)`).
+The temperature slope for days on which people do not have to work ('N') can be read directly from the table (`r round(lm_summary_print['temp','Estimate'], 1)`).
 The temperature slope for days on which people have to work ('Y') is the sum of both temperature weights (`r round(lm_summary_print['temp','Estimate'], 1)`  `r round(lm_summary_print['workdayY:temp','Estimate'], 1)` = `r round(lm_summary_print['temp','Estimate'], 1) + round(lm_summary_print['workdayY:temp','Estimate'], 1)`).
-The intercept of the 'NO Y'-line at temperature = 0 is determined by the intercept term of the linear model (`r round(lm_summary_print['(Intercept)','Estimate'], 1)`).
-The intercept of the 'Y'-line at temperature = 0 is determined by the intercept term + the effect of working day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workdayY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workdayY','Estimate'], 1)`).
+The intercept of the 'N'-line at temperature = 0 is determined by the intercept term of the linear model (`r round(lm_summary_print['(Intercept)','Estimate'], 1)`).
+The intercept of the 'Y'-line at temperature = 0 is determined by the intercept term + the effect of work day (`r round(lm_summary_print['(Intercept)','Estimate'], 1)` + `r round(lm_summary_print['workdayY','Estimate'], 1)` = `r round(lm_summary_print['(Intercept)','Estimate'], 1) + round(lm_summary_print['workdayY','Estimate'], 1)`).
 
 ```{r}
-#| label: interaction-plot
-#| fig.cap: The effect (including interaction) of temperature and working day on the predicted number of bikes for a linear model. Effectively, we get two slopes for the temperature, one for each category of the working day feature. 
+#| label: fig-interaction-plot
+#| fig.cap: The effect (including interaction) of temperature and work day on the predicted number of bikes for a linear model. Effectively, we get two slopes for the temperature, one for each category of the work day feature. The effect of temperature is "flatter" on work days.
 interactions::interact_plot(mod, pred = "temp", modx = "workday")
 ```
 
@@ -580,6 +586,13 @@ plot(mod.gam)
 The interpretation of smooth effects requires a visual check of the fitted curve.
 Splines are usually centered around the mean prediction, so a point on the curve is the difference to the mean prediction.
 For example, at 0 degrees Celsius, the predicted number of bicycles is 3000 lower than the average prediction.
+
+
+::: {.callout-tip}
+
+The more you move away from the pure linear regression by using transformations, interactions and smooth effects, the more you may need model-agnostic tools like the [partial dependence plot](#pdp) to analyze the model.
+
+:::
 
 
 ## Strengths

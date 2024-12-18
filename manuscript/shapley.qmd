@@ -20,9 +20,8 @@ You've trained a machine learning model to predict apartment prices.
 For a certain apartment it predicts €300,000 and you need to explain this prediction.
 The apartment has an area of 50 m^2^, is located on the 2nd floor, has a park nearby and cats are banned:
 
-```{r shapley-instance, fig.cap = "The predicted price for a 50 $m^2$ 2nd floor apartment with a nearby park and cat ban is €300,000. Our goal is to explain how each of these feature values contributed to the prediction."}
-knitr::include_graphics("images/shapley-instance.png")
-```
+
+![The predicted price for a 50 $m^2$ 2nd floor apartment with a nearby park and cat ban is €300,000. Our goal is to explain how each of these feature values contributed to the prediction.](./images/shapley-instance.png){#shapley-instance}
 
 The average prediction for all apartments is €310,000.
 How much has each feature value contributed to the prediction compared to the average prediction?
@@ -97,12 +96,8 @@ For each of these coalitions we compute the predicted apartment price with and w
 The Shapley value is the (weighted) average of marginal contributions.
 We replace the feature values of features that are not in a coalition with random feature values from the apartment dataset to get a prediction from the machine learning model.
 
+![All 8 coalitions needed for computing the exact Shapley value of the `cat-banned` feature value](./images/shapley-coalitions.jpg){#fig-shapley-coalitions width=80%}
 
-```{r}
-#| label: shapley-coalitions
-#| fig-cap: "All 8 coalitions needed for computing the exact Shapley value of the `cat-banned` feature value."
-knitr::include_graphics("images/shapley-coalitions.jpg")
-```
 
 If we estimate the Shapley values for all feature values, we get the complete distribution of the prediction (minus the average) among the feature values.
 
@@ -114,6 +109,7 @@ The value of the j-th feature contributed $\phi_j$ to the prediction of this par
 The Shapley value works for both classification (if we are dealing with probabilities) and regression.
 
 We use the Shapley value to analyze the predictions of a random forest model predicting [penguin sex](#penguins).
+Figure  @fig-shapley-penguins-plot shows the Shapley values for a male penguin.
 
 ```{r}
 #| label: shapley-penguins-prepare
@@ -129,8 +125,8 @@ diff.prediction = actual.prediction - avg.prediction
 
 
 ```{r}
-#| label: shapley-penguins-plot
-#| fig-cap: !expr sprintf("Shapley values for penguin male vs female classification. This penguin's predicted P(female)=%.2f is %.2f above the average probability for P(female) of %.2f. The bill length contributed most to the probability of being female, but most factors where (correctly) pointing to male. The sum of the contributions yields the difference between actual and average prediction. (%.2f).", actual.prediction,diff.prediction, avg.prediction, avg.prediction)
+#| label: fig-shapley-penguins-plot
+#| fig-cap: !expr sprintf("Shapley values for penguin male vs female classification. This penguin's predicted P(female)=%.2f is %.2f below the average probability for P(female) of %.2f. The bill length contributed most to the probability of being female, but most factors were (correctly) pointing to male. The sum of the contributions yields the difference between actual and average prediction. (%.2f).", actual.prediction,diff.prediction, avg.prediction, avg.prediction)
 shapley2 = Shapley$new(predictor, x.interest = x.interest, sample.size = 100)
 plot(shapley2) +
   scale_y_continuous("Feature value contribution") +
@@ -138,9 +134,41 @@ plot(shapley2) +
  scale_x_discrete("")
 ```
 
+Shapley values always need a reference dataset from which to sample the missing team members.
+In this case, I used all of the data points, which means all of the penguins no matter the species.
+The current penguin is an `r x.interest$species`penguin and we can also compute Shapley values that only compare against other penguins of the same species. 
+This reduces the problem of sampling and combining unrealistic values.
+@fig-shapley-penguins-plot-species shows also a different interpretation.
+When comparing our penguin with other `r x.interest$species` penguins, then the reason why it has a low probability of being female is its weight. 
+
+```{r}
+#| label: fig-shapley-penguins-plot-species
+#| fig-cap: Shapley values computed only based on data from the same penguin species.
+
+penguins_subset = penguins_test[penguins_test$species == x.interest$species,]
+avg.prediction = mean(predict(pengu_rf, newdata=penguins_subset, type = 'prob')[,'female'])
+actual.prediction = predict(pengu_rf, newdata = x.interest, type = 'prob')[,'female']
+diff.prediction = actual.prediction - avg.prediction
+
+
+predictor_species = Predictor$new(pengu_rf, data = penguins_subset, type = "prob", class="female")
+shapley2 = Shapley$new(predictor_species, x.interest = x.interest, sample.size = 100)
+plot(shapley2) +
+  scale_y_continuous("Feature value contribution") +
+  ggtitle(sprintf("Actual class: %s\nActual prediction: %.2f\nAverage prediction: %.2f\nDifference: %.2f", x.interest$sex, actual.prediction, avg.prediction, diff.prediction)) +
+ scale_x_discrete("")
+
+```
+
+::: {.callout-tip}
+
+Shapley value interpretation is always in reference to the dataset that was used for replacing missing values.
+Make sure to pick a meaningful reference dataset.
+
+:::
 
 For the [bike rental dataset](#bike-data), we also train a random forest to predict the number of rented bikes for a day, given weather and calendar information.
-The explanations created for the  random forest prediction of a particular day:
+The explanations created for the  random forest prediction of a particular day are shown in @fig-shapley-bike-plot.
 
 ```{r}
 #| label: shapley-bike-prepare
@@ -162,7 +190,9 @@ x.interest = bike.train.x[instance_indices[2],]
 ```
 
 
-```{r shapley-bike-plot, fig.cap = sprintf("Shapley values for day %i. With a predicted %.0f rental bikes, this day is %.0f below the average prediction of %.0f. The weather situation and humidity had the largest negative contributions. The temperature on this day had a positive contribution. The sum of Shapley values yields the difference of actual and average prediction (%.0f).", instance_indices[2], actual.prediction, diff.prediction, avg.prediction, diff.prediction)}
+```{r}
+#| label: fig-shapley-bike-plot
+#| fig-cap: sprintf("Shapley values for day %i. With a predicted %.0f rental bikes, this day is %.0f below the average prediction of %.0f. The temperature and humidity had the largest positive contributions. The low count two days before had the largest negative contribution. The sum of Shapley values yields the difference of actual and average prediction (%.0f).", instance_indices[2], actual.prediction, diff.prediction, avg.prediction, diff.prediction)
 shapley2 = Shapley$new(predictor, x.interest = x.interest)
 plot(shapley2) +  scale_y_continuous("Feature value contribution") +
   ggtitle(sprintf("Actual prediction: %.0f\nAverage prediction: %.0f\nDifference: %.0f", actual.prediction, avg.prediction, diff.prediction))  +
@@ -170,11 +200,13 @@ plot(shapley2) +  scale_y_continuous("Feature value contribution") +
 ```
 
 
+::: {.callout-warning}
+
 Be careful to interpret the Shapley value correctly:
 The Shapley value is the average contribution of a feature value to the prediction in different coalitions.
 The Shapley value is NOT the difference in prediction when we would remove the feature from the model.
 
-
+:::
 
 ## The Shapley Value in Detail
 
@@ -362,8 +394,6 @@ The Shapley value is the only explanation method with a **solid theory**.
 The axioms -- efficiency, symmetry, dummy, additivity -- give the explanation a reasonable foundation.
 Methods like LIME assume linear behavior of the machine learning model locally, but there is no theory as to why this should work.
 
-It's mind-blowing to **explain a prediction as a game** played by the feature values.
-
 
 ## Limitations
 
@@ -381,7 +411,7 @@ The Shapley value of a feature value is not the difference of the predicted valu
 The interpretation of the Shapley value is:
 Given the current set of feature values, the contribution of a feature value to the difference between the actual prediction and the mean prediction is the estimated Shapley value.
 
-Shapley values **are not local in the sense of gradients.** [@bilodeau2024impossibility]
+Shapley value explanations **are not to be interpreted as local in the sense of gradients or neighborhood.** [@bilodeau2024impossibility]
 For example, a positive Shapley value doesn't mean that increasing the feature would increase the prediction.
 Instead, the Shapley value has to be interpreted with respect to the reference dataset that was used for the estimation.
 That's why I would also recommend pairing Shapley values with, for example, [ceteris paribus plots](#ceteris) or [ICE plots](#ice), so you get the full picture.
@@ -416,7 +446,7 @@ But we would use those to compute the feature's Shapley value.
 One solution might be to permute correlated features together and get one mutual Shapley value for them.
 Another adaptation is conditional sampling: Features are sampled conditional on the features that are already in the team.
 While conditional sampling fixes the issue of unrealistic data points, a new issue is introduced:
-The resulting values are no longer the Shapley values to our game, since they violate the symmetry axiom, as found out by Sundararajan et al. (2019) [@sundararajan2020many] and further discussed by Janzing et al. (2020) [@janzing2020feature].
+The resulting values are no longer the Shapley values to our game, since they violate the symmetry axiom, as found out by @sundararajan2020many and further discussed by @janzing2020feature.
 
 
 ## Software and Alternatives

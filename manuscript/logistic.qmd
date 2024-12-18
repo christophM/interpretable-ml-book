@@ -3,7 +3,8 @@
 {{< include _setup.qmd >}}
 
 Logistic regression models the probabilities for classification problems with two possible outcomes.
-It's an extension of the linear regression model for classification problems.
+It's an extension of the linear regression model for class outcomes.
+[^actually-probabilities]
 
 
 ::: {.content-visible when-format="html:js"}
@@ -95,7 +96,7 @@ ggplot(df) + geom_line(aes(x=x,y=y)) + my_theme()
 ```
 
 The step from linear regression to logistic regression is kind of straightforward.
-In the linear regression model, we have modelled the relationship between outcome and features with a linear equation:
+In the linear regression model, we have modeled the relationship between outcome and features with a linear equation:
 
 $$\hat{y}^{(i)}=\beta_{0}+\beta_{1}x^{(i)}_{1}+\ldots+\beta_{p}x^{(i)}_{p}$$
 
@@ -155,6 +156,14 @@ We call the term in the ln() function "odds" (probability of event divided by pr
 This formula shows that the logistic regression model is a linear model for the log odds.
 Great!
 That does not sound helpful!
+
+::: {.callout-warning}
+
+In fact, logistic regression is not at all linear on the level of *probabilities*, but it's a multiplicative model.
+
+:::
+
+
 With a little shuffling of the terms, you can figure out how the prediction changes when one of the features $x_j$ is changed by 1 unit.
 To do this, we can first apply the exp() function to both sides of the equation:
 
@@ -201,17 +210,24 @@ The interpretation for each category then is equivalent to the interpretation of
 When all numerical features are zero and the categorical features are at the reference category, the estimated odds are $\exp(\beta_{0})$.
 The interpretation of the intercept weight is usually not relevant.
 
+:::{.callout-tip}
+
+If you want to interpret the outcome on the level of probabilities, then you have to use [model-agnostic methods](#model-agnostic), such as the [partial dependence plot](#pdp).
+
+:::
+
+
 ## Example
 
-We use logistic regression to predict [whether a penguin is female](#penguins) for Chinstrap[^not-all-penguins] penguins based on penguin characteristics.
+We use logistic regression to predict [whether a penguin is female](#penguins) for Chinstrap penguins based on body measurements.
 The feature "chonk_level" is a discretization of the feature "body mass": Light penguins (0% to 25% quantile) are categorized as "Smol_Penguin", most penguins are "Regular_Penguin", and those with the highest body mass (75% to 100%) are categorized as "Absolute_Unit".
 Normally, I don't recommend discretizing continuous features because you lose information.
 In this case, I used binarization to illustrate the interpretation of a categorical feature with logistic regression, and I also love the word "chonky" and wanted to use it in a textbook.
 
-The following table shows the estimated weights, associated odds ratios, and standard errors of the estimates.
+@tbl-logistic-example shows the estimated weights, associated odds ratios, and standard errors of the estimates.
 
 ```{r}
-#| label: logistic-example
+#| label: tbl-logistic-example
 chinstrap = penguins %>%
   filter(species=="Chinstrap") %>%
   mutate(
@@ -240,15 +256,15 @@ kableExtra::kbl(coef.table[, c('Weight', 'Std. Error', 'Odds ratio')], digits=2,
 ```
 
 Interpretation of a numerical feature ("bill_length_mm"):
-An increase in a penguin's bill length increases the odds of being a female vs a male penguin by a factor of `r coef.table['bill_length_mm', 'Odds ratio']`, when all other features remain the same.
+An increase in a penguin's bill length increases the odds of being female vs  male by a factor of `r coef.table['bill_length_mm', 'Odds ratio']`, when all other features remain the same.
 
 Interpretation of a categorical feature ("chonkiness"):
-For the mid chonky penguins, the odds of being female versus male are increased by a factor of `r coef.table['chonkinessRegular_Penguin', 'Odds ratio']`, compared to lightweight penguins, given all other features remain the same.
-For the chonkiest penguins, the odds of being female versus male are decreased (factor of `r coef.table['chonkinessAbsolute_Unit', 'Odds ratio']`), compared to lightweight penguins, given all other features remain the same.
+For the penguins of regular chonkiness, the odds of being female versus male are increased by a factor of `r coef.table['chonkinessRegular_Penguin', 'Odds ratio']`compared to lightweight penguins, given all other features remain the same.
+For the chonkiest penguins, the odds of being female versus male are decreased by factor of `r coef.table['chonkinessAbsolute_Unit', 'Odds ratio']`compared to lightweight penguins, given all other features remain the same.
 Again, given all other features remain the same.
 
 The intercept is a very large value.
-This is because it is to be interpreted as odds of being female when all numerical features are set to zero and all categorical features to the reference level.
+This is because it is to be interpreted as odds of being female when all numerical features are set to zero and all categorical features are set to the reference level.
 This would be a non-chonky penguin with flipper length, bill length and depth all at zero -- not a meaningful data point.
 You could standardize the features, then the intercept would be more meaningful, but you can also just ignore the intercept.
 
@@ -278,3 +294,5 @@ Then it is called Multinomial Regression.
 I used the `glm` function in R for all examples.
 You can find logistic regression in any programming language that can be used for performing data analysis, such as Python, Java, Stata, Matlab, ...
 
+
+[^actually-probabilities]: To be accurate, logistic regression is a regression model, since the output is continuous. But together with a decision threshold, like 0.5, it can be used for classification as well.

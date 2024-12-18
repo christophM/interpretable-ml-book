@@ -11,8 +11,8 @@ A feature is "unimportant" if shuffling its values leaves the model error unchan
 :w
 ## Theory
 
-The permutation feature importance measurement was introduced by Breiman (2001)[@breiman2001random] for random forests.
-Based on this idea, Fisher, Rudin, and Dominici (2018)[@fisher2019all] proposed a model-agnostic version of the feature importance and called it model reliance.
+The permutation feature importance measurement was introduced by @breiman2001random for random forests.
+Based on this idea, @fisher2019all proposed a model-agnostic version of the feature importance and called it model reliance.
 They also introduced more advanced ideas about feature importance, for example, a (model-specific) version that takes into account that many prediction models may predict the data well.
 Their paper is worth reading.
 
@@ -44,14 +44,10 @@ I can only recommend using the `n(n-1)`-method if you are serious about getting 
 
 ## Use test data for PFI
 
-Use test data to compute permutation feature importance.
-The reason: PFI is based on error estimates and estimating errors using training data, we get overly optimistic results, especially when the model is overfitting.
-Extreme scenario: A feature may have zero information about the target, but your model is completely overfitting using this feature.
-In this case, PFI based on training data would show this feature to be very important.
-But PFI based on test data would show the feature is irrelevant.
+Use test data for PFI to avoid overly optimistic results, especially with overfitting models.
+PFI on training data can falsely highlight irrelevant features as important due to model overfitting.
 
-What if you want to know what the model actually **used**?  
-For that case, we have better options such as [SHAP importance](#shap) or [PDP importance](#pdp) which don't rely on the error measure.
+To understand what the model actually used, consider alternatives like [SHAP importance](#shap) or [PDP importance](#pdp), which don't rely on error measures.
 
 :::
 
@@ -59,31 +55,7 @@ In the examples, I used test data to compute permutation feature importance.
 
 ## Example and Interpretation
 
-I show examples for classification and regression.
-
-**Penguin male versus female classification**
-
-We fit a random forest model to predict [penguin sex](#penguins), using 2/3 of the data for training and 1/3 for computing the importance.
-We measure the error as classification error.
-Features associated with a model error increase by a factor of 1 (= no change) were not important for predicting penguin male vs. female.
-
-```{r}
-#| label: importance-penguins
-#| fig-cap: !expr sprintf("The importance of each of the features for predicting penguin sex with a random forest. The most important feature was %s. Permuting %s resulted in an increase in classification error by a factor of %.1f. The interval indicates min and max importance from repeating the permutation 5 times, while dot represents the average PFI across multiple permutation.", most_imp, most_imp, max(imp.dat$importance))
-predictor = Predictor$new(pengu_rf, data = penguins_test)
-importance = FeatureImp$new(predictor, loss = "ce", compare="ratio")
-imp.dat = data.frame(importance$results[c("feature", "permutation.error", "importance")])
-most_imp = imp.dat$feature[imp.dat$importance == max(imp.dat$importance)]
-
-plot(importance) +
-  scale_x_continuous("Feature importance (classification error)", limits=c(0.5, NA)) +
-   scale_y_discrete("") +
-  my_theme()
-```
-
-**Bike sharing (regression)**
-
-We fit a support vector machine model to predict [the number of rented bikes](#bike-data), given weather conditions and calendar information.
+For the first example, we explain the support vector machine model trained to predict [the number of rented bikes](#bike-data), given weather conditions and calendar information.
 As error measurement, we use the mean absolute error.
 ```{r}
 predictor = Predictor$new(bike_svm, data = bike_test[-which(names(bike_test) == "cnt")], y = bike_test$cnt)
@@ -98,6 +70,40 @@ plot(importance) +
    scale_y_discrete("") +
    scale_x_continuous(limits = c(1, NA))
 ```
+
+
+```{r}
+#| label: importance-penguins-prepare
+predictor = Predictor$new(pengu_logreg, y=penguins_test$sex=="female", data = penguins_test %>% select(-sex),  class="female")
+importance = FeatureImp$new(predictor, loss = "logLoss", compare="ratio")
+imp.dat = data.frame(importance$results[c("feature", "permutation.error", "importance")])
+most_imp = imp.dat$feature[imp.dat$importance == max(imp.dat$importance)]
+```
+
+
+
+Next, let's look at penguins.
+I trained a 3 logistic regression models to predict [penguin sex](#penguins), using 2/3 of the data for training and 1/3 for computing the importance.
+I measure the error as the log loss.
+Features associated with a model error increase by a factor of 1 (= no change) were not important for predicting penguin male vs. female as @fig-importance-penguins shows.
+The importance of each of the features for predicting penguin sex with a the logistic regression models.
+The most important feature was `r most_imp`.
+Permuting `r most_imp` resulted in an increase in classification error by a factor of `r max(imp.dat$importance)`.
+But wait, how can `species` be an important feature as well, because I actually trained 3 models separately.
+The deal is that I treat the 3 models as one black box model here.
+To this overall function, `species` appears as just another feature, and internally this feature splits the data and then we have the three logistic regression models.
+That's why we will look next into conditional feature importance.
+
+```{r}
+#| label: fig-importance-penguins
+#| fig-cap: Permutation feature importance values for the penguin classification task. The interval indicates min and max importance from repeating the permutation 5 times, while dot represents the average PFI across multiple permutation.
+plot(importance) +
+  scale_x_continuous("Feature importance (ratio of logloss)", limits=c(1, NA)) +
+  scale_y_discrete("") +
+  my_theme()
+```
+
+
 
 ## Conditional feature importance
 
@@ -156,19 +162,31 @@ ggplot(penguins_by_species) +
   facet_wrap(~subset, scales = "free") + 
   geom_label(data = cor_data, aes(x = -Inf, y = Inf, label = cor_label), 
              hjust = -0.1, vjust = 1.5, inherit.aes = FALSE) + 
-  theme_minimal()
+  theme_minimal() +
+  scale_x_continuous("Flipper length in mm") +
+  scale_y_continuous("Body mass in grams")
 ```
 
+So we compute the permutation feature importance again, by species.
+Meaning the data are permuted by species, so that, for example, it couldn't happen that the body mass of a heavy Gentoo was assigned to a more lightweight Adelie.
+While grouping reduces the correlation problem, it isn't solved, as we can see in @fig-cor-by-species.
+For example, it can still happen that a Gentoo penguin with a body mass of 4000 grams gets "assigned" a flipper length of 230mm, which produces an unrealistic data point.
+So still the interpretation comes with caveats.
 The results are displayed in @fig-importance-penguins-by-species.
-
+A different picture emerges:
+Body mass is highly important for sex classification for Gentoo, less so for Adelie, and way less important for Chinstrap.
+Note that for the three logistic regression models its natural to see it as three prediction models for which we can compute separate PFIs.
+However, since PFI is model-agnostic, we could do the same for a random forest which simply uses species as a feature.
+Or we could split into subgroups by any other feature, in theory even using variables that weren't used by the model.
 
 ```{r}
 #| label: fig-importance-penguins-by-species 
-#| fig-cap: PFI by species. The results are quite similar to overal PFI and don't differ much by species.
-dat = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
-  pred.penguins = Predictor$new(pengu_rf, data = penguins_test[penguins_test$species == species,], class="female")
-  dat = FeatureImp$new(predictor, loss = "ce", compare="ratio")$results
-  dat$species = species
+#| fig-cap: PFI by species for each logistic regression. The results are quite similar to overal PFI and don't differ much by species.
+dat = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species_) {
+  penguins_sub = penguins_test %>% dplyr::filter(species == species_) 
+  pred.penguins = Predictor$new(pengu_logreg, y = penguins_sub$sex == "female", data = penguins_sub%>% select(-sex), class="female")
+  dat = FeatureImp$new(pred.penguins,  loss = "logLoss", compare="ratio")$results
+  dat$species = species_
   dat
 })
 
@@ -178,6 +196,7 @@ ggplot(dat) +
   geom_point(aes(x = importance, y = feature, shape = species, color = species), 
              size = 3, position = position_jitter(width = 0, height = 0.2))
 ```
+
 
 
 ## Strengths
@@ -275,7 +294,7 @@ A variance-based importance measure, on the other hand, might assign the feature
 
 A good overview of various importance techniques is provided in the paper by Wei (2015) [@wei2015variable].
 
-## Software
+## Code 
 
 The `iml` R package was used for the examples.
 The R packages `DALEX` and `vip`, as well as the Python libraries `alibi`, `scikit-learn`, and `rfpimp`, also implement model-agnostic permutation feature importance.

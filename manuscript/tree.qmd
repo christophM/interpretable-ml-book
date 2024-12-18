@@ -57,7 +57,13 @@ Starting from the root node, you go to the next nodes and the edges tell you whi
 Once you reach the leaf node, the node tells you the predicted outcome.
 All the edges are connected by 'AND'.
 
-Template: If feature x is [smaller/bigger] than threshold c AND ... then the predicted outcome is the mean value of y of the instances in that node.
+::: {.callout-note}
+
+## Interpretation Template
+
+If feature x is [smaller/bigger] than threshold c AND ... then the predicted outcome is the mean value of y of the instances in that node.
+
+:::
 
 **Feature importance**
 
@@ -87,11 +93,11 @@ We can add the contributions for each of the p features and get an interpretatio
 
 Let's have another look at the [bike rental data](#bike-data).
 We want to predict the number of rented bikes on a certain day with a decision tree.
-The learned tree looks like this:
+The learned tree is shown in @fig-tree-example.
 
 ```{r}
-#| label: tree-example
-#| fig.cap: "Regression tree fitted on the bike rental data. The maximum allowed depth for the tree was set to 2. The trend feature (days since 2011) and the temperature (temp) have been selected for the splits. The boxplots show the distribution of bicycle counts in the terminal node."
+#| label: fig-tree-example
+#| fig.cap: Regression tree fitted on the bike rental data. The maximum allowed depth for the tree was set to 2. The recent rental count (`cnt_2d_bfr`) and the temperature (`temp`) have been selected for the splits. The boxplots show the distribution of bicycle counts in the terminal node.
 X = bike_train %>% select(-cnt)
 y = bike_train$cnt
 dat = cbind(X, y)
@@ -102,25 +108,30 @@ plot(xp, digits = 0, id = FALSE, terminal_panel = node_boxplot(xp, id = FALSE),
   inner_panel = node_inner(xp, id = FALSE, pval = FALSE)
   )
 ```
-The first split and one of the second splits were performed with the trend feature, which counts the days since  data collection began and covers the trend that the bike rental service has become more popular over time.
-For days prior to the 105th day, the predicted number of bicycles is around 1800, between the 106th and 430th day it is around 3900.
-For days after the 430th day, the prediction is either 4600 (if temperature is below 12 degrees) or 6600 (if temperature is above 12 degrees).
 
-The feature importance tells us how much a feature helped to improve the purity of all nodes.
-Here, the variance was used, since predicting bicycle rentals is a regression task.
-
+The first split and one of the second level splits were performed with the previous count feature.
+Basically, the larger the number of recent bike rentals, the more are predicted.
+If recently not so many bike were rented, then the temperature decides  whether to predict more or less rentals.
 The visualized tree shows that both temperature and time trend were used for the splits, but does not quantify which feature was more important.
-The feature importance measure shows that the time trend is far more important than temperature.
+@fig-tree-importance shows the feature importance. 
 
 ```{r}
-#| label: tree-importance
-#| fig.cap: "Importance of the features measured by how much the node purity is improved on average."
+#| label: fig-tree-importance
+#| fig.cap: Importance of the features measured by how much the node purity is improved on average.
 imp = round(100 * x$variable.importance / sum(x$variable.importance),0)
 imp.df = data.frame(feature = names(imp), importance = imp)
 imp.df$feature = factor(imp.df$feature, levels = as.character(imp.df$feature)[order(imp.df$importance)])
 ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) +
   scale_y_discrete("")
 ```
+
+::: {.callout-tip}
+
+Trees with lower depths and fewer nodes are easier to interpret.
+Many hyperparameters directly or indirectly control tree depth and/or number of nodes.
+Some of them interact with the data size, so make sure to pick hyperparameters that control number of nodes and tree depth directly.
+
+:::
 
 ## Strengths
 

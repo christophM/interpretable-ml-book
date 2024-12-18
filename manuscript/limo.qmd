@@ -90,6 +90,7 @@ The betas ($\beta_{j}$) represent the learned feature weights or coefficients.
 The first weight in the sum ($\beta_0$) is called the intercept and is not multiplied with a feature.
 The epsilon ($\epsilon$) is the error we still make, i.e. the difference between the prediction and the actual outcome.
 These errors are assumed to follow a Gaussian distribution, which means that we make errors in both negative and positive directions and make many small errors and few large errors.
+[^statistician-view]: This chapter view linear regression through a statistician lens: You can definitely use linear regression without making any assumption whatsoever, but then you also don't get all the perks like confidence intervals and certain types of interpretations.
 
 Various methods can be used to estimate the optimal weight.
 The ordinary least squares method is usually used to find the weights that minimize the squared differences between the actual and the estimated outcomes:
@@ -110,6 +111,13 @@ The interpretation of this interval would be:
 If we repeated the estimation 100 times with newly sampled data, the confidence interval would include the true weight in 95 out of 100 cases, given that the linear regression model is the correct model for the data.
 
 Whether the model is the "correct" model depends on whether the relationships in the data meet certain assumptions, which are linearity, normality, homoscedasticity, independence, fixed features, and absence of multicollinearity.
+
+::: {.callout-tip}
+
+Assumptions are optional.
+You only need them to get certain more out of the linear model like confidence intervals.
+
+:::
 
 **Linearity**  
 The linear regression model forces the prediction to be a linear combination of features, which is both its greatest strength and its greatest limitation.
@@ -178,13 +186,22 @@ Then the intercept reflects the predicted outcome of an instance where all featu
 
 The interpretation of the features in the linear regression model can be automated by using the following text templates.
 
-**Interpretation of a Numerical Feature**
+::: {.callout-note}
+
+## Interpretation of a numerical Feature
 
 An increase of feature $x_{k}$ by one unit increases the prediction for y by $\beta_k$ units when all other feature values remain fixed.
 
-**Interpretation of a Categorical Feature**
+
+:::
+
+::: {.callout-note}
+
+## Interpretation of a categorical Feature
 
 Changing feature $x_{k}$ from the reference category to the other category increases the prediction for y by $\beta_{k}$ when all other features remain fixed.
+
+:::
 
 Another important measurement for interpreting linear models is the R-squared measurement.
 R-squared tells you how much of the total variance of your target outcome is explained by the model.
@@ -256,7 +273,7 @@ Interpretation of a numerical feature (temperature):
 An increase of the temperature by 1 degree Celsius increases the predicted number of bicycles by `r sprintf('%.1f', lm_summary_print['temp', 'Estimate'])`, when all other features remain fixed.
 
 Interpretation of a categorical feature ("weather"):
-The estimated number of bicycles is `r sprintf('%.1f', lm_summary_print['weatherBAD', 'Estimate'])` lower when it is raining, snowing or stormy, compared to good weather -- again assuming that all other features do not change.
+The estimated number of bicycles is `r sprintf('%.1f', lm_summary_print['weatherBAD', 'Estimate'])` lower when is bad (raining, snowing or stormy), compared to good weather -- again assuming that all other features do not change.
 When the weather is misty, the predicted number of bicycles is `r sprintf('%.1f', lm_summary_print['weatherMISTY', 'Estimate'])` lower compared to good weather, given all other features remain the same.
 
 
@@ -284,15 +301,23 @@ The following plot shows the results from the previous linear regression model.
 coef_plot(bike_lm) + scale_y_discrete("")
 ```
 
-The weight plot shows that rainy/snowy/stormy weather has a strong negative effect on the predicted number of bikes.
-The weight of the working day feature is close to zero and zero is included in the 95% interval, which means that the effect is not statistically significant.
+The weight plot shows that bad weather has a strong negative effect on the predicted number of bikes.
+The weight of the work day feature is close to zero and zero is included in the 95% interval, which means that the effect is not statistically significant.
 Some confidence intervals are very short and the estimates are close to zero, yet the feature effects were statistically significant.
 Temperature is one such candidate.
 The problem with the weight plot is that the features are measured on different scales.
-While for the weather the estimated weight reflects the difference between good and rainy/stormy/snowy weather, for temperature it only reflects an increase of 1 degree Celsius.
+While for the weather the estimated weight reflects the difference between good and bad weather, for temperature it only reflects an increase of 1 degree Celsius.
 You can make the estimated weights more comparable by scaling the features (zero mean and standard deviation of one) before fitting the linear model.
 
+:::{.callout-warning}
+
+Don't compare coefficients of features with different scales, because the magnitude of a coefficient is affected by the units of the feature:
+For example, if you multiply a feature by 1000, like when converting from kilogram to gram, then the new coefficient will be smaller by a factor of 1/1000.
+
+:::
+
 ### Effect Plot
+
 The weights of the linear regression model can be more meaningfully analyzed when they are multiplied by the actual feature values.
 The weights depend on the scale of the features and will be different if you have a feature that measures e.g. a person's height and you switch from meter to centimeter.
 The weight will change, but the actual effects in your data will not.
@@ -317,11 +342,10 @@ The categorical feature effects can be summarized in a single boxplot, compared 
 effect_plot(bike_lm, bike_test) + scale_x_discrete("")
 ```
 
-The largest contributions to the expected number of rented bicycles come from the temperature feature and the days feature, which captures the trend of bike rentals over time.
+The largest contributions to the expected number of rented bicycles come from the temperature feature and previous bike count.
 The temperature has a broad range of how much it contributes to the prediction.
-The day trend feature goes from zero to large positive contributions because the first day in the dataset (01.01.2011) has a very small trend effect and the estimated weight for this feature is positive (`r sprintf('%.2f', lm_summary_print['cnt_2d_bfr', 'Estimate'])`).
-This means that the effect increases with each day and is highest for the last day in the dataset (31.12.2012).
-Note that for effects with a negative weight, the instances with a positive effect are those that have a negative feature value.
+The count feature goes from zero to large positive contributions. 
+For effects with a negative weight, the instances with a positive effect are those that have a negative feature value.
 For example, days with a high negative effect of windspeed are the ones with high wind speeds.
 
 
@@ -348,8 +372,7 @@ The instance has the following feature values.
 
 ```{r}
 #| label: linear-effects-single-table
-df = data.frame(feature = colnames(bike_test), value = t(bike_test[i,]))
-colnames(df) = c("feature", "value")
+df = data.frame(Feature = colnames(bike_test), Value = t(bike_test[i,]))
 kableExtra::kbl(df, col.names = c("Feature", "Value"), row.names = FALSE, booktabs = TRUE, caption = sprintf("Feature values for instance %i", i)) %>% kable_styling(position = "center")
 ```
 
@@ -386,7 +409,7 @@ In comparison, the prediction of the `r i`-th instance is small, since only `r r
 The effect plot reveals the reason why.
 The boxplots show the distributions of the effects for all instances of the dataset, the crosses show the effects for the `r i`-th instance.
 The `r i`-th instance has a low temperature effect because on this day the temperature was `r round(bike_test[i, 'temp'],0)` degrees, which is low compared to most other days (and remember that the weight of the temperature feature is positive).
-Also, the effect of the trend feature "days_since_2011" is small compared to the other data instances because this instance is from early 2011 (`r  bike_test[i, 'days_since_2011']` days) and the trend feature also has a positive weight.
+Also, the effect of the feature "cont_2d_bfr" is small compared to the other data instances because fewer bikes were rented early 2011.
 
 
 ## Encoding of Categorical Features {#cat-code}
@@ -509,7 +532,7 @@ n.features = apply(l.mod$beta, 2, function(x){sum(x!=0)})
 kableExtra::kbl(extract.glmnet.effects(l.mod$beta, max(which(n.features == 2))), col.names = "Weight", digits = 2, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
-The first two features with non-zero weights in the Lasso path are temperature ("temp") and the time trend ("days_since_2011").
+The first two features with non-zero weights in the Lasso path are temperature ("temp") and the previous count ("cnt_2d_bfr").
 
 Now, let us select 5 features:
 
@@ -523,7 +546,7 @@ extract.glmnet.effects(l.mod$beta, max(which(n.features == 5))) %>%
 ```
 
 
-Note that the weights for "temp" and "days_since_2011" differ from the model with two features.
+Note that the weights for "temp" and "cnt_2d_bfr" differ from the model with two features.
 The reason for this is that by decreasing lambda even features that are already "in" the model are penalized less and may get a larger absolute weight.
 The interpretation of the Lasso weights corresponds to the interpretation of the weights in the linear regression model.
 You only need to pay attention to whether the features are standardized or not, because this affects the weights.
