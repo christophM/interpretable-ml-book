@@ -20,7 +20,7 @@ Their IF-THEN structure semantically resembles natural language and the way we t
 In programming, it is very natural to write IF-THEN rules.
 New in machine learning is that the decision rules are learned through an algorithm.
 
-Imagine using an algorithm to learn decision rules for predicting the value of a house (`low`, `medium` or `high`).
+Imagine using an algorithm to learn decision rules for predicting the value of a house (`low`, `ok` or `high`).
 One decision rule learned by this model could be:
 If a house is bigger than 100 square meters and has a garden, then its value is high.
 More formally:
@@ -50,7 +50,7 @@ The prediction (THEN-part) is not important for the calculation of support.
 **Accuracy or confidence of a rule**:
 The accuracy of a rule is a measure of how accurate the rule is in predicting the correct class for the instances to which the condition of the rule applies.
 For example:
-Let's say of the 100 houses, where the rule `size=big AND location=good THEN value=high` applies, 85 have `value=high`, 14 have `value=medium` and 1 has `value=low`, then the accuracy of the rule is 85%.
+Let's say of the 100 houses, where the rule `size=big AND location=good THEN value=high` applies, 85 have `value=high`, 14 have `value=ok` and 1 has `value=low`, then the accuracy of the rule is 85%.
 
 
 Usually there is a trade-off between accuracy and support:
@@ -131,13 +131,13 @@ OneR makes for a great baseline to compare more complex models against.
 :::
 
 Let's look at an example of how the best feature is chosen by OneR.
-The following table shows an artificial dataset about houses with information about its value, location, size and whether pets are allowed.
+@tbl-oner-freq-table1 shows an artificial dataset about houses with information about its value, location, size and whether pets are allowed.
 We are interested in learning a simple model to predict the value of a house.
 
 ```{r}
-#| label: OneR-freq-table1
+#| label: tbl-oner-freq-table1
 
-value = factor(c("high", "high", "high", "medium", "medium", "medium", "medium", "low", "low", "low"), levels = c("low", "medium", "high"))
+value = factor(c("high", "high", "high", "ok", "ok", "ok", "ok", "low", "low", "low"), levels = c("low", "ok", "high"))
 
 df = data.frame(
   location = c("good", "good", "good", "bad", "good", "good", "bad", "bad", "bad", "bad"),
@@ -145,17 +145,36 @@ df = data.frame(
   pets = c("yes", "no", "no", "no", "only cats", "only cats", "yes", "yes", "yes", "no"),
   value = value
 )
-value.f = factor(paste("value=", value, sep = ""), levels = c("value=low", "value=medium", "value=high"))
-kableExtra::kbl(df,  booktabs = TRUE) %>% kable_styling(position = "center")
+value.f = factor(paste("value=", value, sep = ""), levels = c("value=low", "value=ok", "value=high"))
+cap = "Artificial dataset for house value."
+kableExtra::kbl(df,  booktabs = TRUE, caption=cap) %>% kable_styling(position = "center")
 ```
 
-OneR creates the cross-tables between each feature and the outcome:
+OneR creates the cross-tables between each feature and the outcome.
+@fig-cross-tables shows the three cross tables.
+
+::: {#fig-cross-tables layout-ncol=2}
+
+
+
 ```{r}
-#| label: OneR-freq-table2
-kableExtra::kbl(table(paste0("location=", df[,"location"]), value.f), booktabs = TRUE) %>% kable_styling(position = "center")
 kableExtra::kbl(table(paste0("size=", df[,"size"]), value.f),  booktabs = TRUE) %>% kable_styling(position = "center")
+```
+
+
+```{r}
 kableExtra::kbl(table(paste0("pets=", df[,"pets"]), value.f),  booktabs = TRUE) %>% kable_styling(position = "center")
 ```
+
+```{r}
+kableExtra::kbl(table(paste0("location=", df[,"location"]), value.f), booktabs = TRUE) %>% kable_styling(position = "center")
+```
+
+
+
+Cross tables between each feature and the target.
+
+:::
 
 For each feature, we go through the table row by row:
 Each feature value is the IF-part of a rule;
@@ -163,13 +182,13 @@ the most common class for instances with this feature value is the prediction, t
 For example, the size feature with the levels `small`, `medium` and `big` results in three rules.
 For each feature we calculate the total error rate of the generated rules, which is the sum of the errors.
 The location feature has the possible values `bad` and `good`.
-The most frequent value for houses in bad locations is `low` and when we use `low` as a prediction, we make two mistakes, because two houses have a `medium` value.
-The predicted value of houses in good locations is `high` and again we make two mistakes, because two houses have a `medium` value.
+The most frequent value for houses in bad locations is `low` and when we use `low` as a prediction, we make two mistakes, because two houses have an `ok` value.
+The predicted value of houses in good locations is `high` and again we make two mistakes, because two houses have an `ok` value.
 The error we make by using the location feature is 4/10, for the size feature it is 3/10  and for the pet feature it is 4/10 .
 The size feature produces the rules with the lowest error and will be used for the final OneR model:
 
 IF `size=small` THEN  `value=low`  
-IF `size=medium` THEN  `value=medium`  
+IF `size=medium` THEN  `value=ok`  
 IF `size=big` THEN  `value=high`
 
 OneR prefers features with many possible levels, because those features can overfit the target more easily.
@@ -181,7 +200,7 @@ A solution would be to split the data into training and validation sets, learn t
 
 ::: {.callout-warning}
 
-Always validate your chosen model with a separate validation set to ensure that it performs well on unseen data, even if it's a simple model "one-rule" model.
+Always validate your chosen model with a separate validation set to ensure that it performs well on unseen data, even if it's a simple "one-rule" model.
 
 :::
 
@@ -195,10 +214,11 @@ OneR solves ties by either taking the first feature with the lowest error or the
 Let's try OneR with real data.
 We use the [palmer penguins data](#penguins) to test the OneR algorithm.
 All continuous input features were discretized into their 5 quantiles.
+The rules created by the OneR learning algorithms are shown in @tbl-oner-penguins.
 The following rules are created:
 
 ```{r}
-#| label: oner-penguins
+#| label: tbl-oner-penguins
 library("OneR")
 rule = OneR::OneR(sex ~ ., data = penguins_train)
 
@@ -207,8 +227,8 @@ rule.to.table = function(rule){
   colnames(dt) = c(rule$feature, "prediction")
   dt
 }
-
-kableExtra::kbl(rule.to.table(rule), row.names = FALSE, booktabs = TRUE) %>% kable_styling(position = "center")
+cap = "Rule learned by OneR for penguin classification."
+kableExtra::kbl(rule.to.table(rule), row.names = FALSE, caption = cap, booktabs = TRUE) %>% kable_styling(position = "center")
 ```
 
 The bill depth feature was chosen by OneR as the best predictive feature.
@@ -216,7 +236,6 @@ To get a better feel for how this one rule performs, let's look into the cross t
 
 ```{r}
 #| label: tbl-oner-penguin-confusion
-#| fig-cap: Confusion matrix for penguin sex classification rule found by OneR.
 
 # make sure to use the same bins
 bin_edges <- levels(bin(penguins_train$bill_depth_mm))
@@ -242,9 +261,9 @@ tt <- penguins_test %>%
 
 # Rename the first column
 colnames(tt)[1] <- "bill_depth_mm"
-
+cap = "Confusion matrix for penguin sex classification rule found by OneR."
 # Create the table with kable and kable_styling
-kableExtra::kbl(tt, booktabs = TRUE, align = "c") %>%
+kableExtra::kbl(tt, booktabs = TRUE, align = "c", caption=cap) %>%
   kable_styling(position = "center")
 ```
 
@@ -299,7 +318,7 @@ The sequential covering algorithm for two classes (one positive, one negative) w
 
 ```{r}
 #| label: covering-algo
-#| fig.cap: "The covering algorithm works by sequentially covering the feature space with single rules and removing the data points that are already covered by those rules. For visualization purposes, the features x1 and x2 are continuous, but most rule learning algorithms require categorical features."
+#| fig.cap: Steps of the covering algorithm."
 
 set.seed(42)
 n = 100
@@ -336,8 +355,7 @@ p4 = p3 +
   geom_rect(xmin = 0.8, xmax = 2.5, ymin = -1.5, ymax = 1.5, color = "black", fill = NA)  + 
   ggtitle("Step 3: Find next rule")
 
-gridExtra::grid.arrange(p1, p2, p3, p4, ncol = 2)
-
+(p1 | p2) / (p3 | p4)
 ```
 
 For example:
@@ -346,7 +364,7 @@ We learn the first rule, which turns out to be:
 If `size=big` and `location=good`, then `value=high`.
 Then we remove all big houses in good locations from the dataset.
 With the remaining data, we learn the next rule.
-Maybe: If `location=good`, then `value=medium`.
+Maybe: If `location=good`, then `value=ok`.
 Note that this rule is learned on data without big houses in good locations, leaving only medium and small houses in good locations.
 
 For multi-class settings, the approach must be modified.
@@ -367,9 +385,9 @@ One possibility is to learn a single rule from a decision tree with beam search:
 - The majority class of the terminal node is used as the rule prediction; 
 the path leading to that node is used as the rule condition.
 
-The following figure illustrates the beam search in a tree:
+@fig-learn-one-rule illustrates the beam search in a tree:
 
-![Learning a rule by searching a path through a decision tree. A decision tree is grown to predict the target of interest. We start at the root node, greedily and iteratively follow the path which locally produces the purest subset (e.g., highest accuracy) and add all the split values to the rule condition. We end up with: If `location=good` and `size=big`, then `value=high`.](./images/learn-one-rule.png)
+![Rule learned by searching a path through a decision tree. We end up with: If `location=good` and `size=big`, then `value=high`.](./images/learn-one-rule.png){#fig-learn-one-rule}
 
 Learning a single rule is a search problem, where the search space is the space of all possible rules.
 The goal of the search is to find the best rule according to some criteria.
@@ -388,7 +406,7 @@ RIPPER can run in ordered or unordered mode and generate either a decision list 
 library("RWeka")
 library(rJava)
 
-extract.rules.jrip = function (rule) {
+extract.rules.jrip = function (rule, caption="") {
   # Get the rules as text
   rules = scan(text = .jcall(rule$classifier, "S", "toString"), sep = "\n", what = "")
   # Remove the initial description lines and the summary at the end
@@ -401,7 +419,7 @@ extract.rules.jrip = function (rule) {
   if (nrow(rules_df) == 0) {
     return(NULL)
   } else {
-    kableExtra::kbl(rules_df, booktabs = TRUE) %>%
+    kableExtra::kbl(rules_df, booktabs = TRUE, caption=caption) %>%
       kableExtra::kable_styling(position = "center")
   }
 }
@@ -409,20 +427,26 @@ extract.rules.jrip = function (rule) {
 ```
 
 First we extract the rules for the [penguin sex classification task](#penguins).
-Here we get these rules plus the default rule.
-
-```{r}
-#| label: jrip-penguins
-#| include: true
-rule = JRip(sex~ ., data = penguins)
-extract.rules.jrip(rule)
-```
-
+The rules plus the default rule are printed in @tbl-jrip-penguins.
 The interpretation is simple:
 To predict a new instance, start at the top of the list and check whether a rule applies.
 If the conditions apply, predict the species on the right-hand side of the rule.
 If it doesn't apply, go to the next rule until you have a classification.
 The default rule ensures that there is always a prediction.
+
+```{r}
+#| label: tbl-jrip-penguins
+#| include: true
+# give shorter names for more narrow tables
+penguins2 = penguins
+penguins2$sex <- ifelse(penguins2$sex == "male", "M", 
+                       ifelse(penguins2$sex == "female", "F", NA))
+penguins2$sex = factor(penguins2$sex)
+rule = JRip(sex ~ ., data = penguins2)
+cap = "JRip rules learned for the penguin classification task."
+extract.rules.jrip(rule, caption=cap)
+```
+
 
 ::: {.callout-info}
 
@@ -435,10 +459,11 @@ When we use RIPPER on the regression task to predict [bike counts](#bike-data) s
 Since RIPPER only works for classification, the bike counts must be turned into a categorical outcome.
 I achieved this by cutting the bike counts into the quartiles.
 For example (4548, 5956) is the interval covering predicted bike counts between 4548 and 5956.
-The following table shows the decision list of learned rules.
+@tbl-jrip-bike shows the decision list of learned rules.
+Interpretation is again: If the conditions apply, we predict the interval on the right-hand side for the number of bikes.
 
 ```{r}
-#| label: jrip-bike
+#| label: tbl-jrip-bike
 bike2 = bike
 bike2$cnt = round(bike2$cnt)
 bike2$cnt =  cut(bike$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
@@ -447,12 +472,10 @@ bike2$windspeed = round(bike2$windspeed)
 bike2$hum = round(bike2$hum)
 
 rule = JRip(cnt  ~ ., data = bike2)
-tab = extract.rules.jrip(rule)
-#if (is.pdf) tab = tab %>% column_spec(1, "10cm")
-tab
+cap = "JRip rules for the bike task."
+extract.rules.jrip(rule, caption=cap)
 ```
 
-Interpretation: If the conditions apply, we predict the interval on the right-hand side for the number of bikes.
 
 ## Bayesian Rule Lists
 
@@ -590,15 +613,13 @@ The BRL algorithm selects the decision list of the samples with the highest post
 That's it with the theory, now let's see the BRL method in action.
 The examples use a faster variant of BRL called Scalable Bayesian Rule Lists (SBRL) [@yang2017scalable].
 We use the SBRL algorithm to predict the [species of the penguins](#penguins).
-Since there are 3 possible species in the Palmers' penguin data, but SBRL needs binary labels, I simplified the task to classify Adelie versus other (Gentoo/Chinstrap).
-I also had to discretize all input features for the SBRL algorithm to work.
+I had to discretize all input features for the SBRL algorithm to work.
 To do this, I binned the continuous features based on the frequency of the values by quantiles.
-
-We get the following rules:
+We get the rules displayed in @tbl-sbrl-penguins-show.
 
 <!-- Set eval = TRUE to recompute the rules -->
 ```{r}
-#| label: sbrl-penguins
+#| label: sbrl-penguins-prepare
 #| results: hide
 #| eval: true
 library("sbrl")
@@ -616,12 +637,12 @@ penguins2 = as.data.frame(lapply(penguins, function(x) {
 get.sbrl.rules = function(x) {
     res = lapply(1:nrow(x$rs), function(i) {
         if (i == 1) 
-            sprintf("If      %s (rule[%d]) then positive probability = %.3f\n", 
+            sprintf("If      %s (rule[%d]) then p = %.3f\n", 
                 x$rulenames[x$rs$V1[i]], x$rs$V1[i], x$rs$V2[i])
         else if (i == nrow(x$rs)) 
-            sprintf("else  (default rule)  then positive probability = %.3f\n", 
+            sprintf("else  (default rule)  then p = %.3f\n", 
                 x$rs$V2[nrow(x$rs)])
-        else sprintf("else if %s (rule[%d]) then positive probability = %.3f\n", 
+        else sprintf("else if %s (rule[%d]) then p = %.3f\n", 
             x$rulenames[x$rs$V1[i]], x$rs$V1[i], x$rs$V2[i])
     })
     data.frame(rules = unlist(res))
@@ -637,11 +658,10 @@ saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-penguins.R
 
 
 ```{r}
-#| label: sbrl-penguins-show
+#| label: tbl-sbrl-penguins-show
 rules = readRDS("../data/cached-sbrl-penguins.RDS")
-tab = kableExtra::kbl(rules$rules, booktabs = TRUE) %>% kable_styling(position = "center")
-#if (is.pdf) tab = tab %>%  column_spec(1, "10cm")
-tab
+cap = "Rules from SBRL model."
+kableExtra::kbl(rules$rules, booktabs = TRUE, caption = cap) %>% kable_styling(position = "center")
 ```
 
 The conditions were selected from patterns that were pre-mined with the FP-Growth algorithm.
@@ -650,7 +670,7 @@ The maximum number of feature values in a condition I allowed as a user was two.
 @tbl-sbrl-penguins-premined shows a sample of ten patterns.
 
 ```{r}
-#| label: sbrl-penguins-premined
+#| label: tbl-sbrl-penguins-premined
 #| tbl-cap: Premined rules for the penguin classification task.
 set.seed(1)
 conditions = sample(rules$rulenames, size = 10)
@@ -673,11 +693,11 @@ But there is a trade-off with complexity and therefore with predictive performan
 :::
 
 
-The following list was learned by SBRL:
+The rule list in @tbl-sbrl-bike-show was learned by SBRL.
 
 <!-- Set eval = TRUE to recompute the rules -->
 ```{r}
-#| label: sbrl-bike
+#| label: sbrl-bike-prepare
 #| results: "hide"
 #| eval: false 
 library("sbrl")
@@ -700,9 +720,10 @@ saveRDS(rules, file = "../data/cached-sbrl-bike.RDS")
 ```
 
 ```{r}
-#| label: sbrl-bike-show
+#| label: tbl-sbrl-bike-show
 rules = readRDS("../data/cached-sbrl-bike.RDS")
-tab = kableExtra::kbl(rules, booktabs = TRUE) %>% kable_styling(position = "center")
+cap = "SBRL rules for the bike task."
+tab = kableExtra::kbl(rules, booktabs = TRUE, caption=cap) %>% kable_styling(position = "center")
 #if (is.pdf) tab = tab %>% column_spec(1, width = "10cm")
 tab
 ```

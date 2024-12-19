@@ -1,4 +1,4 @@
-# Data and Models for Examples {#data}
+# Data and Models {#data}
 
 {{< include _setup.qmd >}}
 
@@ -10,17 +10,25 @@ custom_correlation_plot <- function(dat){
   cor_matrix <- cor(dat_clean)
   cor_melt <- melt(cor_matrix)
   cor_melt <- cor_melt[which(as.numeric(cor_melt$Var1) < as.numeric(cor_melt$Var2)), ]
+
+  # Drop levels of unused factor variables
+  cor_melt$Var1 <- factor(cor_melt$Var1, levels = unique(cor_melt$Var1))
+  cor_melt$Var2 <- factor(cor_melt$Var2, levels = unique(cor_melt$Var2))
+
   ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
     geom_tile(color = "white") +
     geom_label(aes(label = round(value, 2)), color = "black", size = 5, fill="white") +
-    scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +
+    scale_fill_viridis_c(
+      option = "viridis", # Choose a Viridis option (e.g., "viridis", "magma", "plasma")
+      limits = c(-1, 1)   # Set limits for correlation values
+    ) +
     my_theme() +
     labs(
       x = "",
       y = "",
       fill = "Correlation"
     ) +
-    scale_y_discrete(limits = rev(levels(cor_melt$Var1)))  +
+    scale_y_discrete(limits = rev(levels(cor_melt$Var2)))  +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
 ```
@@ -110,14 +118,17 @@ Since this example is just for showcasing the interpretability methods, I'm taki
 I pretend that the weather features are forecasts (they are not).
 That means our prediction task has the following shape:
 We predict tomorrow's number of rented bikes based on weather forecasts, seasonal information, and how many bikes were rented yesterday.
+
 ## Bike count regression models
 
 I trained all regression models using a simple holdout strategy: 2/3 of the data for training and 1/3 for testing.
 The ML algorithms were: random forest, CART decision tree, support vector machine, and linear regression.
+@tbl-performance-bike shows that the support vector machine performed best, since it had the lowest root mean squared error (RMSE) and the lowest mean absolute error (MAE).
+The random forest was slightly worse, and the linear regression model even more.
+Trailing very far behind is the decision tree, which didn't work out so well at all.
 
 ```{r}
-#| label: fig-performance-bike
-library(Metrics)
+#| label: tbl-performance-bike
 rf_preds = predict(bike_rf, bike_test)
 rf_rmse = rmse(bike_test$cnt, rf_preds)
 rf_mae = mae(bike_test$cnt, rf_preds)
@@ -143,12 +154,8 @@ results = data.frame(
 )
 
 results = results[order(results$RMSE), ]
-kable(results, caption = "Comparison of Model Performance", row.names=FALSE)
+kable(results, caption="Comparing bike rental model performance on test data with root mean squared error (RMSE) and mean absolute error (MAE).", row.names=FALSE)
 ```
-
-@fig-performance-bike shows that the support vector machine performed best, since it had the lowest root mean squared error (RMSE) and the lowest mean absolute error (MAE).
-The random forest was slightly worse, and the linear regression model even more.
-Trailing very far behind is the decision tree, which didn't work out so well at all.
 
 
 ### Correlations
@@ -187,17 +194,22 @@ That's why we also don't rely on NMI alone, but visualize the raw data and analy
 Mutual information between two categorical features $X_j$ and $X_k$ is given by:
 
 $$
-MI(X_j, X_k) = \sum_{c \in X_j} \sum_{d \in X_k} \mathbb{P}(X_j=c, X_k=d) \log \left( \frac{\mathbb{P}(X_j=c, X_k=d)}{\mathbb{P}(X_j=c) \mathbb{P}(X_k=d)} \right),
+MI(X_j, X_k) = \sum_{c, d} \mathbb{P}(c, d) \log \frac{\mathbb{P}(c, d)}{\mathbb{P}(c) \mathbb{P}(d)},
 $$
 
-where $\mathbb{P}(X_j=c, X_k=d)$ is the joint probability that feature $X_j$ takes on category $c$ and $X_k$ category $d$.
-$\mathbb{P}(X_j=c)$ is the probability that feature $X_j$ takes on category $c$, and the same for $\mathbb{P}(X_k=d)$.
-
+where $c \in X_j$ and $d \in X_k$.
+$P(c)=\mathbb{P}(X_j=c)$, is the probability that feature $X_j$ takes on category $c$, and the same for $\mathbb{P}(d)$.
+$\mathbb{P}(c,d)=\mathbb{P}(X_j=c, X_k=d)$ is the joint probability that feature $X_j$ takes on category $c$ and $X_k$ category $d$.
 Normalized mutual information brings MI from $[0, \infty[$ to $[0,1]$:
 
 $$NMI(X_j, X_k) = \frac{2 \cdot MI(X_j, X_k)}{H(X_j) + H(X_k)}$$
 
-where $H(X_j) = -\sum_{c \in X_j} \mathbb{P}(X_j=c) \log(\mathbb{P}(X_j=c)).$
+where
+
+$$
+H(X_j) = -\sum_{c \in X_j} \mathbb{P}(c) \log \mathbb{P}(c).
+$$
+
 
 To use (normalized) mutual information with numerical features, we discretize them into bins and the number of bins is based on the Freedman Diaconis rule [@freedman1981histogram] for optimal bin width:
 
@@ -214,6 +226,8 @@ Now let's have a look at the raw dependence data and the normalized mutual infor
 ```{r}
 #| label: fig-bike-mi
 #| fig-cap: Normalized mutual information and pair plots for the features in the bike sharing data. I left out holiday and workday to make the plots easier to read.
+#| height: 8
+#| width: 5
 mi_pair_plot(bike_train[fsubset])
 ```
 
@@ -226,12 +240,12 @@ For the next example, the dependence analysis holds a few more insights.
 ## Palmer Penguins (Classification) {#penguins}
 
 For classification, we will use the Palmer penguin data.
-This cute dataset contains measurements from `r nrow(penguins)` of penguins from the Palmer Archipelago in Antarctica.
+This cute dataset contains measurements from `r nrow(penguins)` of three penguin species from the Palmer Archipelago in Antarctica (visualized in @fig-penguins)
 The dataset was collected and published by Gorman et al. (2014) [@gorman2014ecological] and the Palmer Station in Antarctica, which is part of the Long Term Ecological Research Network.
 The paper studies difference in appearance between male and female, among other things.
-That's why we'll use male / female classification  based on body measurements (as did the paper).
+That's why we'll use male / female classification  based on body measurements (as the dataset creators did in their paper).
 
-![The 3 penguin species in the data: Chinstrap, Gentoo, and Adelie. Artwork by \@allison_horst.](./images/lter_penguins.png){width=80%}
+![The three penguin species in the data: Chinstrap, Gentoo, and Adelie. Artwork by \@allison_horst.](./images/lter_penguins.png){#fig-penguins width=80%}
 
 
 Each row represents a penguin and contains the following information:
@@ -252,10 +266,12 @@ The dataset is loaded using the palmerpenguins R package [@horst2020allisonhorst
 
 ### Penguin Models
 
-For the data examples, I trained the following models, using a simple split into training (2/3) and holdout test data (1/3):
+For the data examples, I trained the following models, using a simple split into training (2/3) and holdout test data (1/3).
+To assess the performance of the models, I measured log loss and accuracy on the test data.
+The results are shown in @tbl-performance-penguins.
 
 ```{r}
-library(Metrics)
+#| label: tbl-performance-penguins.
 # Predictions for random forest 
 rf_probs = predict(pengu_rf, penguins_test, type = "prob")[,"female"]
 rf_preds = predict(pengu_rf, penguins_test)
@@ -283,7 +299,7 @@ results = data.frame(
 results = results[order(results$Log_Loss), ]
 
 
-kable(results, caption = "Comparison of Model Performance", row.names=FALSE)
+kable(results, caption = "Comparison of model performance for penguin female vs. male classification.", row.names=FALSE)
 ```
 
 The logistic regression model is actually 3 models: I first split the data by species trained a logistic regression model and combined the performance results.
@@ -309,8 +325,10 @@ Let's have a look at the pair plots of the features, along with the normalized m
 
 ```{r}
 #| label: fig-penguins-nmi
-#| fig.cap: Pairwise normalized mutual information 
-# give shorter col names for this plot
+#| fig-cap: Pairwise Pearson correlation between the numerical features in the penguin data example.
+#| fig-height: 6
+#| fig-width: 6
+
 penguins_temp = penguins
 colnames(penguins_temp) <- gsub("_mm|_g", "", colnames(penguins_temp))
 mi_pair_plot(penguins_temp %>% dplyr::select(-sex))
@@ -334,13 +352,21 @@ The reason is that Gentoo are heavier and have deeper bills.
 
 ```{r}
 #| label: fig-simpsons
+#| fig-cap: Scatterplot of penguin weight and bill depth for all 3 species. The lines are regression lines for predicting bill depth from body mass for different subsets of the penguins.
+#| out-width: 80%
+penguins2 = penguins
+penguins2$species = "all"
+
 ggplot(data = penguins, aes(x = bill_depth_mm, y = body_mass_g, color = species)) +
   geom_point() +  # Add points
-  geom_smooth(method = "lm", se = FALSE, aes(group = 1), color = "black") +  # Regression line for all data
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(method = "lm", se = FALSE, data = rbind(penguins, penguins2)) +
   xlab("Bill depth in mm") +
-  ylab("Body mass in grams")
-
+  ylab("Body mass in grams") +
+  theme(
+    legend.position = c(.90, .95),
+    legend.justification = c("right", "top"),
+    legend.box.just = "right"
+  )
 ```
 
 :::

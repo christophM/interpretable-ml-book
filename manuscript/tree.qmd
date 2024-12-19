@@ -13,10 +13,12 @@ Trees can be used for classification and regression.
 There are various algorithms that can grow a tree.
 They differ in the possible structure of the tree (e.g. number of splits per node), the criteria for how to find the splits, when to stop splitting, and how to estimate the simple models within the leaf nodes.
 The classification and regression trees (CART) algorithm is probably the most popular algorithm for tree induction.
+An example is visualized in @fig-tree-artificial.
 We'll focus on CART, but the interpretation is similar for most other tree types.
 I recommend the book 'The Elements of Statistical Learning' (Friedman, Hastie, and Tibshirani 2009)[@hastie2009elements] for a more detailed introduction to CART.
+
 ```{r}
-#| label: tree-artificial
+#| label: fig-tree-artificial
 #| fig.cap: "Decision tree with artificial data. Instances with a value greater than 3 for feature x1 end up in node 5. All other instances are assigned to node 3 or node 4, depending on whether values of feature x2  exceed 1."
 library("partykit")
 set.seed(42)
@@ -94,10 +96,13 @@ We can add the contributions for each of the p features and get an interpretatio
 Let's have another look at the [bike rental data](#bike-data).
 We want to predict the number of rented bikes on a certain day with a decision tree.
 The learned tree is shown in @fig-tree-example.
+I set the maximum allowed depth for the tree to 2.
+The recent rental count (`cnt_2d_bfr`) and the temperature (`temp`) have been selected for the splits. 
 
 ```{r}
 #| label: fig-tree-example
-#| fig.cap: Regression tree fitted on the bike rental data. The maximum allowed depth for the tree was set to 2. The recent rental count (`cnt_2d_bfr`) and the temperature (`temp`) have been selected for the splits. The boxplots show the distribution of bicycle counts in the terminal node.
+#| fig.cap: Regression tree fitted on the bike rental data. The boxplots show the distribution of bicycle counts in the terminal node.
+
 X = bike_train %>% select(-cnt)
 y = bike_train$cnt
 dat = cbind(X, y)
@@ -109,15 +114,25 @@ plot(xp, digits = 0, id = FALSE, terminal_panel = node_boxplot(xp, id = FALSE),
   )
 ```
 
+::: {.callout-tip}
+
+Trees with lower depths and fewer nodes are easier to interpret.
+Many hyperparameters directly or indirectly control tree depth and/or number of nodes.
+Some of them interact with the data size, so make sure to pick hyperparameters that control number of nodes and tree depth directly.
+
+:::
+
 The first split and one of the second level splits were performed with the previous count feature.
 Basically, the larger the number of recent bike rentals, the more are predicted.
 If recently not so many bike were rented, then the temperature decides  whether to predict more or less rentals.
 The visualized tree shows that both temperature and time trend were used for the splits, but does not quantify which feature was more important.
-@fig-tree-importance shows the feature importance. 
+@fig-tree-importance shows the feature importance.
+The most important feature, according to Gini importance, was the previous bike count (`cnt_2d_bfr`), followed by temperature and season.
+Weather was the least important.
 
 ```{r}
 #| label: fig-tree-importance
-#| fig.cap: Importance of the features measured by how much the node purity is improved on average.
+#| fig.cap: Importance of the bike features measured by how much the node purity is improved on average.
 imp = round(100 * x$variable.importance / sum(x$variable.importance),0)
 imp.df = data.frame(feature = names(imp), importance = imp)
 imp.df$feature = factor(imp.df$feature, levels = as.character(imp.df$feature)[order(imp.df$importance)])
@@ -125,11 +140,11 @@ ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) +
   scale_y_discrete("")
 ```
 
+
 ::: {.callout-tip}
 
-Trees with lower depths and fewer nodes are easier to interpret.
-Many hyperparameters directly or indirectly control tree depth and/or number of nodes.
-Some of them interact with the data size, so make sure to pick hyperparameters that control number of nodes and tree depth directly.
+CART and other tree algorithms are invariant to the scale of the feature.
+For example, changing a feature from kilograms to grams (multiply by 1000), will change the split value, but the overall tree structure will be unchanged.
 
 :::
 

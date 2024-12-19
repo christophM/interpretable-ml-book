@@ -231,17 +231,13 @@ In the case of tabular data, LIME creates new samples by perturbing each feature
 Tabular data is data that comes in tables, with each row representing an instance and each column a feature.
 LIME samples are not taken around the instance of interest, but from the training data's mass center, which is problematic.
 But it increases the probability that the result for some of the sample points' predictions differ from the data point of interest and that LIME can learn at least some explanation.
-
-It's best to visually explain how sampling and local model training works:
+@fig-lime-fitting visually explains how sampling and local model training works:
 
 ```{r}
-#| label: lime-fitting
-#| fig-cap: "'LIME algorithm for tabular data. A) Random forest predictions given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and data sampled from a normal distribution (small dots). C) Assign higher weight to points near the instance of interest. D) Signs of the grid show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(class=1) = 0.5).'"
+#| label: fig-lime-fitting
+#| fig-cap: "LIME algorithm for tabular data. A) Prediction surface given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and sampled data (small dots). C) Assign weights based on distance to instance. D) Signs (+/-) show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(c=1) = 0.5)."
 #| fig-height: 9
 #| fig-width: 9
-## Creating dataset 
-library("dplyr")
-library("ggplot2")
 
 # Define range of set
 lower_x1 = -2
@@ -375,9 +371,7 @@ p_boundaries_lime = ggplot(grid_df)  +
   geom_line(aes(x=x1, y=x2), data =logistic_boundary_df, color = 'white') +
   my_theme(legend.position='none') + ggtitle('D')
 
-
-gridExtra::grid.arrange(p_boundaries, p_explain, p_weighted, p_boundaries_lime, ncol=2)
-
+(p_boundaries | p_explain) / (p_weighted | p_boundaries_lime)
 ```
 
 As always, the devil is in the detail.
@@ -390,11 +384,13 @@ If you look at [LIME's Python implementation (file lime/lime_tabular.py)](https:
 It looks like an innocent line of code, but it is like an elephant sitting in your living room next to the good porcelain you got from your grandparents.
 The big problem is that we do not have a good way to find the best kernel or width.
 And where does the 0.75 even come from?
-In certain scenarios, you can easily turn your explanation around by changing the kernel width, as shown in @fig-lime-fail. 
+In certain scenarios, you can easily turn your explanation around by changing the kernel width, as shown in @fig-lime-fail:
+The resulting linear regression model depends on the kernel width.
+Should the "true" local feature effect be negative, positive or no effect for x = 1.6?
 
 ```{r}
 #| label: fig-lime-fail
-#| fig-cap: Explanation of the prediction of instance x = 1.6. The predictions of the black box model depending on a single feature is shown as a thick line and the distribution of the data is shown with rugs. Three local surrogate models with different kernel widths are computed. The resulting linear regression model depends on the kernel width. Does the feature have a negative, positive or no effect for x = 1.6?
+#| fig-cap: Explanation of the prediction of instance x = 1.6 with different kernel widths. The model predictions are shown as a thick line and the distribution of the data is shown with rugs. Three local surrogate models with different kernel widths are computed.
 set.seed(42)
 df = data.frame(x = rnorm(200, mean = 0, sd = 3))
 df$x[df$x < -5] = -5
@@ -459,13 +455,11 @@ On what day will the number of rental bikes be above the trend-free average, bas
 
 The explanations are created with `r n_features_lime` features.
 The results of the sparse local linear models trained for two instances with different predicted classes is shown in @fig-lime-tabular-example-explain-plot-1.
+Warmer temperature and good weather situation have a positive effect on the prediction.
 
 ```{r}
 #| label: fig-lime-tabular-example-explain-plot-1
-#| fig-cap: LIME explanations for two instances of the bike rental dataset. Warmer temperature and good weather situation have a positive effect on the prediction. The x-axis shows the feature effect, which is the weight times the actual feature value.
-
-library("iml")
-library("gridExtra")
+#| fig-cap: LIME explanations for two instances of the bike rental dataset. The x-axis shows the feature effect, which is the weight times the actual feature value.
 instance_indices = c(295, 8)
 set.seed(44)
 bike.train.x$temp = round(bike.train.x$temp, 2)
@@ -483,7 +477,8 @@ b = plot(lim2) +
     geom_hline(aes(yintercept=0)) +
   theme(axis.title.y=element_blank(),
         axis.ticks.y=element_blank())
-grid.arrange(a, b, ncol = 1)
+
+(a / b)
 ```
 
 From the figure, it becomes clear that it is easier to interpret categorical features than numerical features.
@@ -514,12 +509,12 @@ All 5 are music videos.
 One of them is "Gangnam Style" by Korean artist Psy.
 The other artists are Katy Perry, LMFAO, Eminem, and Shakira.
 
-Check out some of the comments.
+Check out some of the comments in @tbl-show-dating-data-TubeSpam.
 The comments were manually labeled as spam or legitimate.
 Spam was coded with a "1" and legitimate comments with a "0".
 
 ```{r}
-#| label: show-dating-data-TubeSpam
+#| label: tbl-show-dating-data-TubeSpam
 library(kableExtra)
 load("../data/ycomments.RData")
 tab = kableExtra::kbl(ycomments[1:10, c('CONTENT', 'CLASS')], booktabs = TRUE, caption = "Sample of comments from the YouTube Spam dataset")
@@ -539,23 +534,16 @@ The black box model is a deep decision tree trained on the document word matrix.
 Each comment is one document (= one row) and each column is the number of occurrences of a given word.
 Short decision trees are easy to understand, but in this case the tree is very deep.
 Also in place of this tree there could have been a recurrent neural network or a support vector machine trained on word embeddings (abstract vectors).
-Let's look at the two comments of this dataset and the corresponding classes (1 for spam, 0 for normal comment):
+Let's look at the two comments of this dataset and the corresponding classes (1 for spam, 0 for normal comment) in @tbl-show-data-TubeSpam.
 
 ```{r}
-#| label: load-text-classification-lime
+#| label: tbl-show-data-TubeSpam
 data("ycomments")
 example_indices = c(267, 173)
 texts = ycomments$CONTENT[example_indices]
+cap = "Two examples of comments."
+kableExtra::kbl(ycomments[example_indices, c('CONTENT', 'CLASS')], booktabs = TRUE, caption=cap)  %>% kable_styling(position = "center")
 ```
-
-```{r}
-#| label: show--data-TubeSpam
-kableExtra::kbl(ycomments[example_indices, c('CONTENT', 'CLASS')], booktabs = TRUE)  %>% kable_styling(position = "center")
-
-```
-
-The next step is to create some variations of the datasets used in a local model.
-For example, some variations of one of the comments:
 
 ```{r}
 #| label: lime-text-variations
@@ -574,27 +562,30 @@ colnames(variations) = c(tokenized, 'prob', 'weight')
 example_sentence = paste(colnames(variations)[variations[2, ] == 1], collapse = ' ')
 ```
 
-```{r}
-#| label: lime-text-variations-output
-#| results: asis
-kableExtra::kbl(variations, row.names = FALSE, booktabs = TRUE)  %>% kable_styling(position = "center")
 
-```
 
+The next step is to create some variations of the datasets used in a local model.
+For example, some variations of one of the comments, see @tbl-lime-text-variations-output.
 Each column corresponds to one word in the sentence.
 Each row is a variation, 1 means that the word is part of this variation and 0 means that the word has been removed.
-The corresponding sentence for one of the variations is "```r example_sentence```".
+The corresponding sentence for one of the variations is "`r example_sentence`".
 The "prob" column shows the predicted probability of spam for each of the sentence variations.
 The "weight" column shows the proximity of the variation to the original sentence, calculated as 1 minus the proportion of words that were removed, for example if 1 out of 7 words was removed, the proximity is 1 - 1/7 = 0.86.
 
 
+```{r}
+#| label: tbl-lime-text-variations-output
+#| results: asis
+cap = "Variations of one of the youtube comments along with their weights (based on distance) and predicted probability of being spam."
+kableExtra::kbl(variations, row.names = FALSE, booktabs = TRUE, caption=cap)  %>% kable_styling(position = "center")
+```
 
-
-Here are the two sentences (one spam, one no spam) with their estimated local weights found by the LIME algorithm:
+And finally @tbl-lime-text-explanations shows the two sentences (one spam, one no spam) with their estimated local weights found by the LIME algorithm:
+The word "channel" indicates a high probability of spam.
+For the non-spam comment no non-zero weight was estimated, because no matter which word is removed, the predicted class remains the same.
 
 ```{r}
-#| label: lime-text-explanations
-#| fig-cap: "LIME explanations for text classification."
+#| label: tbl-lime-text-explanations
 set.seed(42)
 ycomments.predict = get.ycomments.classifier(ycomments)
 explanations  = data.table::rbindlist(lapply(seq_along(texts), function(i) {
@@ -602,12 +593,10 @@ explanations  = data.table::rbindlist(lapply(seq_along(texts), function(i) {
 })
 )
 explanations = data.frame(explanations)
-kableExtra::kbl(explanations[c("case", "label_prob", "feature", "feature_weight")], booktabs = TRUE)  %>% kable_styling(position = "center")
-
+cap = "LIME explanations for text classification."
+kableExtra::kbl(explanations[c("case", "label_prob", "feature", "feature_weight")], booktabs = TRUE, caption=cap)  %>% kable_styling(position = "center")
 ```
 
-The word "channel" indicates a high probability of spam.
-For the non-spam comment no non-zero weight was estimated, because no matter which word is removed, the predicted class remains the same.
 
 ## LIME for Images {#images-lime}
 
@@ -620,19 +609,18 @@ Therefore, variations of the images are created by segmenting the image into "su
 Superpixels are interconnected pixels with similar colors and can be turned off by replacing each pixel with a user-defined color such as gray.
 The user can also specify a probability for turning off a superpixel in each permutation.
 
-### Example
+### Image Classification Example
 
 In this example, we look at a classification made by the Inception V3 neural network.
-The image used shows some bread I baked that is in a bowl.
+The image used shows some bread I baked that is in a bowl (see @fig-lime-images-package-example-include).
 Since we can have several predicted labels per image (sorted by probability), we can explain the top labels.
 The top prediction is "Bagel" with a probability of 77%, followed by "Strawberry" with a probability of 4%.
 The following images show for "Bagel" and "Strawberry" the LIME explanations.
 The explanations can be displayed directly on the image samples.
 Green means that this part of the image increases the probability for the label and red means a decrease.
 
-```{r lime-images-package-example-include, fig.cap="Left: Image of a bowl of bread. Middle and right: LIME explanations for the top 2 classes (bagel, strawberry) for image classification made by Google's Inception V3 neural network."}
-knitr::include_graphics("images/lime-images-package-example-1.png")
-```
+![Left: Image of a bowl of bread. Middle and right: LIME explanations for the top 2 classes (bagel, strawberry) for image classification made by Google's Inception V3 neural network.](images/lime-images-package-example-1.png){#fig-lime-images-package-example-include}
+
 The prediction and explanation for "Bagel" are very reasonable, even if the prediction is wrong -- these are clearly no bagels since the hole in the middle is missing.
 
 

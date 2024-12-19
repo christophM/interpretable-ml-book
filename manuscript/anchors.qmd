@@ -21,19 +21,19 @@ Thus, the algorithm is *model-agnostic*, meaning it can be applied to **any** cl
 In their paper, the authors compare both of their algorithms and visualize how differently these consult an instance's neighborhood to derive results.
 For this, the following figure depicts both LIME and anchors locally explaining a complex binary classifier (predicts either **-** or **+**) using two exemplary instances.
 LIME’s results do not indicate how faithful they are, as LIME solely learns a linear decision boundary that best approximates the model given a perturbation space $D$.
+The difference between LIME and Anchors is visualized in @fig-lime-vs-anchors. 
 Given the same perturbation space, the anchors approach constructs explanations whose coverage is adapted to the model’s behavior and the approach clearly expresses their boundaries.
 Thus, they are faithful by design and state exactly for which instances they are valid.
 This property makes anchors particularly intuitive and easy to comprehend.
 
-![LIME vs. Anchors -- A Toy Visualization. Figure from Ribeiro, Singh, and Guestrin (2018).](./images/anchors-visualization.png){width=70%}
+![LIME vs. Anchors -- A Toy Visualization. Inspired by figure from Ribeiro, Singh, and Guestrin (2018).](./images/anchors-visualization.png){#fig-lime-vs-anchors width=70%}
 
 
 As mentioned before, the algorithm’s results or explanations come in the form of rules, called anchors.
 The following simple example illustrates such an anchor.
 For instance, suppose we are given a bivariate black box model that predicts whether or not a passenger survived the Titanic disaster.
-Now we would like to know *why* the model predicts for one specific individual that it survives.
+Now we would like to know *why* the model predicts for one specific person (see @tbl-anchors-explain) that they survive.
 The anchors algorithm provides a result explanation like the one shown below.
-
 
 | Feature         | Value         |
 | --------------- |---------------|
@@ -43,6 +43,8 @@ The anchors algorithm provides a result explanation like the one shown below.
 | Ticket price    | 300\$         |
 | More attributes | ...           |
 | Survived        | true          |
+
+: Example to be explained {#tbl-anchors-explain} 
 
 
 And the corresponding anchors explanation is:
@@ -133,9 +135,9 @@ Thus, at every round $i$, it generates candidates with exactly $i$ predicates an
 Therefore, by setting $B$ high, the algorithm is more likely to avoid local optima.
 In turn, this requires a high number of model calls and thereby increases the computational load.
 
-These four components are shown in the figure below.
+These four components are shown in @fig-anchors-algo.
 
-![The anchors algorithm’s components and their interrelations (simplified)](./images/anchors-process.jpg)
+![The anchors algorithm’s components and their interrelations (simplified)](./images/anchors-process.jpg){#fig-anchors-algo}
 
 The approach is a seemingly perfect recipe for efficiently deriving statistically sound information about why any system classified an instance the way it did.
 It systematically experiments with the model’s input and concludes by observing respective outputs.
@@ -235,12 +237,15 @@ bike.explanations_edge = anchors::explain(bike.explained.instances_edge, bike.ex
 saveRDS(bike.explanations_edge, file = "../data/cached-anchors-edge.RDS")
 ```
 
+The results (@fig-anchors1) are instinctively interpretable and show for each explained instance, which features are most important for the model's prediction.
+As the anchors only have a few predicates, they additionally have high coverage and hence apply to other cases.
+The rules shown above were generated with $\tau = 0.9$.
+Thus, we ask for anchors whose evaluated perturbations faithfully support the label with an accuracy of at least $90\%$.
+Also, discretization was used to increase the expressiveness and applicability of numerical features.
 
 ```{r}
-#| labels: anchors1
+#| labels: fig-anchors1
 #| fig-cap: Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The \"base\" rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.
-#| fig-height: 10
-#| fig-width: 12
 # to recreate plot
 # uncomment next two lines and remove the knitr::includegraphics line 
 #bike.explanations = readRDS("../data/cached-anchors.RDS")
@@ -248,18 +253,12 @@ saveRDS(bike.explanations_edge, file = "../data/cached-anchors-edge.RDS")
 knitr::include_graphics("images/anchors1-1.png")
 ```
 
-The results are instinctively interpretable and show for each explained instance, which features are most important for the model's prediction.
-As the anchors only have a few predicates, they additionally have high coverage and hence apply to other cases.
-The rules shown above were generated with $\tau = 0.9$.
-Thus, we ask for anchors whose evaluated perturbations faithfully support the label with an accuracy of at least $90\%$.
-Also, discretization was used to increase the expressiveness and applicability of numerical features.
-
 All of the previous rules were generated for instances where the model decides confidently based on a few features.
 However, other instances are not as distinctly classified by the model as more features are of importance.
-In such cases, anchors get more specific, comprise more features, and apply to fewer instances.
+In such cases, anchors get more specific, comprise more features, and apply to fewer instances, as for example for @fig-anchors2.
 
 ```{r}
-#| label: anchors2
+#| label: fig-anchors2
 #| fig-cap: "Explaining instances near decision boundaries leads to specific rules comprising a higher number of feature predicates and lower coverage. Also, the empty rule, i.e. the base feature, gets less important. This can be interpreted as a signal for a decision boundary, as the instance is located in a volatile neighborhood."
 #| fig-height: 9
 #| fig-width: 12
@@ -296,6 +295,8 @@ Second, the anchors approach **works when model predictions are non-linear or co
 As the approach deploys reinforcement learning techniques instead of fitting surrogate models, it is less likely to underfit the model.
 
 Apart from that, the algorithm is **model-agnostic** and thus applicable to any model.
+
+Anchors can be useful for justifying predictions as they show the robustness of predictions (or lack thereof) to changes in certain features.
 
 Furthermore, it is **highly efficient as it can be parallelized** by making use of MABs that support batch sampling (e.g. BatchSAR).
 

@@ -15,17 +15,14 @@ Shapley values -- a method from coalitional game theory -- tells us how to fairl
 ## General Idea
 
 Assume the following scenario:
-
 You've trained a machine learning model to predict apartment prices.
 For a certain apartment it predicts €300,000 and you need to explain this prediction.
-The apartment has an area of 50 m^2^, is located on the 2nd floor, has a park nearby and cats are banned:
-
-
-![The predicted price for a 50 $m^2$ 2nd floor apartment with a nearby park and cat ban is €300,000. Our goal is to explain how each of these feature values contributed to the prediction.](./images/shapley-instance.png){#shapley-instance}
-
+The apartment has an area of 50 m^2^, is located on the 2nd floor, has a park nearby and cats are banned, as illustrated in @fig-shapley-instance.
 The average prediction for all apartments is €310,000.
+Our goal is to explain how each of these feature values contributed to the prediction.
 How much has each feature value contributed to the prediction compared to the average prediction?
 
+![The predicted price for a 50 $m^2$ 2nd floor apartment with a nearby park and cat ban is €300,000. ](./images/shapley-instance.png){#fig-shapley-instance}
 
 The answer is simple for linear regression models.
 The effect of each feature is the weight of the feature times the feature value.
@@ -56,7 +53,7 @@ The Shapley value is the average marginal contribution of a feature value across
 All clear now?
 
 In the following figure we evaluate the contribution of the `cat-banned` feature value when it is added to a coalition of `park-nearby` and `area-50`.
-We simulate that only `park-nearby`, `cat-banned` and `area-50` are in a coalition by randomly drawing another apartment from the data and using its value for the floor feature.
+We simulate that only `park-nearby`, `cat-banned` and `area-50` are in a coalition by randomly drawing another apartment from the data and using its value for the floor feature, see @fig-shapley-instance-intervened.
 The value `floor-2nd` was replaced by the randomly drawn `floor-1st`.
 Then we predict the price of the apartment with this combination (€310,000).
 In a second step, we remove `cat-banned` from the coalition by replacing it with a random value of the cat allowed/banned feature from the randomly drawn apartment.
@@ -68,7 +65,7 @@ We'll get better estimates if we repeat this sampling step and average the contr
 
 
 ```{r}
-#| label: shapley-instance-intervened
+#| label: fig-shapley-instance-intervened
 #| fig-cap: "One sample repetition to estimate the contribution of `cat-banned` to the prediction when added to the coalition of `park-nearby` and `area-50`."
 knitr::include_graphics("images/shapley-instance-intervention.png")
 ```
@@ -93,23 +90,16 @@ All in all, the following coalitions are possible:
 - `park-nearby`+`area-50`+`floor-2nd`.
 
 For each of these coalitions we compute the predicted apartment price with and without the feature value `cat-banned` and take the difference to get the marginal contribution.
-The Shapley value is the (weighted) average of marginal contributions.
+The Shapley value is the (weighted) average of all marginal contributions.
+See @fig-shapley-coalitions for all possible coalitions `cat-banned` can be added to.
 We replace the feature values of features that are not in a coalition with random feature values from the apartment dataset to get a prediction from the machine learning model.
+If we estimate the Shapley values for all feature values, we get the complete distribution of the prediction (minus the average) among the feature values.
 
 ![All 8 coalitions needed for computing the exact Shapley value of the `cat-banned` feature value](./images/shapley-coalitions.jpg){#fig-shapley-coalitions width=80%}
 
 
-If we estimate the Shapley values for all feature values, we get the complete distribution of the prediction (minus the average) among the feature values.
 
 ## Examples and Interpretation
-
-The interpretation of the Shapley value for feature value j is:
-The value of the j-th feature contributed $\phi_j$ to the prediction of this particular instance compared to the average prediction for the dataset.
-
-The Shapley value works for both classification (if we are dealing with probabilities) and regression.
-
-We use the Shapley value to analyze the predictions of a random forest model predicting [penguin sex](#penguins).
-Figure  @fig-shapley-penguins-plot shows the Shapley values for a male penguin.
 
 ```{r}
 #| label: shapley-penguins-prepare
@@ -124,9 +114,22 @@ diff.prediction = actual.prediction - avg.prediction
 ```
 
 
+The interpretation of the Shapley value for feature value j is:
+The value of the j-th feature contributed $\phi_j$ to the prediction of this particular instance compared to the average prediction for the dataset.
+The Shapley value works for both classification (if we are dealing with probabilities) and regression.
+
+We use the Shapley value to analyze the predictions of a random forest model predicting [penguin sex](#penguins).
+Figure  @fig-shapley-penguins-plot shows the Shapley values for a male penguin.
+This penguin's predicted P(female)=`r round(actual.prediction, 2)` is `r round(diff.prediction, 2)` below the average probability for P(female) of `r round(avg.prediction, 2)`.
+The bill length contributed most to the probability of being female, but most factors were (correctly) pointing to male.
+The sum of the contributions yields the difference between actual and average prediction (`r round(avg.prediction, 2)`).
+
+
+
 ```{r}
 #| label: fig-shapley-penguins-plot
-#| fig-cap: !expr sprintf("Shapley values for penguin male vs female classification. This penguin's predicted P(female)=%.2f is %.2f below the average probability for P(female) of %.2f. The bill length contributed most to the probability of being female, but most factors were (correctly) pointing to male. The sum of the contributions yields the difference between actual and average prediction. (%.2f).", actual.prediction,diff.prediction, avg.prediction, avg.prediction)
+#| fig-cap: Shapley values for penguin male vs female classification.
+
 shapley2 = Shapley$new(predictor, x.interest = x.interest, sample.size = 100)
 plot(shapley2) +
   scale_y_continuous("Feature value contribution") +
@@ -167,9 +170,6 @@ Make sure to pick a meaningful reference dataset.
 
 :::
 
-For the [bike rental dataset](#bike-data), we also train a random forest to predict the number of rented bikes for a day, given weather and calendar information.
-The explanations created for the  random forest prediction of a particular day are shown in @fig-shapley-bike-plot.
-
 ```{r}
 #| label: shapley-bike-prepare
 data("bike")
@@ -189,10 +189,17 @@ diff.prediction = actual.prediction - avg.prediction
 x.interest = bike.train.x[instance_indices[2],]
 ```
 
+For the [bike rental dataset](#bike-data), we also train a random forest to predict the number of rented bikes for a day, given weather and calendar information.
+The explanations created for the  random forest prediction of a particular day are shown in @fig-shapley-bike-plot.
+With a predicted `r round(actual.prediction, 0)` rental bikes, this day is `r round(diff.prediction, 0)` below the average prediction of `r round(avg.prediction, 0)`.
+The temperature and humidity had the largest positive contributions.
+The low count two days before had the largest negative contribution.
+The sum of Shapley values yields the difference of actual and average prediction (`r round(diff.prediction, 0)`."
+
 
 ```{r}
 #| label: fig-shapley-bike-plot
-#| fig-cap: sprintf("Shapley values for day %i. With a predicted %.0f rental bikes, this day is %.0f below the average prediction of %.0f. The temperature and humidity had the largest positive contributions. The low count two days before had the largest negative contribution. The sum of Shapley values yields the difference of actual and average prediction (%.0f).", instance_indices[2], actual.prediction, diff.prediction, avg.prediction, diff.prediction)
+#| fig-cap: sprintf("Shapley values for day %i of the bike data.", i)
 shapley2 = Shapley$new(predictor, x.interest = x.interest)
 plot(shapley2) +  scale_y_continuous("Feature value contribution") +
   ggtitle(sprintf("Actual prediction: %.0f\nAverage prediction: %.0f\nDifference: %.0f", actual.prediction, avg.prediction, diff.prediction))  +
