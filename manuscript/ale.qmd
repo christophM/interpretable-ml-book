@@ -26,11 +26,11 @@ As a reminder, the recipe for partial dependence plots is: 1) Select feature.
 For the calculation of the first grid value of the PDP -- say 30 m^2^ -- we replace the living area for **all** instances by 30 m^2^, even for houses with 10 rooms.
 Sounds to me like a very unusual house.
 The partial dependence plot includes these unrealistic houses in the feature effect estimation and pretends that everything is fine.
-The following figure illustrates two correlated features and how it comes that the partial dependence plot method averages predictions of unlikely instances.
+@fig-aleplot-motivation1 illustrates two correlated features and how it comes that the partial dependence plot method averages predictions of unlikely instances.
 
 ```{r}
-#| label: aleplot-motivation1
-#| fig.cap: "Strongly correlated features x1 and x2. To calculate the feature effect of x1 at 0.75, the PDP replaces x1 of all instances with 0.75, falsely assuming that the distribution of x2 at x1 = 0.75 is the same as the marginal distribution of x2 (vertical line). This results in unlikely combinations of x1 and x2 (e.g. x2=0.2 at x1=0.75), which the PDP uses for the calculation of the average effect."
+#| label: fig-aleplot-motivation1
+#| fig.cap: Correlated features $X_1$ and $X_2$. When calculating the PDP at $X_1=0.75$ values for $X_2$ from the entire range of $X_2$ are sampled (vertical line). This results in the PDP using unlikely combinations of $X_1$ and $X_2$ (e.g., $X_2=0.2$ at $X_1=0.75$).
 set.seed(1)
 n = 100
 intercept = 0.75
@@ -51,8 +51,10 @@ x1.dens.df = data.frame(dens = x1.dens$y, x = x1.dens$x)
 
 
 p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) + 
-  ggtitle(sprintf("Marginal distribution P(x2)", intercept)) + 
-  scale_y_continuous(limits = c(-0.2, 1.2))
+  ggtitle(latex2exp::TeX(r'(Marginal distribution $P(X_2)$)')) + 
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(-0.2, 1.2)) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
+
 p1
 ```
 
@@ -65,11 +67,11 @@ Why do M-Plots not solve our problem?
 If we average the predictions of all houses of about 30 m^2^, we estimate the **combined** effect of living area and of number of rooms, because of their correlation.
 Suppose that the living area has no effect on the predicted value of a house, only the number of rooms has.
 The M-Plot would still show that the size of the living area increases the predicted value, since the number of rooms increases with the living area.
-The following plot shows for two correlated features how M-Plots work.
+@fig-aleplot-motivation2 shows for two correlated features how M-Plots work.
 
 ```{r}
-#| label: aleplot-motivation2
-#| fig-cap: "Strongly correlated features x1 and x2. M-Plots average over the conditional distribution. Here the conditional distribution of x2 at x1 = 0.75. Averaging the local predictions leads to mixing the effects of both features."
+#| label: fig-aleplot-motivation2
+#| fig-cap: "Correlated features $X_1$ and $X_2$. M-Plots average over the conditional distribution. Here the conditional distribution of $X_2$ at $X_1=0.75$. Averaging the local predictions leads to mixing the effects of both features."
 
 set.seed(1)
 n = 100
@@ -91,30 +93,34 @@ x1.dens.df = data.frame(dens = x1.dens$y, x = x1.dens$x)
 
 
 p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) + 
-  ggtitle(sprintf("Marginal distribution p(x2)", intercept)) + 
-  scale_y_continuous(limits = c(-0.2, 1.2))
+  ggtitle(latex2exp::TeX(r'(Marginal distribution $\mathbb{P}(X_2)$)')) + 
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(-0.2, 1.2)) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
+
 
 x1.dens.ale = density(x1[(x1 > (intercept - 0.1)) & (x1 < (intercept + 0.1))])
 x1.dens.ale.df = data.frame(dens = x1.dens.ale$y, x = x1.dens.ale$x)
 
 p2 = p.int + geom_path(data = x1.dens.ale.df, aes(x = intercept - dens/20, y = x)) + 
-  ggtitle(sprintf("Conditional distribution P(x2|x1=%.2f)", intercept)) + 
-  scale_y_continuous(limits = c(-0.2, 1.2))
+  ggtitle(latex2exp::TeX(r'(Conditional distribution $\mathbb{P}(X_2|X_1=0.75)$)')) + 
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(-0.2, 1.2)) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
+
+
 p2
 ```
-
 
 M-Plots avoid averaging predictions of unlikely data instances, but they mix the effect of a feature with the effects of all correlated features.
 ALE plots solve this problem by calculating -- also based on the conditional distribution of the features --  **differences in predictions instead of averages**.
 For the effect of living area at 30 m^2^, the ALE method uses all houses with about 30 m^2^, gets the model predictions pretending these houses were 31 m^2^ minus the prediction pretending they were 29 m^2^.
 This gives us the pure effect of the living area and is not mixing the effect with the effects of correlated features.
 The use of differences blocks the effect of other features.
-The following graphic provides intuition how ALE plots are calculated.
+@fig-aleplot-computation provides intuition how ALE plots are calculated.
 
 
 ```{r}
-#| label: aleplot-computation
-#| fig.cap: "Calculation of ALE for feature x1, which is correlated with x2. First, we divide the feature into intervals (vertical lines). For the data instances (points) in an interval, we calculate the difference in the prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). These differences are later accumulated and centered, resulting in the ALE curve."
+#| label: fig-aleplot-computation
+#| fig.cap: "Calculation of ALE for feature $X_1$, which is correlated with $X_2$. First, we divide the feature into intervals (vertical lines). For the data instances (points) in an interval, we calculate the difference in the prediction when we replace the feature with the upper and lower limit of the interval (horizontal lines). These differences are later accumulated and centered, resulting in the ALE curve."
 set.seed(12)
 n = 25
 
@@ -141,9 +147,10 @@ break.labels = c(expression(z[0~","~1]),  expression(z[1~","~1]), expression(z[2
 diff.df = df[df$x1 <= 0.8 & df$x1 > 0.6, ]
 
 p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) + 
-  scale_x_continuous(breaks = seq(from = 0,  to = 1, length.out = 6), limits = c(0, 1), labels = break.labels) + 
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'), breaks = seq(from = 0,  to = 1, length.out = 6), limits = c(0, 1), labels = break.labels) + 
   geom_label(data = label.df, aes(x = x1, y = x2, label = label)) + 
-  geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches")))
+  geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches"))) +
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'))
 ```
 
 
@@ -262,7 +269,7 @@ I'll rely on visualizations to develop intuition about the second-order ALE calc
 
 ```{r}
 #| label: aleplot-computation-2d
-#| fig.cap: 'Calculation of 2D-ALE. We place a grid over the two features. In each grid cell we calculate the 2nd-order differences for all instance within. We first replace values of x1 and x2 with the values from the cell corners. If a, b, c and d represent the "corner"-predictions of a manipulated instance (as labeled in the graphic), then the 2nd-order difference is (d - c) - (b - a). The mean 2nd-order difference in each cell is accumulated over the grid and centered.'
+#| fig.cap: 'Calculation of 2D-ALE. We place a grid over the two features. In each grid cell we calculate the 2nd-order differences for all instance within. We first replace values of $X_1$ and $X_2$ with the values from the cell corners. If a, b, c and d represent the "corner"-predictions of a manipulated instance (as labeled in the graphic), then the 2nd-order difference is (d - c) - (b - a). The mean 2nd-order difference in each cell is accumulated over the grid and centered.'
 p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
   theme(panel.grid.major.y = element_blank(), 
     panel.grid.minor.y = element_blank(), 
@@ -282,7 +289,9 @@ p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) +
   geom_hline(data = grid.df2, aes(yintercept = x2), linetype = 3) + 
   geom_rect(aes(xmin = x, xmax = xend,  ymin = y, ymax = yend), data = chosen.tile2, alpha = 0, color = "black", size = 1.1) +
   geom_label(data = chosen.tile, aes(x = x1, y = x2), label = letters[1:4]) + 
-  geom_point(aes(x = x1, y = x2), data = points.df, size = 3)
+  geom_point(aes(x = x1, y = x2), data = points.df, size = 3) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)')) +
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'))
 
 ```
 
@@ -328,7 +337,7 @@ We repeat the procedure with the other seasonal pairs and reduce the resulting d
 
 ::: {.callout-tip}
 
-If there is a meaningful order to the categories of a categorical feartures, use this order for ALE.
+If there is a meaningful order to the categories of a categorical features, use this order for ALE.
 
 :::
 
@@ -336,11 +345,13 @@ If there is a meaningful order to the categories of a categorical feartures, use
 
 Let's see ALE plots in action.
 I've constructed a scenario in which partial dependence plots fail.
-The scenario consists of a prediction model and two strongly correlated features.
+The scenario depicted in @fig-correlation-problem consists of a prediction model and two strongly correlated features.
 The prediction model is mostly a linear regression model but does something weird at a combination of the two features for which we have never observed instances.
+This "weird" area is far from the distribution of data (point cloud) and does not affect the performance of the model and arguably should not affect its interpretation.
+
 ```{r}
-#| label: correlation-problem
-#| fig.cap: "Two features and the predicted outcome. The model predicts the sum of the two features (shaded background), with the exception that if x1 is greater than 0.7 and x2 less than 0.3, the model always predicts 2. This area is far from the distribution of data (point cloud) and does not affect the performance of the model and also should not affect its interpretation."
+#| label: fig-correlation-problem
+#| fig.cap: "Two features and the predicted outcome. The model predicts the sum of the two features (shaded background), with the exception that if $X_1>0.7$ and $X_2<0.3$, the model always predicts 2. "
 set.seed(1)
 n = 25
 
@@ -362,19 +373,21 @@ grid.dat$predicted = y.fun(mod, grid.dat)
 
 ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) + 
   geom_point(aes(x = x1, y = x2), size = 3) + 
-  scale_fill_viridis("Model\nprediction", option = "D")
+  scale_fill_viridis("Model\nprediction", option = "D") +
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)')) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
 ```
 
 Is this a realistic, relevant scenario at all?
 When you train a model, the learning algorithm minimizes the loss for the existing training data instances.
 Weird stuff can happen outside the distribution of training data, because the model is not penalized for doing weird stuff in these areas.
 Leaving the data distribution is called extrapolation, which can also be used to fool machine learning models, described in the [chapter on adversarial examples](#adversarial).
-See in our little example how the partial dependence plots behave compared to ALE plots.
-
+See @fig-correlation-pdp-ale-plot how the partial dependence plots behave compared to ALE plots.
+The PDP estimates are influenced by the odd behavior of the model outside the data distribution (steep jumps in the plots). The ALE plots correctly identify that the machine learning model has a linear relationship between features and prediction, ignoring areas without data.
 
 ```{r}
-#| label: correlation-pdp-ale-plot
-#| fig.cap: "Comparison of the feature effects computed with PDP (upper row) and ALE (lower row). The PDP estimates are influenced by the odd behavior of the model outside the data distribution (steep jumps in the plots). The ALE plots correctly identify that the machine learning model has a linear relationship between features and prediction, ignoring areas without data."
+#| label: fig-correlation-pdp-ale-plot
+#| fig.cap: Feature effects computed with PDP (upper row) and ALE (lower row) for the simulated example.
 pred = Predictor$new(mod, data = df, predict.fun = y.fun)
 pdp = FeatureEffect$new(pred, feature = "x1", method = "pdp")
 pdp1 = pdp$plot() + ggtitle("PDP")
@@ -386,8 +399,6 @@ ale2 = FeatureEffect$new(pred, feature = "x2", method = "ale")$plot() + ggtitle(
 
 (pdp1 | pdp2) / (ale1 | ale2)
 ```
-
-
 
 But is it not interesting to see that our model behaves oddly at x1 > 0.7 and x2 < 0.3?
 Well, yes and no.
@@ -403,7 +414,7 @@ Turning to a real dataset, let us predict the [number of rented bikes](#bike-dat
 We train a regression tree to predict the number of rented bicycles on a given day and use ALE plots to analyze how wind speed and weather influence the predictions.
 
 @fig-ale-bike (left) shows that an increasing wind speed has a negative effect on bike rentals.
-For the weather situation, we see that especially bad weather has a strong negative effect on number of rented bikes.
+For the weather situation (right), we see that especially bad weather has a strong negative effect on number of rented bikes.
 Both effects align with domain knowledge, which is a good sign.
 
 ```{r}
@@ -421,14 +432,12 @@ alecat1 = FeatureEffect$new(pred.bike, "weather", method = "ale")
 alecat = ggplot(alecat1$results) + 
   geom_col(aes(x = weather, y = .value), fill = default_color, width = 0.3) + 
   geom_hline(yintercept=0) +
-  scale_x_discrete('') + 
+  scale_x_discrete('Weather Situation') + 
   scale_y_continuous("", limits=limits)
 
 (ale3 | alecat )
 
 ```
-
-
 
 Next, we consider effects of humidity and temperature and their interaction on the predicted number of bikes.
 Remember that the second-order effect is the additional interaction effect of the two features and does not include the main effects.
@@ -441,29 +450,38 @@ In cold and humid weather, the combined effect of temperature and humidity is th
 ```{r}
 #| label: fig-ale-bike-2d
 #| fig-cap: ALE plot for the 2nd-order effect of humidity and temperature on the predicted number of rented bikes. Lighter shade indicates an above average and darker shade a below average prediction when the main effects are already taken into account. 
+#| fig-height: 4
+ale_temp = FeatureEffect$new(pred.bike, feature = "temp", method = "ale")$results
+ale_temp$feature = "temp"
+ale_temp$x = ale_temp$temp
+ale_temp$temp = NULL
+ale_hum = FeatureEffect$new(pred.bike, feature = "hum", method = "ale")$results
+ale_hum$feature = "hum"
+ale_hum$x = ale_hum$hum
+ale_hum$hum= NULL
 
-ale_temp = FeatureEffect$new(pred.bike, feature = "temp", method = "ale")$plot() +   
-  scale_x_continuous("Temperature")
-ale_hum = FeatureEffect$new(pred.bike, feature = "hum", method = "ale")$plot() +   
-  scale_x_continuous("Humidity")
+ale_main = ggplot(rbind(ale_temp, ale_hum)) +
+  geom_line(aes(x=x, y=`.value`)) +
+  facet_grid(. ~ feature, scales="free_x") +
+  scale_y_continuous("ALE effect") +
+  scale_x_continuous("")
 
 ale_interact = FeatureEffect$new(pred.bike, feature = c("hum", "temp"), method = "ale", grid.size = 40)$plot() +   
   scale_fill_gradient("ALE", low = "red", high = "yellow") + 
   scale_x_continuous("Relative Humidity") + 
   scale_y_continuous("Temperature")+
-  scale_fill_viridis(option = "D")
+  scale_fill_viridis(option = "D") + 
+  theme(legend.position = "top")
 
-(ale_hum | plot_spacer()) /
-(ale_interact + ale_temp) +
-plot_layout(guides = "collect") # Ensures consistent legends
+(ale_main | ale_interact ) +
+  plot_layout(widths=c(2,1.5)) 
 ```
 
-To emphasize the difference between the pure second-order effect (the 2D ALE plot you just saw) and the total effect, let us look at the partial dependence plot.
-The PDP shows the total effect, which combines the mean prediction, the two main effects and the second-order effect (the interaction).
 
 ```{r}
-#| label: pdp-bike-vs-ale-2D
-#| fig.cap: "PDP of the total effect of temperature and humidity on the predicted number of bikes. The plot combines the main effect of each of the features and their interaction effect, as opposed to the 2D-ALE plot which only shows the interaction."
+#| label: fig-pdp-bike-vs-ale-2D
+#| fig.cap: "PDP of the total effect of temperature and humidity on the predicted number of bikes. "
+#| eval: false
 pdp = FeatureEffect$new(pred.bike, c("hum", "temp"), method = "pdp")
 pdp$plot() + 
   scale_fill_gradient("Prediction", low = "red", high = "yellow") + 
@@ -472,13 +490,11 @@ pdp$plot() +
   scale_fill_viridis(option = "D")
 ```
 
+You can also get the total interaction effect by adding the two main effects and the mean prediction on top.
 If you are only interested in the interaction, you should look at the second-order effects, because the total effect mixes the main effects into the plot.
-But if you want to know the combined effect of the features, you should look at the total effect (which the PDP shows).
-For example, if you want to know the expected number of bikes at 30 degrees Celsius and 80 percent humidity, you can read it directly from the 2D PDP.
-If you want to read the same from the ALE plots, you need to look at three plots:
-The ALE plot for temperature, for humidity and for temperature + humidity and you also need to know the overall mean prediction.
-In a scenario where two features have no interaction, the total effect plot of the two features could be misleading because it probably shows a complex landscape, suggesting some interaction, but it is simply the product of the two main effects.
-The second-order effect would immediately show that there is no interaction.
+But if you want to know the combined effect of the features, you should look at the total effect.
+However, in a scenario where two features have no interaction, the total effect of the two features could be misleading because it probably shows a complex landscape, suggesting some interaction, but it is simply the product of the two main effects.
+The pure second-order effect would immediately show that there is no interaction.
 
 Enough bicycles for now, let's turn to a classification task.
 We train a random forest to predict the [penguin sex](#penguins) based on body measurements.

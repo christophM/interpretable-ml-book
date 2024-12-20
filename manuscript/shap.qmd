@@ -138,9 +138,10 @@ As a result, the Shapley values have a different interpretation:
 For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
 For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom.
 
-For images, @fig-shap-images describes a possible mapping function:
+For images, @fig-shap-images describes a possible mapping function.
+Assigning the average color of surrounding pixels or similar would also be an option.
 
-![Function $h_x$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option.](./images/shap-superpixel.jpg){#fig-shap-images}
+![Function $h_x$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. ](./images/shap-superpixel.jpg){#fig-shap-images}
 
 <!-- Kernel -->
 The big difference to LIME is the weighting of the instances in the regression model.
@@ -271,10 +272,12 @@ That's why I summarized them in this [SHAP Plots Cheatsheet](https://christophmo
 
 
 @fig-force-plots shows SHAP explanation force plots for two penguins from the Palmer penguins dataset:
+The first penguin has a high probability of being an Adelie penguin due to its small bill length.
+The second penguin is unlikely to be Adelie due to its large bill length and flipper length.
 
 ```{r}
 #| label: fig-force-plots
-#| fig-cap: "SHAP values to explain the predicted probabilities for Adelie species for two penguins. The baseline -- the average predicted probability -- is 0.47. The first penguin has a high probability of being an Adelie penguin due to its small bill length. The second penguin is unlikely to be Adelie due to its large bill length and flipper length."
+#| fig-cap: "SHAP values for two penguins. The baseline -- the average predicted probability -- is 0.47. Each feature can be seen as a force that pushes the prediction either up or down from the baseline."
 img1 <- png::readPNG("images/shap-explain-1.png")
 img2 <- png::readPNG("images/shap-explain-2.png")
 
@@ -310,11 +313,10 @@ Since we want the global importance, we average the **absolute** Shapley values 
 $$I_j=\frac{1}{n}\sum_{i=1}^n{}|\phi_j^{(i)}|$$
 
 Next, we sort the features by decreasing importance and plot them.
-The following figure shows the SHAP feature importance for the random forest trained before for classifying penguins.
+@fig-shows the SHAP feature importance for the random forest trained before for classifying penguins.
+The bill length was the most important feature, changing the predicted probability for Adelie 33 pecentage points (0.33 on x-axis).
 
-```{r fig.cap="SHAP feature importance measured as the mean absolute Shapley values. The bill length was the most important feature, changing the predicted probability for Adelie 33 pecentage points (0.33 on x-axis)."}
-knitr::include_graphics("images/shap-importance.png")
-```
+![SHAP feature importance measured as the mean absolute Shapley values.](./images/shap-importance.png){#fig-shap-importance}
 
 SHAP feature importance is an alternative to [permutation feature importance](#feature-importance).
 There's a big difference between both importance measures:
@@ -333,14 +335,11 @@ The position on the y-axis is determined by the feature and on the x-axis by the
 The color represents the value of the feature from low to high.
 Overlapping points are jittered in the y-axis direction, so we get a sense of the distribution of the Shapley values per feature.
 The features are ordered according to their importance.
+In the summary plot, @fig-shap-summary-plot, we see first indications of the relationship between the value of a feature and the impact on the prediction.
+A short bill length contributes positively to P(Adelie). The summary plot also shows that bill length has the widest range of effects for the different penguins.
 
-```{r}
-#| label: shap-summary-plot
-#| fig-cap: "SHAP summary plot. A short bill length contributes positively to P(Adelie). The summary plot also shows that bill length has the widest range of effects for the different penguins."
-knitr::include_graphics("images/shap-importance-extended.png")
-```
+![SHAP summary plot. ](images/shap-importance-extended.png){#fig-shap-summary-plot}
 
-In the summary plot, we see first indications of the relationship between the value of a feature and the impact on the prediction.
 But to see the exact form of the relationship, we have to look at SHAP dependence plots.
 
 ## SHAP Dependence Plot
@@ -352,17 +351,15 @@ SHAP feature dependence might be the simplest global interpretation plot:
 
 Mathematically, the plot contains the following points: $\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n$
 
-The following figure shows the SHAP feature dependence for the bill length:
+@fig-shap-dependence shows the SHAP feature dependence for the body mass.
+The heavier the penguin, the less likely it's female.
 
-```{r fig.cap="SHAP dependence plot for bill length. The longer the bills the more likely the penguin is an Adelie penguin."}
-knitr::include_graphics("images/shap-dependence.png")
-```
+![SHAP dependence plot for body mass. The x-axis shows the feature, the x-axis the SHAP values. Each dot represents a data point.](images/shap-dependence.png){#fig-shap-dependence}
 
 SHAP dependence plots are an alternative to [partial dependence plots](#pdp) and [accumulated local effects](#ale).
 While PDP and ALE plots show average effects, SHAP dependence also shows the variance on the y-axis.
 Especially in the case of interactions, the SHAP dependence plot will be much more dispersed on the y-axis.
 The dependence plot can be improved by highlighting these feature interactions.
-
 
 ## SHAP Interaction Values
 
@@ -380,11 +377,10 @@ We average the values over all possible feature coalitions S, as in the Shapley 
 When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions M x M, where M is the number of features.
 
 How can we use the interaction index?
-For example, to automatically color the SHAP feature dependence plot with the strongest interaction:
+For example, to automatically color the SHAP feature dependence plot with the strongest interaction, as in @fig-shap-interaction.
+Here, body mass interacts with bill length.
 
-```{r fig.cap = "SHAP feature dependence plot with interaction visualization. Here we see the dependence plot of bill length in interaction with the body mass. Especially for longer bills, the contribution of the bill length to P(Adelie) differs based on body mass."}
-knitr::include_graphics("images/shap-dependence-interaction.png")
-```
+![SHAP feature dependence plot with interaction visualization. Here we see the dependence plot of bill length in interaction with the body mass. Especially for longer bills, the contribution of the bill length to P(Adelie) differs based on body mass.](images/shap-dependence-interaction.png){#fig-shap-interaction}
 
 
 ::: {.callout-tip}
@@ -408,16 +404,13 @@ SHAP clustering works by clustering the Shapley values of each instance.
 This means that you cluster instances by explanation similarity.
 All SHAP values have the same unit -- the unit of the prediction space.
 You can use any clustering method.
-The following example uses hierarchical agglomerative clustering to order the instances.
 
+@fig-shap-clustering uses hierarchical agglomerative clustering to order the instances.
 The plot consists of many force plots, each of which explains the prediction of an instance.
 We rotate the force plots vertically and place them side by side according to their clustering similarity.
 
-```{r}
-#| label: shap-clustering
-#| fig-cap: "Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it."
-knitr::include_graphics("images/shap-clustering.png")
-```
+![Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it.](./images/shap-clustering.png){#fig-shap-clustering}
+
 
 ## Strengths
 

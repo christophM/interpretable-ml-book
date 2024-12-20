@@ -8,13 +8,13 @@ The purpose of criticisms is to provide insights together with prototypes, espec
 Prototypes and criticisms can be used independently from a machine learning model to describe the data, but they can also be used to create an interpretable model or to make a black box model interpretable.
 
 In this chapter, I use the expression "data point" to refer to a single instance, to emphasize the interpretation that an instance is also a point in a coordinate system where each feature is a dimension.
-The following figure shows a simulated data distribution, with some of the instances chosen as prototypes and some as criticisms.
+@fig-visualize-prototypes shows a simulated data distribution, with some of the instances chosen as prototypes and some as criticisms.
 The small points are the data, the large points are the criticisms, and the large squares are the prototypes.
 The prototypes are selected (manually) to cover the centers of the data distribution, and the criticisms are points in a cluster without a prototype.
 Prototypes and criticisms are always actual instances from the data.
 
 ```{r}
-#| label: visualize-prototypes
+#| label: fig-visualize-prototypes
 #| fig-cap: "Prototypes and criticisms for a data distribution with two features x1 and x2."
 set.seed(1)
 dat1 = data.frame(x1 = rnorm(20, mean = 4, sd = 0.3), x2 = rnorm(20, mean = 1, sd = 0.3))
@@ -29,8 +29,9 @@ dat$type[c(81,95)] = "criticism"
 
 ggplot(dat, aes(x = x1, y = x2)) + geom_point(alpha = 0.7) +
   geom_point(data = filter(dat, type!='data'), aes(shape = type), size = 9, alpha = 1, color = "blue") +
-  scale_shape_manual(breaks = c("prototype", "criticism"), values = c(18, 19))
-
+  scale_shape_manual(breaks = c("prototype", "criticism"), values = c(18, 19)) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)')) +
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'))
 ```
 
 I selected the prototypes manually, which does not scale well and probably leads to poor results.
@@ -89,14 +90,14 @@ The key to bringing MMD2 down to zero is the term in the middle, which calculate
 If this term adds up to the first term (the average proximity of the prototypes to each other) plus the last term (the average proximity of the data points to each other), then the prototypes explain the data perfectly.
 Try out what would happen to the formula if you used all n data points as prototypes.
 
-The following graphic illustrates the MMD2 measure.
+@fig-mmd illustrates the MMD2 measure.
 The first plot shows the data points with two features, whereby the estimation of the data density is displayed with a shaded background.
 Each of the other plots shows different selections of prototypes, along with the MMD2 measure in the plot titles.
 The prototypes are the large dots and their distribution is shown as contour lines.
 The selection of the prototypes that best covers the data in these scenarios (bottom left) has the lowest discrepancy value.
 
 ```{r}
-#| label: mmd
+#| label: fig-mmd
 #| fig-cap: "The squared maximum mean discrepancy measure (MMD2) for a dataset with two features and different selections of prototypes."
 set.seed(42)
 n = 40
@@ -139,8 +140,9 @@ p = ggplot(dt, aes(x = x1, y = x2)) +
   stat_density_2d(geom = "tile", aes(fill = ..density..), contour = FALSE, alpha = 0.9) +
   geom_point() +
   scale_fill_gradient2(low = "white", high = "blue", guide = "none") +
-  scale_x_continuous(limits = c(0, NA)) +
-  scale_y_continuous(limits = c(0, NA))
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'), limits = c(0, NA)) +
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(0, NA))
+
 # create plot for each prototype
 p1 = p + geom_point(data = pt1, color = "red", size = 4) + geom_density_2d(data = pt1, color = "red") +
   ggtitle(sprintf("%.3f MMD2", mmd2(dt, pt1)))
@@ -188,13 +190,13 @@ If the witness function for a point x is close to zero, the density function of 
 A negative witness function at point x means that the prototype distribution overestimates the data distribution (for example if we select a prototype but there are only few data points nearby);
 a positive witness function at point x means that the prototype distribution underestimates the data distribution (for example if there are many data points around x but we have not selected any prototypes nearby).
 
-To give you more intuition, let us reuse the prototypes from the plot beforehand with the lowest MMD2 and display the witness function for a few manually selected points.
-The labels in the following plot show the value of the witness function for various points marked as triangles.
+To give you more intuition, let's reuse the prototypes from the plot beforehand with the lowest MMD2 and display the witness function for a few manually selected points.
+The labels in @fig-witness show the value of the witness function for various points marked as triangles.
 Only the point in the middle has a high absolute value and is therefore a good candidate for a criticism.
 
 
 ```{r}
-#| label: witness
+#| label: fig-witness
 #| fig-cap: "Evaluations of the witness function at different points."
 witness = function(x, dist1, dist2, sigma = 1) {
   k1 = apply(dist1, 1, function(z) radial(x, z, sigma = sigma))
@@ -210,7 +212,10 @@ p + geom_point(data = pt2, color = "red") +
   geom_density_2d(data = pt2, color = "red") +
   ggtitle(sprintf("%.3f MMD2", mmd2(dt, pt2))) +
   geom_label(data = wit.points, aes(label = witness), alpha = 0.9, vjust = "top") +
-    geom_point(data = wit.points, color = "black", shape = 17, size = 4)
+  geom_point(data = wit.points, color = "black", shape = 17, size = 4) +
+  scale_x_continuous(latex2exp::TeX(r'($X_1$)'), limits = c(0, NA)) +
+  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(0, NA))
+
 ```
 
 The witness function allows us to explicitly search for data instances that are not well represented by the prototypes.
@@ -269,14 +274,11 @@ I do not promise that MMD-critic would certainly intercept these kinds of mistak
 ## Examples
 
 The following example of MMD-critic uses a handwritten digit dataset.
-
-Looking at the actual prototypes, you might notice that the number of images per digit is different.
+Looking at the actual prototypes in @fig-prototypes-and-criticisms2, you might notice that the number of images per digit is different.
 This is because a fixed number of prototypes was searched across the entire dataset and not with a fixed number per class.
 As expected, the prototypes show different ways of writing the digits.
 
-```{r, prototypes-and-criticisms2, fig.cap = "Prototypes for a handwritten digits dataset."}
-knitr::include_graphics("images/handwritten-prototypes.png")
-```
+![Prototypes for a handwritten digits dataset.](./images/handwritten-prototypes.png){#fig-prototypes-and-criticisms2}
 
 
 ## Strengths
