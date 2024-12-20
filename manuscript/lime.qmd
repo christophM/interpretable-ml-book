@@ -432,57 +432,42 @@ Distance measures are quite arbitrary and distances in different dimensions (aka
 
 ### Example
 
-Let's look at a concrete example.
-We go back to the [bike rental data](#bike-data) and turn the prediction problem into a classification:
-After taking into account the trend that the bicycle rental has become more popular over time, we want to know on a certain day whether the number of bicycles rented will be above or below the trend line.
-You can also interpret "above" as being above the average number of bicycles, but adjusted for the trend.
-
 ```{r}
-#| label: lime-tabular-example-train-black-box
-data("bike")
-ntree = 100
-bike.train.resid = factor(resid(lm(cnt ~ cnt_2d_bfr, data = bike)) > 0, levels = c(FALSE, TRUE), labels = c('below', 'above'))
-bike.train.x = bike[names(bike) != 'cnt']
-
-model <- caret::train(bike.train.x,
-  bike.train.resid,
-  method = 'rf', ntree=ntree, maximise = FALSE)
+#| label: lime-prepare
 n_features_lime = 2
 ```
 
-First we train a random forest with `r ntree` trees on the classification task.
-On what day will the number of rental bikes be above the trend-free average, based on weather and calendar information?
-
+Let's look at a concrete example.
+We go back to the [penguins data](#bike-data), which is about classifying a penguin as female or male based on body measurements.
+We analyze the random forest trained to do that.
 The explanations are created with `r n_features_lime` features.
 The results of the sparse local linear models trained for two instances with different predicted classes is shown in @fig-lime-tabular-example-explain-plot-1.
-Warmer temperature and good weather situation have a positive effect on the prediction.
+Higher body mass and longer bills are associated with lower P(female).
 
 ```{r}
 #| label: fig-lime-tabular-example-explain-plot-1
 #| fig-cap: LIME explanations for two instances of the bike rental dataset. The x-axis shows the feature effect, which is the weight times the actual feature value.
-instance_indices = c(295, 8)
-set.seed(44)
-bike.train.x$temp = round(bike.train.x$temp, 2)
-pred = Predictor$new(model, data = bike.train.x, class = "above", type = "prob")
-lim1 = LocalModel$new(pred, x.interest = bike.train.x[instance_indices[1],], k = n_features_lime)
-lim2= LocalModel$new(pred, x.interest = bike.train.x[instance_indices[2],], k = n_features_lime)
-wlim = c(min(c(lim1$results$effect, lim2$results$effect)), max(c(lim1$results$effect, lim2$results$effect)))
+
+instance_indices = c(1, 3)
+pengu_features = penguins[names(penguins) != "sex"]
+pred = Predictor$new(pengu_rf, data = pengu_features, type="prob", class="female")
+lim1 = LocalModel$new(pred, x.interest = pengu_features[instance_indices[1],], k = n_features_lime)
+lim2= LocalModel$new(pred, x.interest = pengu_features[instance_indices[2],], k = n_features_lime)
+
+#wlim = c(min(c(lim1$results$effect, lim2$results$effect)), max(c(lim1$results$effect, lim2$results$effect)))
 a = plot(lim1) +
-  scale_y_continuous(limit = wlim) + 
+#  scale_y_continuous(limit = wlim) + 
   geom_hline(aes(yintercept=0))   +
   theme(axis.title.y=element_blank(),
         axis.ticks.y=element_blank())
 b = plot(lim2) +
-    scale_y_continuous(limit = wlim) + 
+#    scale_y_continuous(limit = wlim) + 
     geom_hline(aes(yintercept=0)) +
   theme(axis.title.y=element_blank(),
         axis.ticks.y=element_blank())
 
 (a / b)
 ```
-
-From the figure, it becomes clear that it is easier to interpret categorical features than numerical features.
-One solution is to categorize the numerical features into bins.
 
 
 ## LIME for Text
@@ -494,12 +479,6 @@ The dataset is represented with binary features for each word.
 A feature is 1 if the corresponding word is included and 0 if it has been removed.
 
 ### Example
-
-In this example, we classify [YouTube comments](#spam-data) as spam or normal.
-
-::: {.callout-info}
-
-## YouTube Spam Comments (Text Classification) {#spam-data}
 
 As an example for text classification we work with 1956 comments from 5 different YouTube videos.
 Thankfully, the authors who used this dataset in an article on spam classification made the data [freely available](https://archive.ics.uci.edu/ml/datasets/YouTube+Spam+Collection) [@alberto2015tubespam].
@@ -527,8 +506,6 @@ But please do not get caught in YouTube hell and end up watching videos of monke
 The Google Spam detector has also probably changed a lot since 2015.
 
 [Watch the view-record breaking video "Gangnam Style" here](https://www.youtube.com/watch?v=9bZkp7q19f0&feature=player_embedded).
-
-:::
 
 The black box model is a deep decision tree trained on the document word matrix.
 Each comment is one document (= one row) and each column is the number of occurrences of a given word.

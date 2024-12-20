@@ -3,9 +3,6 @@
 {{< include _setup.qmd >}}
 
 ```{r}
-penguins$is_adelie = penguins$species == "Adelie"
-penguins = penguins[c("is_adelie", "body_mass_g", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "sex")]
-
 influence.matrix.filename = "../data/influence-df.RData"
 ```
 
@@ -174,33 +171,26 @@ In the following example, we will use these simple influence measures.
 
 **Deletion diagnostics example**
 
-In the following example, we train a support vector machine to predict whether a penguin is an [Adelie penguin](#penguins) given body measurements and measure which training instances were most influential overall and for a particular prediction.
-Since this is a classification problem, we measure the influence as the difference in predicted probability for penguin species.
+In the following example, we train a random forest to predict whether a [penguin's sex](#penguin) given body measurements and measure which training instances were most influential overall and for a particular prediction.
+Since this is a classification problem, we measure the influence as the difference in predicted probability for female.
 An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
-Measuring influence for all `r nrow(penguins)` training instances requires training the model once on all data and retraining it `r nrow(penguins)` times (= size of training data) with one of the instances removed each time.
+Measuring influence for all `r nrow(penguins_train)` training instances requires training the model once on all data and retraining it `r nrow(penguins_train)` times (= size of training data) with one of the instances removed each time.
 
 ```{r}
 #| label: influence
-#| eval: false
+#| eval: true 
 
 # TODO: replace eval: false with !file.exists(influence.matrix.filename)
 
-
-#'@param predicted The predicted outcome of a model
-#'@param predicted.without The predicted outcome of a model with a data point removed
 influence.v = function(predicted, predicted.without) {
   predicted - predicted.without
 }
 
-influence.matrix = matrix(NA, ncol = nrow(penguins), nrow = nrow(penguins))
+predicted.orig = predict(pengu_rf, newdata=penguins_train, type="prob")[,"female"]
 
-lrn = makeLearner("classif.svm", predict.type = "prob")
-tsk = makeClassifTask(data = penguins, target = "is_adelie")
-mod = train(lrn, tsk)
-predicted.orig = getPredictionProbabilities(predict(mod, newdata = penguins))
-cs = lapply(1:nrow(penguins), function(to.remove.index) {
-  mod.2 = train(lrn, tsk, subset = setdiff(1:nrow(penguins), to.remove.index))
-  predict.removed = getPredictionProbabilities(predict(mod.2, newdata = penguins))
+cs = lapply(1:nrow(penguins_train), function(to.remove.index) {
+  mod.2 =  randomForest(sex ~ ., data = penguins_train[setdiff(1:nrow(penguins_train), to.remove.index),])
+  predict.removed = predict(mod.2, newdata=penguins_train, type="prob")[,"female"]
   influence.v(predicted.orig, predict.removed)
 })
 
@@ -208,12 +198,13 @@ cs = lapply(1:nrow(penguins), function(to.remove.index) {
 influence.df = data.frame(cs)
 influence.df = as.matrix(influence.df)
 diag(influence.df) = NA
+colnames(influence.df) = rownames(influence.df) = 1:nrow(penguins_train)
 save(influence.df, predicted.orig, file = influence.matrix.filename)
 ```
 
 ```{r}
 load(influence.matrix.filename)
-df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nrow(penguins))
+df = data.frame(influence = colMeans(abs(influence.df), na.rm = TRUE), id = 1:nrow(penguins_train))
 df = df[order(df$influence, decreasing = TRUE),]
 ```
 
@@ -240,7 +231,7 @@ But we can better understand what kind of instances are influential when we ask:
 What distinguishes an influential instance from a non-influential instance?
 We can turn this question into a regression problem and model the influence of an instance as a function of its feature values.
 We are free to choose any model from the chapter on [Interpretable Machine Learning Models](#simple).
-For this example, I chose a decision tree (@fig-cooks-analyzed-1) that shows that data from penguins with short bills and short flippers were the most influential for the support vector machine.
+For this example, I chose a decision tree (@fig-cooks) that shows that data from penguins with short bills and long flippers were the most influential for the support vector machine.
 Penguins with long bills and a low body mass were the least influential.
 
 ```{r}
@@ -252,7 +243,7 @@ Penguins with long bills and a low body mass were the least influential.
 
 # This code snippet causes problems on TravisCI.
 # Hack: save resulting figure locally, set eval to FALSE and load img in different chunk
-df.penguins= cbind(df, penguins[,setdiff(colnames(penguins), "is_adelie")])
+df.penguins= cbind(df, penguins_train[,setdiff(colnames(penguins_train), "sex")])
 ct = rpart(abs(influence) ~ . -id, data = df.penguins, control = rpart.control(maxdepth = 2))
 ct = partykit::as.party.rpart(ct)
 partykit:::plot.constparty(ct,
@@ -269,7 +260,7 @@ partykit:::plot.constparty(ct,
 i = which(predicted.orig == min(predicted.orig))
 i = 8
 obs = influence.df[i,]
-penguins.i = penguins
+penguins.i = penguins_train
 penguins.i$influence = unlist(obs)
 worst.case.index = which(abs(penguins.i$influence) == max(abs(penguins.i$influence), na.rm = TRUE))
 ```
@@ -330,7 +321,7 @@ This method involves approximating the loss around the current model parameters 
 Loss upweighting is similar to deleting the instance.  
 *You*: Great, that's what I'm looking for!  
 
-Koh and Liang (2017) [@koh2017understanding] suggested using influence functions, a method of robust statistics, to measure how an instance influences model parameters or predictions.
+@koh2017understanding suggested using influence functions, a method of robust statistics, to measure how an instance influences model parameters or predictions.
 As with deletion diagnostics, the influence functions trace the model parameters and predictions back to the responsible training instance.
 However, instead of deleting training instances, the method approximates how much the model changes when the instance is upweighted in the empirical risk (sum of the loss over the training data).
 
