@@ -255,10 +255,11 @@ $$E(\text{coffee}|\text{str},\text{slp},\text{wrk})=exp(\beta_0+\beta_{\text{str
 
 Since all the weights are in the exponential function, the effect interpretation is not additive, but multiplicative, because exp(a + b) is exp(a) times exp(b).
 The last ingredient for the interpretation is the actual weights of the toy example.
-@fig-poisson-model-params lists the estimated weights and exp(weights) together with the 95% confidence interval:
+@tbl-poisson-model-params lists the estimated weights and exp(weights) together with the 95% confidence interval:
 
 ```{r}
-#| label: fig-poisson-model-params
+#| label: tbl-poisson-model-params
+#| tbl-cap: "Results of the Poisson model: Weights, exp(Weights), and 95% confidence intervals."
 cc = data.frame(summary(mod.pois)$coefficients)
 cc = cc[,c("Estimate", "Std..Error")]
 colnames(cc) = c("beta", 'var.beta')
@@ -266,9 +267,7 @@ cc$exp.beta = exp(cc[, 'beta'])
 cc = cc[c("beta", "exp.beta")]
 cc = cbind(cc, exp(confint(mod.pois)))
 cc$ci = sprintf("%.2f [%.2f, %.2f]", cc$exp.beta, cc$`2.5 %`, cc$`97.5 %`)
-cap = "Results of the Poisson model: Weights, exp(Weights), and 95% confidence intervals."
-kableExtra::kbl(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2, booktabs = TRUE, caption = cap) %>%
-  kable_styling(position = "center")
+kableExtra::kbl(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%, 97.5%]"), digits = 2, booktabs = TRUE)
 ```
 
 Increasing the stress level by one point multiplies the expected number of coffees by the factor `r round(cc["stress", "exp.beta"], 2)`.
@@ -344,9 +343,9 @@ I'm shorting the weather categories here to narrow the table a bit: G=GOOD, B=BA
 
 ```{r}
 #| label: tbl-data-frame-lm-cat
-cap = "Data example for bike data with features workday and weather for 4 days."
+#| tbl-cap: Data example for bike data with features workday and weather for 4 days.
 x = data.frame(work = c("Y", "N", "N", "Y"), wthr = c("B", "G", "M", "B"))
-kableExtra::kbl(x, booktabs = TRUE, caption = cap) %>% kable_styling(position = "center")
+kableExtra::kbl(x, booktabs = TRUE)
 ```
 
 Next, we include interaction terms to get @tbl-data-frame-lm-cat2.
@@ -383,6 +382,7 @@ This results in tbl-example-lm-interaction estimated weights and confidence inte
 
 ```{r}
 #| label: tbl-example-lm-interaction
+#| tbl-cap: Linear regression estimates for bike data including interaction between workday and temperature.
 X = bike_train %>% select(-cnt)
 y = bike_train$cnt
 dat = cbind(X, y)
@@ -394,9 +394,7 @@ lm_summary_print = lm_summary
 rownames(lm_summary_print) = pretty_rownames(rownames(lm_summary_print))
 
 # var name becomes to long otherwise
-cap = "Linear regression estimates for bike data including interaction between workday and temperature."
-tab = kableExtra::kbl(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight', 'Std. Error', "2.5%","97.5%"), booktabs = TRUE, caption=cap) %>% kable_styling(position = "center")
-tab
+kableExtra::kbl(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mod)), digits = 1, col.names = c('Weight', 'Std. Error', "2.5%","97.5%"), booktabs = TRUE)
 ```
 
 The additional interaction effect is negative (`r round(lm_summary_print['workdayY:temp','Estimate'], 1)`) and differs significantly from zero, as shown by the 95% confidence interval, which does not include zero.
@@ -552,11 +550,10 @@ Each spline basis column contains the value of the spline basis function at the 
 
 ```{r}
 #| label: tbl-splines
+#| tbl-cap: Feature matrix when using splines.
 # fit GAM again with less splines
 mod.gam = gam(cnt ~ s(temp, k = 5), data = bike)
-cap = "Feature matrix when using splines."
-kableExtra::kbl(head(model.matrix(mod.gam)), digits = 2, booktabs = TRUE, caption=cap) %>%
-  kable_styling(position = "center")
+kableExtra::kbl(head(model.matrix(mod.gam)), digits = 2, booktabs = TRUE)
 ```
 
 @fig-splines shows how these spline basis functions look like.
@@ -578,8 +575,7 @@ The GAM assigns weights to each temperature spline basis feature:
 ```{r}
 #| label: tbl-splines-weights
 cap = "Weights estimated for the spline features when training the model."
-kableExtra::kbl(coef(mod.gam), digits = 2, col.names = "weight", booktabs = TRUE) %>%
-  kable_styling(position = "center")
+kableExtra::kbl(coef(mod.gam), digits = 2, col.names = "weight", booktabs = TRUE)
 ```
 
 And the actual spline curve, which results from the sum of the spline basis functions weighted with the estimated weights, looks like in @fig-splines-curve.

@@ -136,7 +136,7 @@ We are interested in learning a simple model to predict the value of a house.
 
 ```{r}
 #| label: tbl-oner-freq-table1
-
+#| tbl-cap: Artificial dataset for house value.
 value = factor(c("high", "high", "high", "ok", "ok", "ok", "ok", "low", "low", "low"), levels = c("low", "ok", "high"))
 
 df = data.frame(
@@ -146,8 +146,7 @@ df = data.frame(
   value = value
 )
 value.f = factor(paste("value=", value, sep = ""), levels = c("value=low", "value=ok", "value=high"))
-cap = "Artificial dataset for house value."
-kableExtra::kbl(df,  booktabs = TRUE, caption=cap) %>% kable_styling(position = "center")
+kableExtra::kbl(df,  booktabs = TRUE) 
 ```
 
 OneR creates the cross-tables between each feature and the outcome.
@@ -219,6 +218,7 @@ The following rules are created:
 
 ```{r}
 #| label: tbl-oner-penguins
+#| tbl-cap: "Rule learned by OneR for penguin classification."
 library("OneR")
 rule = OneR::OneR(sex ~ ., data = penguins_train)
 
@@ -227,8 +227,7 @@ rule.to.table = function(rule){
   colnames(dt) = c(rule$feature, "prediction")
   dt
 }
-cap = "Rule learned by OneR for penguin classification."
-kableExtra::kbl(rule.to.table(rule), row.names = FALSE, caption = cap, booktabs = TRUE) %>% kable_styling(position = "center")
+kableExtra::kbl(rule.to.table(rule), row.names = FALSE, booktabs = TRUE)
 ```
 
 The bill depth feature was chosen by OneR as the best predictive feature.
@@ -236,7 +235,7 @@ To get a better feel for how this one rule performs, let's look into the cross t
 
 ```{r}
 #| label: tbl-oner-penguin-confusion
-
+#| tbl-cap: Confusion matrix for penguin sex classification rule found by OneR.
 # make sure to use the same bins
 bin_edges <- levels(bin(penguins_train$bill_depth_mm))
 clean_edges = gsub("]", "", bin_edges)
@@ -261,9 +260,8 @@ tt <- penguins_test %>%
 
 # Rename the first column
 colnames(tt)[1] <- "bill_depth_mm"
-cap = "Confusion matrix for penguin sex classification rule found by OneR."
 # Create the table with kable and kable_styling
-kableExtra::kbl(tt, booktabs = TRUE, align = "c", caption=cap) %>%
+kableExtra::kbl(tt, booktabs = TRUE, align = "c") %>%
   kable_styling(position = "center")
 ```
 
@@ -406,7 +404,7 @@ RIPPER can run in ordered or unordered mode and generate either a decision list 
 library("RWeka")
 library(rJava)
 
-extract.rules.jrip = function (rule, caption="") {
+extract.rules.jrip = function (rule) {
   # Get the rules as text
   rules = scan(text = .jcall(rule$classifier, "S", "toString"), sep = "\n", what = "")
   # Remove the initial description lines and the summary at the end
@@ -419,8 +417,7 @@ extract.rules.jrip = function (rule, caption="") {
   if (nrow(rules_df) == 0) {
     return(NULL)
   } else {
-    kableExtra::kbl(rules_df, booktabs = TRUE, caption=caption) %>%
-      kableExtra::kable_styling(position = "center")
+    kableExtra::kbl(rules_df, booktabs = TRUE)
   }
 }
 
@@ -436,7 +433,7 @@ The default rule ensures that there is always a prediction.
 
 ```{r}
 #| label: tbl-jrip-penguins
-#| include: true
+
 # give shorter names for more narrow tables
 penguins2 = penguins
 penguins2$sex <- ifelse(penguins2$sex == "male", "M", 
@@ -444,7 +441,7 @@ penguins2$sex <- ifelse(penguins2$sex == "male", "M",
 penguins2$sex = factor(penguins2$sex)
 rule = JRip(sex ~ ., data = penguins2)
 cap = "JRip rules learned for the penguin classification task."
-extract.rules.jrip(rule, caption=cap)
+extract.rules.jrip(rule)
 ```
 
 
@@ -464,6 +461,8 @@ Interpretation is again: If the conditions apply, we predict the interval on the
 
 ```{r}
 #| label: tbl-jrip-bike
+#| tbl-cap: JRip rules for the bike task.
+
 bike2 = bike
 bike2$cnt = round(bike2$cnt)
 bike2$cnt =  cut(bike$cnt, breaks = quantile(bike$cnt), dig.lab = 10, include.lowest = TRUE)
@@ -472,8 +471,7 @@ bike2$windspeed = round(bike2$windspeed)
 bike2$hum = round(bike2$hum)
 
 rule = JRip(cnt  ~ ., data = bike2)
-cap = "JRip rules for the bike task."
-extract.rules.jrip(rule, caption=cap)
+extract.rules.jrip(rule)
 ```
 
 
@@ -659,9 +657,9 @@ saveRDS(list(rulenames = rn, rules = rl), file = "../data/cached-sbrl-penguins.R
 
 ```{r}
 #| label: tbl-sbrl-penguins-show
+#| tbl-cap: "Rules from SBRL model."
 rules = readRDS("../data/cached-sbrl-penguins.RDS")
-cap = "Rules from SBRL model."
-kableExtra::kbl(rules$rules, booktabs = TRUE, caption = cap) %>% kable_styling(position = "center")
+kableExtra::kbl(rules$rules, booktabs = TRUE)
 ```
 
 The conditions were selected from patterns that were pre-mined with the FP-Growth algorithm.
@@ -721,9 +719,9 @@ saveRDS(rules, file = "../data/cached-sbrl-bike.RDS")
 
 ```{r}
 #| label: tbl-sbrl-bike-show
+#| tbl-cap: SBRL rules for the bike task.
 rules = readRDS("../data/cached-sbrl-bike.RDS")
-cap = "SBRL rules for the bike task."
-tab = kableExtra::kbl(rules, booktabs = TRUE, caption=cap) %>% kable_styling(position = "center")
+tab = kableExtra::kbl(rules, booktabs = TRUE)
 #if (is.pdf) tab = tab %>% column_spec(1, width = "10cm")
 tab
 ```
