@@ -2,7 +2,7 @@
 
 {{< include _setup.qmd >}}
 
-Leave One Feature Out (LOFO) Importance measures a feature's importance by retraining the model without the feature and comparing the predictive performance.[^loco]
+Leave One Feature Out (LOFO) Importance measures a feature's importance by retraining the model without the feature and comparing the predictive performances.[^loco]
 
 The intuition behind LOFO Importance: If dropping a feature makes the predictive performance worse, then it was an important feature.
 If dropping the feature keeps performance unchanged it was not important.
@@ -23,13 +23,13 @@ Let's formalize the algorithm:
 
 2. **For each feature $j \in \{1, \ldots, p\}$:**
    - Remove feature $j$ from the dataset, creating new datasets $\mathbf{X}_{\text{train},-j}$ and $\mathbf{X}_{\text{test},-j}$.  
-   - Train a new model $\hat{f}_{-j}$ on $(\mathbf{X}_{\text{train},-j}, \mathbf{y}_{\text{train}})$.  
+   - Train a new model $\hat{f}_{-j}$ on $\left(\mathbf{X}_{\text{train},-j}, \mathbf{y}_{\text{train}}\right)$.  
    - Measure the new error on the modified test set:  
      $$
      e_{-j} = \frac{1}{n_{\text{test}}} \sum_{i=1}^{n_{\text{test}}} L\big(y_{\text{test}}^{(i)}, \hat{f}_{-j}(\mathbf{x}_{\text{test},-j}^{(i)})\big)
      $$  
 
-3. **Calculate LOFO importance:**  
+3. **Calculate LOFO importance for each feature.**  
    - As a quotient:  
      $$
      LOFO_j = \frac{e_{-j}}{e_{\text{orig}}}
@@ -43,7 +43,7 @@ Let's formalize the algorithm:
 
 
 When using performance measures for $L$ instead of error measures, where larger is better, like accuracy, make sure to multiply the difference by -1, or switch the order of the quotient.
-To train and retrain the model use the training data, and for measuring the performance you use the test data.
+To train and retrain the model use the training data, and for measuring the performance use test data.
 
 
 ## Examples
@@ -51,7 +51,7 @@ To train and retrain the model use the training data, and for measuring the perf
 We predict bike rentals based on weather and calendar information using a random forest trained on 2/3 of the data.
 @fig-lofo-bike shows that temperature and previous number of bike rentals are the most important features according to LOFO.
 Interestingly, the holiday feature has a negative importance, which has implications for feature selection.
-Because of how LOFO works algorithmically, we now know that removing the feature increases the model performance.
+Because of how LOFO works algorithmically, we now know that removing the holiday feature increases the model performance.
 
 
 ```{r}
@@ -131,19 +131,18 @@ ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance
 ```
 
 @fig-lofo-bike-correlated shows an interesting phenomenon:
-The LOFO importances of both temperature features are now almost zero.
+The LOFO importances of both temperature features are now almost zero.[^not-same-lofo]
 But if we e.g. remove `temp_copy`, we end up with the original model, for which we knew that `temp` was the most important feature.
 Clearly it would be wrong to conclude that this new model doesn't rely on temperature at all.
 Both `temp` and `temp_copy` get a low importance because, by the definition of LOFO importance, they are not important.
 When we remove the feature `temp`, we don't lose any information at all.
-LOFO has a conditional interpretation: Given the other features, how much will removing a feature worsen the model's predictive performance?
-And given `temp`, the removal of feature `temp_copy` actually seemed to make it easier for the random forest algorithm to learn a good model.
-Two conclusions:
+That's because LOFO has a conditional interpretation: Given the other features, how much will removing a feature worsen the model's predictive performance?
+Conclusions:
 
 - LOFO Importance of strongly correlated features is always low potentially even negative[^learner-ability], since LOFO importance is to be interpreted conditionally on the information provided by the other features. And if you already have a temperature feature in the data, the perfect copy of that same feature is not an important additional information.
 - When you use LOFO Importance as information for feature selection, beware of the interpretation: LOFO only indicates how the model performance reacts to *individually* removing features. As @fig-lofo-bike-correlated showed, LOFO doesn't give us the information how the performance changes when removing 2 or more features at once. 
 
-With that knowledge, let's try LOFO for a random forest predicting penguins sex from body measurements.
+With that knowledge, let's try LOFO for a random forest predicting penguin sex from body measurements.
 For this I've trained a random forest on 2/3 of the data, leaving 1/3 of the data for error estimation.
 @fig-lofo-penguins shows that the bill depth was the most important feature according to LOFO.
 
@@ -178,28 +177,28 @@ ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance
 ```
 
 Note that because of using accuracy here, where larger is better, I multiplied the importance by minus one.
-LOFO also tells us that we could safely remove the feature species.
-However, we want to have it in there, because the model has to be able to distinguish between the species.
+LOFO also tells us that we could safely remove the feature `species` and `flipper_length`.
+However, we would want to keep `species`, because the model has to be able to distinguish between the species.
 
 ## LOFO versus PFI
 
 LOFO differs from the other methods presented in this book, since most of the other methods in this book don't require to retrain the model.
-Arguably, LOFO still follows a classic post-hoc, model-agnostic method patterns, since it can be applied to any model and retraining the model doesn't affect the original model that we want to interpret.
-However, due to retraining the model, the interpretation shifts from only interpreting that one single model, and more to the learner and how model training reacts to changes in the features.
+Arguably, LOFO is a post-hoc, model-agnostic method, since it can be applied to any model and retraining the model doesn't affect the original model that we want to interpret.
+However, due to retraining the model, the interpretation shifts from only interpreting that one single model, and more to interpreting the learner and how model training reacts to changes in the features.
 
 To me the biggest question is: How does LOFO compare to [PFI](#pfi) and when should you use which importance?
 Let's start with the similarities:
 Both PFI and LOFO are performance-based importances measures; both compute importance by "removing" the information of a feature, even when they do it differently; both work in a one-at-a-time way, at least in their simplest version.
-Let's get to how LOFO and PFI differ.
+But LFO and PFI differ in other aspects.
 As we already saw in the example @fig-lofo-bike-correlated, LOFO has a conditional interpretation of importance.
 It's only about a feature's *additional* predictive value.
-This distinguishes LOFO from *marginal* feature importance.
+This distinguishes LOFO from *marginal* permutation feature importance.
 LOFO is more similar to conditional PFI and they both have interpretations conditional on the other features.
 
 But since conditional PFI and LOFO work differently, they differ in their interpretations.
 Conditional PFI is an interpretation that only involves the model at hand.
-LOFO importance focuses more on the ML algorithm, since it involves retraining the model, and the interpretation now involves multiple models trained differently.
-This also means that LOFO importance is affected by how the ML algorithm handles datasets with one fewer column.
+LOFO importance focuses more on the machine  learning algorithm, since it involves retraining the model, and the interpretation now involves multiple models trained differently.
+This also means that LOFO importance is affected by how the machine learning algorithm handles datasets with one fewer column.
 A decision tree algorithm might produce a completely different tree.
 Therefore LOFO's interpretation is both about the model at hand, but also about the machine learning algorithm and how it reacts to removing a feature.
 
@@ -209,17 +208,18 @@ Therefore LOFO's interpretation is both about the model at hand, but also about 
 For the examples here I did just that.
 You can do it yourself, you don't actually need any package for that.
 
-LOFO **is useful for features selection**: Features with LOFO Importance below zero can be removed to improve model performance.
-Just make sure that you can only remove one feature based on LOFO importance results.
-If you want to remove two features, you either have to do it sequentially, meaning compute LOFO importance, remove unimportant feature, compute LOFO again, and remove again the least important.
+LOFO **is useful for feature selection**: A feature with a LOFO importance below zero can be removed to improve model performance; a feature with an importance of zero can also be safely be removed without affecting the performance.
+However, be aware that LOFO is subject to randomness of the training process and also depends on the data sample.
+Just make sure that you can only remove one feature at a time based on LOFO importance results.
+If you want to remove two features, you have to do it sequentially, meaning compute LOFO importance, remove unimportant feature, compute LOFO again, and remove again the least important.
 You can also adapt LOFO to LTFO (leave two features out) to compute shared importance.
 Other importance methods like PFI or SHAP importance don't directly provide actionable feature selection information.
 
-LOFO **doesn't create unrealistic data** like many other methods do, such as marginal PFI, since LOFO removes features and doesn't probe the model with newly sampled data.
+LOFO **doesn't create unrealistic data** like other methods, such as marginal PFI, since LOFO removes features and doesn't probe the model with newly sampled data.
 
-LOFO is **useful for modeling phase** due to its useful insights into feature selection.
+LOFO is **useful for the modeling phase** due to its actionable insights for feature selection.
 It's also useful when the focus is more on **understanding the underlying phenomenon** and less on the model itself.
-Note, however, that also how the specific learner used reacts to removing features will influence the LOFO importance values.
+Note, however, that also how the specific learner reacts to removing features will influence the LOFO importance values.
 
 LOFO makes sense when your goal of interpretation is about the phenomenon (and less about the model itself) or the learner.
 
@@ -230,7 +230,7 @@ This can be costly, especially when compared to Permutation Feature Importance.
 
 LOFO is **not the best method for understanding a specific model**.
 For example, for more of a model audit setting, LOFO is not suitable, since the interpretation is based on training new models.
-Meaning the interpretation is not only based on the model under inspection, but also on other models produced by the ML algorithm so that results are to be interpreted in terms of the ML algorithm.
+Meaning the interpretation is not only based on the model under inspection, but also on other models produced by the machine learning algorithm so that results are to be interpreted in terms of the machine learning algorithm.
 
 It's also a bit **unclear how to handle hyperparameter tuning.** Should you train with the exact same hyperparameters, or run the hyperparameter optimization again?
 Keeping the hyperparameters fixed is computationally cheaper and shifts LOFO's focus more on that model as the newly trained models are potentially more similar to it.
@@ -240,10 +240,11 @@ Running hyperparameter optimization for each of the $p$ models is costly, but ma
 It also means that studying the correlations of your data is a must before you can interpret LOFO importances.
 You can also group highly correlated features and only remove them together so your interpretation becomes more marginal than conditional.
 A "fix" to this would be to group highly correlated features and only compute a shared importance for them.
+
 ## Software and Alternatives
 
 LOFO has a [Python implementation](https://github.com/aerdem4/lofo-importance).
-But it's also an algorithm you can implement yourself quite simply.
+But it's also an algorithm you can implement yourself easily.
 
 An alternative to LOFO is [conditional PFI](#pfi).
 It's also possible to add a permuted version of the variable instead of dropping it, and then relearning a model.
@@ -254,3 +255,6 @@ The feature selection method "backward sequential feature selection" is basicall
 [^loco]: The first formal description of LOFO I'm aware of is by @lei2018distributionfree. They call it Leave One Covariate Out (LOCO), and the paper is mostly about distribution-free testing. However, due to the approach's simplicity and use in feature selection, it doesn't make sense to attribute it to a single publication.
 
 [^learner-ability]: We need to assume here that the learner is able to compensate for the removal of a feature by relying more on the other features. But I don't know of any machine learning algorithm that isn't capable of that.
+
+
+[^not-same-lofo]: The features `temp` and `temp_copy` have similiar but not equal LOFO importances which is due to randomness in the model training.

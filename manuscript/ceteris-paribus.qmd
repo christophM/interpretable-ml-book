@@ -5,13 +5,12 @@
 Ceteris paribus (CP) plots [@kuzba2019pyceterisparibus] visualize how changes in a single feature change the prediction of a data point.
 
 <!-- introduction -->
-Ceteris paribus plots are the simplest analysis one can do, despite the complex-sounding Latin name, which stands for "other things equal" and means changing one feature but keeping the others untouched.
-[^hate-latin]
+Ceteris paribus plots are the simplest analysis one can do, despite the complex-sounding Latin name, which stands for "other things equal" and means changing one feature but keeping the others untouched.[^hate-latin]
 It's so simple since it only looks at one feature at a time, systematically changes its values, and plots how the prediction changes across the range of the feature.
-But this is the perfect model-agnostic method to start the book with, since it teaches the basic principles of model-agnostic interpretation.
+But ceteris paribus is the perfect model-agnostic method to start the book with, since it teaches the basic principles of model-agnostic interpretation.
 Also don't be deceived by the simplicity:
 By creatively combining multiple ceteris paribus curves[^curve-vs-plot], you can compare models, features, and study multi-class classification models.
-CP curves are building blocks for [Individual Conditional Expectation curves](#ice) and [Partial Dependence Plots](#pdp), as visualized in @fig-cp-ice-pdp:
+CP curves are building blocks for [Individual Conditional Expectation curves](#ice) and [Partial Dependence Plots](#pdp), as visualized in @fig-cp-ice-pdp.
 
 - ICE plots is a CP plot containing all CP curves for an entire dataset.
 - A partial dependence plot (PDP) is the average of all CP curves of one dataset.
@@ -30,7 +29,7 @@ Input: Data point $\mathbf{x}^{(i)}$ to explain and feature $j$
    1. Create new data point $\mathbf{x}^{(i)}_{x_j := z_l}$
    1. Get prediction $\hat{f}(\mathbf{x}^{(i)}_{x_j := z_l})$
 1. Visualize the CP curves:
-     - Plot line for data point $\left\{\mathbf{x}^{(i)}_{x_j := z_l}, \hat{f}(\mathbf{x}^{(i)}_{x_j := z_l})\right\}_{l=1}^k$
+     - Plot line for data points $\left\{z_l, \hat{f}(\mathbf{x}^{(i)}_{x_j := z_l})\right\}_{l=1}^k$
      - Plot dot for original data point $\left(\mathbf{x}_j^{(i)}, \hat{f}(\mathbf{x}^{(i)})\right)$
 
 
@@ -55,12 +54,12 @@ data_point_y = penguins_test[1,]$sex
 ```
 
 For our first example, we look at the random forest predicting the probability of a penguin being female.
-We look at the first penguin in the test dataset, a `r as.character(data_point_y)` `r as.character(data_point$species)` penguin with a bill length of `r data_point["bill_length_mm"]` millimeters.
-@fig-ceteris-penguins shows how changing the bill length changes the prediction.
+We look at the first penguin in the test dataset, a `r as.character(data_point_y)` `r as.character(data_point$species)` penguin with a bill depth of `r data_point["bill_depth_mm"]` millimeters.
+@fig-ceteris-penguins shows that decreasing the bill depth of this penguin first slightly increases the predicted P(female) but then greatly decreases P(female).
 
 ```{r}
 #| label: fig-ceteris-penguins
-#| fig-cap: Ceteris paribus plot for bill length and one penguin. The line shows the predicted value for a particular penguin when changing the bill length. Increasing the bill length slightly increases P(female) for this penguin. The penguin's actual bill length is marked with a dot.
+#| fig-cap: Ceteris paribus plot for bill depth and one penguin. The line shows the predicted value for a particular penguin when changing the bill depth. The penguin's actual bill depth is marked with a dot.
 pred2 <- function(m, x) predict(m, x, type = "prob")[,2]
 explainer <- DALEX::explain(pengu_rf, data = penguins_test,
                             y = penguins_test$sex == "female",
@@ -70,8 +69,8 @@ explainer <- DALEX::explain(pengu_rf, data = penguins_test,
 
 
 cp_rf <- ceteris_paribus(explainer, data_point, y = data_point_y)
-plot(cp_rf,  selected_variables="bill_length_mm") +
-  xlab("Bill length in mm") +
+plot(cp_rf,  selected_variables="bill_depth_mm") +
+  xlab("Bill depth in mm") +
   scale_y_continuous("P(female)", limits = c(0,1)) +
   ggtitle("")
 ```
@@ -119,7 +118,7 @@ ggplot(data = penguins, aes(x = bill_depth_mm, y = body_mass_g, color = species)
 
 Next we study the SVM predicting the number of rented bikes based on weather and seasonal information.
 We pick a `r tolower(observation$season)` day with `r tolower(observation$weather)` weather and see how changing the features would change the prediction.
-But this time we visualize it for all of the numerical features in @fig-whatif-bike.
+But this time we visualize it for all features, see @fig-whatif-bike.
 Changes in the number of rented bikes 2 days before would change the prediction the most.
 Also, a higher temperature would have been better for more bike rentals.
 Would the prediction be for a non-workday, the SVM would predict fewer bike rentals.
@@ -171,11 +170,11 @@ ggplot(mapping=aes(x=fvalue, y=yhat)) +
 In general, the CP plots show how feature changes affect the prediction, from small changes to large changes in all directions.
 By comparing all the features side-by-side with a shared y-axis, we can see which feature has more influence on this data point's prediction.
 However, correlation between features is a concern, especially when interpreting the CP curve far away from the original value (marked with a dot).
-For example, increasing the temperature to 30 degrees Celsius, but keeping the season the same (`r tolower(observation['season'])`) would be quite unrealistic.
+For example, increasing the temperature to 30 degrees Celsius, but keeping the season the same (`r tolower(observation$season)`) would be quite unrealistic.
 
 Ceteris paribus plots are super flexible.
 We can compute CP curves for different model to better understand how they treat features differently.
-In @fig-cp-bike-models we compare the ceteris paribus plots for a decision tree, a random forest, a linear regression model and an SVM.
+In @fig-cp-bike-models we compare the ceteris paribus plots for different models. 
 
 ```{r}
 #| label: fig-cp-bike-models 
@@ -201,8 +200,8 @@ p
 
 Here we can see how very different the models behave:
 The linear model does what linear models do and models the relation linearly between temperature and predicted bike rentals.
-The tree shows one jump at around 8 degrees C.
-The random forest looks a bit like an interpolation between the tree curve and the SVM curve.
+The tree shows one jump.
+The random forest and the SVM model show a smoother increase which flattens at high temperature, and, in the case of the SVM, slightly decreases for very high temperatures.
 
 ::: {.callout-tip}
 
@@ -211,9 +210,9 @@ The random forest looks a bit like an interpolation between the tree curve and t
 Ceteris paribus plots are simple, yet surprisingly insightful when you combine multiple CP curves:
 
 - Compare features.
-- Compare models from different ML algorithms or with different hyperparameter settings.
+- Compare models from different machine learning algorithms or with different hyperparameter settings.
 - Compare class probabilities.
-- Compare different data points (but this already goes into the direction of ICE curves, another IML method).
+- Compare different data points (see also [ICE curves](#ice)).
 - Subset the data (e.g. by a binary feature) and compare CP curves.
 
 :::
@@ -246,6 +245,7 @@ Ceteris paribus plots can complement attribution-based techniques and provide a 
 
 **Ceteris paribus plots are flexible building blocks.**
 They are building blocks for other interpretation methods, but you can also get creative in combining these lines across models, classes, hyperparameter settings, and features to create nuanced insights into the model predictions.
+
 ## Limitations
 
 **Ceteris paribus plots only show us one feature change at a time.**
@@ -259,16 +259,14 @@ This can be alleviated by e.g. restricting the range of the ceteris paribus plot
 But this would also mean we need a model or procedure to tell us what these ranges are.
 
 In general, you must **be careful with causal interpretation**, or if you want one, make sure the model itself is causal.
-This is a problem with all ML model interpretation, but the risk of wrongful causal interpretation may be higher with CP plots since there is a lower barrier to showing the plots to non-experts.
+This is a problem with all interpretation methods, but the risk of wrongful causal interpretation may be higher with CP plots since there is a lower barrier to showing the plots to non-experts.
 
 ## Software and Alternatives
 
 I created all plots in this chapter with the [ceterisParibus R package](https://cran.r-project.org/web/packages/ceterisParibus/index.html).
 It also has a [Python implementation](https://github.com/ModelOriented/pyCeterisParibus).
-You can also create CP plots with any tool that can produce ICE plots, like ICEBox and iml, by simply providing a "dataset" that only contains the one data point you are interested in.
+You can further create CP plots with any tool that can produce ICE plots, like ICEBox and iml, by simply providing a "dataset" that only contains the one data point you are interested in.
 However, the ceterisParibus package is better suited because it makes it simpler to compare ceteris paribus curves.
-
-The ceterisParibus method is also available in .
 
 
 [^hate-latin]: I'm not a fan of the Latin name. In school they promised that Latin helps with learning other Latin-based languages, like Italian. But you know what even helps better when your goal is to learn Italian? That's right. Skip Latin; learn Italian. They also said Latin is a "mathematical" language that, a probably even bigger lie.
