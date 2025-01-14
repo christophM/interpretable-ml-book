@@ -73,34 +73,34 @@ This gives us a map of the size of the input features with negative to positive 
 The recipe for this approach is:
 
 1. Perform a forward pass of the image of interest.
-1. Compute the gradient of class score of interest with respect to the input pixels:
-   $$E_{grad}(I_0)=\frac{\delta{}S_c}{\delta{}I}|_{I=I_0}$$
+1. Compute the gradient of the class score of interest with respect to the input pixels:
+   $$E_{grad}(\mathbf{x}_0)=\frac{\delta S_c}{\delta \mathbf{x}}|_{\mathbf{x}=\mathbf{x}_0}$$
    Here we set all other classes to zero.
 1. Visualize the gradients. You can either show the absolute values or highlight negative and positive contributions separately.
 
-More formally, we have an image I and the convolutional neural network gives it a score $S_c(I)$ for class c.
+More formally, we have an image $\mathbf{x}$ and the convolutional neural network gives it a score $S_c(\mathbf{x})$ for class $c$.
 The score is a highly non-linear function of our image.
 The idea behind using the gradient is that we can approximate that score by applying a first-order Taylor expansion
 
-$$S_c(I)\approx{}w^T{}I+b$$
+$$S_c(\mathbf{x}) \approx \mathbf{w}^T \mathbf{x} + b$$
 
-where w is the derivate of our score:
+where $\mathbf{w}$ is the derivative of our score:
 
-$$w = \frac{\delta S_C}{\delta I}|_{I_0}$$
+$$\mathbf{w} = \frac{\delta S_c}{\delta \mathbf{x}}|_{\mathbf{x}_0}$$
 
 Now, there is some ambiguity how to perform a backward pass of the gradients, since non-linear units such as ReLU (Rectifying Linear Unit) "remove" the sign.
 So when we do a backpass, we do not know whether to assign a positive or negative activation.
-Using my incredible ASCII art skill, the ReLU function looks like this: _/ and is defined as $X_{n+1}(x)=max(0,X_n)$ from layer $X_n$ to layer $X_{n-1}$.
+Using my incredible ASCII art skill, the ReLU function looks like this: _/ and is defined as $\mathbf{x}_{l+1}(x)=\max(0,\mathbf{x}_l)$ from layer $\mathbf{x}_{l}$ to layer $\mathbf{x}_{l+1}$.
 This means that when the activation of a neuron is zero, we do not know which value to backpropagate.
 In the case of Vanilla Gradient, the ambiguity is resolved as follows:
 
-$$\frac{\delta f}{\delta X_n} = \frac{\delta f}{\delta X_{n+1}} \cdot \mathbf{I}(X_n > 0)$$
+$$\frac{\delta f}{\delta \mathbf{x}_l} = \frac{\delta f}{\delta \mathbf{x}_{l+1}} \cdot \mathbf{I}(\mathbf{x}_l > 0)$$
 
 Here, $\mathbf{I}$ is the element-wise indicator function, which is zero where the activation at the lower layer was negative, and one where it's positive or zero.
-Vanilla Gradient takes the gradient we have backpropagated so far up to layer n+1, and then simply sets the gradients to zero where the activation at the layer below is negative.
+Vanilla Gradient takes the gradient we have backpropagated so far up to layer $l+1$, and then simply sets the gradients to zero where the activation at the layer below is negative.
 
-Let's look at an example where we have layers $X_n$ and $X_{n+1}=ReLU(X_{n+1})$.
-Our fictive activation at $X_n$ is:
+Let's look at an example where we have layers $\mathbf{x}_l$ and $\mathbf{x}_{l+1}=\text{ReLU}(\mathbf{x}_{l})$.
+Our fictive activation at $\mathbf{x}_l$ is:
 
 $$
 \begin{pmatrix}
@@ -109,7 +109,7 @@ $$
 \end{pmatrix}
 $$
 
-And these are our gradients at $X_{(n+1)}$:
+And these are our gradients at $\mathbf{x}_{l+1}$:
 
 $$
 \begin{pmatrix}
@@ -118,7 +118,7 @@ $$
 \end{pmatrix}
 $$
 
-Then our gradients at $X_n$ are:
+Then our gradients at $\mathbf{x}_l$ are:
 
 $$
 \begin{pmatrix}
@@ -149,7 +149,7 @@ If you take a look into the paper, it looks very different to Vanilla Gradient, 
 Vanilla Gradient can be seen as a generalization of DeconvNet.
 DeconvNet makes a different choice for backpropagating the gradient through ReLU:
 
-$$R_n=R_{n+1}\mathbb{1}(R_{n+1}>0)$$,
+$$R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$$,
 
 where $R_n$ and $R_{n+1}$ are the layer reconstructions and $\mathbb{1}$ the indicator function.
 When backpassing from layer n to layer n-1, DeconvNet "remembers" which of the activations in layer n were set to zero in the forward pass and sets them to zero in layer n-1.
@@ -208,8 +208,8 @@ Here, u is the width, v the height of the explanation and c the class of interes
 1. Forward-propagate the input image through the convolutional neural network.
 1. Obtain the raw score for the class of interest, meaning the activation of the neuron before the softmax layer.
 1. Set all other class activations to zero.
-1. Back-propagate the gradient of the class of interest to the last convolutional layer before the fully connected layers: $\frac{\delta{}y^c}{\delta{}A^k}$.
-1. Weight each feature map "pixel" by the gradient for the class. Indices i and j refer to the width and height dimensions:
+1. Back-propagate the gradient of the class of interest to the last convolutional layer before the fully connected layers: $\frac{\delta y^c}{\delta A^k}$.
+1. Weight each feature map "pixel" by the gradient for the class. Indices $i$ and $j$ refer to the width and height dimensions:
    $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{\text{global average pooling}} \underbrace{\frac{\delta y^c}{\delta A_{ij}^k}}_{\text{gradients via backprop}}$$
 This means that the gradients are globally pooled.
 1. Calculate an average of the feature maps, weighted per pixel by the gradient.

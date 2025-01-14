@@ -66,7 +66,7 @@ One counterfactual might say to change feature A, the other counterfactual might
 This issue of multiple truths can be addressed either by reporting all counterfactual explanations or by having a criterion to evaluate counterfactuals and select the best one.
 
 Speaking of criteria, how do we define a good counterfactual explanation?
-First, the user of a counterfactual explanation defines a relevant change in the prediction of an instance (= the alternative reality).
+First, the user of a counterfactual explanation defines a relevant change in the prediction of an instance (the alternative reality).
 An obvious first requirement is that **a counterfactual instance produces the predefined prediction as closely as possible**.
 It's not always possible to find a counterfactual with the predefined prediction.
 For example, in a classification setting with two classes, a rare class and a frequent class, the model might always classify an instance as the frequent class.
@@ -147,14 +147,14 @@ Ultimately, the user must decide how to balance the requirement that the predict
 The authors of the method suggest instead of selecting a value for $\lambda$ to select a tolerance $\epsilon$ for how far away from $y'$ the prediction of the counterfactual instance is allowed to be.
 This constraint can be written as:
 
-$$|\hat{f}(x^\prime)-y^\prime|\leq\epsilon$$
+$$|\hat{f}(\mathbf{x^\prime})-y^{\prime}|\leq\epsilon$$
 
 To minimize this loss function, any suitable optimization algorithm can be used, such as Nelder-Mead.
 If you have access to the gradients of the machine learning model, you can use gradient-based methods like ADAM.
 The instance x to be explained, the desired output y', and the tolerance parameter $\epsilon$ must be set in advance.
 The loss function is minimized for x' and the (locally) optimal counterfactual x' returned while increasing $\lambda$ until a sufficiently close solution is found (= within the tolerance parameter):
 
-$$\arg\min_{x^\prime}\max_{\lambda}L(x,x^\prime,y^\prime,\lambda).$$
+$$\arg\min_{\mathbf{x^\prime}}\max_{\lambda}L(\mathbf{x},\mathbf{x^\prime},y^{\prime},\lambda).$$
 
 Overall, the recipe for producing the counterfactuals is simple:
 
@@ -183,19 +183,17 @@ Let's now have a look on another approach overcoming these issues.
 
 Dandl et al. suggest simultaneously minimizing a four-objective loss:
 
-$$L(x,x',y',X^{obs})=\big(o_1(\hat{f}(x'),y'),o_2(x, x'),o_3(x,x'),o_4(x',X^{obs})\big) $$
+$$L(\mathbf{x},\mathbf{x'},y',\mathbf{X}^{\text{obs}})=\big(o_1(\hat{f}(\mathbf{x'}),y'),o_2(\mathbf{x}, \mathbf{x'}),o_3(\mathbf{x},\mathbf{x'}),o_4(\mathbf{x'},\mathbf{X}^{\text{obs}})\big) $$
 
 Each of the four objectives $o_1$ to $o_4$ corresponds to one of the four criteria mentioned above.
 The first objective $o_1$ reflects that the prediction of our counterfactual x' should be as close as possible to our desired prediction y'.
 We therefore want to minimize the distance between $\hat{f}(x')$ and y', here calculated by the Manhattan metric ($L_1$ norm):
 
-$$o_1(\hat{f}(x'),y')=\begin{cases}0&\text{if $\hat{f}(x')\in{}y'$}\\\inf\limits_{y'\in y'}|\hat{f}(x')-y'|&\text{else}\end{cases}$$
+$$o_1(\hat{f}(\mathbf{x'}),y')=\begin{cases}0&\text{if $\hat{f}(x')\in{}y'$}\\\inf\limits_{y'\in y'}|\hat{f}(x')-y'|&\text{else}\end{cases}$$
 
-The second objective $o_2$ reflects that our counterfactual should be as similar as possible to our instance $x$.
-It quantifies the distance between x' and x
-as the Gower distance:
+The second objective $o_2$ reflects that our counterfactual should be as similar as possible to our instance $\mathbf{x}$. It quantifies the distance between $\mathbf{x'}$ and $\mathbf{x}$ as the Gower distance:
 
-$$o_2(x,x')=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x_j, x'_j)$$
+$$o_2(\mathbf{x},\mathbf{x'})=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x_j, x'_j)$$
 
 with p being the number of features.
 The value of $\delta_G$ depends on the feature type of $x_j$:
@@ -207,19 +205,15 @@ Dividing the distance of a numeric feature $j$ by $\widehat{R}_j$, the observed 
 The Gower distance can handle both numerical and categorical features, but does not count how many features were changed.
 Therefore, we count the number of features in a third objective $o_3$ using the $L_0$ norm:
 
-$$o_3(x,x')=||x-x'||_0=\sum_{j=1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
+$$o_3(\mathbf{x},\mathbf{x'})=||\mathbf{x}-\mathbf{x'}||_0=\sum_{j=1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
 
 By minimizing $o_3$ we aim for our third criterion -- sparse feature changes.
 
-The fourth objective $o_4$ reflects that our counterfactuals should have likely feature values/combinations.
-We can infer how "likely" a data point is using the training data or another dataset.
-We denote this dataset as $X^{obs}$.
-As an approximation for the likelihood, $o_4$ measures the average Gower distance between $x'$ and the nearest observed data point $x^{[1]}\in{}X^{obs}$:
+The fourth objective $o_4$ reflects that our counterfactuals should have likely feature values/combinations. We can infer how "likely" a data point is using the training data or another dataset. We denote this dataset as $\mathbf{X}^{\text{obs}}$. As an approximation for the likelihood, $o_4$ measures the average Gower distance between $\mathbf{x'}$ and the nearest observed data point $x^{[1]}\in \mathbf{X}^{\text{obs}}$:
 
-$$o_4(x',\textbf{X}^{obs})=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x'_j,x^{[1]}_j)$$
+$$o_4(\mathbf{x'},\mathbf{X}^{\text{obs}})=\frac{1}{p}\sum_{j=1}^{p}\delta_G(x'_j,x^{[1]}_j)$$
 
-Compared to Wachter et al., $L(x,x',y',X^{obs})$ has no balancing/weighting terms like $\lambda$.
-We do not want to collapse the four objectives $o_1$, $o_2$, $o_3$, and $o_4$ into a single objective by summing them up and weighting them, but we want to optimize all four terms simultaneously.
+Compared to Wachter et al., $L(\mathbf{x},\mathbf{x'},y',\mathbf{X}^{\text{obs}})$ has no balancing/weighting terms like $\lambda$. We do not want to collapse the four objectives $o_1$, $o_2$, $o_3$, and $o_4$ into a single objective by summing them up and weighting them, but we want to optimize all four terms simultaneously.
 
 How can we do that?
 We use the **Nondominated Sorting Genetic Algorithm** [@deb2002fast] or short NSGA-II.
@@ -268,7 +262,7 @@ The counterfactuals should answer how the input features need to be changed to g
 @tbl-best-counterfactuals shows the ten best counterfactuals.
 The first five columns contain the proposed feature changes (only altered features are displayed), the next three columns show the objective values ($o_1$ equals 0 in all cases) and the last column displays the predicted probability.
 
-|age|sex|job |amount|dur.|$o_2$|$o_3$|$o_4$|$\hat{f}(x')$|
+|age|sex|job |amount|dur.|$o_2$|$o_3$|$o_4$|$\hat{f}(\mathbf{x}^{\prime})$|
 |---|---|----|-------|---|-----|-|-----|----|
 |   | |skilled|      |-20|0.108|2|0.036|0.501|
 |   | |skilled|      |-24|0.114|2|0.029|0.525|

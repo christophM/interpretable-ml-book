@@ -28,8 +28,8 @@ dat = expand.grid(x1 = x1, x2 = x2)
 dat$y = f(dat$x1, dat$x2)
 # mean(dat$y)
 p = ggplot(dat, aes(x = x1, y = x2, fill = y, z = y)) + geom_tile() + geom_contour() +
-  scale_x_continuous(latex2exp::TeX(r'(Feature $X_1$)')) +
-  scale_y_continuous(latex2exp::TeX(r'(Feature $X_2$)')) +
+  scale_x_continuous(latex2exp::TeX(r'(Feature $x_1$)')) +
+  scale_y_continuous(latex2exp::TeX(r'(Feature $x_2$)')) +
   scale_fill_continuous("Prediction")
 p
 ```
@@ -51,13 +51,13 @@ The intercept simply tells us what the prediction is when all feature effects ar
 Note that the components themselves are functions (except for the intercept) with different input dimensionality.
 
 I'll just give you the components now and explain where they come from later.
-The intercept is $\hat{f}_0\sim3.18$.
+The intercept is given as $\hat{f}_0 \approx 3.18$.
 Since the other components are functions, we can visualize them in @fig-decomp-example-continued.
 
 
 ```{r}
 #| label: fig-decomp-example-continued
-#| fig-cap: "Decomposition of a 2-dimensional function into main effects and interaction. Top row: Main effects $f_1$ (left) and $f_2$. Bottom: Interaction $f_{12} between $X_1$ and $X_2$"
+#| fig-cap: "Decomposition of a 2-dimensional function into main effects and interaction. Top row: Main effects $f_1$ (left) and $f_2$. Bottom: Interaction $f_{12}$ between $X_1$ and $X_2$"
 # fig-asp: 1
 pred.fun = function(model = NULL, newdata){
   f(newdata$x1, newdata$x2)
@@ -65,16 +65,16 @@ pred.fun = function(model = NULL, newdata){
 pred = Predictor$new(predict.fun = pred.fun, data = dat, y = "y")
 p1 = FeatureEffect$new(pred, feature = "x1",  method = "ale")$plot(rug = FALSE) +
 #  ggtitle(expression(paste(f[1], " main effect of ", X[1]))) +
-  scale_x_continuous(latex2exp::TeX(r'(Feature $X_1$)'))
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)'))
 p2 = FeatureEffect$new(pred, feature = "x2", method = "ale")$plot(rug = FALSE) +
 #  ggtitle(expression(paste(f[2], " main effect of ", X[2]))) +
-  scale_x_continuous(latex2exp::TeX(r'(Feature $X_2$)'))
+  scale_x_continuous(latex2exp::TeX(r'($x_2$)'))
 interact = FeatureEffect$new(pred, feature = c("x1", "x2"), method = "ale")
 p12 = interact$plot(rug = FALSE) + geom_contour(aes(z = .ale), color = "black") +
   scale_fill_continuous("value", low = "blue",  high = "yellow") +
 #  ggtitle(expression(paste(f[12], " interaction between ", X[1], " and ", X[2]))) +
-  scale_x_continuous(latex2exp::TeX(r'(Feature $X_1$)')) +
-  scale_y_continuous(latex2exp::TeX(r'(Feature $X_2$)'))
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)')) +
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)'))
 #(p1 + p2) / p12 + patchwork::plot_layout(heights = c(1,2.5))
 
 p1 + p12 + p2 + plot_layout(ncol = 2)
@@ -128,9 +128,9 @@ We can make the decomposition formula a bit nicer by indexing all possible subse
 This set contains the intercept ($S=\emptyset$), main effects ($|S|=1$), and all interactions ($|S|\geq{}1$).
 With this subset defined, we can write the decomposition as follows:
 
-$$\hat{f}(x) = \sum_{S\subseteq\{1,\ldots,p\}} \hat{f}_S(x_S)$$
+$$\hat{f}(\mathbf{x}) = \sum_{S\subseteq\{1,\ldots,p\}} \hat{f}_S(\mathbf{x}_S)$$
 
-In the formula, $x_S$ is the vector of features in the index set $S$.
+In the formula, $\mathbf{x}_S$ is the vector of features in the index set $S$.
 And each subset $S$ represents a functional component, for example a main effect if $S$ contains only one feature, or an interaction if $|S| > 1$.
 
 <!-- Dimensionality -->
@@ -154,7 +154,7 @@ Here's an even more extreme example that illustrates the need for constraints on
 Suppose you have a 3-dimensional function.
 It does not really matter what this function looks like, but the following decomposition would **always** work:
 $\hat{f}_0$ is 0.12.
-$\hat{f}_1(x_1)=2\cdot{}x_1$ + number of shoes you own.
+$\hat{f}_1(\mathbf{x})=2\cdot{}x_1 + \text{number of shoes you own}$.
 $\hat{f}_2$, $\hat{f}_3$, $\hat{f}_{1,2}$, $\hat{f}_{2,3}$, $\hat{f}_{1,3}$ are all zero.
 And to make this trick work, I define $\hat{f}_{1,2,3}(x_1,x_2,x_3)=\hat{f}(x)-\sum_{S\subset\{1,\ldots,p\}}\hat{f}_S(x_S)$.
 So the interaction term containing all features simply sucks up all the remaining effects, which by definition always works, in the sense that the sum of all components gives us the original prediction function.
@@ -176,16 +176,16 @@ Functional ANOVA was proposed by Hooker (2004) [@hooker2004discovering].
 A requirement for this approach is that the model prediction function $\hat{f}$ is square integrable.
 As with any functional decomposition, the functional ANOVA decomposes the function into components:
 
-$$\hat{f}(x) = \sum_{S\subseteq\{1,\ldots,p\}} \hat{f}_S(x_S)$$
+$$\hat{f}(\mathbf{x}) = \sum_{S\subseteq\{1,\ldots,p\}} \hat{f}_S(\mathbf{x}_S)$$
 
 Hooker (2004) defines each component with the following formula:
 
-$$\hat{f}_S(x) = \int_{X_{-S}} \left( \hat{f}(x) - \sum_{V \subset S} \hat{f}_V(x)\right) d X_{-S}$$
+$$\hat{f}_S(\mathbf{x}) = \int_{X_{-S}} \left( \hat{f}(\mathbf{x}) - \sum_{V \subset S} \hat{f}_V(\mathbf{x})\right) d \mathbb{P}(X_{-S})$$
 
 Okay, let us take this thing apart.
 We can rewrite the component as:
 
-$$\hat{f}_S(x) = \int_{X_{-S}} \left( \hat{f}(x)\right) d X_{-S} - \int_{X_{-S}} \left(\sum_{V \subset S} \hat{f}_V(x) \right) d X_{-S}$$
+$$\hat{f}_S(\mathbf{x}) = \int_{X_{-S}} \left( \hat{f}(\mathbf{x})\right) d \mathbb{P}(X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \hat{f}_V(\mathbf{x}) \right) d \mathbb{P}(X_{-S})$$
 
 On the left side is the integral over the prediction function with respect to the features excluded from the set $S$, denoted with $-S$.
 For example, if we compute the 2-way interaction component for features 2 and 3, we would integrate over features 1, 4, 5, ...
@@ -197,30 +197,30 @@ The occurrence of these lower-order effects makes the formula recursive:
 We have to go through the hierarchy of subsets to the intercept and compute all these components.
 For the intercept component $\hat{f}_0$, the subset is the empty set $S=\{\emptyset\}$ and therefore $-S$ contains all features:
 
-$$\hat{f}_0(x) = \int_{X} \hat{f}(x) dX$$
+$$\hat{f}_0(\mathbf{x}) = \int_{X} \hat{f}(\mathbf{x}) d \mathbb{P}(X)$$
 
 This is simply the prediction function integrated over all features.
 The intercept can also be interpreted as the expectation of the prediction function when we assume that all features are uniformly distributed.
 Now that we know $\hat{f}_0$, we can compute $\hat{f}_1$ (and equivalently $\hat{f}_2$):
 
-$$\hat{f}_1(x) = \int_{X_{-1}} \left( \hat{f}(x) - \hat{f}_0\right) d X_{-1}$$
+$$\hat{f}_1(\mathbf{x}) = \int_{X_{-1}} \left( \hat{f}(\mathbf{x}) - \hat{f}_0\right) d \mathbb{P}(X_{-1})$$
 
 To finish the calculation for the component $\hat{f}_{1,2}$, we can put everything together:
 
-\begin{align*}\hat{f}_{1,2}(x) &= \int_{X_{3,4}} \left( \hat{f}(x) - (\hat{f}_0(x) + \hat{f}_1(x) - \hat{f}_0 + \hat{f}_2(x) - \hat{f}_0)\right) d X_{3},X_4 \\  &= \int_{X_{3,4}} \left(\hat{f}(x) - \hat{f}_1(x) - \hat{f}_2(x) + \hat{f}_0\right) d X_{3},X_4 \end{align*}
-
+\begin{align*}
+\hat{f}_{1,2}(\mathbf{x}) &= \int_{X_{3,4}} \left( \hat{f}(\mathbf{x}) - (\hat{f}_0(\mathbf{x}) + \hat{f}_1(\mathbf{x}) - \hat{f}_0 + \hat{f}_2(\mathbf{x}) - \hat{f}_0)\right) d \mathbb{P}(X_{3},X_4) \\  
+&= \int_{X_{3,4}} \left(\hat{f}(\mathbf{x}) - \hat{f}_1(\mathbf{x}) - \hat{f}_2(\mathbf{x}) + \hat{f}_0\right) d \mathbb{P}(X_{3},X_4) 
+\end{align*}
 
 This example shows how each higher-order effect is defined by integrating over all other features, but also by removing all the lower-order effects that are subsets of the feature set we are interested in.
 
 Hooker (2004) has shown that this definition of functional components satisfies these desirable axioms:
 
-- Zero Means: $\int{}\hat{f}_S(x_S)dX_S=0$ for each $S\neq\emptyset$.
-- Orthogonality: $\int{}\hat{f}_S(x_S)\hat{f}_V(x_V)dX=0$ for $S\neq{}V$
-- Variance Decomposition: Let $\sigma^2_{\hat{f}}=\int \hat{f}(x)^2dX$, then $\sigma^2(\hat{f}) = \sum_{S \subseteq \{1,\ldots,p\}} \sigma^2_S(\hat{f}_S)$
+- Zero Means: $\int \hat{f}_S(\mathbf{x}_S)d \mathbb{P}(X_S)=0$ for each $S\neq\emptyset$.
+- Orthogonality: $\int \hat{f}_S(\mathbf{x}_S)\hat{f}_V(\mathbf{x}_V)d \mathbb{P}(X)=0$ for $S\neq V$.
+- Variance Decomposition: Let $\sigma^2_{\hat{f}}=\int \hat{f}(\mathbf{x})^2d \mathbb{P}(X)$, then $\sigma^2(\hat{f}) = \sum_{S \subseteq \{1,\ldots,p\}} \sigma^2_S(\hat{f}_S)$.
 
-
-The zero means axiom implies that all effects or interactions are centered around zero.
-As a consequence, the interpretation at a position x is relative to the centered prediction and not the absolute prediction.
+The zero means axiom implies that all effects or interactions are centered around zero. As a consequence, the interpretation at a position $\mathbf{x}$ is relative to the centered prediction and not the absolute prediction.
 
 The orthogonality axiom implies that components do not share information.
 For example, the first-order effect of feature $X_1$ and the interaction term of $X_{1}$ and $X_2$ are not correlated.
@@ -251,16 +251,14 @@ Hooker (2007) [@hooker2007generalized] proposed the generalized functional ANOVA
 It's a generalization of the functional ANOVA we encountered earlier, which means that the functional ANOVA is a special case of the generalized functional ANOVA.
 The components are defined as projections of f onto the space of additive functions:
 
-$$\hat{f}_S(x_S) = argmin_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(x)  - \sum_{S \subset P} g_S(x_S)\right)^2 w(x)dx.$$
+$$\hat{f}_S(\mathbf{x}_S) = \arg\min_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(\mathbf{x})  - \sum_{S \subset P} g_S(\mathbf{x}_S)\right)^2 w(\mathbf{x})\,dx.$$
 
 Instead of orthogonality, the components satisfy a hierarchical orthogonality condition:
 
-$$\forall \hat{f}_S(x_S)| S \subset U: \int \hat{f}_S(x_S) \hat{f}_U(x_U) w(x)dx = 0$$
+$$\forall \hat{f}_S(\mathbf{x}_S)| S \subset U: \int \hat{f}_S(\mathbf{x}_S) \hat{f}_U(\mathbf{x}_U) w(\mathbf{x})\,dx = 0$$
 
 <!-- hierarchical orthogonality -->
-Hierarchical orthogonality is different from orthogonality.
-For two feature sets S and U, neither of which is a subset of the other (e.g. $S=\{1,2\}$ and $U=\{2,3\}$), the components $\hat{f}_S$ and $\hat{f}_U$ need not be orthogonal for the decomposition to be hierarchically orthogonal.
-But all components for all subsets of $S$ must be orthogonal to $\hat{f}_S$.
+Hierarchical orthogonality is different from orthogonality. For two feature sets $S$ and $U$, neither of which is a subset of the other (e.g. $S=\{1,2\}$ and $U=\{2,3\}$), the components $\hat{f}_S$ and $\hat{f}_U$ need not be orthogonal for the decomposition to be hierarchically orthogonal. But all components for all subsets of $S$ must be orthogonal to $\hat{f}_S$. 
 <!-- Entanglement -->
 As a result, the interpretation differs in relevant ways:
 Similar to the M-Plot in the [ALE chapter](#ale), generalized functional ANOVA components can entangle the (marginal) effects of correlated features.
@@ -333,7 +331,7 @@ $$\hat{f}(x) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p$$
 
 The formula looks very similar to the functional decomposition, but with two major modifications.
 Modification 1: All interaction effects are excluded and we keep only intercept and main effects.
-Modification 2: The main effects may only be linear in the features: $\hat{f}_j(x_j)=\beta_j{}x_j$.
+Modification 2: The main effects may only be linear in the features: $\hat{f}_j(x_j)=\beta_j x_j$.
 Viewing the linear regression model through the lens of functional decomposition, we see that the model itself represents a functional decomposition of the true function that maps from features to target, but under strong assumptions that the effects are linear effects and there are no interactions.
 
 The generalized additive model relaxes the second assumption by allowing more flexible functions $\hat{f}_j$ through the use of splines.
@@ -348,7 +346,7 @@ The discrepancy occurs because other functional decomposition approaches split e
 
 So when should you use GAMs instead of a complex model + decomposition?
 You should stick to GAMs when most interactions are zero, especially when there are no interactions with three or more features.
-If we know that the maximum number of features involved in interactions is two ($|S|\leq{}2$), then we can use approaches like MARS or GA2M.
+If we know that the maximum number of features involved in interactions is two ($|S|\leq 2$), then we can use approaches like MARS or GA2M.
 Ultimately, model performance on test data may indicate whether a GAM is sufficient or a more complex model performs much better.
 
 
@@ -375,8 +373,7 @@ They are also divided among individual effects.
 
 The SHAP interaction plots can also be better understood through decompositions.
 
-
-There are many methods that produce individual explanations in the form of $\hat{f}(X)=\sum_{p=1}^n\phi_j$, which attribute one number per feature, see [Shapley Values](#shapley), [LIME](#lime) and most [pixel attribution methods for neural networks](#pixel-attribution), all of which you will encounter later in the book.
+There are many methods that produce individual explanations in the form of $\hat{f}(\mathbf{x})=\sum_{j=1}^p\phi_j$, which attribute one number per feature, see [Shapley Values](#shapley), [LIME](#lime) and most [pixel attribution methods for neural networks](#pixel-attribution), all of which you will encounter later in the book.
 Looking at them through functional decomposition:
 When methods fulfill the property of efficiency, like for example Shapley values do, it means that the sum of attributions is equal to the prediction.
 This means that we decomposed the function.
@@ -417,7 +414,7 @@ Functional decomposition also provides a **better understanding of other methods
 For example, [permutation feature importance](#feature-importance) breaks the association between a feature and the target.
 Viewed through the functional decomposition lens, we can see that the permutation "destroys" the effect of all components in which the feature was involved.
 This affects the main effect of the feature, but also all interactions with other features.
-As another example, Shapley values decompose a prediction into additive effects of the individual feature.
+As another example, Shapley values decompose a prediction into additive effects of the individual features.
 But the functional decomposition tells us that there should also be interaction effects in the decomposition, so where are they?
 Shapley values provide a fair attribution of effects to the individual features, meaning that all interactions are also fairly attributed to the features and therefore divided up among the Shapley values.
 

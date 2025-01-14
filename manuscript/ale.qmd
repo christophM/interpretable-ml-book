@@ -153,37 +153,33 @@ p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) +
   scale_y_continuous(latex2exp::TeX(r'($X_2$)'))
 ```
 
-
-To summarize how each type of plot (PDP, M, ALE) calculates the effect of a feature at a certain grid value v:
-**Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value v for that feature.
-I ignore whether the value v makes sense for all data instances."
-**M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to v for that feature.
-The effect could be due to that feature, but also due to correlated features."
-**ALE plots**: "Let me show you how the model predictions change in a small "window" of the feature around v for data instances in that window."
-
+To summarize how each type of plot (PDP, M, ALE) calculates the effect of a feature at a certain grid value $v$:
+**Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value $v$ for that feature. I ignore whether the value $v$ makes sense for all data instances."
+**M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to $v$ for that feature. The effect could be due to that feature, but also due to correlated features."
+**ALE plots**: "Let me show you how the model predictions change in a small 'window' of the feature around $v$ for data instances in that window."
 ## Theory
 
 How do PDP, M-plot and ALE plot differ mathematically?
-Common to all three methods is that they reduce the complex prediction function f to a function that depends on only one (or two) features.
+Common to all three methods is that they reduce the complex prediction function $f$ to a function that depends on only one (or two) features.
 All three methods reduce the function by averaging the effects of the other features, but they differ in whether averages of predictions or of **differences in predictions** are calculated and whether averaging is done over the marginal or conditional distribution.
 
 Partial dependence plots average the predictions over the marginal distribution.
 
 \begin{align*}
-\hat{f}_{S,PDP}(x)&=E_{X_C}\left[\hat{f}(x_S,X_C)\right] \\
-& = \int_{X_C}\hat{f}(x_S,X_C)d\mathbb{P}(X_C)
+\hat{f}_{S,PDP}(\mathbf{x}_S)&=\mathbb{E}_{X_C}\left[\hat{f}(\mathbf{x}_S,X_C)\right] \\
+& = \int_{X_C}\hat{f}(\mathbf{x}_S,X_C)d\mathbb{P}(X_C)
 \end{align*}
 
-This is the value of the prediction function f, at feature value(s) $x_S$, averaged over all features in $X_C$ (here treated as random variables).
-Averaging means calculating the marginal expectation E over the features in set C, which is the integral over the predictions weighted by the probability distribution.
-Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in set S, and average the predictions for this manipulated dataset.
+This is the value of the prediction function $f$, at feature value(s) $\mathbf{x}_S$, averaged over all features in $X_C$ (here treated as random variables).
+Averaging means calculating the marginal expectation $\mathbb{E}$ over the features in set $C$, which is the integral over the predictions weighted by the probability distribution.
+Sounds fancy, but to calculate the expected value over the marginal distribution, we simply take all our data instances, force them to have a certain grid value for the features in set $S$, and average the predictions for this manipulated dataset.
 This procedure ensures that we average over the marginal distribution of the features.
 
 M-plots average the predictions over the conditional distribution.
 
 \begin{align*}
-\hat{f}_{S,M}(x_S)&=E_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=x_S\right]\\
-&=\int_{X_C}\hat{f}(x_S, X_C)d\mathbb{P}(X_C|X_S = x_S)
+\hat{f}_{S,M}(\mathbf{x}_S) &= \mathbb{E}_{X_C|X_S}\left[\hat{f}(X_S,X_C)|X_S=\mathbf{x}_S\right] \\
+ &= \int_{X_C}\hat{f}(x_S, X_C)d\mathbb{P}(X_C|X_S = \mathbf{x}_S)
 \end{align*}
 
 The only thing that changes compared to PDPs is that we average the predictions conditional on each grid value of the feature of interest, instead of assuming the marginal distribution at each grid value.
@@ -192,12 +188,12 @@ In practice, this means that we have to define a neighborhood, for example for t
 ALE plots average the changes in the predictions and accumulate them over the grid (more on the calculation later).
 
 \begin{align*}
-\hat{f}_{S,ALE}(x_S)=&\int_{z_{0,S}}^{x_S}E_{X_C|X_S = x_S}\left[\hat{f}^S(X_s,X_c)|X_S=z_S\right]dz_S-\text{constant}\\
-= & \int_{z_{0,S}}^{x_S}(\int_{x_C}\hat{f}^S(z_s,X_c)d\mathbb{P}(X_C|X_S = z_S))dz_S-\text{constant}
+\hat{f}_{S,ALE}(\mathbf{x}_S) = & \int_{\mathbf{z}_{0,S}}^{\mathbf{x}_S} \mathbb{E}_{X_C|X_S = \mathbf{x}_S} \left[\hat{f}^S(X_S,X_C)|X_S = \mathbf{z}_S\right] d \mathbf{z}_S-\text{constant} \\
+=& \int_{\mathbf{z}_{0,S}}^{x_S}\left(\int_{x_C}\hat{f}^S(z_S,X_C)d\mathbb{P}(X_C|X_S = z_S)\right) d \mathbf{z}_S-\text{constant}
 \end{align*}
 
 The formula reveals three differences to M-Plots.
-First, we average the changes of predictions, not the predictions itself.
+First, we average the changes of predictions, not the predictions themselves.
 The change is defined as the partial derivative (but later, for the actual computation, replaced by the differences in the predictions over an interval).
 
 
@@ -216,7 +212,7 @@ The third difference of ALE plots to M-plots is that we subtract a constant from
 This step centers the ALE plot so that the average effect over the data is zero.
 
 One problem remains:
-Not all models come with a gradient, for example random forests have no gradient.
+Not all models come with a gradient; for example, random forests have no gradient.
 But as you will see, the actual computation works without gradients and uses intervals.
 Let's delve a little deeper into the estimation of ALE plots.
 
@@ -245,7 +241,7 @@ The word **Accumulated** in ALE reflects this.
 
 This effect is centered so that the mean effect is zero.
 
-$$\hat{f}_{j,ALE}(x)=\hat{\tilde{f}}_{j,ALE}(x)-\frac{1}{n}\sum_{i=1}^{n}\hat{\tilde{f}}_{j,ALE}(x^{(i)}_{j})$$
+$$\hat{f}_{j,ALE}(x) = \hat{\tilde{f}}_{j,ALE}(x) - \frac{1}{n}\sum_{i=1}^{n} \hat{\tilde{f}}_{j,ALE}(x_j^{(i)})$$
 
 The value of the ALE can be interpreted as the main effect of the feature at a certain value compared to the average prediction of the data.
 For example, an ALE estimate of -2 at $x_j=3$ means that when the j-th feature has value 3, then the prediction is lower by 2 compared to the average prediction.

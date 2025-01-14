@@ -90,6 +90,7 @@ All notable changes to the book will be documented here.
   - Ceteris Paribus 
   - LOFO
 - Updated lots of references (and move them from footnotes to proper bibtex references).
+- Made math more consistent
 - Improved the captions of the figures and referenced them from within the text.
 - Use Palmer Penguins for classification examples. This replaces the examples with the cancer dataset. There was an error in how how I coded the outcome, so all interpretations were reversed. Instead of reversing the labels, I decided to replace the data, since I on longer think it's a good fit for the book. The penguin data examples are more accessible, and less sensitive.
 - Deleted chapter "Other interpretable models": only contained naive bayes and knn, but raised more question than it answered.
