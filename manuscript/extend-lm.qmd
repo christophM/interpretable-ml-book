@@ -117,12 +117,12 @@ The core concept of any GLM is:
 Keep the weighted sum of the features, but allow non-Gaussian outcome distributions and connect the expected mean of this distribution and the weighted sum through a possibly nonlinear function.
 For example, the logistic regression model assumes a Bernoulli distribution for the outcome and links the expected mean and the weighted sum using the logistic function.
 
-The GLM mathematically links the weighted sum of the features with the mean value of the assumed distribution using the link function g, which can be chosen flexibly depending on the type of outcome.
+The GLM mathematically links the weighted sum of the features with the mean value of the assumed distribution using the link function  $g$, which can be chosen flexibly depending on the type of outcome.
 
-$$g(E_Y(y|x))=\beta_0+\beta_1{}x_{1}+\ldots{}\beta_p{}x_{p}$$
+$$g(\mathbb{E}[Y|\mathbf{x}])=\beta_0+\beta_1 x_{1}+\ldots+\beta_p x_{p}$$
 
 GLMs consist of three components:
-The link function g, the weighted sum $X^T\beta$ (sometimes called linear predictor) and a probability distribution from the exponential family that defines $E_Y$.
+The link function $g$, the weighted sum $\mathbf{X}^T \boldsymbol{\beta}$ (sometimes called linear predictor) and a probability distribution from the exponential family that defines $\mathbb{E}_Y$.
 
 The exponential family is a set of distributions that can be written with the same (parameterized) formula that includes an exponent, the mean and variance of the distribution and some other parameters.
 I will not go into the mathematical details because this is a very big universe of its own that I do not want to enter.
@@ -149,7 +149,7 @@ $$\ln(\mathbb{E}[Y|X])=\mathbf{x}^{T}\boldsymbol{\beta}$$
 The logistic regression model is also a GLM that assumes a Bernoulli distribution and uses the logit function as the link function.
 The mean of the binomial distribution used in logistic regression is the probability that y is 1.
 
-$$x^{T}\beta=ln\left(\frac{E_Y(y|x)}{1-E_Y(y|x)}\right)=ln\left(\frac{P(y=1|x)}{1-P(y=1|x)}\right)$$
+$$\mathbf{x}^{T}\boldsymbol{\beta}=\ln\left(\frac{\mathbb{E}[Y|X = \mathbf{x}]}{1-\mathbb{E}[Y|X = \mathbf{x}]}\right)=\ln\left(\frac{\mathbb{P}(Y=1|X = \mathbf{x})}{1-\mathbb{P}(Y=1|X = \mathbf{x})}\right)$$
 
 And if we solve this equation to have $\mathbb{P}(Y=1)$ on one side, we get the logistic regression formula:
 
@@ -227,7 +227,7 @@ We can change the link function and the assumed distribution.
 One possibility is to keep the Gaussian distribution and use a link function that always leads to positive predictions such as the log-link (the inverse is the exp-function) instead of the identity function.
 Even better:
 We choose a distribution that corresponds to the data generating process and an appropriate link function.
-Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as link function.
+Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as the link function.
 In this case, the data was even generated with the Poisson distribution, so the Poisson GLM is the perfect choice.
 The fitted Poisson GLM leads to the distribution of predicted values shown in @fig-linear-model-positive.
 
@@ -249,7 +249,7 @@ No negative amounts of coffees, looks much better now.
 The assumed distribution together with the link function determines how the estimated feature weights are interpreted.
 In the coffee count example, I used a GLM with Poisson distribution and log link, which implies the following relationship between the expected outcome and the features stress (str), sleep (slp) and work (wrk).
 
-$$\ln(\mathbb{E}(\text{coffee}|\text{str},\text{slp},\text{wrk}))=\beta_0+\beta_{\text{str}}x_{\text{str}} + \beta_{\text{slp}}x_{\text{slp}} +\beta_{\text{wrk}}x_{\text{wrk}}$$
+$$\ln(\mathbb{E}[\text{coffee}|\text{str},\text{slp},\text{wrk}])=\beta_0+\beta_{\text{str}}x_{\text{str}} + \beta_{\text{slp}}x_{\text{slp}} +\beta_{\text{wrk}}x_{\text{wrk}}$$
 
 To interpret the weights we invert the link function so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome.
 
@@ -289,7 +289,7 @@ On days off, many people ride for pleasure, but only when it is warm enough.
 When it comes to rental bicycles, you might expect an interaction between temperature and work day.
 
 How can we get the linear model to include interactions?
-Before you fit the linear model, add a column to the feature matrix that represents the interaction between the features and fit the model as usual.
+Before you fit the linear model, add a column to the feature matrix $\mathbf{X}$ that represents the interaction between the features and fit the model as usual.
 The solution is elegant in a way, since it does not require any change of the linear model, only additional columns in the data.
 In the work day and temperature example, we would add a new feature that has zeros for no-work days, otherwise it has the value of the temperature feature, assuming that work day is the reference category.
 Suppose our data looks like in @tbl-data-frame.
@@ -443,7 +443,7 @@ Linearity in linear models means that no matter what value an instance has in a 
 Is it reasonable to assume that increasing the temperature by one degree at 10 degrees Celsius has the same effect on the number of rental bikes as increasing the temperature when it already has 40 degrees?
 Intuitively, one expects that increasing the temperature from 10 to 11 degrees Celsius has a positive effect on bicycle rentals and from 40 to 41 a negative effect, which is also the case, as you will see, in many examples throughout the book.
 The temperature feature has a linear, positive effect on the number of rental bikes, but at some point it flattens out and even has a negative effect at high temperatures.
-The linear model does not care, it will dutifully find the best linear plane (by minimizing the Euclidean distance).
+The linear model does not care; it will dutifully find the best linear plane (by minimizing the Euclidean distance).
 
 You can model nonlinear relationships using one of the following techniques:
 
@@ -525,11 +525,11 @@ That's the motivation behind GAMs.
 GAMs relax the restriction that the relationship must be a simple weighted sum and instead assume that the outcome can be modeled by a sum of arbitrary functions of each feature.
 Mathematically, the relationship in a GAM looks like this:
 
-$$g(E_Y(y|x))=\beta_0+f_1(x_{1})+f_2(x_{2})+\ldots+f_p(x_{p})$$
+$$g[\mathbb{E}(Y|X = \mathbf{x})] = \beta_0 + f_1(x_{1}) + f_2(x_{2}) + \ldots + f_p(x_{p})$$
 
-The formula is similar to the GLM formula with the difference that the linear term $\beta_j{}x_{j}$ is replaced by a more flexible function $f_j(x_{j})$.
+The formula is similar to the GLM formula with the difference that the linear term $\beta_j x_{j}$ is replaced by a more flexible function $f_j(x_{j})$.
 The core of a GAM is still a sum of feature effects, but you have the option to allow nonlinear relationships between some features and the output.
-Linear effects are also covered by the framework because for features to be handled linearly, you can limit their $f_j(x_{j})$ only to take the form of $x_{j}\beta_j$.
+Linear effects are also covered by the framework because for features to be handled linearly, you can limit their $f_j(x_{j})$ only to take the form of $x_{j} \beta_j$.
 
 The big question is how to learn nonlinear functions.
 The answer is called "splines" or "spline functions".
@@ -645,7 +645,7 @@ This is partly my own experience and partly observations from the winning models
 All examples in this chapter were created using the R language.
 For GAMs, the `gam` package was used, but there are many others.
 R has an incredible number of packages to extend linear regression models.
-Unsurpassed by any other analytics language, R is home to every conceivable extension of the linear regression model extension.
+Unsurpassed by any other analytics language, R is home to every conceivable extension of the linear regression model.
 You'll find implementations of e.g. GAMs in Python (such as [pyGAM](https://github.com/dswah/pyGAM)), but these implementations are not as mature.
 The [Python PiML](https://selfexplainml.github.io/PiML-Toolbox/_build/html/index.html) package also implements various GAM versions.
 

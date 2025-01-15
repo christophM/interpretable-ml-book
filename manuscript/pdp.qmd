@@ -8,7 +8,7 @@ For example, when applied to a linear regression model, partial dependence plots
 
 The partial dependence function for regression is defined as:
 
-$$\hat{f}_S(x_S)=E_{X_C}\left[\hat{f}(x_S,X_C)\right]=\int\hat{f}(x_S,X_C)d\mathbb{P}(X_C)$$
+$$\hat{f}_S(\mathbf{x}_S) = \mathbb{E}_{\mathbf{X}_C}\left[\hat{f}(\mathbf{x}_S, X_C)\right] = \int \hat{f}(\mathbf{x}_S, X_C) d\mathbb{P}(\mathbf{X}_C)$$
 
 The $x_S$ are the features for which the partial dependence function should be plotted and $X_C$ are the other features used in the machine learning model $\hat{f}$, which are here treated as random variables.
 Usually, there is only one or two features in the set S.
@@ -19,12 +19,12 @@ By marginalizing over the other features, we get a function that depends only on
 
 The partial function $\hat{f}_S$ is estimated by calculating averages in the training data, also known as the Monte Carlo method:
 
-$$\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})$$
+$$\hat{f}_S(\mathbf{x}_S) = \frac{1}{n} \sum_{i=1}^n \hat{f}(\mathbf{x}_S, \mathbf{x}^{(i)}_{C})$$
 
 This is equivalent to averaging all the [ICE curves](#ice) of a dataset.
-The partial function tells us for given value(s) of features S what the average marginal effect on the prediction is.
-In this formula, $x^{(i)}_{C}$ are actual feature values from the dataset for the features in which we are not interested, and n is the number of instances in the dataset.
-An assumption of the PDP is that the features in C are not correlated with the features in S.
+The partial function tells us for given value(s) of features $S$ what the average marginal effect on the prediction is.
+In this formula, $\mathbf{x}^{(i)}_{C}$ are actual feature values from the dataset for the features in which we are not interested, and $n$ is the number of instances in the dataset.
+An assumption of the PDP is that the features in $C$ are not correlated with the features in $S$.
 If this assumption is violated, the averages calculated for the partial dependence plot will include data points that are very unlikely or even impossible (see disadvantages).
 
 ::: {.callout-warning}
@@ -49,7 +49,7 @@ The method considers all instances and gives a statement about the global relati
 So far, we have only considered numerical features.
 For categorical features, the partial dependence is very easy to calculate.
 For each of the categories, we get a PDP estimate by forcing all data instances to have the same category.
-For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season,  we get four numbers, one for each season.
+For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season, we get four numbers, one for each season.
 To compute the value for "summer", we replace the season of all data instances with "summer" and average the predictions.
 
 ## PDP-based Feature Importance
@@ -58,12 +58,12 @@ Greenwell et al. (2018) [@greenwell2018simple] proposed a simple partial depende
 The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
 For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
 
-$$I(x_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(\hat{f}_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K \hat{f}_S({x^{(k)}_S))^2}}$$
+$$I(X_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(\hat{f}_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K \hat{f}_S(x^{(k)}_S))^2}$$
 
-Note that here the $x^{(k)}_S$ are the K unique values of feature the $X_S$.
+Note that here the $x^{(k)}_S$ are the $K$ unique values of feature $X_S$.
 For categorical features we have:
 
-$$I(x_S) = (max_k(\hat{f}_S(x^{(k)}_S)) - min_k(\hat{f}_S(x^{(k)}_S)))/4$$
+$$I(X_S) = \frac{max_k(\hat{f}_S(x^{(k)}_S)) - min_k(\hat{f}_S(x^{(k)}_S))}{4}$$
 
 This is the range of the PDP values for the unique categories divided by four.
 This strange way of calculating the deviation is called the range rule.
@@ -82,7 +82,7 @@ A unique feature value with just one instance is given the same weight in the im
 
 ## Examples
 
-In practice, the set of features S usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
+In practice, the set of features $S$ usually only contains one feature or a maximum of two, because one feature produces 2D plots and two features produce 3D plots.
 Everything beyond that is quite tricky.
 Even 3D on a 2D paper or monitor is already challenging.
 
@@ -136,7 +136,7 @@ ggplot(pdp$results) +
 
 We also compute the partial dependence for [penguin classification](#penguins) (male/female).
 To mix things up a little bit, we analyze both the random forest and the logistic regression approach.
-Both predict P(female) based on body measurements.
+Both predict $\mathbb{P}(Y^{(i)} = \text{female})$ based on body measurements.
 We compute and visualize the partial dependence of the probability for being female based on body mass and bill depth for the random forest (@fig-pdp-penguin).
 The heavier the penguin, the less likely it is female.
 We see a similar pattern for bill depth, but the probability doesn't go to zero for deep bills.
@@ -318,7 +318,7 @@ For example, suppose you want to predict how fast a person walks, given the pers
 For the partial dependence of one of the features, e.g. height, we assume that the other features (weight) are not correlated with height, which is obviously a false assumption.
 For the computation of the PDP at a certain height (e.g. 200 cm), we average over the marginal distribution of weight, which might include a weight below 50 kg, which is unrealistic for a 2 meter person.
 In other words:
-When the features are correlated, we create new data points in areas of the feature distribution where the actual probability is very low (for example it is unlikely that someone is 2 meters tall but weighs less than 50 kg).
+When the features are correlated, we create new data points in areas of the feature distribution where the actual probability is very low (for example, it is unlikely that someone is 2 meters tall but weighs less than 50 kg).
 One solution to this problem is [Accumulated Local Effect plots](#ale) or short ALE plots that work with the conditional instead of the marginal distribution.
 
 **Heterogeneous effects might be hidden** because PD plots only show the average marginal effects.

@@ -119,7 +119,7 @@ This can be a regression function, but it can also be the classification probabi
 Fully decomposed, we can represent the prediction function as the sum of functional components:
 
 \begin{align*}
-\hat{f}(x) = & \hat{f}_0 + \hat{f}_1(x_1) + \ldots + \hat{f}_p(x_p) \\
+\hat{f}(\mathbf{x}) = & \hat{f}_0 + \hat{f}_1(x_1) + \ldots + \hat{f}_p(x_p) \\
 & + \hat{f}_{1,2}(x_1, x_2) + \ldots + \hat{f}_{1,p}(x_1, x_p) + \ldots + \hat{f}_{p-1,p}(x_{p-1}, x_p) \\
 & + \ldots  \\ & +  \hat{f}_{1,\ldots,p}(x_1, \ldots, x_p)
 \end{align*}
@@ -208,8 +208,8 @@ $$\hat{f}_1(\mathbf{x}) = \int_{X_{-1}} \left( \hat{f}(\mathbf{x}) - \hat{f}_0\r
 To finish the calculation for the component $\hat{f}_{1,2}$, we can put everything together:
 
 \begin{align*}
-\hat{f}_{1,2}(\mathbf{x}) &= \int_{X_{3,4}} \left( \hat{f}(\mathbf{x}) - (\hat{f}_0(\mathbf{x}) + \hat{f}_1(\mathbf{x}) - \hat{f}_0 + \hat{f}_2(\mathbf{x}) - \hat{f}_0)\right) d \mathbb{P}(X_{3},X_4) \\  
-&= \int_{X_{3,4}} \left(\hat{f}(\mathbf{x}) - \hat{f}_1(\mathbf{x}) - \hat{f}_2(\mathbf{x}) + \hat{f}_0\right) d \mathbb{P}(X_{3},X_4) 
+\hat{f}_{1,2}(\mathbf{x}) &= \int_{X_{3,4}} \left( \hat{f}(\mathbf{x}) - (\hat{f}_0 + \hat{f}_1(\mathbf{x}) - \hat{f}_0 + \hat{f}_2(\mathbf{x}) - \hat{f}_0)\right) d \mathbb{P}(X_{3},X_4) \\  
+&= \int_{X_{3,4}} \left(\hat{f}(\mathbf{x}) - \hat{f}_1(\mathbf{x}) - \hat{f}_2(\mathbf{x}) + \hat{f}_0\right) d \mathbb{P}(X_{3},X_4)
 \end{align*}
 
 This example shows how each higher-order effect is defined by integrating over all other features, but also by removing all the lower-order effects that are subsets of the feature set we are interested in.
@@ -220,7 +220,8 @@ Hooker (2004) has shown that this definition of functional components satisfies 
 - Orthogonality: $\int \hat{f}_S(\mathbf{x}_S)\hat{f}_V(\mathbf{x}_V)d \mathbb{P}(X)=0$ for $S\neq V$.
 - Variance Decomposition: Let $\sigma^2_{\hat{f}}=\int \hat{f}(\mathbf{x})^2d \mathbb{P}(X)$, then $\sigma^2(\hat{f}) = \sum_{S \subseteq \{1,\ldots,p\}} \sigma^2_S(\hat{f}_S)$.
 
-The zero means axiom implies that all effects or interactions are centered around zero. As a consequence, the interpretation at a position $\mathbf{x}$ is relative to the centered prediction and not the absolute prediction.
+The zero means axiom implies that all effects or interactions are centered around zero.
+As a consequence, the interpretation at a position $\mathbf{x}$ is relative to the centered prediction and not the absolute prediction.
 
 The orthogonality axiom implies that components do not share information.
 For example, the first-order effect of feature $X_1$ and the interaction term of $X_{1}$ and $X_2$ are not correlated.
@@ -230,7 +231,7 @@ The more interesting consequence arises for orthogonality of hierarchical compon
 In contrast, a two-dimensional partial dependence plot for $X_1$ and $X_2$ would contain four effects: the intercept, the two main effects of $X_1$ and $X_2$ and the interaction between them.
 The functional ANOVA component for $\hat{f}_{1,2}(x_1,x_2)$ contains only the pure interaction.
 
-Variance decomposition allows us to divide the variance of the function $\hat{f}$ among the components, and guarantees that it adds up the total variance of the function in the end.
+Variance decomposition allows us to divide the variance of the function $\hat{f}$ among the components, and guarantees that it adds up to the total variance of the function in the end.
 The variance decomposition property can also explain to us why the method is called functional ANOVA.
 In statistics, ANOVA stands for ANalysis Of VAriance.
 ANOVA refers to a collection of methods that analyze differences in the mean of a target variable.
@@ -249,20 +250,22 @@ If we integrate over the uniform distribution, when in reality features are depe
 <!-- The solution -->
 Hooker (2007) [@hooker2007generalized] proposed the generalized functional ANOVA, a decomposition that works for dependent features.
 It's a generalization of the functional ANOVA we encountered earlier, which means that the functional ANOVA is a special case of the generalized functional ANOVA.
-The components are defined as projections of f onto the space of additive functions:
+The components are defined as projections of $f$ onto the space of additive functions:
 
-$$\hat{f}_S(\mathbf{x}_S) = \arg\min_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(\mathbf{x})  - \sum_{S \subset P} g_S(\mathbf{x}_S)\right)^2 w(\mathbf{x})\,dx.$$
+$$\hat{f}_S(\mathbf{x}_S) = \arg\min_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(\mathbf{x}) - \sum_{S \subset P} g_S(\mathbf{x}_S)\right)^2 w(\mathbf{x})\,d\mathbf{x}.$$
 
 Instead of orthogonality, the components satisfy a hierarchical orthogonality condition:
 
 $$\forall \hat{f}_S(\mathbf{x}_S)| S \subset U: \int \hat{f}_S(\mathbf{x}_S) \hat{f}_U(\mathbf{x}_U) w(\mathbf{x})\,dx = 0$$
 
 <!-- hierarchical orthogonality -->
-Hierarchical orthogonality is different from orthogonality. For two feature sets $S$ and $U$, neither of which is a subset of the other (e.g. $S=\{1,2\}$ and $U=\{2,3\}$), the components $\hat{f}_S$ and $\hat{f}_U$ need not be orthogonal for the decomposition to be hierarchically orthogonal. But all components for all subsets of $S$ must be orthogonal to $\hat{f}_S$. 
+Hierarchical orthogonality is different from orthogonality.
+For two feature sets $S$ and $U$, neither of which is a subset of the other (e.g. $S=\{1,2\}$ and $U=\{2,3\}$), the components $\hat{f}_S$ and $\hat{f}_U$ need not be orthogonal for the decomposition to be hierarchically orthogonal.
+But all components for all subsets of $S$ must be orthogonal to $\hat{f}_S$.
 <!-- Entanglement -->
 As a result, the interpretation differs in relevant ways:
 Similar to the M-Plot in the [ALE chapter](#ale), generalized functional ANOVA components can entangle the (marginal) effects of correlated features.
-Whether the components entangle the marginal effects also depends on the choice of weight function $w(x)$.
+Whether the components entangle the marginal effects also depends on the choice of weight function $w(\mathbf{x})$.
 If we choose $w$ to be the uniform measure on the unit cube, we obtain the functional ANOVA from the section above.
 A natural choice for $w$ is the joint probability distribution function.
 However, the joint distribution is usually unknown and difficult to estimate.
@@ -303,13 +306,13 @@ Furthermore, ALE does not require estimation of the joint distribution; the comp
 Their proposal consists of two parts: a decomposition procedure and a set of training constraints to make the decomposition more interpretable.
 
 The strategy to get from an ensemble of trees to the functional composition involves aggregation, purification, and attribution.
-First each tree is decomposed into decision rules, with each leaf node becoming a decision rule.
+First, each tree is decomposed into decision rules, with each leaf node becoming a decision rule.
 These rules are then sorted by the features they use.
 For example, all rules using only feature $X_1$ are collected and used to estimate the main effect $f_1$.
 The same is done for all other main effects and interactions.
 However, this decomposition wouldn't be unique since, for example, you could absorb the main effect of $X_1$ into the interaction term of $X_1$ and $X_2$.
 They "purify" the components to enforce zero-means and orthogonality constraints (should sound familiar by now).
-In the attribution step  feature contributions for each data point are computed and aggregated across the data to get global importance values for each feature.
+In the attribution step, feature contributions for each data point are computed and aggregated across the data to get global importance values for each feature.
 The individual contributions are the same as the [Shapley values](#shapley).
 
 The other suggestion in the paper is to add constraints to the training so that the functional decomposition can be better interpreted.
@@ -327,7 +330,7 @@ Both approaches have in common that their goal is to provide individual and inte
 In statistical models, we restrict the number of components so that not all $2^p$ components have to be fitted.
 The simplest version is linear regression:
 
-$$\hat{f}(x) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p$$
+$$\hat{f}(\mathbf{x}) = \beta_0 + \beta_1 x_1 + \ldots + \beta_p x_p$$
 
 The formula looks very similar to the functional decomposition, but with two major modifications.
 Modification 1: All interaction effects are excluded and we keep only intercept and main effects.
@@ -346,7 +349,7 @@ The discrepancy occurs because other functional decomposition approaches split e
 
 So when should you use GAMs instead of a complex model + decomposition?
 You should stick to GAMs when most interactions are zero, especially when there are no interactions with three or more features.
-If we know that the maximum number of features involved in interactions is two ($|S|\leq 2$), then we can use approaches like MARS or GA2M.
+If we know that the maximum number of features involved in interactions is two ($|S| \leq 2$), then we can use approaches like MARS or GA2M.
 Ultimately, model performance on test data may indicate whether a GAM is sufficient or a more complex model performs much better.
 
 
@@ -373,7 +376,7 @@ They are also divided among individual effects.
 
 The SHAP interaction plots can also be better understood through decompositions.
 
-There are many methods that produce individual explanations in the form of $\hat{f}(\mathbf{x})=\sum_{j=1}^p\phi_j$, which attribute one number per feature, see [Shapley Values](#shapley), [LIME](#lime) and most [pixel attribution methods for neural networks](#pixel-attribution), all of which you will encounter later in the book.
+There are many methods that produce individual explanations in the form of $\hat{f}(\mathbf{x}) = \sum_{j=1}^{p} \phi_j$, which attribute one number per feature, see [Shapley Values](#shapley), [LIME](#lime) and most [pixel attribution methods for neural networks](#pixel-attribution), all of which you will encounter later in the book.
 Looking at them through functional decomposition:
 When methods fulfill the property of efficiency, like for example Shapley values do, it means that the sum of attributions is equal to the prediction.
 This means that we decomposed the function.

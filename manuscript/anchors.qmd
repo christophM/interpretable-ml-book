@@ -59,7 +59,7 @@ In those cases the explanation is 97\% accurate, meaning the displayed predicate
 
 An anchor $A$ is formally defined as follows:
 
-$$ \mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(x)=\hat{f}(z)}]\geq\tau;A(x)=1 $$
+$$ \mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(\mathbf{x})=\hat{f}(z)}] \geq \tau; A(\mathbf{x})=1 $$
 
 Wherein:
 
@@ -88,27 +88,27 @@ Experiment with different values to balance precision and coverage.
 
 
 Although anchors’ mathematical description may seem clear and straightforward, constructing particular rules is infeasible.
-It would require evaluating $1_{\hat{f}(x) = \hat{f}(z)}$ for all $z \in \mathcal{D}_x(\cdot|A)$, which is not possible in continuous or large input spaces.
+It would require evaluating $1_{\hat{f}(\mathbf{x}) = \hat{f}(\mathbf{z})}$ for all $\mathbf{z} \in \mathcal{D}_x(\cdot|A)$, which is not possible in continuous or large input spaces.
 Therefore, the authors propose to introduce the parameter $0 \leq \delta \leq 1$ to create a probabilistic definition.
 This way, samples are drawn until there is statistical confidence concerning their precision.
 The probabilistic definition reads as follows:
 
-$$P(prec(A)\geq\tau)\geq{}1-\delta\quad\textrm{with}\quad{}prec(A)=\mathbb{E}_{\mathcal{D}_x(z|A)}[1_{\hat{f}(x)=\hat{f}(z)}]$$
+$$\mathbb{P}(prec(A) \geq \tau) \geq 1 - \delta \quad \textrm{with} \quad prec(A) = \mathbb{E}_{\mathcal{D}_x(\mathbf{z}|A)}[1_{\hat{f}(\mathbf{x}) = \hat{f}(\mathbf{z})}]$$
 
 The previous two definitions are combined and extended by the notion of coverage.
 Its rationale consists of finding rules that apply to a preferably large part of the model’s input space.
 Coverage is formally defined as an anchor's probability of applying to its neighbors, i.e., its perturbation space:
 
-$$cov(A)=\mathbb{E}_{\mathcal{D}_{(\mathbf{z})}}[A(\mathbf{z})]$$
+$$cov(A) = \mathbb{E}_{\mathcal{D}_{(\mathbf{z})}}[A(\mathbf{z})]$$
 
 Including this element leads to the anchor's final definition taking into account the maximization of coverage:
 
-$$\underset{A\:\textrm{s.t.}\;\mathbb{P}(prec(A)\geq\tau)\geq{}1-\delta}{\textrm{max}}cov(A)$$
+$$\underset{A \:\textrm{s.t.}\;\mathbb{P}(prec(A) \geq \tau) \geq 1 - \delta}{\textrm{max}} cov(A)$$
 
 Thus, the proceeding strives for a rule that has the highest coverage among all eligible rules (all those that satisfy the precision threshold given the probabilistic definition).
 These rules are thought to be more important, as they describe a larger part of the model.
 Note that rules with more predicates tend to have higher precision than rules with fewer predicates.
-In particular, a rule that fixes every feature of $x$ reduces the evaluated neighborhood to identical instances.
+In particular, a rule that fixes every feature of $\mathbf{x}$ reduces the evaluated neighborhood to identical instances.
 Thus, the model classifies all neighbors equally, and the rule’s precision is $1$.
 At the same time, a rule that fixes many features is overly specific and only applicable to a few instances.
 Hence, there is a *trade-off between precision and coverage*.
@@ -116,10 +116,10 @@ Hence, there is a *trade-off between precision and coverage*.
 The anchors approach uses four main components to find explanations.
 
 **Candidate Generation**: Generates new explanation candidates.
-In the first round, one candidate per feature of $x$ gets created and fixes the respective value of possible perturbations.
+In the first round, one candidate per feature of $\mathbf{x}$ gets created and fixes the respective value of possible perturbations.
 In every other round, the best candidates of the previous round are extended by one feature predicate that is not yet contained therein.
 
-**Best Candidate Identification**: Candidate rules are to be compared in regard to which rule explains $x$ the best.
+**Best Candidate Identification**: Candidate rules are to be compared in regard to which rule explains $\mathbf{x}$ the best.
 To this end, perturbations that match the currently observed rule are created and evaluated by calling the model.
 However, these calls need to be minimized as to limit computational overhead.
 This is why, at the core of this component, there is a pure-exploration Multi-Armed Bandit (*MAB*; *KL-LUCB*[@kaufmann2013information], to be precise).
@@ -133,8 +133,8 @@ The precision thus states how well the rule describes the instance to be explain
 **Modified Beam Search**: All of the above components are assembled in a beam search, which is a graph search algorithm and a variant of the breadth-first algorithm.
 It carries the $B$ best candidates of each round over to the next one (where $B$ is called the *Beam Width*).
 These $B$ best rules are then used to create new rules.
-The beam search conducts at most $featureCount(x)$ rounds, as each feature can only be included in a rule at most once.
-Thus, at every round $i$, it generates candidates with exactly $i$ predicates and selects the B best thereof.
+The beam search conducts at most $featureCount(\mathbf{x})$ rounds, as each feature can only be included in a rule at most once.
+Thus, at every round $i$, it generates candidates with exactly $i$ predicates and selects the $B$ best thereof.
 Therefore, by setting $B$ high, the algorithm is more likely to avoid local optima.
 In turn, this requires a high number of model calls and thereby increases the computational load.
 
@@ -254,8 +254,7 @@ Also, discretization was used to increase the expressiveness and applicability o
 #plotExplanations(bike.explanations, colPal = colPal)
 ```
 
-![Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The \"base\" rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.
-](./images/anchors1-1.png){#fig-anchors1}
+![Anchors explaining six instances of the bike rental dataset. Each row represents one explanation or anchor, and each bar depicts the feature predicates contained by it. The x-axis displays a rule's precision, and a bar's thickness corresponds to its coverage. The "base" rule contains no predicates. These anchors show that the model mainly considers the temperature for predictions.](./images/anchors1-1.png){#fig-anchors1}
 
 All of the previous rules were generated for instances where the model decides confidently based on a few features.
 However, other instances are not as distinctly classified by the model as more features are of importance.

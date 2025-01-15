@@ -8,7 +8,7 @@ The concept is really straightforward:
 We measure the importance of a feature by calculating the increase in the model's prediction error after permuting the feature.
 A feature is "important" if shuffling its values increases the model error, because in this case, the model relied on the feature for the prediction.
 A feature is "unimportant" if shuffling its values leaves the model error unchanged, because in this case, the model ignored the feature for the prediction.
-:w
+
 ## Theory
 
 The permutation feature importance measurement was introduced by @breiman2001random for random forests.
@@ -33,7 +33,7 @@ Input: Trained model $\hat{f}$, feature matrix $\mathbf{X}$, target vector $\mat
 # Invert positive metrics
 
 You can also use PFI with metrics where larger is better, like accuracy or AUC.
-Just make sure to swap roles of $e_{perm}$ and $e_{orig}$ in the ratio/difference.
+Just make sure to swap roles of $e_{\text{perm}}$ and $e_{\text{orig}}$ in the ratio/difference.
 
 :::
 
@@ -117,7 +117,7 @@ Like all the model-agnostic methods, permutation feature importance has a proble
 Shuffling produces unrealistic or at least unlikely data points, that are then used to compute feature importance -- not ideal.
 The problem is the *marginal* version of PFI ignores dependencies.
 But there is also the concept of *conditional* importance.
-The conditional version samples from the conditional distribution $P(X_j| X_{-j})$ instead of the marginal distribution $P(X_j)$ (shuffling is a way to sample from the marginal distribution).
+The conditional version samples from the conditional distribution $\mathbb{P}(X_j | X_{-j})$ instead of the marginal distribution $\mathbb{P}(X_j)$ (shuffling is a way to sample from the marginal distribution).
 By conditional sampling, we sample more realistic data points.
 
 However, sampling from the conditional distribution is difficult.
@@ -178,12 +178,12 @@ ggplot(penguins_by_species) +
 So we compute the permutation feature importance again, by species.
 Meaning the data are permuted by species, so that, for example, it couldn't happen that the body mass of a heavy Gentoo was assigned to a more lightweight Adelie.
 While grouping reduces the correlation problem, it isn't solved, as we can see in @fig-cor-by-species.
-For example, it can still happen that a Gentoo penguin with a body mass of 4000 grams gets "assigned" a flipper length of 230mm, which produces an unrealistic data point.
+For example, it can still happen that a Gentoo penguin with a body mass of 4000 grams gets "assigned" a flipper length of 230 mm, which produces an unrealistic data point.
 So still the interpretation comes with caveats.
 The results are displayed in @fig-importance-penguins-by-species.
 A different picture emerges:
 Body mass is highly important for sex classification for Gentoo, less so for Adelie, and way less important for Chinstrap.
-Note that for the three logistic regression models its natural to see it as three prediction models for which we can compute separate PFIs.
+Note that for the three logistic regression models it's natural to see it as three prediction models for which we can compute separate PFIs.
 However, since PFI is model-agnostic, we could do the same for a random forest which simply uses species as a feature.
 Or we could split into subgroups by any other feature, in theory even using variables that weren't used by the model.
 
@@ -229,7 +229,7 @@ Importance methods that retrain the model with a subset of features appear intui
 We are interested in the feature importance of a fixed model.
 Retraining with a reduced dataset creates a different model than the one we are interested in.
 Suppose you train a sparse linear model (with Lasso) with a fixed number of features with a non-zero weight.
-The dataset has 100 features; you set the number of non-zero weights to 5.
+The dataset has $p = 100$ features; you set the number of non-zero weights to $5$.
 You analyze the importance of one of the features that have a non-zero weight.
 You remove the feature and retrain the model.
 The model performance remains the same because another equally good feature gets a non-zero weight and your conclusion would be that the feature was not important.
@@ -271,11 +271,11 @@ Now imagine another scenario in which I additionally include the temperature at 
 The temperature at 9:00 AM does not give me much additional information if I already know the temperature at 8:00 AM.
 But having more features is always good, right?
 I train a random forest with the two temperature features and the uncorrelated features.
-Some of the trees in the random forest pick up the 8:00 AM temperature, others the 9:00 AM temperature, again others both and again others none.
+Some of the trees in the random forest pick up the temperature at 8:00 AM, others the temperature at 9:00 AM, again others both and again others none.
 The two temperature features together have a bit more importance than the single temperature feature before, but instead of being at the top of the list of important features, each temperature is now somewhere in the middle.
 By introducing a correlated feature, I kicked the most important feature from the top of the importance ladder to mediocrity.
 On one hand this is fine, because it simply reflects the behavior of the underlying machine learning model, here the random forest.
-The 8:00 AM temperature has simply become less important because the model can now rely on the 9:00 AM measurement as well.
+The temperature at 8:00 AM has simply become less important because the model can now rely on the temperature at 9:00 AM measurement as well.
 On the other hand, it makes the interpretation of the feature importance considerably more difficult.
 Imagine you want to check the features for measurement errors.
 The check is expensive and you decide to check only the top 3 of the most important features.
@@ -286,17 +286,17 @@ Even though the importance values might make sense at the level of model behavio
 ## Alternatives
 
 An algorithm called [PIMP](https://academic.oup.com/bioinformatics/article/26/10/1340/193348) adapts the permutation feature importance algorithm to provide p-values for the importances.
-Another loss-based alternative is [LOFO](#lofo), which omit the feature from the training data, retrains the model and measures the increase in loss.
+Another loss-based alternative is [LOFO](#lofo), which omits the feature from the training data, retrains the model, and measures the increase in loss.
 Permuting a feature and measuring the increase in loss is not the only way to measure the importance of a feature.
 The different importance measures can be divided into model-specific and model-agnostic methods.
 The Gini importance for random forests or standardized regression coefficients for regression models are examples of model-specific importance measures.
 
-A model-agnostic alternative to permutation feature importance are variance-based measures.
+A model-agnostic alternative to permutation feature importance is variance-based measures.
 Variance-based feature importance measures such as Sobol's indices or [functional ANOVA](#decomposition) give higher importance to features that cause high variance in the prediction function.
-Also [SHAP importance](#shap) has similarities to a variance-based importance measure.
+Also, [SHAP importance](#shap) has similarities to a variance-based importance measure.
 If changing a feature greatly changes the output, then it is important.
 This definition of importance differs from the loss-based definition as in the case of permutation feature importance.
-This is evident in cases where a model overfitted.
+This is evident in cases where a model overfits.
 If a model overfits and uses a feature that is unrelated to the output, then the permutation feature importance would assign an importance of zero because this feature does not contribute to producing correct predictions.
 A variance-based importance measure, on the other hand, might assign the feature high importance as the prediction can change a lot when the feature is changed.
 

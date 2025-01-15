@@ -99,7 +99,7 @@ $$\frac{\delta f}{\delta \mathbf{x}_l} = \frac{\delta f}{\delta \mathbf{x}_{l+1}
 Here, $\mathbf{I}$ is the element-wise indicator function, which is zero where the activation at the lower layer was negative, and one where it's positive or zero.
 Vanilla Gradient takes the gradient we have backpropagated so far up to layer $l+1$, and then simply sets the gradients to zero where the activation at the layer below is negative.
 
-Let's look at an example where we have layers $\mathbf{x}_l$ and $\mathbf{x}_{l+1}=\text{ReLU}(\mathbf{x}_{l})$.
+Let's look at an example where we have layers $\mathbf{x}_l$ and $\mathbf{x}_{l+1} = \text{ReLU}(\mathbf{x}_{l})$.
 Our fictive activation at $\mathbf{x}_l$ is:
 
 $$
@@ -151,10 +151,10 @@ DeconvNet makes a different choice for backpropagating the gradient through ReLU
 
 $$R_n=R_{n+1}\mathbb{I}(R_{n+1}>0)$$,
 
-where $R_n$ and $R_{n+1}$ are the layer reconstructions and $\mathbb{1}$ the indicator function.
-When backpassing from layer n to layer n-1, DeconvNet "remembers" which of the activations in layer n were set to zero in the forward pass and sets them to zero in layer n-1.
-Activations with a negative value in layer x are set to zero in layer n-1.
-The gradient $X_n$ for the example from earlier becomes:
+where $R_n$ and $R_{n+1}$ are the layer reconstructions and $\mathbb{I}$ the indicator function.
+When backpassing from layer $n$ to layer $n-1$, DeconvNet "remembers" which of the activations in layer $n$ were set to zero in the forward pass and sets them to zero in layer $n-1$.
+Activations with a negative value in layer $x$ are set to zero in layer $n-1$.
+The gradient $\mathbf{X}_n$ for the example from earlier becomes:
 
 $$
 \begin{pmatrix}
@@ -183,27 +183,26 @@ The goal of Grad-CAM is to understand at which parts of an image a convolutional
 As a reminder, the first convolutional layer of a CNN takes as input the images and outputs feature maps that encode learned features (see the chapter on [Learned Features](#cnn-features)).
 The higher-level convolutional layers do the same, but take as input the feature maps of the previous convolutional layers.
 To understand how the CNN makes decisions, Grad-CAM analyzes which regions are activated in the feature maps of the last convolutional layers.
-There are k feature maps in the last convolutional layer, and I will call them $A_1, A_2, \ldots, A_k$.
+There are $k$ feature maps in the last convolutional layer, and I will call them $A_1, A_2, \ldots, A_k$.
 How can we "see" from the feature maps how the convolutional neural network has made a certain classification?
-In the first approach, we could simply visualize the raw values of each feature map, average over the feature maps and overlay this over our image.
+In the first approach, we could simply visualize the raw values of each feature map, average over the feature maps, and overlay this over our image.
 This would not be helpful since the feature maps encode information for **all classes**, but we are interested in a particular class.
-Grad-CAM has to decide how important each of the k feature maps was to our class c that we are interested in.
+Grad-CAM has to decide how important each of the $k$ feature maps was to our class $c$ that we are interested in.
 We have to weight each pixel of each feature map with the gradient before we average over the feature maps.
 This gives us a heatmap which highlights regions that positively or negatively affect the class of interest.
 This heatmap is sent through the ReLU function, which is a fancy way of saying that we set all negative values to zero.
-Grad-CAM removes all negative values by using a ReLU function, with the argument that we are only interested in the parts that contribute to the selected class c and not to other classes.
+Grad-CAM removes all negative values by using a ReLU function, with the argument that we are only interested in the parts that contribute to the selected class $c$ and not to other classes.
 The word pixel might be misleading here as the feature map is smaller than the image (because of the pooling units) but is mapped back to the original image.
-We then scale the Grad-CAM map to the interval [0,1] for visualization purposes and overlay it over the original image.
+We then scale the Grad-CAM map to the interval $[0,1]$ for visualization purposes and overlay it over the original image.
 
 
 <!-- Pseudo code-->
 Let's look at the recipe for Grad-CAM.
 Our goal is to find the localization map, which is defined as:
 
-$$L^c_{Grad-CAM} \in \mathbb{R}^{u\times v} = \underbrace{ReLU}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
+$$L^c_{\text{Grad-CAM}} \in \mathbb{R}^{u\times v} = \underbrace{\text{ReLU}}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
 
-
-Here, u is the width, v the height of the explanation and c the class of interest.
+Here, $u$ is the width, $v$ the height of the explanation and $c$ the class of interest.
 
 1. Forward-propagate the input image through the convolutional neural network.
 1. Obtain the raw score for the class of interest, meaning the activation of the neuron before the softmax layer.
@@ -247,9 +246,9 @@ The theory is that the derivative fluctuates greatly at small scales.
 Neural networks have no incentive during training to keep the gradients smooth; their goal is to classify images correctly.
 Averaging over multiple maps "smooths out" these fluctuations:
 
-$$R_{sg}(x)=\frac{1}{N}\sum_{i=1}^n{}R(x+g_i),$$
+$$R_{sg}(\mathbf{x})=\frac{1}{N}\sum_{i=1}^N R(\mathbf{x} + \mathbf{g}_i),$$
 
-Here, $g_i\sim{}N(0,\sigma^2)$ are noise vectors sampled from the Gaussian distribution.
+Here, $g_i \sim N(0, \sigma^2)$ are noise vectors sampled from the Gaussian distribution.
 The "ideal" noise level depends on the input image and the network.
 The authors suggest a noise level of 10%-20%, which means that $\frac{\sigma}{x_{max} - x_{min}}$ should be between 0.1 and 0.2.
 The limits $x_{min}$ and $x_{max}$ refer to minimum and maximum pixel values of the image.

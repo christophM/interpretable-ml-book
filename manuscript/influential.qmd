@@ -334,18 +334,18 @@ The following section explains the intuition and math behind influence functions
 
 The key idea behind influence functions is to upweight the loss of a training instance by an infinitesimally small step $\epsilon$, which results in new model parameters:
 
-$$\hat{\theta}_{\epsilon,z}=\arg\min_{\theta{}\in\Theta}(1-\epsilon)\frac{1}{n}\sum_{i=1}^n{}L(z_i,\theta)+\epsilon{}L(z,\theta)$$
+$$\hat{\theta}_{\epsilon, \mathbf{z}} = \arg\min_{\theta \in \Theta} \left( (1 - \epsilon)\frac{1}{n}\sum_{i=1}^n L(\mathbf{z}^{(i)}, \theta) + \epsilon L(\mathbf{z}, \theta) \right)$$
 
-where $\theta$ is the model parameter vector and $\hat{\theta}_{\epsilon,z}$ is the parameter vector after upweighting z by a very small number $\epsilon$.
-L is the loss function with which the model was trained, $z_i$ is the training data, and z is the training instance which we want to upweight to simulate its removal.
+where $\theta$ is the model parameter vector and $\hat{\theta}_{\epsilon, \mathbf{z}}$ is the parameter vector after upweighting $\mathbf{z}$ by a very small number $\epsilon$.
+$L$ is the loss function with which the model was trained, $\mathbf{z}^{(i)}$ is the training data, and $\mathbf{z}$ is the training instance which we want to upweight to simulate its removal.
 The intuition behind this formula is:
 How much will the loss change if we upweight a particular instance $\mathbf{z}^{(i)}$ from the training data by a little ($\epsilon$) and downweight the other data instances accordingly?
 What would the parameter vector look like to optimize this new combined loss?
 The influence function of the parameters, i.e., the influence of upweighting training instance $\mathbf{z}$ on the parameters, can be calculated as follows.
 
-$$I_{\text{up,params}}(\mathbf{z})=\left.\frac{d \hat{\theta}_{\epsilon, \mathbf{z}}}{d\epsilon}\right|_{\epsilon=0}=-H_{\hat{\theta}}^{-1}\nabla_{\theta}L(\mathbf{z}, \hat{\theta})$$
+$$I_{\text{up,params}}(\mathbf{z}) = \left.\frac{d \hat{\theta}_{\epsilon, \mathbf{z}}}{d\epsilon}\right|_{\epsilon=0} = -H_{\hat{\theta}}^{-1} \nabla_{\theta}L(\mathbf{z}, \hat{\theta})$$
 
-The last expression $\nabla_{\theta}L(\mathbf{z},\hat{\theta})$ is the loss gradient with respect to the parameters for the upweighted training instance.
+The last expression $\nabla_{\theta}L(\mathbf{z}, \hat{\theta})$ is the loss gradient with respect to the parameters for the upweighted training instance.
 The gradient is the rate of change of the loss of the training instance.
 It tells us how much the loss changes when we change the model parameters $\hat{\theta}$ by a bit.
 A positive entry in the gradient vector means that a small increase in the corresponding model parameter increases the loss; a negative entry means that the increase of the parameter reduces the loss.
@@ -353,7 +353,7 @@ The first part $H^{-1}_{\hat{\theta}}$ is the inverse Hessian matrix (second der
 The Hessian matrix is the rate of change of the gradient, or expressed as loss, it is the rate of change of the rate of change of the loss.
 It can be estimated using:
 
-$$H_{\theta}=\frac{1}{n}\sum_{i=1}^n\nabla^2_{\hat{\theta}}L(z_i,\hat{\theta})$$
+$$H_{\theta} = \frac{1}{n}\sum_{i=1}^n \nabla^2_{\hat{\theta}}L(\mathbf{z}^{(i)}, \hat{\theta})$$
 
 More informally:
 The Hessian matrix records how curved the loss is at a certain point.
@@ -368,7 +368,7 @@ That means we do not actually know, or it is too complex to calculate how exactl
 We approximate the function locally by using information about the steepness (= gradient) and the curvature (= Hessian matrix) at the current model parameter setting.
 With this loss approximation, we can calculate what the new parameters would approximately look like if we upweighted instance $\mathbf{z}$:
 
-$$\hat{\theta}_{-\mathbf{z}}\approx\hat{\theta}-\frac{1}{n}I_{\text{up,params}}(\mathbf{z})$$
+$$\hat{\theta}_{-\mathbf{z}} \approx \hat{\theta} - \frac{1}{n} I_{\text{up,params}}(\mathbf{z})$$
 
 The approximate parameter vector is basically the original parameter minus the gradient of the loss of $\mathbf{z}$ (because we want to decrease the loss) scaled by the curvature (= multiplied by the inverse Hessian matrix) and scaled by $\frac{1}{n}$ because that is the weight of a single training instance.
 
@@ -429,11 +429,11 @@ We can either calculate the new parameters and then make predictions using the n
 The first line of this equation means that we measure the influence of a training instance on a certain prediction $z_{test}$ as a change in loss of the test instance when we upweight the instance z and get new parameters $\hat{\theta}_{\epsilon,z}$.
 For the second line of the equation, we have applied the chain rule of derivatives and get the derivative of the loss of the test instance with respect to the parameters times the influence of z on the parameters.
 In the third line, we replace the expression with the influence function for the parameters.
-The first term in the third line $\nabla_{\theta}L(z_{test},\hat{\theta})^T{}$ is the gradient of the test instance with respect to the model parameters.
+The first term in the third line $\nabla_{\theta}L(\mathbf{z}_{test},\hat{\theta})^T$ is the gradient of the test instance with respect to the model parameters.
 
 Having a formula is great and the scientific and accurate way of showing things.
 But I think it is very important to get some intuition about what the formula means.
-The formula for $I_{\text{up,loss}}$ states that the influence function of the training instance z on the prediction of an instance $z_{test}$ is "how strongly the instance reacts to a change of the model parameters" multiplied by "how much the parameters change when we upweight the instance z".
+The formula for $I_{\text{up,loss}}$ states that the influence function of the training instance $\mathbf{z}$ on the prediction of an instance $\mathbf{z}_{test}$ is "how strongly the instance reacts to a change of the model parameters" multiplied by "how much the parameters change when we upweight the instance $\mathbf{z}$".
 Another way to read the formula:
 The influence is proportional to how large the gradients for the training and test loss are.
 The higher the gradient of the training loss, the higher its influence on the parameters and the higher the influence on the test prediction.
@@ -473,7 +473,7 @@ The conclusion would be that the model needs to be trained on more patients who 
 If you have a limit on how many training instances you can check for correctness, how do you make an efficient selection?
 The best way is to select the most influential instances, because -- by definition -- they have the most influence on the model.
 Even if you would have an instance with obviously incorrect values, if the instance is not influential and you only need the data for the prediction model, it is a better choice to check the influential instances.
-For example, you train a model for predicting whether a patient should remain in hospital or be discharged early.
+For example, you train a model for predicting whether a patient should remain in the hospital or be discharged early.
 You really want to make sure that the model is robust and makes correct predictions, because a wrong release of a patient can have bad consequences.
 Patient records can be very messy, so you do not have perfect confidence in the quality of the data.
 But checking patient information and correcting it can be very time-consuming, because once you have reported which patients you need to check, the hospital actually needs to send someone to look at the records of the selected patients more closely, which might be handwritten and lying in some archive.
@@ -502,7 +502,7 @@ If you are interested, read the paper by Koh and Liang (2017).
 
 For deletion diagnostics and influence functions, we considered the difference in the prediction and for the influence function the increase of the loss.
 But, really, **the approach is generalizable** to any question of the form:
-"What happens to ... when we delete or upweight instance z?", where you can fill "..." with any function of your model of your desire. 
+"What happens to ... when we delete or upweight instance $\mathbf{z}$?", where you can fill "..." with any function of your model of your desire.
 You can analyze how much a training instance influences the overall loss of the model.
 You can analyze how much a training instance influences the feature importance.
 You can analyze how much a training instance influences which feature is selected for the first split when training a [decision tree](#tree).
@@ -517,11 +517,11 @@ A calculation that 20 years ago was unthinkable in terms of resources can easily
 You can train models with thousands of training instances and hundreds of parameters on a laptop in seconds/minutes.
 It's therefore not a big leap to assume that deletion diagnostics will work without problems even with large neural networks in 10 years.
 
-**Influence functions are a good alternative to deletion diagnostics, but only for models with a 2nd order diffentiable loss function with respect to its parameters**, such as neural networks.
+**Influence functions are a good alternative to deletion diagnostics, but only for models with a 2nd order differentiable loss function with respect to its parameters**, such as neural networks.
 They do not work for tree-based methods like random forests, boosted trees or decision trees.
 Even if you have models with parameters and a loss function, the loss may not be differentiable.
 But for the last problem, there is a trick:
-Use a differentiable loss as substitute for calculating the influence when, for example, the underlying model uses the Hinge loss instead of some differentiable loss.
+Use a differentiable loss as a substitute for calculating the influence when, for example, the underlying model uses the Hinge loss instead of some differentiable loss.
 The loss is replaced by a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
 
 **Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
@@ -530,7 +530,7 @@ Koh and Liang (2017) showed for some examples that the influence calculated by t
 But there is no guarantee that the approximation will always be so close.
 
 There's **no clear cutoff of the influence measure at which we call an instance influential or non-influential**.
-It's useful to sort the instances by influence, but it would be great to have the means not only to sort the instances, but actually to distinguish between influential and non-influential.
+It's useful to sort the instances by influence, but it would be great to have the means not only to sort the instances but actually to distinguish between influential and non-influential.
 For example, if you identify the top 10 most influential training instances for a test instance, some of them may not be influential because, for example, only the top 3 were really influential.
 
 ## Software and Alternatives
@@ -538,10 +538,10 @@ For example, if you identify the top 10 most influential training instances for 
 Deletion diagnostics are very simple to implement.
 Take a look at [the code](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) I wrote for the examples in this chapter.
 
-For linear models and generalized linear models many influence measures like Cook's distance are implemented in R in the `stats` package.
+For linear models and generalized linear models, many influence measures like Cook's distance are implemented in R in the `stats` package.
 
 Koh and Liang published the Python code for influence functions from their paper [in a repository](https://github.com/kohpangwei/influence-release).
 That's great!
-Unfortunately it is "only" the code of the paper and not a maintained and documented Python module.
-The code is focused on the Tensorflow library, so you cannot use it directly for black box models using other frameworks, like sci-kit learn.
+Unfortunately, it's "only" the code of the paper and not a maintained and documented Python module.
+The code is focused on the TensorFlow library, so you cannot use it directly for black box models using other frameworks, like scikit-learn.
 
