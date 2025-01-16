@@ -78,21 +78,21 @@ All clear?
 Personally, I understand these concepts much better when I see how something is calculated with data.
 The following formula shows how to calculate the squared MMD measure (MMD2):
 
-$$MMD^2=\frac{1}{m^2}\sum_{i,j=1}^m{}k(z_i,z_j)-\frac{2}{mn}\sum_{i,j=1}^{m,n}k(z_i,x_j)+\frac{1}{n^2}\sum_{i,j=1}^n{}k(x_i,x_j)$$
+$$\text{MMD}^2 = \frac{1}{m^2} \sum_{i,j=1}^m k(\mathbf{z}_i, \mathbf{z}_j) - \frac{2}{mn} \sum_{i=1}^m \sum_{j=1}^n k(\mathbf{z}_i, \mathbf{x}_j) + \frac{1}{n^2} \sum_{i,j=1}^n k(\mathbf{x}_i, \mathbf{x}_j)$$
 
-k is a kernel function that measures the similarity of two points, but more about this later.
-m is the number of prototypes z, and n is the number of data points x in our original dataset.
-The prototypes z are a selection of data points x.
+$k$ is a kernel function that measures the similarity of two points, but more about this later.
+$m$ is the number of prototypes $\mathbf{z}$, and $n$ is the number of data points $\mathbf{x}$ in our original dataset.
+The prototypes $\mathbf{z}$ are a selection of data points $\mathbf{x}$.
 Each point is multidimensional, that is it can have multiple features.
-The goal of MMD-critic is to minimize MMD2.
-The closer MMD2 is to zero, the better the distribution of the prototypes fits the data.
-The key to bringing MMD2 down to zero is the term in the middle, which calculates the average proximity between the prototypes and all other data points (multiplied by 2).
+The goal of MMD-critic is to minimize $\text{MMD}^2$.
+The closer $\text{MMD}^2$ is to zero, the better the distribution of the prototypes fits the data.
+The key to bringing $\text{MMD}^2$ down to zero is the term in the middle, which calculates the average proximity between the prototypes and all other data points (multiplied by 2).
 If this term adds up to the first term (the average proximity of the prototypes to each other) plus the last term (the average proximity of the data points to each other), then the prototypes explain the data perfectly.
-Try out what would happen to the formula if you used all n data points as prototypes.
+Try out what would happen to the formula if you used all $n$ data points as prototypes.
 
-@fig-mmd illustrates the MMD2 measure.
+@fig-mmd illustrates the $\text{MMD}^2$ measure.
 The first plot shows the data points with two features, whereby the estimation of the data density is displayed with a shaded background.
-Each of the other plots shows different selections of prototypes, along with the MMD2 measure in the plot titles.
+Each of the other plots shows different selections of prototypes, along with the $\text{MMD}^2$ measure in the plot titles.
 The prototypes are the large dots and their distribution is shown as contour lines.
 The selection of the prototypes that best covers the data in these scenarios (bottom left) has the lowest discrepancy value.
 
@@ -182,7 +182,7 @@ We combine the MMD2 measure, the kernel and greedy search in an algorithm for fi
 The remaining ingredient for finding criticisms is the witness function, which tells us how much two density estimates differ at a particular point.
 It can be estimated using:
 
-$$\mathrm{witness}(\mathbf{x})=\frac{1}{n}\sum_{i=1}^{n}k(\mathbf{x}, \mathbf{x}_i)-\frac{1}{m}\sum_{j=1}^{m}k(\mathbf{x}, \mathbf{z}_j)$$
+$$\mathrm{witness}(\mathbf{x})=\frac{1}{n}\sum_{i=1}^{n}k(\mathbf{x}, \mathbf{x}^{(i)})-\frac{1}{m}\sum_{j=1}^{m}k(\mathbf{x}, \mathbf{z}^{(j)})$$
 
 For two datasets (with the same features), the witness function gives you the means of evaluating in which empirical distribution the point $\mathbf{x}$ fits better.
 To find criticisms, we look for extreme values of the witness function in both negative and positive directions.
@@ -222,7 +222,7 @@ p + geom_point(data = pt2, color = "red") +
 The witness function allows us to explicitly search for data instances that are not well represented by the prototypes.
 Criticisms are points with high absolute value in the witness function.
 Like prototypes, criticisms are also found through greedy search.
-But instead of reducing the overall MMD2, we are looking for points that maximize a cost function that includes the witness function and a regularizer term.
+But instead of reducing the overall $\text{MMD}^2$, we are looking for points that maximize a cost function that includes the witness function and a regularizer term.
 The additional term in the optimization function enforces diversity in the points, which is needed so that the points come from different clusters.
 
 This second step is independent of how the prototypes are found.
@@ -244,9 +244,9 @@ But with MMD-critic you can achieve more!
 For example, you can create an interpretable prediction model: a so-called "nearest prototype model".
 The prediction function is defined as:
 
-$$\hat{f}(x)=argmax_{i\in{}S}k(x,x_i)$$
+$$\hat{f}(\mathbf{x})=\arg\max_{i\in S}k(\mathbf{x},\mathbf{x}_i)$$
 
-which means that we select the prototype i from the set of prototypes S that is closest to the new data point, in the sense that it yields the highest value of the kernel function.
+which means that we select the prototype $i$ from the set of prototypes $S$ that is closest to the new data point, in the sense that it yields the highest value of the kernel function.
 The prototype itself is returned as an explanation for the prediction.
 This procedure has three tuning parameters:
 The type of kernel, the kernel scaling parameter and the number of prototypes.
@@ -265,7 +265,7 @@ Now you have a number of examples that represent the data well and help you to f
 How does that help?
 Remember when Google's image classifier identified black people as gorillas?
 Perhaps they should have used the procedure described here before deploying their image recognition model.
-It's not enough just to check the performance of the model, because if it were 99% correct, this issue could still be in the 1%.
+It's not enough just to check the performance of the model because if it were 99% correct, this issue could still be in the 1%.
 And labels can also be wrong!
 Going through all the training data and performing a sanity check if the prediction is problematic might have revealed the problem but would be infeasible.
 But the selection of -- say a few thousand -- prototypes and criticisms is feasible and could have revealed a problem with the data: It might have shown that there is a lack of images of people with dark skin, which indicates a problem with the diversity in the dataset.
@@ -318,8 +318,8 @@ The more the better?
 The less the better?
 One solution is to select the number of prototypes and criticisms by measuring how much time humans have for the task of looking at the images, which depends on the particular application.
 Only when using MMD-critic to build a classifier do we have a way to optimize it directly.
-One solution could be a scree plot showing the number of prototypes on the x-axis and the MMD2 measure on the y-axis.
-We would choose the number of prototypes where the MMD2 curve flattens.
+One solution could be a scree plot showing the number of prototypes on the x-axis and the $\text{MMD}^2$ measure on the y-axis.
+We would choose the number of prototypes where the $\text{MMD}^2$ curve flattens.
 
 The other parameters are the choice of the kernel and the kernel scaling parameter.
 We have the same problem as with the number of prototypes and criticisms:

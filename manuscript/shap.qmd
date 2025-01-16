@@ -66,7 +66,7 @@ $$\hat{f}(\mathbf{x})=g(\mathbf{x}')=\phi_0+\sum_{j=1}^M\phi_j x_j'$$
 If you define $\phi_0=\mathbb{E}[\hat{f}(X)]$ and set all $x_j'$ to 1, this is the Shapley efficiency property.
 Only with a different name and using the coalition vector.
 
-$$\hat{f}(X) = \phi_0+\sum_{j=1}^M\phi_j X_j' = \mathbb{E}[\hat{f}(X)] + \sum_{j=1}^M\phi_j$$
+$$\hat{f}(\mathbf{x}) = \phi_0 + \sum_{j=1}^M \phi_j x_j' = \mathbb{E}[\hat{f}(X)] + \sum_{j=1}^M\phi_j$$
 
 **2) Missingness**
 
@@ -85,14 +85,14 @@ In practice, this is only relevant for features that are constant.
 
 **3) Consistency**
 
-Let $\hat{f}_x(z')=\hat{f}(h_x(z'))$ and $z_{-j}'$ indicate that $z_j'=0$.
-For any two models f and f' that satisfy:
+Let $\hat{f}_\mathbf{x}(\mathbf{z}') = \hat{f}(h_\mathbf{x}(\mathbf{z}'))$ and $\mathbf{z}_{-j}'$ indicate that $z_j'=0$.
+For any two models $\hat{f}$ and $\hat{f}'$ that satisfy:
 
-$$\hat{f}_x'(z')-\hat{f}_x'(z_{-j}')\geq{}\hat{f}_x(z')-\hat{f}_x(z_{-j}')$$
+$$\hat{f}_\mathbf{x}^{\prime}(\mathbf{z}') - \hat{f}_\mathbf{x}'(\mathbf{z}_{-j}') \geq \hat{f}_\mathbf{x}(\mathbf{z}') - \hat{f}_\mathbf{x}(\mathbf{z}_{-j}')$$
 
-for all inputs $z'\in\{0,1\}^M$, then:
+for all inputs $\mathbf{z}'\in\{0,1\}^M$, then:
 
-$$\phi_j(\hat{f}',x)\geq\phi_j(\hat{f},x)$$
+$$\phi_j(\hat{f}', \mathbf{x}) \geq \phi_j (\hat{f}, \mathbf{x})$$
 
 The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same.
 From Consistency, the Shapley properties Linearity, Dummy, and Symmetry follow, as described in the Appendix of Lundberg and Lee.
@@ -100,12 +100,12 @@ From Consistency, the Shapley properties Linearity, Dummy, and Symmetry follow, 
 ## KernelSHAP
 
 <!-- The general Idea of linear model -->
-KernelSHAP estimates for an instance x the contributions of each feature value to the prediction.
+KernelSHAP estimates for an instance $\mathbf{x}$ the contributions of each feature value to the prediction.
 KernelSHAP consists of five steps:
 
-- Sample coalitions $z_k'\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
-- Get prediction for each $z_k'$ by first converting $z_k'$ to the original feature space and then applying model $\hat{f}: \hat{f}(h_x(z_k'))$
-- Compute the weight for each $z_k'$ with the SHAP kernel.
+- Sample coalitions $\mathbf{z}_k' \in \{0,1\}^M, \quad k \in \{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
+- Get prediction for each $\mathbf{z}_k'$ by first converting $\mathbf{z}_k'$ to the original feature space and then applying model $\hat{f}: \hat{f}(h_{\mathbf{x}}(\mathbf{z}_k'))$.
+- Compute the weight for each $\mathbf{z}_k'$ with the SHAP kernel.
 - Fit weighted linear model.
 - Return Shapley values $\phi_k$, the coefficients from the linear model.
 
@@ -121,12 +121,12 @@ For tabular data, it maps 0's to the values of another instance that we sample f
 This means that we equate "feature value is absent" with "feature value is replaced by random feature value from data".
 For tabular data, @fig-shap-simplified-feature visualizes the mapping from coalitions to feature values.
 
-![Function $h_x$ maps a coalition to a valid instance. For present features (1), $h_x$ maps to the feature values of x. For absent features (0), $h_x$ maps to the values of a randomly sampled data instance.](./images/shap-simplified-features.jpg){#fig-shap-simplified-feature width=90%}
+![Function $h_{\mathbf{x}}$ maps a coalition to a valid instance. For present features (1), $h_{\mathbf{x}}$ maps to the feature values of $\mathbf{x}$. For absent features (0), $h_{\mathbf{x}}$ maps to the values of a randomly sampled data instance.](./images/shap-simplified-features.jpg){#fig-shap-simplified-feature width=90%}
 
 
-$h_x$ for tabular data treats feature $X_j$ and $X_{-j}$ (the other features) as independent and integrates over the marginal distribution:
+$h_{\mathbf{x}}$ for tabular data treats feature $X_j$ and $X_{-j}$ (the other features) as independent and integrates over the marginal distribution:
 
-$$\hat{f}(h_x(z'))=E_{X_{-j}}[\hat{f}(x)]$$
+$$\hat{f}(h_{\mathbf{x}}(\mathbf{z}')) = \mathbb{E}_{X_{-j}}[\hat{f}(\mathbf{x})]$$
 
 Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
@@ -134,14 +134,13 @@ The estimation puts too much weight on unlikely instances.
 Results can become unreliable.
 But it is necessary to sample from the marginal distribution.
 The solution would be to sample from the conditional distribution, which changes the value function, and therefore the game to which Shapley values are the solution.
-As a result, the Shapley values have a different interpretation:
-For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
+As a result, the Shapley values have a different interpretation: For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
 For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom.
 
 For images, @fig-shap-images describes a possible mapping function.
 Assigning the average color of surrounding pixels or similar would also be an option.
 
-![Function $h_x$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. ](./images/shap-superpixel.jpg){#fig-shap-images}
+![Function $h_{\mathbf{x}}$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_{\mathbf{x}}$ returns the corresponding part of the original image. For absent features (0), $h_{\mathbf{x}}$ greys out the corresponding area.](./images/shap-superpixel.jpg){#fig-shap-images}
 
 <!-- Kernel -->
 The big difference to LIME is the weighting of the instances in the regression model.
@@ -156,18 +155,17 @@ If a coalition consists of all but one feature, we can learn about this feature'
 If a coalition consists of half the features, we learn little about an individual feature's contribution, as there are many possible coalitions with half of the features.
 To achieve Shapley compliant weighting, Lundberg et al. propose the SHAP kernel:
 
-$$\pi_{x}(z')=\frac{(M-1)}{\binom{M}{|z'|}|z'|(M-|z'|)}$$
+$$\pi_{\mathbf{x}}(\mathbf{z}') = \frac{(M-1)}{\binom{M}{|\mathbf{z}'|} |\mathbf{z}'| (M - |\mathbf{z}'|)}$$
 
-Here, M is the maximum coalition size and $|z'|$ the number of present features in instance z'.
+Here, $M$ is the maximum coalition size and $|\mathbf{z}'|$ the number of present features in instance $\mathbf{z}'$.
 Lundberg and Lee show that linear regression with this kernel weight yields Shapley values.
 If you were to use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!
 
 <!-- Sampling trick -->
-We can be a bit smarter about the sampling of coalitions:
-The smallest and largest coalitions take up most of the weight.
-We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly.
-We start with all possible coalitions with 1 and M-1 features, which makes 2 times M coalitions in total.
-When we have enough budget left (current budget is K - 2M), we can include coalitions with 2 features and with M-2 features and so on.
+We can be a bit smarter about the sampling of coalitions: The smallest and largest coalitions take up most of the weight.
+We get better Shapley value estimates by using some of the sampling budget $K$ to include these high-weight coalitions instead of sampling blindly.
+We start with all possible coalitions with 1 and $M-1$ features, which makes $2M$ coalitions in total.
+When we have enough budget left (current budget is $K - 2M$), we can include coalitions with 2 features and with $M-2$ features and so on.
 From the remaining coalition sizes, we sample with readjusted weights.
 
 
@@ -175,20 +173,20 @@ From the remaining coalition sizes, we sample with readjusted weights.
 We have the data, the target and the weights;
 Everything we need to build our weighted linear regression model:
 
-$$g(z')=\phi_0+\sum_{j=1}^M\phi_jz_j'$$
+$$g(\mathbf{z}') = \phi_0 + \sum_{j=1}^M \phi_j z_j'$$
 
-We train the linear model g by optimizing the following loss function L:
+We train the linear model $g$ by optimizing the following loss function $L$:
 
-$$L(\hat{f},g,\pi_{x})=\sum_{z'\in{}Z}[\hat{f}(h_x(z'))-g(z')]^2\pi_{x}(z')$$
+$$L(\hat{f}, g, \pi_{\mathbf{x}}) = \sum_{\mathbf{z}' \in \mathbf{Z}} [\hat{f}(h_{\mathbf{x}}(\mathbf{z}')) - g(\mathbf{z}')]^2 \pi_{\mathbf{x}}(\mathbf{z}')$$
 
-where Z is the training data.
+where $\mathbf{Z}$ is the training data.
 This is the good old boring sum of squared errors that we usually optimize for linear models.
 The estimated coefficients of the model, the $\phi_j$'s, are the Shapley values.
 
 
 Since we are in a linear regression setting, we can also make use of the standard tools for regression.
 For example, we can add regularization terms to make the model sparse.
-If we add an L1 penalty to the loss L, we can create sparse explanations.
+If we add an L1 penalty to the loss $L$, we can create sparse explanations.
 (I'm not so sure whether the resulting coefficients would still be valid Shapley values though.)
 
 ## TreeSHAP
@@ -196,20 +194,18 @@ If we add an L1 penalty to the loss L, we can create sparse explanations.
 @lundberg2019consistent proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests, and gradient boosted trees.
 TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.
 
-TreeSHAP defines the value function using the conditional expectation $E_{X_j|X_{-j}}(\hat{f}(x)|x_j)$ instead of the marginal expectation.
-The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero, as shown by @sundararajan2020many and @janzing2020feature.
+TreeSHAP defines the value function using the conditional expectation $\mathbb{E}_{X_j|X_{-j}}[\hat{f}(X_j, \mathbf{x}_{-j})])$ instead of the marginal expectation.
+The problem with the conditional expectation is that features that have no influence on the prediction function $\hat{f}$ can get a TreeSHAP estimate different from zero, as shown by @sundararajan2020many and @janzing2020feature.
 The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
 
 How much faster is TreeSHAP?
 Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL2^M)$ to $O(TLD^2)$, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.
 
-<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(\hat{f}(x)|x_S)$ for all possible feature value subsets S.-->
-TreeSHAP uses the conditional expectation $E_{X_j|X_{-j}}(\hat{f}(x)|x_j)$ to estimate effects.
-I'll give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
-If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance x falls would be the expected prediction.
+TreeSHAP uses the conditional expectation $\mathbb{E}_{X_j|X_{-j}}[\hat{f}(X_j, \mathbf{x}_{-j})]$ to estimate effects.
+I'll give you some intuition on how we can compute the expected prediction for a single tree, an instance $\mathbf{x}$ and feature subset S. If we conditioned on all features -- if S was the set of all features -- then the prediction from the node in which the instance $\mathbf{x}$ falls would be the expected prediction.
 If we would not condition the prediction on any feature -- if S was empty -- we would use the weighted average of predictions of all terminal nodes.
 If S contains some, but not all, features, we ignore predictions of unreachable nodes.
-Unreachable means that the decision path that leads to this node contradicts values in $x_S$.
+Unreachable means that the decision path that leads to this node contradicts values in $\mathbf{x}_S$.
 From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node).
 The mean of the remaining terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S.
 The problem is that we have to apply this procedure for each possible subset S of the feature values.
@@ -219,10 +215,10 @@ Here, each summand is the set of all possible subsets S with the same cardinalit
 -->
 TreeSHAP computes in polynomial time instead of exponential.
 The basic idea is to push all possible subsets S down the tree at the same time.
-For each decision node we have to keep track of the number of subsets.
+For each decision node, we have to keep track of the number of subsets.
 This depends on the subsets in the parent node and the split feature.
-For example, when the first split in a tree is on feature x3, then all the subsets that contain feature x3 will go to one node (the one where x goes).
-Subsets that do not contain feature x3 go to both nodes with reduced weight.
+For example, when the first split in a tree is on feature $X_3$, then all the subsets that contain feature $X_3$ will go to one node (the one where $\mathbf{x}$ goes).
+Subsets that do not contain feature $X_3$ go to both nodes with reduced weight.
 Unfortunately, subsets of different sizes have different weights.
 The algorithm has to keep track of the overall weight of the subsets in each node.
 This complicates the algorithm.
@@ -314,14 +310,14 @@ $$I_j=\frac{1}{n}\sum_{i=1}^n |\phi_j^{(i)}|$$
 
 Next, we sort the features by decreasing importance and plot them.
 @fig-shap-importance shows the SHAP feature importance for the random forest trained before for classifying penguins.
-The bill length was the most important feature, changing the predicted probability for Adelie 33 percentage points (0.33 on x-axis).
+The bill length was the most important feature, changing the predicted probability for Adelie 33 percentage points (0.33 on the x-axis).
 
 ![SHAP feature importance measured as the mean absolute Shapley values.](./images/shap-importance.png){#fig-shap-importance}
 
 SHAP feature importance is an alternative to [permutation feature importance](#feature-importance).
 There's a big difference between both importance measures:
 Permutation feature importance is based on the decrease in model performance.
-SHAP is based on magnitude of feature attributions.
+SHAP is based on the magnitude of feature attributions.
 
 
 The feature importance plot is useful, but contains no information beyond the importances.
@@ -354,7 +350,7 @@ Mathematically, the plot contains the following points: $\{(x_j^{(i)}, \phi_j^{(
 @fig-shap-dependence shows the SHAP feature dependence for the body mass.
 The heavier the penguin, the less likely it's female.
 
-![SHAP dependence plot for body mass. The x-axis shows the feature, the x-axis the SHAP values. Each dot represents a data point.](images/shap-dependence.png){#fig-shap-dependence}
+![SHAP dependence plot for body mass. The x-axis shows the feature, the y-axis the SHAP values. Each dot represents a data point.](images/shap-dependence.png){#fig-shap-dependence}
 
 SHAP dependence plots are an alternative to [partial dependence plots](#pdp) and [accumulated local effects](#ale).
 While PDP and ALE plots show average effects, SHAP dependence also shows the variance on the y-axis.
@@ -370,11 +366,11 @@ $$\phi_{i,j}=\sum_{S\subseteq\backslash\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\de
 
 when $i\neq{}j$ and:
 
-$$\delta_{ij}(S)=\hat{f}_x(S\cup\{i,j\})-\hat{f}_x(S\cup\{i\})-\hat{f}_x(S\cup\{j\})+\hat{f}_x(S)$$
+$$\delta_{ij}(S)=\hat{f}_{\mathbf{x}}(S\cup\{i,j\})-\hat{f}_{\mathbf{x}}(S\cup\{i\})-\hat{f}_{\mathbf{x}}(S\cup\{j\})+\hat{f}_{\mathbf{x}}(S)$$
 
 This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects.
-We average the values over all possible feature coalitions S, as in the Shapley value computation.
-When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions M x M, where M is the number of features.
+We average the values over all possible feature coalitions $S$, as in the Shapley value computation.
+When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions $M \times M$, where $M$ is the number of features.
 
 How can we use the interaction index?
 For example, to automatically color the SHAP feature dependence plot with the strongest interaction, as in @fig-shap-interaction.
@@ -437,10 +433,10 @@ If you use LIME for local explanations and partial dependence plots plus permuta
 
 **KernelSHAP is slow**.
 This makes KernelSHAP impractical to use when you want to compute Shapley values for many instances.
-Also all global SHAP methods such as SHAP feature importance require computing Shapley values for a lot of instances.
+Also, all global SHAP methods such as SHAP feature importance require computing Shapley values for a lot of instances.
 
 **KernelSHAP ignores feature dependence**.
-Most other permutation based interpretation methods have this problem.
+Most other permutation-based interpretation methods have this problem.
 By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution.
 However, if features are dependent, e.g. correlated, this leads to putting too much weight on unlikely data points.
 TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.
