@@ -13,10 +13,12 @@ pdf: output/pdf-$(bookname).pdf
 beta-reader: output/beta-reader-$(bookname).docx
 
 
-COMMON_BOOK_FILES = $(wildcard *.qmd) $(wildcard *.qmd) references.bib _quarto.yml
+COMMON_BOOK_FILES = $(wildcard *.qmd) $(wildcard *.qmd) references.bib grateful-refs.bib _quarto.yml
 
+grateful-refs.bib: _setup.qmd
+	Rscript -e 'grateful::cite_packages(output = "table", out.dir = ".")'
 
-html: *.qmd html/*.html
+html: $(COMMON_BOOK_FILES) html/*.html
 	quarto render --to html --no-cache
 
 docx : $(COMMON_BOOK_FILES)
