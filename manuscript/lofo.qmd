@@ -51,7 +51,7 @@ To train and retrain the model use the training data, and for measuring the perf
 We predict bike rentals based on weather and calendar information using a random forest trained on $\frac{2}{3}$ of the data.
 @fig-lofo-bike shows that temperature and previous number of bike rentals are the most important features according to LOFO.
 Interestingly, the holiday feature has a negative importance, which has implications for feature selection.
-Because of how LOFO works algorithmically, we now know that removing the holiday feature increases the model performance.
+Because of how LOFO works algorithmically, we now know that removing the holiday feature increases the model's performance.
 
 
 ```{r}
@@ -133,17 +133,17 @@ ggplot(feature_importances, aes(x = reorder(feature, importance), y = importance
 @fig-lofo-bike-correlated shows an interesting phenomenon:
 The LOFO importances of both temperature features are now almost zero.[^not-same-lofo]
 But if we e.g. remove `temp_copy`, we end up with the original model, for which we knew that `temp` was the most important feature.
-Clearly it would be wrong to conclude that this new model doesn't rely on temperature at all.
+Clearly, it would be wrong to conclude that this new model doesn't rely on temperature at all.
 Both `temp` and `temp_copy` get a low importance because, by the definition of LOFO importance, they are not important.
 When we remove the feature `temp`, we don't lose any information at all.
 That's because LOFO has a conditional interpretation: Given the other features, how much will removing a feature worsen the model's predictive performance?
 Conclusions:
 
-- LOFO Importance of strongly correlated features is always low potentially even negative[^learner-ability], since LOFO importance is to be interpreted conditionally on the information provided by the other features. And if you already have a temperature feature in the data, the perfect copy of that same feature is not an important additional information.
-- When you use LOFO Importance as information for feature selection, beware of the interpretation: LOFO only indicates how the model performance reacts to *individually* removing features. As @fig-lofo-bike-correlated showed, LOFO doesn't give us the information how the performance changes when removing 2 or more features at once. 
+- LOFO Importance of strongly correlated features is always low, potentially even negative[^learner-ability], since LOFO importance is to be interpreted conditionally on the information provided by the other features. And if you already have a temperature feature in the data, the perfect copy of that same feature is not important additional information.
+- When you use LOFO Importance as information for feature selection, beware of the interpretation: LOFO only indicates how the model performance reacts to *individually* removing features. As @fig-lofo-bike-correlated showed, LOFO doesn't give us the information on how the performance changes when removing 2 or more features at once.
 
 With that knowledge, let's try LOFO for a random forest predicting penguin sex from body measurements.
-For this I've trained a random forest on 2/3 of the data, leaving 1/3 of the data for error estimation.
+For this, I've trained a random forest on 2/3 of the data, leaving 1/3 of the data for error estimation.
 @fig-lofo-penguins shows that the bill depth was the most important feature according to LOFO.
 
 ```{r}
@@ -187,9 +187,8 @@ Arguably, LOFO is a post-hoc, model-agnostic method, since it can be applied to 
 However, due to retraining the model, the interpretation shifts from only interpreting that one single model, and more to interpreting the learner and how model training reacts to changes in the features.
 
 To me the biggest question is: How does LOFO compare to [PFI](#pfi) and when should you use which importance?
-Let's start with the similarities:
-Both PFI and LOFO are performance-based importances measures; both compute importance by "removing" the information of a feature, even when they do it differently; both work in a one-at-a-time way, at least in their simplest version.
-But LFO and PFI differ in other aspects.
+Let's start with the similarities: Both PFI and LOFO are performance-based importance measures; both compute importance by "removing" the information of a feature, even when they do it differently; both work in a one-at-a-time way, at least in their simplest version.
+But LOFO and PFI differ in other aspects.
 As we already saw in the example @fig-lofo-bike-correlated, LOFO has a conditional interpretation of importance.
 It's only about a feature's *additional* predictive value.
 This distinguishes LOFO from *marginal* permutation feature importance.
@@ -208,7 +207,7 @@ Therefore LOFO's interpretation is both about the model at hand, but also about 
 For the examples here I did just that.
 You can do it yourself, you don't actually need any package for that.
 
-LOFO **is useful for feature selection**: A feature with a LOFO importance below zero can be removed to improve model performance; a feature with an importance of zero can also be safely be removed without affecting the performance.
+LOFO **is useful for feature selection**: A feature with a LOFO importance below zero can be removed to improve model performance; a feature with an importance of zero can also be safely removed without affecting the performance.
 However, be aware that LOFO is subject to randomness of the training process and also depends on the data sample.
 Just make sure that you can only remove one feature at a time based on LOFO importance results.
 If you want to remove two features, you have to do it sequentially, meaning compute LOFO importance, remove the unimportant feature, compute LOFO again, and remove again the least important.
@@ -257,4 +256,4 @@ The feature selection method "backward sequential feature selection" is basicall
 [^learner-ability]: We need to assume here that the learner is able to compensate for the removal of a feature by relying more on the other features. But I don't know of any machine learning algorithm that isn't capable of that.
 
 
-[^not-same-lofo]: The features `temp` and `temp_copy` have similiar but not equal LOFO importances which is due to randomness in the model training.
+[^not-same-lofo]: The features `temp` and `temp_copy` have similar but not equal LOFO importances which is due to randomness in the model training.
