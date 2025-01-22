@@ -30,7 +30,7 @@ It helps to understand that there are two different types of attribution methods
 **Gradient-based**: Many methods compute the gradient of the prediction (or classification score) with respect to the input features.
 The gradient-based methods (of which there are many) mostly differ in how the gradient is computed.
 
-Both approaches have in common that the explanation has the same size as the input image (or at least can be meaningfully projected onto it) and they assign each pixel a value that can be interpreted as the relevance of the pixel to the prediction or classification of that image.
+Both approaches have in common that the explanation has the same size as the input image (or at least can be meaningfully projected onto it), and they assign each pixel a value that can be interpreted as the relevance of the pixel to the prediction or classification of that image.
 
 Another useful categorization for pixel attribution methods is the baseline question:
 
@@ -40,7 +40,7 @@ The interpretation of the gradient-only attribution is:
 If I were to increase the color values of the pixel, the predicted class probability would go up (for positive gradient) or down (for negative gradient).
 The larger the absolute value of the gradient, the stronger the effect of a change of this pixel.
 
-**Path-attribution methods** compare the current image to a reference image, which can be an artificial "zero" image such as a completely grey image.
+**Path-attribution methods** compare the current image to a reference image, which can be an artificial "zero" image such as a completely gray image.
 The difference in actual and baseline prediction is divided among the pixels.
 The baseline image can also be multiple images: a distribution of images.
 This category includes model-specific gradient-based methods such as Deep Taylor and Integrated Gradients [@sundararajan2017axiomatic], as well as model-agnostic methods such as LIME and SHAP.
@@ -66,7 +66,7 @@ At this point, I would normally give an intuitive explanation about how these me
 ## Vanilla Gradient (Saliency Maps)
 
 The idea of Vanilla Gradient, introduced by @simonyan2014deep as one of the first pixel attribution approaches, is quite simple if you already know backpropagation.
-(They called their approach "Image-Specific Class Saliency", but I like Vanilla Gradient better).
+(They called their approach "Image-Specific Class Saliency," but I like Vanilla Gradient better.)
 We calculate the gradient of the loss function for the class we are interested in with respect to the input pixels.
 This gives us a map of the size of the input features with negative to positive values.
 
@@ -88,7 +88,7 @@ where $\mathbf{w}$ is the derivative of our score:
 
 $$\mathbf{w} = \frac{\delta S_c}{\delta \mathbf{x}}|_{\mathbf{x}_0}$$
 
-Now, there is some ambiguity how to perform a backward pass of the gradients, since non-linear units such as ReLU (Rectifying Linear Unit) "remove" the sign.
+Now, there is some ambiguity in how to perform a backward pass of the gradients, since non-linear units such as ReLU (Rectified Linear Unit) "remove" the sign.
 So when we do a backpass, we do not know whether to assign a positive or negative activation.
 Using my incredible ASCII art skill, the ReLU function looks like this: _/ and is defined as $\text{ReLU}(\mathbf{x}_{l}) = \max(0, \mathbf{x}_l)$.
 This means that when the activation of a neuron is zero, we do not know which value to backpropagate.
@@ -114,7 +114,7 @@ And these are our gradients at $\mathbf{x}_{l+1}$:
 $$
 \begin{pmatrix}
 0.4 & 1.1 \\
--0.5 & -0.1  \\
+-0.5 & -0.1 \\
 \end{pmatrix}
 $$
 
@@ -123,7 +123,7 @@ Then our gradients at $\mathbf{x}_l$ are:
 $$
 \begin{pmatrix}
 0.4 & 0 \\
-0 & 0  \\
+0 & 0 \\
 \end{pmatrix}
 $$
 
@@ -132,9 +132,9 @@ $$
 ### Problems with Vanilla Gradient
 
 Vanilla Gradient has a saturation problem, as explained in @shrikumar2017learning.
-When ReLU is used, and when the activation goes below zero, then the activation is capped at zero and does not change any more.
+When ReLU is used, and when the activation goes below zero, the activation is capped at zero and does not change anymore.
 The activation is saturated.
-For example: The input to the layer is two neurons with weights $-1$ and $-1$ and a bias of $1$.
+For example: The input to the layer is two neurons with weights $-1$ and $-1$, and a bias of $1$.
 When passing through the ReLU layer, the activation will be neuron1 + neuron2 if the sum of both neurons is $<1$.
 If the sum of both is greater than 1, the activation will remain saturated at an activation of 1.
 Also, the gradient at this point will be zero, and Vanilla Gradient will say that this neuron is not important.
@@ -150,7 +150,7 @@ DeconvNet makes a different choice for backpropagating the gradient through ReLU
 
 $$R_n = R_{n+1} \mathbb{I}(R_{n+1} > 0),$$
 
-where $R_n$ and $R_{n+1}$ are the layer reconstructions and $\mathbb{I}$ is the indicator function.
+where $R_n$ and $R_{n+1}$ are the layer reconstructions, and $\mathbb{I}$ is the indicator function.
 When backpassing from layer $n$ to layer $n-1$, DeconvNet "remembers" which of the activations in layer $n$ were set to zero in the forward pass and sets them to zero in layer $n-1$.
 Activations with a negative value in layer $n$ are set to zero in layer $n-1$.
 The gradient $\mathbf{X}_n$ for the example from earlier becomes:
@@ -186,11 +186,11 @@ There are $k$ feature maps in the last convolutional layer, and I will call them
 How can we "see" from the feature maps how the convolutional neural network has made a certain classification?
 In the first approach, we could simply visualize the raw values of each feature map, average over the feature maps, and overlay this over our image.
 This would not be helpful since the feature maps encode information for **all classes**, but we are interested in a particular class.
-Grad-CAM has to decide how important each of the $k$ feature maps was to our class $c$ that we are interested in.
+Grad-CAM has to decide how important each of the $k$ feature maps was to our class $c$, that we are interested in.
 We have to weight each pixel of each feature map with the gradient before we average over the feature maps.
 This gives us a heatmap which highlights regions that positively or negatively affect the class of interest.
 This heatmap is sent through the ReLU function, which is a fancy way of saying that we set all negative values to zero.
-Grad-CAM removes all negative values by using a ReLU function, with the argument that we are only interested in the parts that contribute to the selected class $c$ and not to other classes.
+Grad-CAM removes all negative values by using a ReLU function, with the argument that we are only interested in the parts that contribute to the selected class $c$, and not to other classes.
 The word pixel might be misleading here as the feature map is smaller than the image (because of the pooling units) but is mapped back to the original image.
 We then scale the Grad-CAM map to the interval $[0,1]$ for visualization purposes and overlay it over the original image.
 
@@ -201,7 +201,7 @@ Our goal is to find the localization map, which is defined as:
 
 $$L^c_{\text{Grad-CAM}} \in \mathbb{R}^{u\times v} = \underbrace{\text{ReLU}}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
 
-Here, $u$ is the width, $v$ the height of the explanation and $c$ the class of interest.
+Here, $u$ is the width, $v$ the height of the explanation, and $c$ the class of interest.
 
 1. Forward-propagate the input image through the convolutional neural network.
 1. Obtain the raw score for the class of interest, meaning the activation of the neuron before the softmax layer.
@@ -222,8 +222,7 @@ This means that the gradients are globally pooled.
 From the description of Grad-CAM, you can guess that the localization is very coarse, since the last convolutional feature maps have a much coarser resolution compared to the input image.
 In contrast, other attribution techniques backpropagate all the way to the input pixels.
 They are therefore much more detailed and can show you individual edges or spots that contributed most to a prediction.
-A fusion of both methods is called Guided Grad-CAM.
-And it's super simple.
+A fusion of both methods is called Guided Grad-CAM, and it's super simple.
 You compute for an image both the Grad-CAM explanation and the explanation from another attribution method, such as Vanilla Gradient.
 The Grad-CAM output is then upsampled with bilinear interpolation, and then both maps are multiplied element-wise.
 Grad-CAM works like a lens that focuses on specific parts of the pixel-wise attribution map.
@@ -323,7 +322,7 @@ They compared two networks, the original network and the "shifted" network where
 Both networks produce the same predictions.
 Further, the gradient is the same for both.
 But the explanations changed, which is an undesirable property.
-They looked at DeepLift, Vanilla Gradient and Integrated Gradients.
+They looked at DeepLift, Vanilla Gradient, and Integrated Gradients.
 
 ::: {.callout-warning}
 
@@ -340,9 +339,9 @@ The paper "Sanity checks for saliency maps" [@adebayo2018sanity] investigated wh
 Insensitivity is highly undesirable because it would mean that the "explanation" is unrelated to model and data.
 Methods that are insensitive to model and training data are similar to edge detectors.
 Edge detectors simply highlight strong pixel color changes in images and are unrelated to a prediction model or abstract features of the image, and require no training.
-The methods tested were Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM and SmoothGrad (with Vanilla Gradient).
+The methods tested were Vanilla Gradient, Gradient x Input, Integrated Gradients, Guided Backpropagation, Guided Grad-CAM, and SmoothGrad (with Vanilla Gradient).
 Vanilla Gradient and Grad-CAM passed the insensitivity check, while Guided Backpropagation and Guided Grad-CAM failed.
-However, the sanity checks paper itself has found some criticism from @tomsett2020sanity with a paper called "Sanity checks for caliency metrics" (of course).
+However, the sanity checks paper itself has found some criticism from @tomsett2020sanity with a paper called "Sanity checks for saliency metrics" (of course).
 They found that there is a lack of consistency for evaluation metrics (I know, it's getting pretty meta now).
 So we are back to where we started ...
 It remains difficult to evaluate the visual explanations.

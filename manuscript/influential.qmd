@@ -57,7 +57,7 @@ ggplot(df) + geom_histogram(aes(x = x)) + my_theme() +
 ```
 
 
-Outliers can be interesting data points (e.g. [criticisms](#proto)).
+Outliers can be interesting data points (e.g., [criticisms](#proto)).
 When an outlier influences the model, it is also an influential instance.
 
 **Influential instance**
@@ -110,7 +110,7 @@ With influential instances, we do not treat the model as fixed, but as a functio
 Influential instances help us answer questions about global model behavior and about individual predictions.
 Which were the most influential instances for the model parameters or the predictions overall?
 Which were the most influential instances for a particular prediction?
-Influential instances tell us for which instances the model could have problems, which training instances should be checked for errors and give an impression of the robustness of the model.
+Influential instances tell us for which instances the model could have problems, which training instances should be checked for errors, and give an impression of the robustness of the model.
 We might not trust a model if a single instance has a strong influence on the model predictions and parameters.
 At least that would make us investigate further.
 
@@ -273,15 +273,14 @@ Now we select one of the instances, namely the `r i`-th instance, for which we w
 It's like a counterfactual question:
 How would the prediction for instance `r i` change if we omit instance i from the training process?
 We repeat this removal for all instances.
-Then we select the training instances that result in the biggest change in the prediction of instance `r i` when they are omitted from the training and use them to explain the prediction of the model for that instance.
+Then we select the training instances that result in the biggest change in the prediction of instance `r i` when they are omitted from the training, and use them to explain the prediction of the model for that instance.
 I chose to explain the prediction for instance `r i` because for this penguin there were some highly influential other penguins.
 We could return the, say, top 10 most influential instances for predicting the `r i`-th instance printed as a table.
 Not very useful, because we could not see much.
 Again, it makes more sense to find out what distinguishes the influential instances from the non-influential instances by analyzing their features.
 We use a decision tree trained to predict the influence given the features, but in reality we misuse it only to find a structure and not to actually predict something.
 The decision tree in @fig-influence-single shows which kind of training instances were most influential for predicting the `r i`-th instance.
-Data from penguins with flippers shorter than 179 mm had a large influence on the prediction of the `r i`-th instance, with an average change in absolute prediction of 1 percentage point of P(Adelie) and one of the penguins even 6 percentage points.
-
+Data from penguins with flippers shorter than 179 mm had a large influence on the prediction of the `r i`-th instance, with an average change in absolute prediction of 1 percentage point of P(Adelie), and one of the penguins even 6 percentage points.
 ```{r}
 #| label: fig-influence-single
 #| fig-cap:  Decision tree explaining which instances were most influential in predicting the chosen instance.
@@ -307,7 +306,7 @@ And there are only 7 penguins with a flipper length shorter than 179 mm, which l
 These examples showed how useful it is to identify influential instances to check the robustness of the model.
 One problem with the proposed approach is that the model needs to be retrained for each training instance.
 The whole retraining can be quite slow, because if you have thousands of training instances, you will have to retrain your model thousands of times.
-Assuming the model takes one day to train and you have 1000 training instances, then the computation of influential instances -- without parallelization -- will take almost 3 years.
+Assuming the model takes one day to train and you have 1,000 training instances, then the computation of influential instances -- without parallelization -- will take almost 3 years.
 Nobody has time for this.
 In the rest of this chapter, I'll show you a method that does not require retraining the model.
 
@@ -343,9 +342,8 @@ The key idea behind influence functions is to upweight the loss of a training in
 $$\hat{\theta}_{\epsilon, \mathbf{z}} = \arg\min_{\theta \in \Theta} \left(\frac{1}{n}\sum_{i=1}^n L(\mathbf{z}^{(i)}, \theta) + \epsilon L(\mathbf{z}, \theta) \right)$$
 
 where $\theta$ is the model parameter vector and $\hat{\theta}_{\epsilon, \mathbf{z}}$ is the parameter vector after upweighting $\mathbf{z}$ by a very small number $\epsilon$.
-$L$ is the loss function with which the model was trained, $\mathbf{z}^{(i)}$ is the training data, and $\mathbf{z}$ is the training instance which we want to upweight to simulate its removal.
-The intuition behind this formula is:
-How much will the loss change if we upweight a particular instance $\mathbf{z}^{(i)}$ from the training data by a little ($\epsilon$) and downweight the other data instances accordingly?
+$L$ is the loss function with which the model was trained, $\mathbf{z}^{(i)}$ is the training data, and $\mathbf{z}$ is the training instance that we want to upweight to simulate its removal.
+The intuition behind this formula is: How much will the loss change if we upweight a particular instance $\mathbf{z}^{(i)}$ from the training data by a little ($\epsilon$) and downweight the other data instances accordingly?
 What would the parameter vector look like to optimize this new combined loss?
 The influence function of the parameters, i.e., the influence of upweighting training instance $\mathbf{z}$ on the parameters, can be calculated as follows.
 
@@ -361,8 +359,7 @@ It can be estimated using:
 
 $$H_{\theta} = \frac{1}{n}\sum_{i=1}^n \nabla^2_{\hat{\theta}}L(\mathbf{z}^{(i)}, \hat{\theta})$$
 
-More informally:
-The Hessian matrix records how curved the loss is at a certain point.
+More informally: The Hessian matrix records how curved the loss is at a certain point.
 The Hessian is a matrix and not just a vector because it describes the curvature of the loss, and the curvature depends on the direction in which we look.
 The actual calculation of the Hessian matrix is time-consuming if you have many parameters.
 Koh and Liang suggested some tricks to calculate it efficiently, which goes beyond the scope of this chapter.
@@ -381,8 +378,8 @@ The approximate parameter vector is basically the original parameter minus the g
 @fig-quadratic-expansion shows how the upweighting works.
 The x-axis shows the value of the $\theta$ parameter and the y-axis the corresponding value of the loss with upweighted instance $\mathbf{z}$.
 The model parameter here is 1-dimensional for demonstration purposes, but in reality, it is usually high-dimensional.
-We move only $\frac{1}{n}$ into the direction of improvement of the loss for instance $\mathbf{z}$.
-We do not know how the loss would really change when we delete $\mathbf{z}$, but with the first and second derivative of the loss, we create this quadratic approximation around our current model parameter and pretend that this is how the real loss would behave.
+We move only $\frac{1}{n}$ in the direction of improvement of the loss for instance $\mathbf{z}$.
+We do not know how the loss would really change when we delete $\mathbf{z}$, but with the first and second derivatives of the loss, we create this quadratic approximation around our current model parameter and pretend that this is how the real loss would behave.
 ```{r}
 #| label: fig-quadratic-expansion
 #| fig.cap: !expr sprintf("Updating the model parameter (x-axis) by forming a quadratic expansion of the loss around the current model parameter, and moving 1/n into the direction in which the loss with upweighted instance $\\mathbf{z}$ (y-axis) improves most. This upweighting of instance $\\mathbf{z}$ in the loss approximates the parameter changes if we delete $\\mathbf{z}$ and train the model on the reduced data.")
@@ -471,7 +468,7 @@ Of course, you assume that the two hospitals have different patients, and if you
 But what are the features or instances that have "broken" the model?
 Here too, influential instances are a good way to answer this question.
 You take one of the new patients, for whom the model has made a false prediction, find and analyze the most influential instances.
-For example, this could show that the second hospital has older patients on average and the most influential instances from the training data are the few older patients from the first hospital and the model simply lacked the data to learn to predict this subgroup well.
+For example, this could show that the second hospital has older patients on average, and the most influential instances from the training data are the few older patients from the first hospital, and the model simply lacked the data to learn to predict this subgroup well.
 The conclusion would be that the model needs to be trained on more patients who are older in order to work well in the second hospital.
 
 **Fixing training data**
@@ -531,7 +528,7 @@ Use a differentiable loss as a substitute for calculating the influence when, fo
 The loss is replaced by a smoothed version of the problematic loss for the influence functions, but the model can still be trained with the non-smooth loss.
 
 **Influence functions are only approximate**, because the approach forms a quadratic expansion around the parameters.
-The approximation can be wrong and the influence of an instance is actually higher or lower when removed.
+The approximation can be wrong, and the influence of an instance is actually higher or lower when removed.
 Koh and Liang (2017) showed for some examples that the influence calculated by the influence function was close to the influence measure obtained when the model was actually retrained after the instance was deleted.
 But there is no guarantee that the approximation will always be so close.
 
@@ -544,7 +541,7 @@ For example, if you identify the top 10 most influential training instances for 
 Deletion diagnostics are very simple to implement.
 Take a look at [the code](https://github.com/christophM/interpretable-ml-book/blob/master/manuscript/06.5-example-based-influence-fct.Rmd) I wrote for the examples in this chapter.
 
-For linear models and generalized linear models, many influence measures like Cook's distance are implemented in R in the `stats` package.
+For linear models and generalized linear models, many influence measures, like Cook's distance, are implemented in R in the `stats` package.
 
 Koh and Liang published the Python code for influence functions from their paper [in a repository](https://github.com/kohpangwei/influence-release).
 That's great!

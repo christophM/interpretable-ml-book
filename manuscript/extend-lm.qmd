@@ -2,14 +2,14 @@
 
 {{< include _setup.qmd >}}
 
-The biggest strength but also the biggest weakness of the [linear regression model](#limo) is that the prediction is modeled as a weighted sum of the features.
+The biggest strength, but also the biggest weakness, of the [linear regression model](#limo) is that the prediction is modeled as a weighted sum of the features.
 In addition, the linear model comes with many other assumptions.
 The bad news is (well, not really news) that all those assumptions are often violated in reality:
 The outcome given the features might have a non-Gaussian distribution, the features might interact, and the relationship between the features and the outcome might be nonlinear.
 The good news is that the statistics community has developed a variety of modifications that transform the linear regression model from a simple blade into a Swiss knife.
 
 
-This chapter is definitely not your definite guide to extending linear models.
+This chapter is definitely not your definitive guide to extending linear models.
 Rather, it serves as an overview of extensions such as Generalized Linear Models (GLMs) and Generalized Additive Models (GAMs) and gives you a little intuition.
 After reading, you should have a solid overview of how to extend linear models.
 If you want to learn more about the linear regression model first, I suggest you read the [chapter on linear regression models](#limo), if you have not already.
@@ -205,7 +205,7 @@ ggplot(tab) +
   scale_y_continuous("Number of days")
 ```
 
-On `r tab[1,2]` of the `r n` days you had no coffee at all and on the most extreme day you had `r tab[nrow(tab),1]`.
+On `r tab[1,2]` of the `r n` days, you had no coffee at all, and on the most extreme day, you had `r tab[nrow(tab),1]`.
 Let's naively use a linear model to predict the number of coffees using sleep level, stress level, and work yes/no as features.
 What can go wrong when we falsely assume a Gaussian distribution?
 A wrong assumption can invalidate the estimates, especially the confidence intervals of the weights.
@@ -225,9 +225,8 @@ ggplot(pred.gauss) +
 
 The problem of non-matching distributions can be solved with Generalized Linear Models (GLMs).
 We can change the link function and the assumed distribution.
-One possibility is to keep the Gaussian distribution and use a link function that always leads to positive predictions such as the log-link (the inverse is the exp-function) instead of the identity function.
-Even better:
-We choose a distribution that corresponds to the data generating process and an appropriate link function.
+One possibility is to keep the Gaussian distribution and use a link function that always leads to positive predictions, such as the log-link (the inverse is the exp-function), instead of the identity function.
+Even better: We choose a distribution that corresponds to the data-generating process, and an appropriate link function.
 Since the outcome is a count, the Poisson distribution is a natural choice, along with the logarithm as the link function.
 In this case, the data was even generated with the Poisson distribution, so the Poisson GLM is the perfect choice.
 The fitted Poisson GLM leads to the distribution of predicted values shown in @fig-linear-model-positive.
@@ -252,7 +251,7 @@ In the coffee count example, I used a GLM with Poisson distribution and log link
 
 $$\ln(\mathbb{E}[\text{coffee}|\text{str},\text{slp},\text{wrk}])=\beta_0+\beta_{\text{str}}x_{\text{str}} + \beta_{\text{slp}}x_{\text{slp}} +\beta_{\text{wrk}}x_{\text{wrk}}$$
 
-To interpret the weights we invert the link function so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome.
+To interpret the weights, we invert the link function so that we can interpret the effect of the features on the expected outcome and not on the logarithm of the expected outcome.
 
 $$\mathbb{E}[\text{coffee}|\text{str},\text{slp},\text{wrk}]=\exp\left(\beta_0+\beta_{\text{str}}x_{\text{str}}+\beta_{\text{slp}}x_{\text{slp}} +\beta_{\text{wrk}}x_{\text{wrk}}\right)$$
 
@@ -274,7 +273,7 @@ kableExtra::kbl(cc[c("beta", "ci")], col.names = c("weight", "exp(weight) [2.5%,
 
 Increasing the stress level by one point multiplies the expected number of coffees by the factor `r round(cc["stress", "exp.beta"], 2)`.
 Increasing the sleep quality by one point multiplies the expected number of coffees by the factor `r round(cc["sleep", "exp.beta"], 2)`.
-The predicted number of coffees on a work day is on average `r round(cc["workYES", "exp.beta"], 2)` times the number of coffees on a day off.
+The predicted number of coffees on a workday is on average `r round(cc["workYES", "exp.beta"], 2)` times the number of coffees on a day off.
 In summary, the more stress, the less sleep, and the more work, the more coffee is consumed.
 
 In this section, you learned a little about Generalized Linear Models that are useful when the target does not follow a Gaussian distribution.
@@ -316,7 +315,7 @@ kableExtra::kbl(model.tab, booktabs = TRUE) %>% kable_styling(position = "center
 ```
 
 The first column is the intercept term.
-The second column encodes the categorical feature, with 0 for the reference category and 1 for the other.
+The second column encodes the categorical feature, with 0 for the reference category, and 1 for the other.
 The third column contains the temperature.
 
 If we want the linear model to consider the interaction between temperature and the workday feature, we have to add a column for the interaction as in @tbl-data-frame-lm.
@@ -341,7 +340,7 @@ If we include the interaction, we allow the effect of the numerical features (th
 The interaction of two categorical features works similarly.
 We create additional features which represent combinations of categories.
 @tbl-data-frame-lm-cat shows some artificial data containing work day (work) and a categorical weather feature (wthr).
-I'm shorting the weather categories here to narrow the table a bit: G=GOOD, B=BAD, and M=misty.
+I'm shortening the weather categories here to narrow the table a bit: G=GOOD, B=BAD, and M=misty.
 
 ```{r}
 #| label: tbl-data-frame-lm-cat
@@ -401,15 +400,15 @@ kableExtra::kbl(cbind(lm_summary_print[,c('Estimate', 'Std. Error')], confint(mo
 
 The additional interaction effect is negative (`r round(lm_summary_print['workdayY:temp','Estimate'], 1)`) and differs significantly from zero, as shown by the 95% confidence interval, which does not include zero.
 By the way, it's debatable whether the data is IID, because days that are close to each other are not independent of each other.
-Conditioning on previous counts should alleviate the problem somewhat at least though.
+Conditioning on previous counts should alleviate the problem somewhat, at least though.
 Confidence intervals might be misleading; just take it with a grain of salt.
 The interaction term changes the interpretation of the weights of the involved features.
-Does the temperature have a negative effect given it is a work day?
+Does the temperature have a negative effect given it is a workday?
 The answer is no, even if the table suggests it to an untrained user.
 We cannot interpret the "workdayY:temp" interaction weight in isolation, since the interpretation would be:
-"While leaving all other feature values unchanged, increasing the interaction effect of temperature for work day decreases the predicted number of bikes."
+"While leaving all other feature values unchanged, increasing the interaction effect of temperature for workday decreases the predicted number of bikes."
 But the interaction effect only adds to the main effect of the temperature.
-Suppose it is a work day and we want to know what would happen if the temperature were 1 degree warmer today.
+Suppose it is a workday and we want to know what would happen if the temperature were 1 degree warmer today.
 Then we need to sum both the weights for "temp" and "workdayY:temp" to determine how much the estimate increases.
 
 ::: {.callout-tip}
@@ -562,7 +561,7 @@ mod.gam = gam(cnt ~ s(temp, k = 5), data = bike)
 kableExtra::kbl(head(model.matrix(mod.gam)), digits = 2, booktabs = TRUE)
 ```
 
-@fig-splines shows how these spline basis functions look like.
+@fig-splines shows what these spline basis functions look like.
 
 ```{r}
 #| label: fig-splines
@@ -605,12 +604,12 @@ Whatever problems you face with linear models, **you will probably find an exten
 
 Most methods have been used for decades.
 For example, GAMs are almost 30 years old.
-Many researchers and practitioners from industry are very **experienced** with linear models and the methods are **accepted in many communities as the status quo for modeling**.
+Many researchers and practitioners from industry are very **experienced** with linear models, and the methods are **accepted in many communities as the status quo for modeling**.
 
 In addition to making predictions, you can use the models to **do inference**, draw conclusions about the data -- given the model assumptions are not violated.
 You get confidence intervals for weights, significance tests, prediction intervals, and much more.
 
-Statistical software usually has really good interfaces to fit GLMs, GAMs and more special linear models.
+Statistical software usually has really good interfaces to fit GLMs, GAMs, and more special linear models.
 
 The opacity of many machine learning models comes from 1) a lack of sparseness, which means that many features are used, 2) features that are treated in a nonlinear fashion, which means you need more than a single weight to describe the effect, and 3) the modeling of interactions between the features.
 Assuming that linear models are highly interpretable but often underfit reality, the extensions described in this chapter offer a good way to achieve a **smooth transition to more flexible models**, while preserving some of the interpretability.
@@ -636,7 +635,7 @@ This is partly my own experience and partly observations from the winning models
 
 ## Use model-agnostic methods
 
-The more you move away from the pure linear regression by using transformations, interactions and smooth effects, the more you may need model-agnostic tools like the [partial dependence plot](#pdp) to analyze the model.
+The more you move away from the pure linear regression by using transformations, interactions, and smooth effects, the more you may need model-agnostic tools like the [partial dependence plot](#pdp) to analyze the model.
 
 :::
 
