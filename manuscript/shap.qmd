@@ -9,14 +9,16 @@ I recommend reading the chapter on [Shapley values](#shapley) first.
 
 To understand why SHAP is a thing and not just an extension of the [Shapley values chapter](#shapley), a bit of history:
 In 1953, Lloyd Shapley introduced the concept of Shapley values for game theory.
-In 2010 (and 2012), Shapley values were suggested for the first time to explain machine learning model predictions.
+Shapley values for explaining machine learning predictions were suggested for the first time by @strumbelj2011general and @strumbelj2014explaining.
 However, they didn't become so popular.
-In 2017, @lundberg2017unified proposed SHAP, which was basically a new way to estimate Shapley values for interpreting machine learning predictions, along with a theory connecting Shapley values with [LIME](#lime) and a bit of theory on Shapley values.
+A few years later, @lundberg2017unified proposed SHAP, which was basically a new way to estimate Shapley values for interpreting machine learning predictions, along with a theory connecting Shapley values with [LIME](#lime) and a bit of additionaly theory on Shapley values.
 
-Cyncally, you could say that SHAP is just a rebranding of Shapley values (which is true), but that would miss the fact that SHAP also marks a change in popularity and usage of Shapley values, and introduced lots of new ways of estimating Shapley values and to aggregate them in new types of plots.
+You might say that SHAP is just a rebranding of Shapley values (which is true), but that would miss the fact that SHAP also marks a change in popularity and usage of Shapley values, and introduced new ways of estimating Shapley values and to aggregating them in new ways.
+Also, SHAP brought Shapley values to text and image models.
 
-So this chapter could totally be a subchapter of the [Shapley value chapter](#shapley), but you can also see it as Shapley values 2.0 for interpreting machine learning models.
+While this chapter could totally be a subchapter of the [Shapley value chapter](#shapley), you can also see it as Shapley values 2.0 for interpreting machine learning models.
 This chapter emphasizes the new ways to estimate Shapley values and the new types of plots.
+But first, a bit of theory.
 
 ::: {.content-visible when-format="html:js"}
 
@@ -25,10 +27,10 @@ This chapter emphasizes the new ways to estimate Shapley values and the new type
 :::
 
 
-## A bit more on SHAP theory 
+## SHAP theory 
 
 The goal of SHAP is to explain the prediction of an instance $\mathbf{x}$ by computing the contribution of each feature to the prediction.
-The SHAP explanation method computes Shapley values from coalitional game theory.
+SHAP computes Shapley values from coalitional game theory, the same as we discussed in @sec-shapley.
 The feature values of a data instance act as players in a coalition.
 Shapley values tell us how to fairly distribute the "payout" (= the prediction) among the features.
 A player can be an individual feature value, e.g. for tabular data.
@@ -40,21 +42,22 @@ SHAP specifies the explanation as:
 
 $$g(\mathbf{z}')=\phi_0+\sum_{j=1}^M\phi_j z_j'$$
 
-where $g$ is the explanation model, $\mathbf{z}' \in \{0,1\}^M$ is the coalition vector, $M$ is the maximum coalition size and $\phi_j \in \mathbb{R}$ is the feature attribution for feature $j$, the Shapley values.
+where $g$ is the explanation model, $\mathbf{z}' = (z_1', \ldots, z_M')^T \in \{0,1\}^M$ is the coalition vector, $M$ is the maximum coalition size and $\phi_j \in \mathbb{R}$ is the feature attribution for feature $j$, the Shapley values.
 What I call "coalition vector" is called "simplified features" in the SHAP paper.
 I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to superpixels.
 It's helpful to think about the $\mathbf{z}'$ as describing coalitions:
 In the coalition vector, an entry of 1 means that the corresponding feature value is "present" and 0 that it is "absent".
-This should sound familiar to you if you know about Shapley values.
+But again, a feature here can be different from features the model used, like superpixels instead so pixels.
+The important part is that we can map between the two representations.
 To compute Shapley values, we simulate that only some feature values are playing ("present") and some are not ("absent").
-The representation as a linear model of coalitions is a trick for the computation of the $\phi$'s.
+The representation as a linear model of coalitions is a trick for the computation of the $\phi_j$'s.
 For $\mathbf{x}$, the instance of interest, the coalition vector $\mathbf{x}'$ is a vector of all 1's, i.e. all feature values are "present".
 The formula simplifies to:
 
 $$g(\mathbf{x}')=\phi_0+\sum_{j=1}^M\phi_j$$
 
 You can find this formula in similar notation in the [Shapley value](#shapley) chapter.
-More about the actual estimation comes later.
+More about the actual estimation comes later in this chapter.
 Let's first talk about the properties of the $\phi$'s before we go into the details of their estimation.
 
 <!-- Desirable properties -->
@@ -79,7 +82,6 @@ $$x_j'=0 \Rightarrow \phi_j=0$$
 Missingness says that a missing feature gets an attribution of zero.
 Note that $x_j'$ refers to the coalitions where a value of 0 represents the absence of a feature value.
 In coalition notation, all feature values $x_j'$ of the instance to be explained should be '1'.
-The presence of a 0 would mean that the feature value is missing for the instance of interest.
 This property is not among the properties of the "normal" Shapley values.
 So why do we need it for SHAP?
 Lundberg calls it a ["minor book-keeping property"](https://github.com/slundberg/shap/issues/175#issuecomment-407134438).
@@ -100,36 +102,36 @@ $$\phi_j(\hat{f}', \mathbf{x}) \geq \phi_j (\hat{f}, \mathbf{x})$$
 
 The notation $\phi_j(\hat{f}, \mathbf{x})$ is emphasizing on which model and data point the Shapley values depend on.
 The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same.
-From Consistency, the Shapley properties Linearity, Dummy, and Symmetry follow, as described in the Appendix of Lundberg and Lee.
+From Consistency, the Shapley properties Linearity, Dummy, and Symmetry follow, as described in the [Supplemental](https://papers.nips.cc/paper_files/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html) of @lundberg2017unified.
 
 ## SHAP estimation
 
-This section is about 3 ways to estimate Shapley values for explaining predictions: KernelSHAP, Permutation, and TreeSHAP.
+This section is about three ways to estimate Shapley values for explaining predictions: KernelSHAP, Permutation Method, and TreeSHAP.
 
 ## KernelSHAP
 
 <!-- The general Idea of linear model -->
-The situation with KernelSHAP is a bit confusing: It has been the entire motivation for SHAP and linking it with LIME and how SHAP was introduced in @lundberg2017unified.
-Also all blog posts and so on about SHAP talk about it.
-But KernelSHAP is extremely slow compared to TreeSHAP and the Permutation Method, and that's why the main shap Python package no longer uses it.
-Even if depreciated, KernelSHAP gives a way to understand Shapley values and also shows how Shapley values and [LIME](#lime) are connected. 
+The situation with KernelSHAP is a bit confusing: It has been the entire motivation for SHAP, linked it with [LIME](@sec-lime) and other attribution methods, and was introduced in the original paper @lundberg2017unified.
+Also, many blog posts and so on about SHAP talk about KernelSHAP.
+But KernelSHAP is extremely slow compared to TreeSHAP and the Permutation Method, and that's why the `shap` Python package no longer uses it.
+Even if depreciated, KernelSHAP helps to understand Shapley values and shows how Shapley values and [LIME](#lime) are connected. 
 
 The KernelSHAP estimation has five steps:
 
-- Sample coalitions $\mathbf{z}_k' \in \{0,1\}^M, \quad k \in \{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
+- Sample coalition vectors $\mathbf{z}_k' \in \{0,1\}^M, \quad k \in \{1,\ldots,K\}$ (1 = feature present in coalition, 0 = feature absent).
 - Get prediction for each $\mathbf{z}_k'$ by first converting $\mathbf{z}_k'$ to the original feature space and then applying model $\hat{f}: \hat{f}(h_{\mathbf{x}}(\mathbf{z}_k'))$.
 - Compute the weight for each coalition $\mathbf{z}_k'$ with the SHAP kernel.
 - Fit weighted linear model.
 - Return Shapley values $\phi_k$, the coefficients from the linear model.
 
 We can create a random coalition by repeated coin flips until we have a chain of 0's and 1's.
-For example, the vector of (1,0,1,0) means that we have a coalition of the first and third features.
-The K sampled coalitions become the dataset for the regression model.
+For example, the vector of $(1,0,1,0)^T$ means that we have a coalition of the first and third features.
+The $K$ sampled coalitions become the dataset for the regression model.
 The target for the regression model is the prediction for a coalition.
 ("Hold on!," you say.
 "The model has not been trained on these binary coalition data and cannot make predictions for them.")
 To get from coalitions of feature values to valid data instances, we need a function $h_\mathbf{x}(\mathbf{z}') = \mathbf{z}$ where $h_\mathbf{x}: \{0,1\}^M\rightarrow\mathbb{R}^p$.
-The function $h_\mathbf{x}$ maps 1's to the corresponding value from the instance x that we want to explain.
+The function $h_\mathbf{x}$ maps 1's to the corresponding value from the instance $\mathbf{x}$ that we want to explain.
 For tabular data, it maps 0's to the values of another instance that we sample from the data.
 This means that we equate "feature value is absent" with "feature value is replaced by random feature value from data".
 For tabular data, @fig-shap-simplified-feature visualizes the mapping from coalitions to feature values.
@@ -143,12 +145,23 @@ $$\hat{f}(h_{\mathbf{x}}(\mathbf{z}')) = \mathbb{E}_{X_{-j}}[\hat{f}(x_j, X_{-j}
 
 Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
 KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
-The estimation puts too much weight on unlikely instances.
+The estimation potentially puts weight on unlikely instances.
 Results can become unreliable.
-But it's necessary to sample from the marginal distribution.
-The solution would be to sample from the conditional distribution, which changes the value function, and therefore the game to which Shapley values are the solution.
+Would we sample from the conditional distribution, the value function would change, and therefore the game to which Shapley values are the solution.
 As a result, the Shapley values have a different interpretation: For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
 For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom.
+This conditional sampling version of SHAP exists and was suggested by [@aas2021explaining].
+
+::: {.callout-warning}
+
+## Conditional Shapley values may give non-zero Shapley values to unused features
+
+The problem with the conditional expectation is that features that have no influence on the prediction function $\hat{f}$ can get a TreeSHAP estimate different from zero, as shown by @sundararajan2020many and @janzing2020feature.
+
+The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
+
+:::
+
 
 For images, @fig-shap-images describes a possible mapping function.
 Assigning the average color of surrounding pixels or similar would also be an option.
@@ -156,7 +169,7 @@ Assigning the average color of surrounding pixels or similar would also be an op
 ![Function $h_{\mathbf{x}}$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_{\mathbf{x}}$ returns the corresponding part of the original image. For absent features (0), $h_{\mathbf{x}}$ greys out the corresponding area.](./images/shap-superpixel.jpg){#fig-shap-images}
 
 <!-- Kernel -->
-The big difference to LIME is the weighting of the instances in the regression model.
+The big difference between SHAP and LIME is the weighting of the instances in the regression model.
 LIME weights the instances according to how close they are to the original instance.
 The more 0's in the coalition vector, the smaller the weight in LIME.
 SHAP weights the sampled instances according to the weight the coalition would get in the Shapley value estimation.
@@ -166,12 +179,12 @@ We learn most about individual features if we can study their effects in isolati
 If a coalition consists of a single feature, we can learn about this feature's isolated main effect on the prediction.
 If a coalition consists of all but one feature, we can learn about this feature's total effect (main effect plus feature interactions).
 If a coalition consists of half the features, we learn little about an individual feature's contribution, as there are many possible coalitions with half of the features.
-To achieve Shapley compliant weighting, Lundberg et al. propose the SHAP kernel:
+To achieve Shapley compliant weighting, @lundberg2017unified propose the SHAP kernel:
 
 $$\pi_{\mathbf{x}}(\mathbf{z}') = \frac{(M-1)}{\binom{M}{|\mathbf{z}'|} |\mathbf{z}'| (M - |\mathbf{z}'|)}$$
 
 Here, $M$ is the maximum coalition size and $|\mathbf{z}'|$ the number of present features in instance $\mathbf{z}'$.
-Lundberg and Lee show that linear regression with this kernel weight yields Shapley values.
+@lundberg2017unified show that linear regression with this kernel weight yields Shapley values.
 If you were to use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!
 
 <!-- Sampling trick -->
@@ -212,23 +225,13 @@ Compared to exact KernelSHAP, it reduces the computational complexity from $O(TL
 
 TreeSHAP comes in two versions:
 
-- Interventional: This computes the classic Shapley values.
-- Tree-path dependent: The tree-path dependent version redefines the value function $\mathbb{E}_{X_j|X_{-j}}[\hat{f}(X_j, \mathbf{x}_{-j})])$.
+- "Interventional" computes the classic Shapley values.
+- "Tree-path dependent" computes something akin to conditional SHAP values.
 
 The original implementation in the `shap` Python package used to be the tree-path to  dependent version, but is now the interventional one.
 
-::: {.callout-warning}
 
-## Tree-path dependent may give non-zero Shapley values to unused features
-
-The problem with the conditional expectation is that features that have no influence on the prediction function $\hat{f}$ can get a TreeSHAP estimate different from zero, as shown by @sundararajan2020many and @janzing2020feature.
-
-The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.
-
-:::
-
-The estimation for both interventional and tree-path dependent estimation is rather complex, so I'll just give you the rough idea (meaning I haven't fully understood the full version myself).
-
+The estimation for both interventional and tree-path dependent estimation is rather complex, so I'll just give you the rough idea (read: I haven't fully understood the full version myself).
 Essentially, TreeSHAP leverages the tree structure to compute the Shapley values more efficiently. 
 
 <!--
@@ -243,28 +246,28 @@ The problem is that we have to apply this procedure for each possible subset S o
 
 Interventional TreeSHAP calculates the usual SHAP values but takes advantage of the tree structure for the computation.
 The following description is for estimating Shapley values for a single tree.
-To get the Shapley values for an ensemble of trees, for example for a random forest, simply combine the Shapley values the same way the ensemble predictions are combined.
-In case of random forest, it would be averaging the values.
-Anyays, to estimate the Shapley values, the algorithm recursively goes through the tree.
-Let's say you have a data point $\mathbf{x}$ to explain and, for simplicity, the background dataset contains just one data point $\mathbf{z}$:
+Anyways, to estimate the Shapley values, the algorithm recursively goes through the tree.
+For a data point $\mathbf{x}$ to explain and, for simplicity, the background dataset contains just one data point $\mathbf{z}$:
 
 The Shapley value as we know is computed by repeatedly forming coalitions of feature values, which includes present players (feature values from $\mathbf{x}$) and absent players (feature values from $\mathbf{z}$).
-However, for many of these coalitions, adding a feature from $\mathbf{x}$ wouldn't change the prediction, since the tree only has a limited amount of distinct preditions due to the decision structure.
+However, for many of these coalitions, adding a feature from $\mathbf{x}$ wouldn't change the prediction, since the tree only has a limited amount of distinct predictions due to the decision structure.
 For example, a binary tree of depth 5 has a maximum of 32 possible predictions.
-So instead of iterating through all coalitions, the Intervential TreeSHAP estimator explores the tree paths to only work with the coalitions that would actually change the predictions.
+So instead of iterating through all coalitions, the Interventional TreeSHAP estimator explores the tree paths to only work with the coalitions that would actually change the predictions.
 The tricky part is to correctly weight and combine these marginal contributions, which makes the interventional TreeSHAP algorithm more difficult to understand.
 And of course, damn recursion.
+To get the Shapley values for an ensemble of trees, for example for a random forest, simply combine the Shapley values the same way the ensemble predictions are combined.
+In case of random forest, it would be averaging the values.
 
-Path-dependent TreeSHAP works in a similiar fashion, making use of the tree structure.
-The basic idea is to push all subsets of a coalitions S doen the tree simultaneously.
+Path-dependent TreeSHAP works in a similar fashion, making use of the tree structure.
+The basic idea is to push all subsets of a coalitions S done the tree simultaneously.
 And in each split, we keep track of the number of instances for the subsets.
 
 ### Permutation Explainer
 
-The most efficient truly model-agnostic estimator is the Permutation method.
+The most efficient model-agnostic estimator is the Permutation Method.
 The idea is to sample cleverly from the coalitions by creating permutations of the features.
 
-Let's look at an example (taken from the book "Interpreting Machine Learning Models with SHAP") with four feature values: $x_{\text{park}}, x_{\text{cat}}, x_{\text{area}}$, and $x_{\text{floor}}$.
+Let's look at an example (taken from the book [Interpreting Machine Learning Models with SHAP](https://christophmolnar.com/books/shap/) with four feature values: $x_{\text{park}}, x_{\text{cat}}, x_{\text{area}}$, and $x_{\text{floor}}$.
 For simplicity, I'll shorten $x^{(i)}_{\text{park}}$ as $x_{\text{park}}$.
 
 A random permutation of these features would be:
@@ -285,10 +288,10 @@ And the same we can do backwards:
 - Adding $x_{\text{area}}$ to $\{x_{\text{park}}, x_{\text{floor}}\}$
 - Adding $x_{\text{cat}}$ to $\{x_{\text{area}}, x_{\text{park}}, x_{\text{floor}}\}$
 
-The permutation changes on feature at a time.
-This reduces the number of model calls since the second first of a marginal contribution (a model prediction) is also need to compute the next marginal contribution.
+The permutation changes one feature at a time.
+This reduces the number of model calls since the second term of a marginal contribution (a model prediction) is also needed to compute the next marginal contribution.
 For example, the coalition $\{x_{\text{cat}}, x_{\text{area}}\}$ is used to calculate both the marginal contribution of $x_{\text{park}}$ to $\{x_{\text{cat}}, x_{\text{area}}\}$ and of $x_{\text{area}}$ to $\{x_{\text{cat}}\}$.
-Each forward + backward permutation give us two marginal contribution per feature.
+Each forward and backward permutation give us two marginal contributions per feature.
 By doing a couple of permutations like this, we get a pretty good estimate of the Shapley values.
 To actually compute the Shapley values, we have to define the Shapley values in terms of permutations instead of coalitions:
 There are $p!$ possible permutations of the features and $o(k)$ the k-th permutation, then the Shapley value for feature $j$ can be computed as:
@@ -298,14 +301,14 @@ $$\hat{\phi}_j^{(i)} = \frac{1}{m} \sum_{k=1}^m \hat{\Delta}_{o(k), j}$$
 The term $\hat{\Delta}_{o(k), j}$ is the $k$-th marginal contribution.
 This means we can compute the Shapley value as a simple average over all contributions.
 However, the motivation for permutation estimation was to avoid computing all possible coalitions or permutations.
-Good thing is we can simply sample the permutations and still do this simple averaging.
+Good thing is we can sample permutations and still take the average. 
 Since we perform forward and backward iterations, we compute the Shapley value as: 
 
 $$\hat{\phi}_j^{(i)} = \frac{1}{2m} \sum_{k=1}^m (\hat{\Delta}_{o(k), j} + \hat{\Delta}_{-o(k), j})$$
 
 Permutation $-o(k)$ is the reverse version of the permutation.
 The permutation procedure with forward and backward iterations, also known as antithetic sampling, performs quite well compared to other SHAP value sampling estimators [@mitchell2022sampling].
-The permutation method additionanlly ensures that the efficiency axiom is always satisfied, meaning when you add up the SHAP values, they equal prediction minus average prediction.
+The permutation method additionally ensures that the efficiency axiom is always satisfied, meaning when you add up the SHAP values, they equal prediction minus average prediction.
 For a rough idea of how many permutations you might need: the `shap` package defaults to 10.
 
 ## Example
