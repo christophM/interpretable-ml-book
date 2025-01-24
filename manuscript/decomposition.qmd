@@ -88,8 +88,6 @@ The interaction term looks a bit like a Pringles chip.
 In less crunchy and more mathematical terms, it is a hyperbolic paraboloid, as we would expect for $x_1 \cdot x_2$.
 Spoiler alert: the decomposition is based on accumulated local effect plots, which we will discuss later in the chapter.
 
-## How not to Compute the Components I
-
 <!-- The naive approach -->
 But why all the excitement?
 A glance at the formula already gives us the answer to the decomposition, so no need for fancy methods, right?
@@ -111,7 +109,7 @@ To solve problem 2) of lack of definition, we need some axioms that tell us what
 But first, we should define more precisely what functional decomposition is.
 
 
-## Functional Decomposition
+## Functional decomposition
 
 <!-- Explaining the formula -->
 A prediction function takes $p$ features as input, $\hat{f}: \mathbb{R}^p \mapsto \mathbb{R}$, and produces an output.
@@ -141,8 +139,6 @@ For example, if a function uses 10 features, we can decompose the function into 
 And with each additional feature, the number of components doubles.
 Clearly, for most functions, it is not feasible to compute all components.
 Another reason NOT to compute all components is that components with $|S|>2$ are difficult to visualize and interpret.
-
-## How not to Compute the Components II
 
 So far I've avoided talking about how the components are defined and computed.
 The only constraints we have implicitly talked about were the number and dimensionality of the components, and that the sum of components should yield the original function.
@@ -240,7 +236,7 @@ Functional ANOVA can therefore be seen as an extension of this concept to any fu
 Problems arise with the functional ANOVA when features are correlated.
 As a solution, the generalized functional ANOVA has been proposed.
 
-## Generalized Functional ANOVA for Dependent Features
+## Generalized Functional ANOVA for dependent features
 
 <!-- The extrapolation problem -->
 Similar to most interpretation techniques based on sampling data (such as the PDP), the functional ANOVA can produce misleading results when features are correlated.
@@ -275,7 +271,7 @@ However, the components cannot be computed individually, nor hierarchically, but
 The computation is therefore quite complex and computationally intensive.
 
 
-## Accumulated Local Effect Plots
+## Accumulated Local Effect plots
 
 ALE plots (Apley and Zhu 2020 [@apley2020visualizingeffects]) also provide a functional decomposition, meaning that adding all ALE plots from intercept, 1D ALE plots, 2D ALE plots, and so on yields the prediction function.
 ALE differs from the (generalized) functional ANOVA, as the components are not orthogonal but, as the authors call it, pseudo-orthogonal.
@@ -298,8 +294,16 @@ Or in mathematical terms, the ALE operator maps functions to orthogonal subspace
 As Apley and Zhu (2020) note, pseudo-orthogonality may be more desirable than hierarchical orthogonality because it does not entangle marginal effects of the features.
 Furthermore, ALE does not require estimation of the joint distribution; the components can be estimated in a hierarchical manner, which means that calculating the 2D ALE for features 1 and 2 requires only the calculations of individual ALE components of 1 and 2, and the intercept term in addition.
 
+Does the [Partial Dependence Plot](#pdp) also provide a functional decomposition?
+Short answer: No.
+Longer answer:
+The partial dependence plot for a feature set $S$ always contains all effects of the hierarchy -- the PDP for $\{1,2\}$ contains not only the interaction, but also the individual feature effects.
+As a consequence, adding all PDPs for all subsets does not yield the original function, and thus is not a valid decomposition.
+But could we adjust the PDP, perhaps by removing all lower effects?
+Yes, we could, but we would get something similar to the functional ANOVA.
+However, instead of integrating over a uniform distribution, the PDP integrates over the marginal distribution of $X_{-S}$, which is estimated using Monte Carlo sampling.
 
-## Decomposing Tree Ensembles
+## Decomposing tree ensembles
 
 @yang2024inherently proposed a functional decomposition of tree ensembles, for example, trained with XGBoost.
 Their proposal consists of two parts: a decomposition procedure and a set of training constraints to make the decomposition more interpretable.
@@ -320,7 +324,7 @@ For example, setting the maximum depth to two makes the model have only main eff
 Other suggestions include monotonicity constraints, reduced number of bins, and interaction constraints.
 They also introduce a post-processing step for pruning effects from the functional decomposition.
 
-## Statistical Regression Models
+## Statistical regression models
 
 This approach ties in with [interpretable models](#simple), in particular [generalized additive models](#extend-lm).
 Instead of decomposing a complex function, we can build constraints into the modeling process so that we can easily read out the individual components.
@@ -350,60 +354,6 @@ So when should you use GAMs instead of a complex model + decomposition?
 You should stick to GAMs when most interactions are zero, especially when there are no interactions with three or more features.
 If we know that the maximum number of features involved in interactions is two ($|S| \leq 2$), then we can use approaches like MARS or GA2M.
 Ultimately, model performance on test data may indicate whether a GAM is sufficient or a more complex model performs much better.
-
-
-<!--
-### Viewing Other Methods Through the Lens of Decomposition
-
-You might want to come back to this chapter again if you have a good grasp on some of the other methods.
-
-First on a high level:
-Feature effects are direct visualizations of the individual components.
-However, we have to distinguish between total effect and isolated effect for the higher-order feature effects.
-PDP is total effect.
-ALE is individual effect.
-If you remove lower effects from PDP, you get fANOVA, at least for the independent feature case.
-
-PDP is a direct decomposition, but with additional intercept difference.
-ALE is a decomposition.
-For permutation feature importance,
-Methods such as Shapley values and co only describe a prediction with 1-dimensional effects.
-What happened with the interaction terms?
-They are divided among the individual effects.
-What happened in PFI with the interactions?
-They are also divided among individual effects.
-
-The SHAP interaction plots can also be better understood through decompositions.
-
-There are many methods that produce individual explanations in the form of $\hat{f}(\mathbf{x}) = \sum_{j=1}^{p} \phi_j$, which attribute one number per feature, see [Shapley Values](#shapley), [LIME](#lime), and most [pixel attribution methods for neural networks](#pixel-attribution), all of which you will encounter later in the book.
-Looking at them through functional decomposition:
-When methods fulfill the property of efficiency, like for example Shapley values do, it means that the sum of attributions is equal to the prediction.
-This means that we decomposed the function.
-But there are only first-order effects, no interactions.
-It means that all the interactions have to be split among the individual values per feature.
-And we do not get separate interaction effects.
-
-
-Can a function exist where lower components are zero, but the interactions are non-zero?
-For example, components for $X_1$ and $X_2$ are zero, but their interaction is not?
-Yes!
-For example, the XOR problem where $Y=X_1XOR{}X_2$.
-
--->
-
-## Bonus: Partial Dependence Plot
-
-Does the [Partial Dependence Plot](#pdp) also provide a functional decomposition?
-Short answer: No.
-Longer answer:
-The partial dependence plot for a feature set $S$ always contains all effects of the hierarchy -- the PDP for $\{1,2\}$ contains not only the interaction, but also the individual feature effects.
-As a consequence, adding all PDPs for all subsets does not yield the original function, and thus is not a valid decomposition.
-But could we adjust the PDP, perhaps by removing all lower effects?
-Yes, we could, but we would get something similar to the functional ANOVA.
-However, instead of integrating over a uniform distribution, the PDP integrates over the marginal distribution of $X_{-S}$, which is estimated using Monte Carlo sampling.
-
-
-
 
 ## Strengths
 
