@@ -50,7 +50,6 @@ output/beta-reader-$(bookname).docx: $(COMMON_BOOK_FILES)
 	mv _book/$(bookname).docx output/beta-reader-$(bookname).docx
 
 editing: *.qmd _quarto-editing.yml latex _quarto.yml
-	mkdir -p output/editing
 	git rev-parse --short HEAD > latex/hash.tex
 	quarto render --profile editing --to pdf --no-cache
 	mv _book/$(bookname).pdf output/editing.pdf
