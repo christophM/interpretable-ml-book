@@ -6,16 +6,16 @@ The partial dependence plot (short PDP or PD plot) shows the marginal effect one
 A partial dependence plot can show whether the relationship between the target and a feature is linear, monotonic, or more complex.
 For example, when applied to a linear regression model, partial dependence plots always show a linear relationship.
 
-## PDP definition and estimation
+## Definition and estimation
 
 The partial dependence function for regression is defined as:
 
 $$\hat{f}_S(\mathbf{x}_S) = \mathbb{E}_{\mathbf{X}_C}\left[\hat{f}(\mathbf{x}_S, X_C)\right] = \int \hat{f}(\mathbf{x}_S, X_C) d\mathbb{P}(\mathbf{X}_C)$$
 
-The $x_S$ are the features for which the partial dependence function should be plotted and $X_C$ are the other features used in the machine learning model $\hat{f}$, which are here treated as random variables.
+The $\mathbf{x}_S$ are the features for which the partial dependence function should be plotted and $X_C$ are the other features used in the machine learning model $\hat{f}$, which are here treated as random variables.
 Usually, there is only one or two features in the set S.
 The feature(s) in S are those for which we want to know the effect on the prediction.
-The feature vectors $x_S$ and $x_C$ combined make up the total feature space x.
+The feature vectors $\mathbf{x}_S$ and $\mathbf{x}_C$ combined make up the total data $\mathbf{X}$.
 Partial dependence works by marginalizing the machine learning model output over the distribution of the features in set C, so that the function shows the relationship between the features in set S we are interested in and the predicted outcome.
 By marginalizing over the other features, we get a function that depends only on features in S, with interactions with other features included.
 
@@ -24,7 +24,7 @@ The partial function $\hat{f}_S$ is estimated by calculating averages in the tra
 $$\hat{f}_S(\mathbf{x}_S) = \frac{1}{n} \sum_{i=1}^n \hat{f}(\mathbf{x}_S, \mathbf{x}^{(i)}_{C})$$
 
 This is equivalent to averaging all the [ICE curves](#ice) of a dataset.
-The partial function tells us for given value(s) of features $S$ what the average marginal effect on the prediction is.
+The partial function tells us for given value(s) of features in set $S$ what the average marginal effect on the prediction is.
 In this formula, $\mathbf{x}^{(i)}_{C}$ are actual feature values from the dataset for the features in which we are not interested, and $n$ is the number of instances in the dataset.
 An assumption of the PDP is that the features in $C$ are not correlated with the features in $S$.
 If this assumption is violated, the averages calculated for the partial dependence plot will include data points that are very unlikely or even impossible (see disadvantages).
@@ -33,7 +33,7 @@ If this assumption is violated, the averages calculated for the partial dependen
 
 # Correlated features are a problem
 
-Be cautious when interpreting PDPs for correlated features: In this case, the partial dependence plot includes unrealistic data points.
+Be cautious when interpreting PDPs for (strongly) correlated features: In this case, the partial dependence plot includes unrealistic data points.
 
 :::
 
@@ -53,51 +53,23 @@ For each of the categories, we get a PDP estimate by forcing all data instances 
 For example, if we look at the bike rental dataset and are interested in the partial dependence plot for the season, we get four numbers, one for each season.
 To compute the value for "summer", we replace the season of all data instances with "summer" and average the predictions.
 
-## PDP-based feature importance
-
-@greenwell2018simple proposed a simple partial dependence-based feature importance measure.
-The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
-For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
-
-$$I(X_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(\hat{f}_S(x^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K \hat{f}_S(x^{(k)}_S))^2}$$
-
-Note that here the $x^{(k)}_S$ are the $K$ unique values of feature $X_S$.
-For categorical features, we have:
-
-$$I(X_S) = \frac{\max_k(\hat{f}_S(x^{(k)}_S)) - \min_k(\hat{f}_S(x^{(k)}_S))}{4}$$
-
-This is the range of the PDP values for the unique categories divided by four.
-This strange way of calculating the deviation is called the range rule.
-It helps to get a rough estimate for the deviation when you only know the range.
-And the denominator four comes from the standard normal distribution:
-In the normal distribution, 95\% of the data are minus two and plus two standard deviations around the mean.
-So the range divided by four gives a rough estimate that probably underestimates the actual variance.
-
-This PDP-based feature importance should be interpreted with care.
-It captures only the main effect of the feature and ignores possible feature interactions.
-A feature could be very important based on other methods such as [permutation feature importance](#feature-importance), but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
-Another drawback of this measure is that it is defined over the unique values.
-A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.
-
-
 
 ## Examples
 
 In practice, the set of features $S$ usually only contains one feature or a maximum of two, because one feature produces 2D plots, and two features produce 3D plots.
 Everything beyond that is quite tricky.
-Even 3D on a 2D paper or monitor is already challenging.
 
 Let's return to the regression example, in which we predict the number of [bikes that will be rented on a given day](#bike-data).
 First, we fit a machine learning model, then we analyze the partial dependencies.
-In this case, we have fitted a random forest to predict the number of bicycles and used the partial dependence plot to visualize the relationships the model has learned, see @fig-pdp-bike.
+In this case, we have fitted a random forest to predict the number of bikes and used the partial dependence plot to visualize the relationships the model has learned, see @fig-pdp-bike.
 The influence of the weather features on the predicted bike counts is visualized in the following figure.
 The largest differences can be seen in the temperature.
 The hotter, the more bikes are rented.
-This trend goes up to 20 degrees Celsius, then flattens, and drops slightly at 30.
+This trend goes up to 20 degrees Celsius, then flattens, and drops slightly around 30.
 
 ```{r}
 #| label: fig-pdp-bike
-#| fig.cap: 'PDPs for the bicycle count prediction model and temperature, humidity and wind speed. Marks on the x-axis indicate the data distribution.'
+#| fig.cap: 'PDPs for the bike count prediction model and temperature, humidity and wind speed. Marks on the x-axis indicate the data distribution.'
 #| fig-asp: 0.45
 pred.bike = Predictor$new(bike_rf, data = bike_test)
 pdp = FeatureEffect$new(pred.bike, "temp", method = "pdp")
@@ -116,14 +88,13 @@ p3 = pdp$plot() +
 (p1 | p2 | p3)
 ```
 
-For warm but not too hot weather, the model predicts, on average, a high number of rented bicycles.
 Potential bikers are increasingly inhibited in renting a bike when humidity exceeds 60%.
 In addition, the more wind, the fewer people like to cycle, which makes sense.
 Interestingly, the predicted number of bike rentals does not fall when wind speed increases from 25 to 35 km/h, but there is not much training data, so the machine learning model could probably not learn a meaningful prediction for this range.
-At least intuitively, I would expect the number of bicycles to decrease with increasing wind speed, especially when the wind speed is very high.
+At least intuitively, I would expect the number of bikes to decrease with increasing wind speed, especially when the wind speed is very high.
 
 To illustrate a partial dependence plot with a categorical feature, we examine the effect of the season feature on the predicted bike rentals, see @fig-pdp-bike-cat.
-All seasons show a similar effect on the model predictions; only for winter, the model predicts fewer bicycle rentals, and slightly fewer for spring.
+All seasons show a similar effect on the model predictions; only for winter, the model predicts fewer bike rentals, and slightly fewer for spring.
 
 ```{r}
 #| label: fig-pdp-bike-cat
@@ -140,7 +111,8 @@ To mix things up a little bit, we analyze both the random forest and the logisti
 Both predict $\mathbb{P}(Y^{(i)} = \text{female})$ based on body measurements.
 We compute and visualize the partial dependence of the probability for being female based on body mass and bill depth for the random forest (@fig-pdp-penguin).
 The heavier the penguin, the less likely it is female.
-We see a similar pattern for bill depth, but the probability doesn't go to zero for deep bills.
+We see a similar pattern for bill depth.
+The random forest PDP is way more rugged due to the decision-tree basis.
 
 ```{r}
 #| label: fig-pdp-penguin
@@ -272,7 +244,7 @@ pd$plot() +
   geom_point(data=penguins[penguins$sex =="male",], color="grey") +
   scale_fill_viridis("P(female)", option = "D") +
   scale_x_continuous("Bill depth in millimeters") +
-  scale_x_continuous("Bill length in millimeters")
+  scale_y_continuous("Bill length in millimeters")
 ```
 
 
@@ -285,6 +257,35 @@ Means to do this are reducing tree depth when using tree-based methods or adding
 Alternatively, you can optimize for lower interactions, sparsity, and less complex effects in a model-agnostic way, see @molnar2020quantifying.
 
 :::
+
+## PDP-based feature importance
+
+@greenwell2018simple proposed a simple partial dependence-based feature importance measure.
+The basic motivation is that a flat PDP indicates that the feature is not important, and the more the PDP varies, the more important the feature is.
+For numerical features, importance is defined as the deviation of each unique feature value from the average curve:
+
+$$I(\mathbf{x}_S) =  \sqrt{\frac{1}{K-1}\sum_{k=1}^K(\hat{f}_S(\mathbf{x}^{(k)}_S) - \frac{1}{K}\sum_{k=1}^K \hat{f}_S(\mathbf{x}^{(k)}_S))^2}$$
+
+Note that here the $\mathbf{x}^{(k)}_S$ are the $K$ unique values of feature $X_S$.
+For categorical features, we have:
+
+$$I(X_S) = \frac{\max_k(\hat{f}_S(\mathbf{x}^{(k)}_S)) - \min_k(\hat{f}_S(\matbhf{x}^{(k)}_S))}{4}$$
+
+This is the range of the PDP values for the unique categories divided by four.
+This strange way of calculating the deviation is called the range rule.
+It helps to get a rough estimate for the deviation when you only know the range.
+And the denominator four comes from the standard normal distribution:
+In the normal distribution, 95\% of the data are minus two and plus two standard deviations around the mean.
+So the range divided by four gives a rough estimate that probably underestimates the actual variance.
+
+This PDP-based feature importance should be interpreted with care.
+It captures only the main effect of the feature and ignores possible feature interactions.
+A feature could be very important based on other methods such as [permutation feature importance](#feature-importance), but the PDP could be flat as the feature affects the prediction mainly through interactions with other features.
+Another drawback of this measure is that it is defined over the unique values.
+A unique feature value with just one instance is given the same weight in the importance computation as a value with many instances.
+
+
+
 
 ## Strengths
 

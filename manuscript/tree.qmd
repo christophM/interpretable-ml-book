@@ -2,7 +2,7 @@
 
 {{< include _setup.qmd >}}
 
-Linear regression and logistic regression models fail in situations where the relationship between features and outcome is nonlinear or where features interact with each other.
+Plain linear regression and logistic regression models fail in situations where the relationship between features and outcome is nonlinear or where features interact with each other.
 Time to shine for the decision tree!
 Tree-based models split the data multiple times according to certain cutoff values in the features.
 Through splitting, different subsets of the dataset are created, with each instance belonging to one subset.
@@ -19,34 +19,34 @@ I recommend the book 'The Elements of Statistical Learning' [@hastie2009elements
 
 ```{r}
 #| label: fig-tree-artificial
-#| fig.cap: "Decision tree with artificial data. Instances with a value greater than 3 for feature x1 end up in node 5. All other instances are assigned to node 3 or node 4, depending on whether values of feature x2  exceed 1."
+#| fig.cap: "Decision tree with artificial data. Instances with a value greater than 3 for feature $x_1$ end up in node 5. All other instances are assigned to node 3 or node 4, depending on whether values of feature $x_2$  exceed 1."
 #| fig-width: 7
 #| fig-height: 5
 library("partykit")
 set.seed(42)
 n = 100
-dat_sim = data.frame(feature_x1 = rep(c(3,3,4,4), times = n), feature_x2 = rep(c(1,2,2,2), times = n), y = rep(c(1, 2, 3, 4), times = n))
+dat_sim = data.frame(x1 = rep(c(3,3,4,4), times = n), x2= rep(c(1,2,2,2), times = n), y = rep(c(1, 2, 3, 4), times = n))
 dat_sim = dat_sim[sample(1:nrow(dat_sim), size = 0.9 * nrow(dat_sim)), ]
 dat_sim$y = dat_sim$y + rnorm(nrow(dat_sim), sd = 0.2)
-ct = ctree(y ~ feature_x1 + feature_x2, dat_sim)
+ct = ctree(y ~ x1 + x2, dat_sim)
 plot(ct, inner_panel = node_inner(ct, pval = FALSE, id = FALSE),
   terminal_panel = node_boxplot(ct, id = FALSE))
 ```
 
-The following formula describes the relationship between the outcome y and features x.
+The following formula describes the relationship between the outcome $y$ and features $\mathbf{x}$.
 
-$$\hat{y}=\hat{f}(x)=\sum_{m=1}^Mc_m{}I\{x\in{}R_m\}$$
+$$\hat{f}(\mathbf{x})=\sum_{m=1}^M c_m I\{ \mathbf{x} \in R_m\}$$
 
-Each instance falls into exactly one leaf node (=subset $R_m$).
-$I_{\{ \mathbf{x}^{(i)} \in R_m \}}$ is the identity function that returns 1 if $\mathbf{x}^{(i)}$ is in the subset $R_m$ and 0 otherwise.
-If an instance falls into a leaf node $R_l$, the predicted outcome is $\hat{y}^{(i)}=c_l$, where $c_l$ is the average of all training instances in leaf node $R_l$.
+Each instance falls into exactly one leaf node (= subset $R_m$).
+$I_{\{ \mathbf{x} \in R_m \}}$ is the identity function that returns 1 if $\mathbf{x}$ is in the subset $R_m$ and 0 otherwise.
+If an instance falls into a leaf node $R_l$, the predicted outcome is $c_l$, where $c_l$ is the average of all training instances in leaf node $R_l$.
 
 But where do the subsets come from?
 This is quite simple:
-CART takes a feature and determines which cut-off point minimizes the variance of y for a regression task or the Gini index of the class distribution of y for classification tasks.
-The variance tells us how much the y values in a node are spread around their mean value.
+CART takes a feature and determines which cut-off point minimizes the variance of $y$ for a regression task or the Gini index of the class distribution of $y$ for classification tasks.
+The variance tells us how much the $y$ values in a node are spread around their mean value.
 The Gini index tells us how "impure" a node is; e.g., if all classes have the same frequency, the node is impure; if only one class is present, it is maximally pure.
-Variance and Gini index are minimized when the data points in the nodes have very similar values for y.
+Variance and Gini index are minimized when the data points in the nodes have very similar values for $y$.
 As a consequence, the best cut-off point makes the two resulting subsets as different as possible with respect to the target outcome.
 For categorical features, the algorithm tries to create subsets by trying different groupings of categories.
 After the best cutoff per feature has been determined, the algorithm selects the feature for splitting that would result in the best partition in terms of the variance or Gini index, and adds this split to the tree.
@@ -65,7 +65,7 @@ All the edges are connected by 'AND'.
 
 ## Interpretation Template
 
-If feature x is [smaller/bigger] than threshold c AND ... then the predicted outcome is the mean value of y of the instances in that node.
+If feature $x_j$ is [smaller/bigger] than threshold c AND ... then the predicted outcome is the mean value of $y$ of the instances in that node.
 
 :::
 
@@ -103,7 +103,7 @@ The recent rental count (`cnt_2d_bfr`) and the temperature (`temp`) have been se
 
 ```{r}
 #| label: fig-tree-example
-#| fig.cap: Regression tree fitted on the bike rental data. The boxplots show the distribution of bicycle counts in the terminal node.
+#| fig.cap: Regression tree fitted on the bike rental data. The boxplots show the distribution of bike counts in the terminal node.
 #| fig-width: 7
 #| fig-height: 5
 
@@ -124,7 +124,7 @@ plot(xp, digits = 0, id = FALSE, terminal_panel = node_boxplot(xp, id = FALSE),
 
 Trees with lower depths and fewer nodes are easier to interpret.
 Many hyperparameters directly or indirectly control tree depth and/or number of nodes.
-Some of them interact with the data size, so make sure to pick hyperparameters that control the number of nodes and tree depth directly.
+Some of them interact with the data size, so make sure to pick hyperparameters that control the number of nodes and tree depth directly if you have specific interpretability requirements.
 
 :::
 
@@ -132,7 +132,7 @@ The first split and one of the second level splits were performed with the previ
 Basically, the larger the number of recent bike rentals, the more are predicted.
 If recently not so many bikes were rented, then the temperature decides whether to predict more or fewer rentals.
 The visualized tree shows that both temperature and time trend were used for the splits, but does not quantify which feature was more important.
-@fig-tree-importance shows the feature importance.
+@fig-tree-importance shows the feature importance if we allow the tree to grow deeper.
 The most important feature, according to Gini importance, was the previous bike count (`cnt_2d_bfr`), followed by temperature and season.
 Weather was the least important.
 
@@ -143,7 +143,8 @@ imp = round(100 * x$variable.importance / sum(x$variable.importance),0)
 imp.df = data.frame(feature = names(imp), importance = imp)
 imp.df$feature = factor(imp.df$feature, levels = as.character(imp.df$feature)[order(imp.df$importance)])
 ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) +
-  scale_y_discrete("")
+  scale_y_discrete("") +
+  scale_x_continuous("Gini Importance")
 ```
 
 
@@ -151,8 +152,16 @@ ggplot(imp.df) + geom_point(aes(x = importance, y = feature)) +
 
 # Feature scale doesn't matter 
 
-CART and other tree algorithms are invariant to the scale of the feature.
+CART and other tree algorithms are invariant to the scale and monotonic transformations of the feature.
 For example, changing a feature from kilograms to grams (multiplying by 1000) will change the split value, but the overall tree structure will be unchanged.
+
+:::
+
+
+
+::: {.callout-warning}
+
+Gini importance has a bias that it gives higher importance to numerical features and categorical features with many categories.[@strobl2008conditional] Better use [permutation feature importance](feature-importance).
 
 :::
 
@@ -174,7 +183,7 @@ A tree with a depth of three requires a maximum of three features and split poin
 The truthfulness of the prediction depends on the predictive performance of the tree.
 The explanations for short trees are very simple and general because for each split the instance falls into either one or the other leaf, and binary decisions are easy to understand.
 
-There's no need to transform features.
+There's **no need to transform features**.
 In linear models, it is sometimes necessary to take the logarithm of a feature.
 A decision tree works equally well with any monotonic transformation of a feature.
 
@@ -209,7 +218,7 @@ The more terminal nodes and the deeper the tree, the more difficult it becomes t
 A depth of 1 means 2 terminal nodes.
 Depth of 2 means max. 4 nodes.
 Depth of 3 means max. 8 nodes.
-The maximum number of terminal nodes in a tree is 2 to the power of the depth.
+The maximum number of terminal nodes in a binary tree is 2 to the power of the depth.
 
 ## Software
 

@@ -1,4 +1,4 @@
-# Accumulated Local Effects (ALE) Plot {#ale}
+# Accumulated Local Effects (ALE) {#ale}
 
 {{< include _setup.qmd >}}
 
@@ -30,7 +30,7 @@ The partial dependence plot includes these unrealistic houses in the feature eff
 
 ```{r}
 #| label: fig-aleplot-motivation1
-#| fig.cap: Correlated features $X_1$ and $X_2$. When calculating the PDP at $X_1=0.75$ values for $X_2$ from the entire range of $X_2$ are sampled (vertical line). This results in the PDP using unlikely combinations of $X_1$ and $X_2$ (e.g., $X_2=0.2$ at $X_1=0.75$).
+#| fig.cap: Correlated features $X_1$ and $X_2$. When calculating the PDP at $x_1=0.75$ values for $x_2$ from the entire range of $X_2$ are sampled (vertical line). This results in the PDP using unlikely combinations of $X_1$ and $X_2$ (e.g., $x_2=0.2$ at $x_1=0.75$).
 set.seed(1)
 n = 100
 intercept = 0.75
@@ -52,14 +52,14 @@ x1.dens.df = data.frame(dens = x1.dens$y, x = x1.dens$x)
 
 p1 = p.int + geom_path(data = x1.dens.df, aes(x = intercept - dens/10, y = x)) + 
   ggtitle(latex2exp::TeX(r'(Marginal distribution $P(X_2)$)')) + 
-  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(-0.2, 1.2)) +
-  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)'), limits = c(-0.2, 1.2)) +
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)'))
 
 p1
 ```
 
 What can we do to get a feature effect estimate that respects the correlation of the features?
-We could average over the conditional distribution of the feature, meaning at a grid value of $X_1$, we average the predictions of instances with a similar $x^{(i)}_1$ value.
+We could average over the conditional distribution of the feature, meaning at a grid value of $X_1$, we average the predictions of instances with a similar value  for $X_1$.
 The solution for calculating feature effects using the conditional distribution is called Marginal Plots, or M-Plots (confusing name, since they are based on the conditional, not the marginal distribution).
 Wait, did I not promise you to talk about ALE plots?
 M-Plots are not the solution we are looking for.
@@ -71,7 +71,7 @@ The M-Plot would still show that the size of the living area increases the predi
 
 ```{r}
 #| label: fig-aleplot-motivation2
-#| fig-cap: "Correlated features $X_1$ and $X_2$. M-Plots average over the conditional distribution. Here the conditional distribution of $X_2$ at $X_1=0.75$. Averaging the local predictions leads to mixing the effects of both features."
+#| fig-cap: "Correlated features $X_1$ and $X_2$. M-Plots average over the conditional distribution. Here the conditional distribution of $X_2$ at $x_1=0.75$. Averaging the local predictions leads to mixing the effects of both features."
 
 set.seed(1)
 n = 100
@@ -102,9 +102,9 @@ x1.dens.ale = density(x1[(x1 > (intercept - 0.1)) & (x1 < (intercept + 0.1))])
 x1.dens.ale.df = data.frame(dens = x1.dens.ale$y, x = x1.dens.ale$x)
 
 p2 = p.int + geom_path(data = x1.dens.ale.df, aes(x = intercept - dens/20, y = x)) + 
-  ggtitle(latex2exp::TeX(r'(Conditional distribution $\mathbb{P}(X_2|X_1=0.75)$)')) + 
-  scale_y_continuous(latex2exp::TeX(r'($X_2$)'), limits = c(-0.2, 1.2)) +
-  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
+  ggtitle(latex2exp::TeX(r'(Conditional distribution $\mathbb{P}(X_2|x_1=0.75)$)')) + 
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)'), limits = c(-0.2, 1.2)) +
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)'))
 
 
 p2
@@ -147,21 +147,22 @@ break.labels = c(expression(z[0~","~1]),  expression(z[1~","~1]), expression(z[2
 diff.df = df[df$x1 <= 0.8 & df$x1 > 0.6, ]
 
 p + geom_vline(data = grid.df, aes(xintercept = x1), linetype = 3) + 
-  scale_x_continuous(latex2exp::TeX(r'($X_1$)'), breaks = seq(from = 0,  to = 1, length.out = 6), limits = c(0, 1), labels = break.labels) + 
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)'), breaks = seq(from = 0,  to = 1, length.out = 6), limits = c(0, 1), labels = break.labels) + 
   geom_label(data = label.df, aes(x = x1, y = x2, label = label)) + 
   geom_segment(data = diff.df, aes(x = 0.6, xend = 0.8, y = x2, yend  = x2), arrow = arrow(ends = "both", angle = 90, length = unit(0.07, "inches"))) +
-  scale_y_continuous(latex2exp::TeX(r'($X_2$)'))
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)'))
 ```
 
 To summarize how each type of plot (PDP, M, ALE) calculates the effect of a feature at a certain grid value $v$:
-**Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value $v$ for that feature. I ignore whether the value $v$ makes sense for all data instances."
-**M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to $v$ for that feature. The effect could be due to that feature, but also due to correlated features."
-**ALE plots**: "Let me show you how the model predictions change in a small 'window' of the feature around $v$ for data instances in that window."
+
+- **Partial Dependence Plots**: "Let me show you what the model predicts on average when each data instance has the value $v$ for that feature. I ignore whether the value $v$ makes sense for all data instances."
+- **M-Plots**: "Let me show you what the model predicts on average for data instances that have values close to $v$ for that feature. The effect could be due to that feature, but also due to correlated features."
+- **ALE plots**: "Let me show you how the model predictions change in a small 'window' of the feature around $v$ for data instances in that window."
 
 ## Theory
 
 How do PDP, M-plot, and ALE plot differ mathematically?
-Common to all three methods is that they reduce the complex prediction function $f$ to a function that depends on only one (or two) features.
+Common to all three methods is that they reduce the complex prediction function $\hat{f}$ to a function that depends on only one (or two) features.
 All three methods reduce the function by averaging the effects of the other features, but they differ in whether averages of predictions or of **differences in predictions** are calculated and whether averaging is done over the marginal or conditional distribution.
 
 Partial dependence plots average predictions over the marginal distribution.
@@ -190,7 +191,7 @@ ALE plots average the changes in the predictions and accumulate them over the gr
 
 \begin{align*}
 \hat{f}_{S,ALE}(\mathbf{x}_S) = & \int_{\mathbf{z}_{0,S}}^{\mathbf{x}_S} \mathbb{E}_{X_C|X_S = \mathbf{x}_S} \left[\hat{f}^S(X_S,X_C)|X_S = \mathbf{z}_S\right] d \mathbf{z}_S-\text{constant} \\
-=& \int_{\mathbf{z}_{0,S}}^{x_S}\left(\int_{x_C}\hat{f}^S(z_S,X_C)d\mathbb{P}(X_C|X_S = z_S)\right) d \mathbf{z}_S-\text{constant}
+=& \int_{\mathbf{z}_{0,S}}^{\mathbf{x}_S}\left(\int_{\mathbf{x}_C}\hat{f}^S(\mathbf{z}_S,X_C)d\mathbb{P}(X_C|X_S = \mathbf{z}_S)\right) d \mathbf{z}_S-\text{constant}
 \end{align*}
 
 The formula reveals three differences compared to M-plots.
@@ -198,9 +199,9 @@ First, we average the changes of predictions, not the predictions themselves.
 The change is defined as the partial derivative (but later, for the actual computation, replaced by the differences in the predictions over an interval).
 
 
-$$\hat{f}^S(x_s,x_c)=\frac{\partial\hat{f}(x_S,x_C)}{\partial{}x_S}$$
+$$\hat{f}^S(\mathbf{x}_S,\mathbf{x}_C)=\frac{\partial\hat{f}(\mathbf{x}_S,\mathbf{x}_C)}{\partial \mathbf{x}_S}$$
 
-The second difference is the additional integral over z.
+The second difference is the additional integral over $\mathbf{z}$.
 We accumulate the local partial derivatives over the range of features in set S, which gives us the effect of the feature on the prediction.
 For the actual computation, the z's are replaced by a grid of intervals over which we compute the changes in the prediction.
 Instead of directly averaging the predictions, the ALE method calculates the prediction differences conditional on features S and integrates the derivative over features S to estimate the effect.
@@ -214,7 +215,7 @@ This step centers the ALE plot so that the average effect over the data is zero.
 
 One problem remains: Not all models come with a gradient; for example, random forests have no gradient.
 But as you will see, the actual computation works without gradients and uses intervals.
-Let's delve a little deeper into the estimation of ALE plots.
+Let's dive a little deeper into the estimation of ALE plots.
 
 
 ## Estimation
@@ -225,7 +226,7 @@ This procedure approximates the derivatives and also works for models without de
 
 First we estimate the uncentered effect:
 
-$$\hat{\tilde{f}}_{j,ALE}(x) = \sum_{k=1}^{k_j(x)} \frac{1}{n_j(k)} \sum_{i: x_j^{(i)} \in N_j(k)} \left[\hat{f}(z_{k,j}, \mathbf{x}^{(i)}_{-j}) - \hat{f}(z_{k-1,j}, \mathbf{x}^{(i)}_{-j})\right]$$
+$$\hat{\tilde{f}}_{j,ALE}(\mathbf{x}) = \sum_{k=1}^{k_j(\mathbf{x})} \frac{1}{n_j(k)} \sum_{i: x_j^{(i)} \in N_j(k)} \left[\hat{f}(z_{k,j}, \mathbf{x}^{(i)}_{-j}) - \hat{f}(z_{k-1,j}, \mathbf{x}^{(i)}_{-j})\right]$$
 
 Let's break this formula down, starting from the right side.
 The name **Accumulated Local Effects** nicely reflects all the individual components of this formula.
@@ -241,10 +242,10 @@ The word **Accumulated** in ALE reflects this.
 
 This effect is centered so that the mean effect is zero.
 
-$$\hat{f}_{j,ALE}(x) = \hat{\tilde{f}}_{j,ALE}(x) - \frac{1}{n} \sum_{i=1}^{n} \hat{\tilde{f}}_{j,ALE}(x_j^{(i)})$$
+$$\hat{f}_{j,ALE}(\mathbf{x}) = \hat{\tilde{f}}_{j,ALE}(\mathbf{x}) - \frac{1}{n} \sum_{i=1}^{n} \hat{\tilde{f}}_{j,ALE}(x_j^{(i)})$$
 
 The value of the ALE can be interpreted as the main effect of the feature at a certain value compared to the average prediction of the data.
-For example, an ALE estimate of -2 at $x_j = 3$ means that when the $j$-th feature has value 3, then the prediction is lower by 2 compared to the average prediction.
+For example, an ALE estimate of -2 at $x^{(i)}_j = 3$ means that when the $j$-th feature has value 3, then the prediction is lower by 2 compared to the average prediction.
 
 The quantiles of the distribution of the feature are used as the grid that defines the intervals.
 Using the quantiles ensures that there is the same number of data instances in each of the intervals.
@@ -260,12 +261,12 @@ In addition to adjusting for the overall mean effect, we also adjust for the mai
 This means that ALE for two features estimates the second-order effect, which does not include the main effects of the features.
 In other words, ALE for two features only shows the additional interaction effect of the two features.
 I spare you the formulas for 2D ALE plots because they are long and unpleasant to read.
-If you are interested in the calculation, I refer you to the paper [@apley2020visualizingeffects], formulas (13) -- (16).
+If you are interested in the calculation, I refer you to the paper by @apley2020visualizingeffects, formulas (13) - (16).
 I'll rely on visualizations to develop intuition about the second-order ALE calculation.
 
 ```{r}
 #| label: aleplot-computation-2d
-#| fig.cap: 'Calculation of 2D-ALE. We place a grid over the two features. In each grid cell we calculate the 2nd-order differences for all instance within. We first replace values of $X_1$ and $X_2$ with the values from the cell corners. If a, b, c and d represent the "corner"-predictions of a manipulated instance (as labeled in the graphic), then the 2nd-order difference is (d - c) - (b - a). The mean 2nd-order difference in each cell is accumulated over the grid and centered.'
+#| fig.cap: 'Calculation of 2D-ALE. We place a grid over the two features. In each grid cell we calculate the 2nd-order differences for all instance within. We first replace values of $x_1$ and $x_2$ with the values from the cell corners. If a, b, c and d represent the "corner"-predictions of a manipulated instance (as labeled in the graphic), then the 2nd-order difference is (d - c) - (b - a). The mean 2nd-order difference in each cell is accumulated over the grid and centered.'
 p = ggplot(df) + geom_point(aes(x = x1, y = x2)) +
   theme(panel.grid.major.y = element_blank(), 
     panel.grid.minor.y = element_blank(), 
@@ -286,8 +287,8 @@ p + geom_vline(data = grid.df1, aes(xintercept = x1), linetype = 3) +
   geom_rect(aes(xmin = x, xmax = xend,  ymin = y, ymax = yend), data = chosen.tile2, alpha = 0, color = "black", size = 1.1) +
   geom_label(data = chosen.tile, aes(x = x1, y = x2), label = letters[1:4]) + 
   geom_point(aes(x = x1, y = x2), data = points.df, size = 3) +
-  scale_x_continuous(latex2exp::TeX(r'($X_1$)')) +
-  scale_y_continuous(latex2exp::TeX(r'($X_2$)'))
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)')) +
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)'))
 
 ```
 
@@ -349,7 +350,7 @@ This "weird" area is far from the distribution of data (point cloud) and does no
 
 ```{r}
 #| label: fig-correlation-problem
-#| fig.cap: "Two features and the predicted outcome. The model predicts the sum of the two features (shaded background), with the exception that if $X_1>0.7$ and $X_2<0.3$, the model always predicts 2. "
+#| fig.cap: "Two features and the predicted outcome. The model predicts the sum of the two features (shaded background), with the exception that if $x_1>0.7$ and $x_2<0.3$, the model always predicts 2. "
 set.seed(1)
 n = 25
 
@@ -372,8 +373,8 @@ grid.dat$predicted = y.fun(mod, grid.dat)
 ggplot(df) + geom_tile(data = grid.dat, aes(x = x1, y = x2, fill = predicted)) + 
   geom_point(aes(x = x1, y = x2), size = 3) + 
   scale_fill_viridis("Model\nprediction", option = "D") +
-  scale_y_continuous(latex2exp::TeX(r'($X_2$)')) +
-  scale_x_continuous(latex2exp::TeX(r'($X_1$)'))
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)')) +
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)'))
 ```
 
 Is this a realistic, relevant scenario at all?
@@ -405,10 +406,21 @@ But it has to be a conscious decision to include areas where we have not observe
 If you suspect that the model will later be used with differently distributed data, I recommend using ALE plots and simulating the distribution of data you are expecting.
 
 
+::: {.callout-tip}
+
+# Produce both PDP and ALE
+
+Anecdotal observation: For my applications, the ALE and PDP plots looked quite similar, despite correlation.
+Correlation can ruin the interpretability, but it doesn't have to.
+If you ALE and PDP show the same curve for a correlated feature, just interpret the PDP since it has a simpler interpretation.
+
+:::
+
+
 ## Examples
 
-Turning to a real dataset, let us predict the [number of rented bikes](#bike-data) based on weather and day, and check if the ALE plots really work as well as promised.
-We train a regression tree to predict the number of rented bicycles on a given day and use ALE plots to analyze how wind speed and weather influence the predictions.
+Turning to a real dataset, let's predict the [number of rented bikes](#bike-data) based on weather and day, and check if the ALE plots really work as well as promised.
+We train a random forest to predict the number of rented bikes and use ALE plots to analyze how wind speed and weather influence the predictions.
 
 @fig-ale-bike (left) shows that an increasing wind speed has a negative effect on bike rentals.
 For the weather situation (right), we see that especially bad weather has a strong negative effect on the number of rented bikes.
@@ -423,7 +435,7 @@ limits = c(-800, 250)
 
 ale3 = FeatureEffect$new(pred.bike, "windspeed", method = "ale")$plot() +
   scale_x_continuous("Wind speed") +
-  scale_y_continuous("ALE of predicted bike rentals", limits=limits)
+  scale_y_continuous("ALE of bike rentals", limits=limits)
 
 alecat1 = FeatureEffect$new(pred.bike, "weather", method = "ale") 
 alecat = ggplot(alecat1$results) + 
@@ -440,7 +452,7 @@ Next, we consider the effects of humidity and temperature, and their interaction
 Remember that the second-order effect is the additional interaction effect of the two features and does not include the main effects.
 This means that, for example, you will not see the main effect that high humidity leads to a lower number of predicted bikes on average in the second-order ALE plot.
 @fig-ale-bike-2d shows both the main effects of temperature and humidity, and their interaction.
-The plot reveals an interaction between temperature and humidity: cold and humid weather increases the prediction.
+The plot reveals an interaction: cold and humid weather increases the prediction.
 Keep in mind that both main effects of humidity and temperature say that the predicted number of bikes decreases in very cold and humid weather.
 In cold and humid weather, the combined effect of temperature and humidity is therefore not the sum of the main effects, but larger than the sum.
 
@@ -492,7 +504,7 @@ But if you want to know the combined effect of the features, you should look at 
 However, in a scenario where two features have no interaction, the total effect of the two features could be misleading because it probably shows a complex landscape, suggesting some interaction, but it is simply the product of the two main effects.
 The pure second-order effect would immediately show that there is no interaction.
 
-Enough bicycles for now, let's turn to a classification task.
+Enough bikes for now, let's turn to a classification task.
 We train a random forest to predict the $\mathbb{P}(Y = \text{female})$ based on body measurements.
 How does the body weight affect the probability of a penguin being female?
 @fig-ale-penguin (left) visualizes the ALE plot for body mass.
@@ -509,7 +521,7 @@ pred.penguins = Predictor$new(pengu_rf, data = penguins, class="female")
 ale = FeatureEffect$new(pred.penguins, "body_mass_g", method = "ale", grid.size = 20)
 p1 = ale$plot() +
   scale_x_continuous("Body mass in grams") +
-  scale_y_continuous('P(female)', limits = c(-0.45, 0.45))
+  scale_y_continuous('ALE of P(female)', limits = c(-0.45, 0.45))
 
 ale_data = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species) {
   pred.penguins = Predictor$new(pengu_rf, data = penguins[penguins$species == species,], class="female")
@@ -539,7 +551,7 @@ Partial dependence plots fail in this scenario because they marginalize over unl
 The PDP requires n times the number of grid point estimations.
 For 20 grid points, PDPs require 20 times more predictions than the worst-case ALE plot, where as many intervals as instances are used.
 
-The **interpretation of ALE plots is clear**: Conditional on a given value, the relative effect of changing the feature on the prediction can be read from the ALE plot.
+The (local) **interpretation of ALE plots is clear**: Conditional on a given value, the relative effect of changing the feature on the prediction can be read from the ALE plot.
 **ALE plots are centered at zero**.
 This makes their interpretation nice because the value at each point of the ALE curve is the difference to the mean prediction.
 **The 2D ALE plot only shows the interaction**:
@@ -561,7 +573,7 @@ For convenience, the interval-wise effects are accumulated to show a smooth curv
 ALE effects **may differ from the coefficients specified in a linear regression model** when features interact and are correlated.
 @gromping2020model showed that in a linear model with two correlated features and an additional interaction term ($\hat{f}(x) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_1 x_2$), the first-order ALE plots do not show a straight line.
 Instead, they are slightly curved because they incorporate parts of the multiplicative interaction of the features.
-To understand what is happening here, I recommend reading the chapter on [function decomposition](#decomposition).
+To understand what is happening here, I recommend reading the chapter on [functional decomposition](#decomposition).
 In short, ALE defines first-order (or 1D) effects differently than the linear formula describes them.
 This is not necessarily wrong, because when features are correlated, the attribution of interactions is not as clear.
 But it is certainly unintuitive that ALE and linear coefficients do not match.
@@ -596,8 +608,10 @@ This disadvantage is not specific to ALE plots, but a general problem of strongl
 If the features are uncorrelated and computation time is not a problem, PDPs are slightly preferable because they are easier to understand and can be plotted along with ICE curves.
 
 
-The list of disadvantages has become quite long, but do not be fooled by the number of words I use:
-As a rule of thumb: Use ALE instead of PDP.
+The list of disadvantages has become quite long, but do not be fooled by the number of words I use.
+As a rule of thumb: Use PDP if features are not correlated.
+If feature are correlated, but PDP and ALE show more or less the same curves, go for the simpler PDP interpretation.
+If feature are correlated and PDP and ALE differ, go with the ALE plot.
 
 
 ## Software and alternatives

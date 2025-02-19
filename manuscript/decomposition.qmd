@@ -10,7 +10,7 @@ In addition, functional decomposition is a fundamental principle underlying many
 Let's jump right in and look at a particular function.
 This function takes two features as input and produces a one-dimensional output:
 
-$$y = \hat{f}(x_1, x_2) = 2 + e^{x_1} - x_2 + x_1 \cdot x_2$$
+$$\hat{f}(x_1, x_2) = 2 + e^{x_1} - x_2 + x_1 \cdot x_2$$
 
 Think of the function as a machine learning model.
 We can visualize the function with a 3D plot or a heatmap with contour lines as in @fig-decomp-example.
@@ -28,16 +28,16 @@ dat = expand.grid(x1 = x1, x2 = x2)
 dat$y = f(dat$x1, dat$x2)
 # mean(dat$y)
 p = ggplot(dat, aes(x = x1, y = x2, fill = y, z = y)) + geom_tile() + geom_contour() +
-  scale_x_continuous(latex2exp::TeX(r'(Feature $x_1$)')) +
-  scale_y_continuous(latex2exp::TeX(r'(Feature $x_2$)')) +
+  scale_x_continuous(latex2exp::TeX(r'($x_1$)')) +
+  scale_y_continuous(latex2exp::TeX(r'($x_2$)')) +
   scale_fill_continuous("Prediction")
 p
 ```
 
 <!-- Describing the prediction function -->
-The function takes large values when $X_1$ is large and $X_2$ is small, and it takes small values for large $X_2$ and small $X_1$.
+The function takes large values when $x_1$ is large and $x_2$ is small, and it takes small values for large $x_2$ and small $x_1$.
 The prediction function is not simply an additive effect between the two features, but an interaction between the two.
-The presence of an interaction can be seen in the figure -- the effect of changing values for feature $X_1$ depends on the value that feature $X_2$ has.
+The presence of an interaction can be seen in the figure -- the effect of changing values for feature $x_1$ depends on the value that feature $x_2$ has.
 
 <!-- Referring back to functional decomposition for machine learning -->
 Our job now is to decompose this function into main effects of features $X_1$ and $X_2$ and an interaction term.
@@ -85,31 +85,31 @@ p1 + p12 + p2 + plot_layout(ncol = 2)
 Do you think the components make sense given the above true formula, ignoring that the intercept value seems a bit random?
 The $X_1$ feature shows an exponential main effect, and $X_2$ shows a negative linear effect.
 The interaction term looks a bit like a Pringles chip.
-In less crunchy and more mathematical terms, it is a hyperbolic paraboloid, as we would expect for $x_1 \cdot x_2$.
+In less crunchy and more mathematical terms, it's a hyperbolic paraboloid, as we would expect for $x_1 \cdot x_2$.
 Spoiler alert: the decomposition is based on accumulated local effect plots, which we will discuss later in the chapter.
 
 <!-- The naive approach -->
 But why all the excitement?
 A glance at the formula already gives us the answer to the decomposition, so no need for fancy methods, right?
-For feature $x_1$, we can take all the summands that contain only $x_1$ as the component for that feature.
-That would be $\hat{f}_1(x_1) = e^{x_1}$ and $\hat{f}_2(x_2) = -x_2$ for feature $x_2$.
+For feature $X_1$, we can take all the summands that contain only $x_1$ as the component for that feature.
+That would be $\hat{f}_1(x_1) = e^{x_1}$ and $\hat{f}_2(x_2) = -x_2$ for feature $X_2$.
 The interaction is then $\hat{f}_{12}(x_{1},x_{2}) = x_1 \cdot x_2$.
 While this is the correct answer for this example (up to constants), there are two problems with this approach:
 Problem 1): While the example started with the formula, the reality is that almost no machine learning model can be described with such a neat formula.
 Problem 2) is much more intricate and concerns what an interaction is.
 Imagine a simple function $\hat{f}(x_1,x_2) = x_1 \cdot x_2$, where both features take values larger than zero and are independent of each other.
-Using our look-at-the-formula tactic, we would conclude that there is an interaction between features $x_1$ and $x_2$, but not individual feature effects.
+Using our look-at-the-formula tactic, we would conclude that there is an interaction between features $X_1$ and $X_2$, but not individual feature effects.
 But can we really say that feature $x_1$ has no individual effect on the prediction function?
-Regardless of what value the other feature $x_2$ takes on, the prediction increases as we increase $x_1$.
+Regardless of what value $x_2$ takes on, the prediction increases as we increase $x_1$.
 For example, for $x_2 = 1$, the effect of $x_1$ is $\hat{f}(x_1, 1) = x_1$, and when $x_2 = 10$ the effect is $\hat{f}(x_1, 10) = 10 \cdot x_1$.
-Thus, it is clear that feature $x_1$ has a positive effect on the prediction, independent of $x_2$, and is not zero.
+Thus, it's clear that feature $X_1$ has a positive effect on the prediction, independent of $X_2$, and is not zero.
 
 To solve problem 1) of lack of access to a neat formula, we need a method that uses only the prediction function or classification score.
 To solve problem 2) of lack of definition, we need some axioms that tell us what the components should look like and how they relate to each other.
 But first, we should define more precisely what functional decomposition is.
 
 
-## Functional decomposition
+## Decomposing a function 
 
 <!-- Explaining the formula -->
 A prediction function takes $p$ features as input, $\hat{f}: \mathbb{R}^p \mapsto \mathbb{R}$, and produces an output.
@@ -160,7 +160,7 @@ The ambiguity can be avoided by specifying further constraints or specific metho
 In this chapter, we will discuss different approaches to functional decomposition:
 
 - (Generalized) functional ANOVA
-- [Accumulated Local Effects](#ale)
+- Accumulated Local Effects
 - Statistical regression models
 - Decomposing tree ensembles
 
@@ -177,7 +177,7 @@ $$\hat{f}(\mathbf{x}) = \sum_{S \subseteq \{1, \ldots, p\}} \hat{f}_S(\mathbf{x}
 
 $$\hat{f}_S(\mathbf{x}) = \int_{X_{-S}} \left( \hat{f}(\mathbf{x}) - \sum_{V \subset S} \hat{f}_V(\mathbf{x})\right) d \mathbb{P}(X_{-S})$$
 
-Okay, let us take this thing apart.
+Okay, let's take this thing apart.
 We can rewrite the component as:
 
 $$\hat{f}_S(\mathbf{x}) = \int_{X_{-S}} \left( \hat{f}(\mathbf{x})\right) d \mathbb{P}(X_{-S}) - \int_{X_{-S}} \left(\sum_{V \subset S} \hat{f}_V(\mathbf{x}) \right) d \mathbb{P}(X_{-S})$$
@@ -245,7 +245,7 @@ If we integrate over the uniform distribution, when in reality features are depe
 <!-- The solution -->
 @hooker2007generalized proposed the generalized functional ANOVA, a decomposition that works for dependent features.
 It's a generalization of the functional ANOVA we encountered earlier, which means that the functional ANOVA is a special case of the generalized functional ANOVA.
-The components are defined as projections of $f$ onto the space of additive functions:
+The components are defined as projections of $\hat{f}$ onto the space of additive functions:
 
 $$\hat{f}_S(\mathbf{x}_S) = \arg\min_{g_S \in L^2(\mathbb{R}^S)_{S \in P}} \int \left(\hat{f}(\mathbf{x}) - \sum_{S \subset P} g_S(\mathbf{x}_S)\right)^2 w(\mathbf{x})\,d\mathbf{x}.$$
 
@@ -271,15 +271,15 @@ However, the components cannot be computed individually, nor hierarchically, but
 The computation is therefore quite complex and computationally intensive.
 
 
-## Accumulated Local Effect plots
+## Accumulated Local Effects
 
-ALE plots (Apley and Zhu 2020 [@apley2020visualizingeffects]) also provide a functional decomposition, meaning that adding all ALE plots from intercept, 1D ALE plots, 2D ALE plots, and so on yields the prediction function.
+ALE plots [@apley2020visualizingeffects] also provide a functional decomposition, meaning that adding all ALE plots from intercept, 1D ALE plots, 2D ALE plots, and so on yields the prediction function.
 ALE differs from the (generalized) functional ANOVA, as the components are not orthogonal but, as the authors call it, pseudo-orthogonal.
 To understand pseudo-orthogonality, we have to define the operator $H_S$, which takes a function $\hat{f}$ and maps it to its ALE plot for feature subset $S$.
 For example, the operator $H_{1,2}$ takes as input a machine learning model and produces the 2D ALE plot for features 1 and 2: $H_{1,2}(\hat{f}) = \hat{f}_{ALE,12}$.
 If we apply the same operator twice, we get the same ALE plot.
-After applying the operator $H_{1,2}$ to $f$ once, we get the 2D ALE plot $\hat{f}_{ALE,12}$.
-Then we apply the operator again, not to $f$ but to $\hat{f}_{ALE,12}$.
+After applying the operator $H_{1,2}$ to $\hat{f}$ once, we get the 2D ALE plot $\hat{f}_{ALE,12}$.
+Then we apply the operator again, not to $\hat{f}$ but to $\hat{f}_{ALE,12}$.
 This is possible because the 2D ALE component is itself a function.
 The result is again $\hat{f}_{ALE,12}$, meaning we can apply the same operator several times and always get the same ALE plot.
 This is the first part of pseudo-orthogonality.
@@ -311,7 +311,7 @@ Their proposal consists of two parts: a decomposition procedure and a set of tra
 The strategy to get from an ensemble of trees to the functional composition involves aggregation, purification, and attribution.
 First, each tree is decomposed into decision rules, with each leaf node becoming a decision rule.
 These rules are then sorted by the features they use.
-For example, all rules using only feature $X_1$ are collected and used to estimate the main effect $f_1$.
+For example, all rules using only feature $X_1$ are collected and used to estimate the main effect $\hat{f}_1$.
 The same is done for all other main effects and interactions.
 However, this decomposition wouldn't be unique since, for example, you could absorb the main effect of $X_1$ into the interaction term of $X_1$ and $X_2$.
 They "purify" the components to enforce zero means and orthogonality constraints (should sound familiar by now).

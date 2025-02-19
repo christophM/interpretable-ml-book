@@ -176,9 +176,8 @@ explain_text = function(text, pred_fun, prob=0.9, n_variations=500, K = 3, case=
 
 
 Local surrogate models are interpretable models that are used to explain individual predictions of black box machine learning models.
-Local interpretable model-agnostic explanations (LIME) [@ribeiro2016why] is a paper in which the authors propose a concrete implementation of local surrogate models.
+Local interpretable model-agnostic explanations (LIME), proposed by @ribeiro2016why is an approach of fitting surrogate models.
 Surrogate models are trained to approximate the predictions of the underlying black box model.
-Instead of training a global surrogate model, LIME focuses on training local surrogate models to explain individual predictions.
 
 The idea is quite intuitive.
 First, forget about the training data and imagine you only have the black box model where you can input data points and get the predictions of the model.
@@ -193,9 +192,9 @@ This kind of accuracy is also called local fidelity.
 
 Mathematically, local surrogate models with interpretability constraint can be expressed as follows:
 
-$$\text{explanation}(\mathbf{x}) = \arg\min_{g \in G} L(f,g,\pi_{\mathbf{x}}) + \Omega(g)$$
+$$\text{explanation}(\mathbf{x}) = \arg\min_{g \in G} L(\hat{f},g,\pi_{\mathbf{x}}) + \Omega(g)$$
 
-The explanation model for instance $\mathbf{x}$ is the model $g$ (e.g., linear regression model) that minimizes loss $L$ (e.g., mean squared error), which measures how close the explanation is to the prediction of the original model $f$ (e.g., an xgboost model), while the model complexity $\Omega(g)$ is kept low (e.g., prefer fewer features).
+The explanation model for instance $\mathbf{x}$ is the model $g$ (e.g., linear regression model) that minimizes loss $L$ (e.g., mean squared error), which measures how close the explanation is to the prediction of the original model $\hat{f}$ (e.g., an xgboost model), while the model complexity $\Omega(g)$ is kept low (e.g., prefer fewer features).
 $G$ is the family of possible explanations, for example, all possible linear regression models.
 The proximity measure $\pi_{\mathbf{x}}$ defines how large the neighborhood around instance $\mathbf{x}$ is that we consider for the explanation.
 In practice, LIME only optimizes the loss part.
@@ -235,7 +234,7 @@ But it increases the probability that the result for some of the sample points' 
 
 ```{r}
 #| label: fig-lime-fitting
-#| fig-cap: "LIME algorithm for tabular data. A) Prediction surface given features x1 and x2. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and sampled data (small dots). C) Assign weights based on distance to instance. D) Signs (+/-) show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(c=1) = 0.5)."
+#| fig-cap: "LIME algorithm for tabular data. A) Prediction surface given features $x_1$ and $x_2$. Predicted classes: 1 (dark) or 0 (light). B) Instance of interest (big dot) and sampled data (small dots). C) Assign weights based on distance to instance. D) Signs (+/-) show the classifications of the locally learned model from the weighted samples. The white line marks the decision boundary (P(c=1) = 0.5)."
 #| fig-asp: 1
 
 # Define range of set
@@ -329,6 +328,9 @@ x1_steps = unique(grid_df$x1)[seq(from=1, to=n_grid, length.out = 20)]
 x2_steps = unique(grid_df$x2)[seq(from=1, to=n_grid, length.out = 20)]
 grid_df_small = grid_df[grid_df$x1 %in% x1_steps & grid_df$x2 %in% x2_steps,]
 grid_df_small$explained_class = round(grid_df_small$explained)
+library(latex2exp)
+x1lab = xlab(TeX("$x_1$"))
+x2lab = ylab(TeX("$x_2$"))
 
 colors = c('#132B43', '#56B1F7')
 # Data with some noise
@@ -342,7 +344,7 @@ p_data = ggplot(lime_training_df) +
 p_boundaries = ggplot(grid_df) +
   geom_raster(aes(x=x1,y=x2,fill=predicted), alpha = 0.3, interpolate=TRUE) +
   my_theme(legend.position='none') +
-  ggtitle('A')
+  ggtitle('A') + x1lab + x2lab
 
 
 # Drawing some samples
@@ -368,7 +370,8 @@ p_boundaries_lime = ggplot(grid_df)  +
   geom_point(aes(x=x1, y=x2, color=explained), size = 2, data = grid_df_small[grid_df_small$explained_class==0,], shape=95) +
   geom_point(data = df_explain, aes(x=x1,y=x2), fill = 'yellow', shape = 21, size=4) +
   geom_line(aes(x=x1, y=x2), data =logistic_boundary_df, color = 'white') +
-  my_theme(legend.position='none') + ggtitle('D')
+  my_theme(legend.position='none') + ggtitle('D') +
+  x1lab + x2lab
 
 (p_boundaries | p_explain) / (p_weighted | p_boundaries_lime)
 ```
@@ -380,8 +383,8 @@ A smoothing kernel is a function that takes two data instances and returns a pro
 The kernel width determines how large the neighborhood is:
 A small kernel width means that an instance must be very close to influence the local model; a larger kernel width means that instances that are farther away also influence the model.
 If you look at [LIME's Python implementation (file lime/lime_tabular.py)](https://github.com/marcotcr/lime/tree/ce2db6f20f47c3330beb107bb17fd25840ca4606), you will see that it uses an exponential smoothing kernel (on the normalized data), and the kernel width is 0.75 times the square root of the number of columns of the training data.
-It looks like an innocent line of code, but it is like an elephant sitting in your living room next to the good porcelain you got from your grandparents.
-The big problem is that we do not have a good way to find the best kernel or width.
+It looks like an innocent line of code, but it's the elephant sitting in your living room next to the good porcelain you got from your grandparents.
+The big problem is that we don't have a good way to find the best kernel or width.
 And where does the 0.75 even come from?
 In certain scenarios, you can easily turn your explanation around by changing the kernel width, as shown in @fig-lime-fail:
 The resulting linear regression model depends on the kernel width.
@@ -438,7 +441,7 @@ We go back to the [penguins data](#bike-data), which is about classifying a peng
 We analyze the random forest trained to do that.
 The explanations are created with `r n_features_lime` features.
 The results of the sparse local linear models trained for two instances with different predicted classes are shown in @fig-lime-tabular-example-explain-plot-1.
-Higher body mass and longer bills are associated with lower P(female).
+Here, higher body mass and longer bills are associated with lower P(female).
 
 ```{r}
 #| label: fig-lime-tabular-example-explain-plot-1
@@ -481,31 +484,18 @@ The comments were collected via the YouTube API from five of the ten most viewed
 All 5 are music videos.
 One of them is "Gangnam Style" by Korean artist Psy.
 The other artists are Katy Perry, LMFAO, Eminem, and Shakira.
-
-Check out some of the comments in @tbl-show-dating-data-TubeSpam.
+Check out two comments in @tbl-show-data-TubeSpam, one spam (class=1), one legit (class=0).
 The comments were manually labeled as spam or legitimate.
 Spam was coded with a "1" and legitimate comments with a "0".
-
-```{r}
-#| label: tbl-show-dating-data-TubeSpam
-#| tbl-cap: Sample of comments from the YouTube Spam dataset.
-library(kableExtra)
-load("../data/ycomments.RData")
-tab = kableExtra::kbl(ycomments[1:10, c('CONTENT', 'CLASS')], booktabs = TRUE)
-tab %>% column_spec(1, width = "24em") %>% column_spec(2, width="3em")
-```
-
 You can also go to YouTube and take a look at the comment section.
 But please do not get caught in YouTube hell, and end up watching videos of monkeys stealing and drinking cocktails from tourists on the beach.
 The Google Spam detector has also probably changed a lot since 2015.
-
 [Watch the view-record-breaking video "Gangnam Style" here](https://www.youtube.com/watch?v=9bZkp7q19f0&feature=player_embedded).
 
 The black box model is a deep decision tree trained on the document word matrix.
 Each comment is one document (= one row), and each column is the number of occurrences of a given word.
 Short decision trees are easy to understand, but in this case, the tree is very deep.
 Also, in place of this tree, there could have been a recurrent neural network or a support vector machine trained on word embeddings (abstract vectors).
-Let's look at the two comments of this dataset and the corresponding classes (1 for spam, 0 for normal comment) in @tbl-show-data-TubeSpam.
 
 ```{r}
 #| label: tbl-show-data-TubeSpam
@@ -604,9 +594,6 @@ Local surrogate models benefit from the literature and experience of training an
 
 When using Lasso or short trees, the resulting **explanations are short (= selective) and possibly contrastive**.
 Therefore, they make [human-friendly explanations](#explanation).
-This is why I see LIME more in applications where the recipient of the explanation is a lay person or someone with very little time.
-It's not sufficient for complete attributions, so I do not see LIME in compliance scenarios where you might be legally required to fully explain a prediction.
-Also for debugging machine learning models, it is useful to have all the reasons instead of a few.
 
 LIME is one of the few methods that **works for tabular data, text, and images**.
 
@@ -624,7 +611,7 @@ Using interpretable features for LIME can be a big advantage over other methods,
 ## Limitations
 
 The **choice of neighborhood is an unsolved problem** when using LIME with tabular data.
-In my opinion, it is the biggest problem with LIME and the reason why I would recommend using LIME only with great care.
+In my opinion, it's the biggest problem with LIME and the reason why I would recommend using LIME only with great care.
 For each application, you have to try different kernel settings and see for yourself if the explanations make sense.
 Unfortunately, this is the best advice I can give to find good kernel widths.
 
@@ -650,5 +637,4 @@ But the method is still in the development phase and many problems need to be so
 
 The original Python implementation is in the [lime package](https://github.com/marcotcr/lime).
 Other Python implementations can be found in [PiML](https://selfexplainml.github.io/PiML-Toolbox/_build/html/index.html), and [eli5](https://eli5.readthedocs.io/en/latest/blackbox/lime.html).
-
 In R, you can use [iml](https://github.com/giuseppec/iml) or [DALEX](https://dalex.drwhy.ai/).

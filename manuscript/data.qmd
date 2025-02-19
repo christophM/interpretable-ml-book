@@ -92,25 +92,23 @@ This chapter presents the data and models that we will interpret in this book.
 
 ## Bike rentals (regression) {#bike-data}
 
-This dataset contains daily counts of rented bicycles from the bicycle rental company [Capital-Bikeshare](https://www.capitalbikeshare.com/) in Washington, D.C., along with weather and seasonal information.
+This dataset contains daily counts of rented bikes from the bike rental company [Capital-Bikeshare](https://www.capitalbikeshare.com/) in Washington, D.C., along with weather and seasonal information.
 The data was kindly made openly available by Capital-Bikeshare.
 @fanaeet2014event added weather data and seasonal information.
-The goal is to predict how many bikes will be rented depending on the weather and the day.
 The data can be downloaded from the [UCI Machine Learning Repository](http://archive.ics.uci.edu/ml/datasets/Bike+Sharing+Dataset).
+I did a bit of data processing and ended up with these columns:
 
-I didn't use all the features and did some feature engineering myself, so here is the list of features I used for training models:
+- Count of bikes, including both casual and registered users. The count is used as the target in the regression task (`cnt`).
+- The season. Either spring, summer, fall, or winter (`season`).
+- Indicator of whether the day was a holiday or not (`holiday`).
+- Indicator of whether the day was a workday or weekend (`workday`).
+- The weather situation on that day. One of: Good, Misty, Bad (`weather`).
+- Temperature in degrees Celsius (`temp`).
+- Relative humidity in percent (0 to 100) (`hum`).
+- Wind speed in km per hour (`windspeed`).
+- Count of rented bikes two days before (`cnt_2d_bfr`).
 
-- Count of bicycles, including both casual and registered users. The count is used as the target in the regression task.
-- The season. Either spring, summer, fall, or winter.
-- Indicator of whether the day was a holiday or not.
-- Indicator of whether the day was a workday or weekend.
-- The weather situation on that day. One of: Good, Misty, Bad.
-- Temperature in degrees Celsius.
-- Relative humidity in percent (0 to 100).
-- Wind speed in km per hour.
-- Count of rented bikes two days before.
-
-I removed one day where the humidity was measured as 0, and the first two days due to missing lag features (`cnt_2d_bfr`).
+I removed one day where the humidity was measured as 0, and the first two days due to missing count data two days before (`cnt_2d_bfr`).
 All in all, the processed data contains `r nrow(bike)` days.
 
 ### Predicting bike rentals
@@ -162,6 +160,14 @@ kable(results, row.names=FALSE)
 
 For many interpretation methods, it's important to understand how the features are correlated.
 Therefore, let's have a look at the Pearson correlation for the numerical features.
+@fig-bike-correlations shows that the only larger correlation is between count 2 days before, and the temperature.
+But what about the categorical features?
+And what about non-linear correlation?
+
+To understand the non-linear dependencies, we will do two things:
+
+- Visualize the raw pairwise dependence (e.g., scatter plot) 
+- Compute the normalized mutual information (NMI) between two features. 
 
 ```{r}
 #| label: fig-bike-correlations
@@ -169,17 +175,10 @@ Therefore, let's have a look at the Pearson correlation for the numerical featur
 custom_correlation_plot(bike %>% select(-cnt))
 ```
 
-@fig-bike-correlations shows the only larger correlation is between count 2 days before, and the temperature.
-But what about the categorical features?
-And what about non-linear correlation?
 
-To understand the dependencies also on a non-linear scale, we will do two things:
 
-- Visualize the raw pairwise dependence (e.g., scatter plot) 
-- Compute the normalized mutual information (NMI) between two features. 
-
-The normalized mutual information is between zero and one.
-An NMI of zero means that the features share no information, while one means all variation stems from their dependence.
+The normalized mutual information is a number between 0 and 1.
+An NMI of 0 means that the features share no information, while 1 means all variation stems from their dependence.
 The NMI can be biased upwards for features with a large number of categories/bins [@mahmoudi2024proof].
 That means the more bins/categories, the less you should trust a large NMI value.
 That's why we also don't rely on NMI alone, but visualize the raw data and analyze Pearson correlation.
@@ -189,7 +188,7 @@ That's why we also don't rely on NMI alone, but visualize the raw data and analy
 
 ## Normalized Mutual Information
 
-Mutual information between two random variables $X_j$ and $X_k$ is given by:
+Mutual information between two categorical random variables $X_j$ and $X_k$ is given by:
 
 $$
 MI(X_j, X_k) = \sum_{c, d} \mathbb{P}(c, d) \log \frac{\mathbb{P}(c, d)}{\mathbb{P}(c) \mathbb{P}(d)},
@@ -198,7 +197,7 @@ $$
 where $c \in X_j$ and $d \in X_k$.
 $\mathbb{P}(c) = \mathbb{P}(X_j = c)$ is the probability that feature $X_j$ takes on category $c$, and the same for $\mathbb{P}(d)$.
 $\mathbb{P}(c, d) = \mathbb{P}(X_j = c, X_k = d)$ is the joint probability that feature $X_j$ takes on category $c$ and $X_k$ category $d$.
-Normalized mutual information brings MI from $[0, \infty[$ to $[0,1]$:
+Normalized mutual information scales MI from $[0, \infty[$ to $[0,1]$:
 
 $$NMI(X_j, X_k) = \frac{2 \cdot MI(X_j, X_k)}{H(X_j) + H(X_k)}$$
 
@@ -209,7 +208,7 @@ H(X_j) = -\sum_{c \in C_j} \mathbb{P}(c) \log \mathbb{P}(c).
 $$
 
 Where $C_j$ is the set of all categories $X_j$ can take on.
-To use (normalized) mutual information with numerical features, we discretize the observed values of the feature $\mathbf{x}_j$ into bins.
+To use (normalized) mutual information with numerical features, we discretize the observed values $\mathbf{x}_j$ of the feature $X_j$ into equally-sized bins.
 The number of bins is determined using the Freedman-Diaconis rule [@freedman1981histogram]:
 
 $$\text{nbins}_j = \left\lceil \frac{\max(\mathbf{x}_j) - \min(\mathbf{x}_j)}{2 \cdot \frac{\text{IQR}(\mathbf{x}_j)}{n^{1/3}}} \right\rceil$$
@@ -232,13 +231,13 @@ The NMI analysis overall confirms the impression from the correlation analysis.
 In addition, we get insights about the categorical features:
 The season shares information with temperature and count 2 days before, which isn't surprising.
 The pair plots also confirm that correlation coefficients are good measures of dependence for this dataset, since the numerical features don't show extravagant dependence patterns, but mostly linear ones.
-For the next example, the dependence analysis holds a few more insights.
+For the next data example, the dependence analysis has more surprises.
 
 ## Palmer penguins (classification) {#penguins}
 
-For classification, we will use the Palmer penguin data.
-This cute dataset contains measurements from `r nrow(penguins)` of three penguin species from the Palmer Archipelago in Antarctica (visualized in @fig-penguins).
-The dataset was collected and published by Gorman et al. (2014) [@gorman2014ecological], and the Palmer Station in Antarctica, which is part of the Long Term Ecological Research Network.
+For classification, we will use the Palmer penguins data.
+This cute dataset contains measurements from `r nrow(penguins)` penguins from the Palmer Archipelago in Antarctica (visualized in @fig-penguins).
+The dataset was collected and published by @gorman2014ecological, and the Palmer Station in Antarctica, which is part of the Long Term Ecological Research Network.
 The paper studies differences in appearance between male and female, among other things.
 That's why we'll use male/female classification based on body measurements (as the dataset creators did in their paper).
 
@@ -247,12 +246,12 @@ That's why we'll use male/female classification based on body measurements (as t
 
 Each row represents a penguin and contains the following information:
 
-- Sex of the penguin (male/female), which is the classification target.
-- Species of penguin (Chinstrap/Gentoo/Adelie).
-- Body mass of the penguin, measured in grams.
-- Length of the bill (the beak), measured in millimeters (see also @fig-bill-measurements).
-- Depth of the bill, measured in millimeters.
-- Length of the flipper (the "tail"), measured in millimeters.
+- Sex of the penguin (male/female), which is the classification target (`sex`).
+- Species of penguin , which is one of Chinstrap, Gentoo, or Adelie (`species`).
+- Body mass of the penguin, measured in grams (`body_mass_g`).
+- Length of the bill (the beak), measured in millimeters (`bill_length_mm`). See also @fig-bill-measurements.
+- Depth of the bill, measured in millimeters (`bill_depth_mm`).
+- Length of the flipper (the "tail"), measured in millimeters (`flipper_length_mm`).
 
 ![Bill measurements. Artwork by \@allison_horst.](./images/culmen_depth.jpg){#fig-bill-measurements width=70%}
 
@@ -263,13 +262,13 @@ The dataset is loaded using the `palmerpenguins` R package [@horst2020allisonhor
 
 ### Classifying penguin sex (male / female)
 
-For the data examples, I trained the following models, using a simple split into training (2/3) and holdout test data (1/3).
+For the data examples, I trained the following models, using a simple split into training $\frac{2}{3}$ and holdout test data $\frac{1}{3}$.
 To assess the performance of the models, I measured log loss and accuracy on the test data.
 The results are shown in @tbl-performance-penguins.
 
 ```{r}
 #| label: tbl-performance-penguins
-#| tbl-cap: Comparison of model performance for penguin female vs. male classification.
+#| tbl-cap: Comparison of model performance for penguin sex classification (male/female).
 # Predictions for random forest 
 rf_probs = predict(pengu_rf, penguins_test, type = "prob")[,"female"]
 rf_preds = predict(pengu_rf, penguins_test)
@@ -335,6 +334,10 @@ But the correlation between body mass and bill depth is much lower.
 The reason is that linear correlation isn't capturing the dynamics, at least not when bundling all the penguins together.
 The reason why linear correlation doesn't work well here is Simpson's paradox.
 Mutual information captures this much better.
+
+A note on modeling all penguins together: Throughout the book, I'll treat the penguins as one dataset by default, using species as a feature. 
+Arguably, it might be better to always model and analyze the penguins by species.
+However, this is a very common tension in machine learning: Often, data instances belong to a cluster or entity -- think of forecasting sales for different stores or classifying lab samples from the same batches -- and we have to decide whether to use separate models or using the entity id as a feature.
 
 ::: {.callout-note}
 

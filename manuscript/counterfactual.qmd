@@ -14,12 +14,12 @@ The ability to think in counterfactuals makes us humans so smart compared to oth
 In interpretable machine learning, counterfactual explanations can be used to explain predictions of individual instances.[^causal-counterfactual]
 Displayed as a graph (@fig-ml-graph-cf), the relationship between the inputs and the prediction is very simple:
 The feature values cause the prediction.
+Even if in reality the relationship between the inputs and the outcome to be predicted might not be causal, we can see the inputs of a model as the cause of the prediction.
 
 ![The causal relationships between inputs of a machine learning model and the predictions, when the model is merely seen as a black box. The inputs cause the prediction (not necessarily reflecting the real causal relation of the data).](images/graph.jpg){#fig-ml-graph-cf width=80%}
 
-Even if in reality the relationship between the inputs and the outcome to be predicted might not be causal, we can see the inputs of a model as the cause of the prediction.
 
-Given this simple graph, it is easy to see how we can simulate counterfactuals for predictions of machine learning models:
+Given this simple graph, it's easy to see how we can simulate counterfactuals for predictions of machine learning models:
 We simply change the feature values of an instance before making the predictions and we analyze how the prediction changes.
 We're interested in scenarios in which the prediction changes in a relevant way, like a flip in predicted class (for example, credit application accepted or rejected), or in which the prediction reaches a certain threshold (for example, the probability for cancer reaches 10%).
 **A counterfactual explanation of a prediction describes the smallest change to the feature values that changes the prediction to a predefined output.**
@@ -50,7 +50,7 @@ Note that Anna worked with the rent prediction model and wasn't necessarily inte
 
 ::: {.callout-warning}
 
-Counterfactuals (the IML method) alone don't support any **causal** claims about the real world.
+By default, counterfactuals (the IML method) alone don't support **causal** claims about the real world.
 This would require a causal model.
 
 :::
@@ -95,7 +95,7 @@ Thus, besides providing a decision subject with different ways to get the desire
 
 The last requirement is that **a counterfactual instance should have feature values that are likely**.
 It would not make sense to generate a counterfactual explanation for the rent example where the size of an apartment is negative or the number of rooms is set to 200.
-It's even better when the counterfactual is likely according to the joint distribution of the data; for example, an apartment with 10 rooms and 20 m^2 should not be regarded as a counterfactual explanation.
+It's even better when the counterfactual is likely according to the joint distribution of the data; for example, an apartment with 10 rooms and 20 m^2^ should not be regarded as a counterfactual explanation.
 Ideally, if the number of square meters is increased, an increase in the number of rooms should also be proposed.
 
 ## Generating counterfactual explanations
@@ -213,11 +213,11 @@ Dividing the distance of a numeric feature $j$ by $\widehat{R}_j$, the observed 
 The Gower distance can handle both numerical and categorical features, but does not count how many features were changed.
 Therefore, we count the number of features in a third objective $o_3$ using the $L_0$ norm:
 
-$$o_3(\mathbf{x},\mathbf{x'})=||\mathbf{x}-\mathbf{x'}||_0=\sum_{j=1}^{p}\mathbb{I}_{x'_j\neq x_j}.$$
+$$o_3(\mathbf{x},\mathbf{x'})=||\mathbf{x}-\mathbf{x'}||_0=\sum_{j=1}^{p}I_{x'_j\neq x_j}.$$
 
 By minimizing $o_3$ we aim for our third criterion -- sparse feature changes.
 
-The fourth objective $o_4$ reflects that our counterfactuals should have likely feature values/combinations.
+The fourth objective $o_4$ reflects that our counterfactuals should have likely combinations of feature values.
 We can infer how "likely" a data point is using the training data or another dataset.
 We denote this dataset as $\mathbf{X}^{\text{obs}}$.
 As an approximation for the likelihood, $o_4$ measures the average Gower distance between $\mathbf{x'}$ and the nearest observed data point $x^{[1]}\in \mathbf{X}^{\text{obs}}$:
@@ -259,7 +259,6 @@ From this set, we can choose those with which we are most satisfied, or we can g
 
 The following example is based on the credit dataset example in Dandl et al. (2020).
 The German Credit Risk dataset can be found on the machine learning challenges platform [kaggle.com](https://www.kaggle.com/uciml/german-credit).
-
 The authors trained a support vector machine (with radial basis kernel) to predict the probability that a customer has a good credit risk.
 The corresponding dataset has 522 complete observations and nine features containing credit and customer information.
 
@@ -271,7 +270,7 @@ The goal is to find counterfactual explanations for a customer with feature valu
 
 : Feature values of a particular customer {#tbl-customer}
 
-The SVM predicts that the woman has a good credit risk with a probability of 24.2\%.
+The SVM predicts that the person has a good credit risk with a probability of 24.2\%.
 The counterfactuals should answer how the input features need to be changed to get a predicted probability larger than 50\%.
 @tbl-best-counterfactuals shows the ten best counterfactuals.
 The first five columns contain the proposed feature changes (only altered features are displayed), the next three columns show the objective values ($o_1$ equals 0 in all cases), and the last column displays the predicted probability.
@@ -305,7 +304,7 @@ We can also see that, although some counterfactuals suggest changes to four feat
 **The interpretation of counterfactual explanations is very clear**.
 If the feature values of an instance are changed according to the counterfactual, the prediction changes to the predefined prediction.
 There are no additional assumptions and no magic in the background.
-This also means it is not as dangerous as methods like [LIME](#lime), where it is unclear how far we can extrapolate the local model for the interpretation.
+This also means counterfactuals are not as dangerous as methods like [LIME](#lime), where it is unclear how far we can extrapolate the local model for the interpretation.
 
 The counterfactual method creates a new instance, but we can also summarize a counterfactual by reporting which feature values have changed.
 This gives us **two options for reporting our results**.
@@ -321,13 +320,17 @@ The method **works also with systems that do not use machine learning**.
 We can create counterfactuals for any system that receives inputs and returns outputs.
 The system that predicts apartment rents could also consist of handwritten rules, and counterfactual explanations would still work.
 
-**The counterfactual explanation method is relatively easy to implement**, since it is essentially a loss function (with a single or many objectives) that can be optimized with standard optimizer libraries.
+**The counterfactual explanation method is relatively easy to implement**, since it's essentially a loss function (with a single or many objectives) that can be optimized with standard optimizer libraries.
 Some additional details must be taken into account, such as limiting feature values to meaningful ranges (e.g., only positive apartment sizes).
+
+Counterfactuals are **useful for the goal of justification**, especially recourse, since they are truthful and simple.
+Compared to other interpretation methods, they are not just estimates of something, like Shapley values.
+But counterfactuals are just data newly created data instances for which we can report what the model predicts.
 
 ## Limitations
 
 **For each instance, you will usually find multiple counterfactual explanations (Rashomon effect).**
-This is inconvenient - most people prefer simple explanations over the complexity of the real world.
+This is inconvenient --  most people prefer simple explanations over the complexity of the real world.
 It's also a practical challenge.
 Let's say we generated 23 counterfactual explanations for one instance.
 Are we reporting them all?
@@ -335,6 +338,9 @@ Only the best?
 What if they are all relatively "good," but very different?
 These questions must be answered anew for each project.
 It can also be advantageous to have multiple counterfactual explanations because humans then can select the ones that correspond to their previous knowledge.
+
+Counterfactuals are **not so useful for model and data insights**, since insights from counterfactual are specific to one instance and one counterfactual prediction.
+This is a very limited insight, even when compared to other local methods.
 
 ## Software and alternatives {#example-software}
 
@@ -349,7 +355,7 @@ They translated necessary criteria for proper counterfactuals into logical formu
 DiCE implements both a model-agnostic and a gradient-based method.
 
 Another way to search counterfactuals is the Growing Spheres algorithm by @laugel2017inverse.
-They do not use the word counterfactual in their paper, but the method is quite similar.
+They don't use the word counterfactual in their paper, but the method is quite similar.
 They also define a loss function that favors counterfactuals with as few changes in the feature values as possible.
 Instead of directly optimizing the function, they suggest first drawing a sphere around the point of interest, sampling points within that sphere, and checking whether one of the sampled points yields the desired prediction.
 Then they contract or expand the sphere accordingly until a (sparse) counterfactual is found and finally returned.

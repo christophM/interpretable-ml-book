@@ -3,8 +3,7 @@
 {{< include _setup.qmd >}}
 
 Logistic regression models the probabilities for classification problems with two possible outcomes.
-It's an extension of the linear regression model for class outcomes.
-[^actually-probabilities]
+It's an extension of the linear regression model for class outcomes.[^actually-probabilities]
 
 
 ::: {.content-visible when-format="html:js"}
@@ -32,24 +31,23 @@ Why is that?
 In the case of two classes, you could label one of the classes with 0 and the other with 1 and use linear regression.
 Technically, it works, and most linear model programs will spit out weights for you.
 But there are a few problems with this approach:
-
-A linear model does not output probabilities, but it treats the classes as numbers (0 and 1) and fits the best hyperplane (for a single feature, it is a line) that minimizes the distances between the points and the hyperplane.
+A linear model does not output probabilities, but it treats the classes as numbers (0 and 1) and fits the best hyperplane (for a single feature, it's a line) that minimizes the distances between the points and the hyperplane.
 So it simply interpolates between the points, and you cannot interpret it as probabilities.
 
 A linear model also extrapolates and gives you values below zero and above one.
 This is a good sign that there might be a smarter approach to classification.
 
-Since the predicted outcome is not a probability, but a linear interpolation between points, there is no meaningful threshold at which you can distinguish one class from the other.
-A good illustration of this issue has been given on [Stackoverflow](https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression).
+Since the predicted outcome is not a probability, but a linear interpolation between points, there is no meaningful threshold at which you can distinguish one class from the other, as illustrated in @fig-linear-class-threshold.
+A good explanation of this issue has been given on [Stackoverflow](https://stats.stackexchange.com/questions/22381/why-not-approach-classification-through-regression).
 
-Linear models do not extend to classification problems with multiple classes, as illustrated in @fig-linear-class-threshold.
+Linear models don't extend to classification problems with multiple classes.
 You would have to start labeling the next class with 2, then 3, and so on.
 The classes might not have any meaningful order, but the linear model would force a weird structure on the relationship between the features and your class predictions.
 The higher the value of a feature with a positive weight, the more it contributes to the prediction of a class with a higher number, even if classes that happen to get a similar number are not closer than other classes.
 
 ```{r}
 #| label: fig-linear-class-threshold
-#| fig-cap: "Estimating a linear model to predict (simulated) tumor type based on tumor size. Points are slightly jittered to reduce over-plotting. Left: Using a cutoff at 0.5 would yield an acceptable classifier. Right) Adding just two more data points completely changes the regression estimates and makes a 0.5 cutoff meaningless."
+#| fig-cap: "Estimating a linear model to predict (simulated) tumor type based on tumor size. Points are slightly jittered to reduce over-plotting. Left: Using a cutoff at 0.5 would yield an acceptable classifier. Right) Adding just two more data points completely changes the regression estimates and makes a 0.5 cutoff meaningless. The model also produces predictions > 1"
 #| fig-asp: 0.5
 df = data.frame(x = c(1,2,3,8,9,10,11,9),
   y = c(0,0,0,1,1,1,1, 0),
@@ -79,7 +77,7 @@ A solution for classification is logistic regression.
 Instead of fitting a straight line or hyperplane, the logistic regression model uses the logistic function to squeeze the output of a linear equation between 0 and 1.
 The logistic function is defined as:
 
-$$\text{logistic}(\eta)=\frac{1}{1+\exp(-\eta)}$$
+$$\text{logistic}(\mathbf{z})=\frac{1}{1+\exp(-\mathbf{z})}$$
 
 The logistic function is visualized in @fig-logistic-function.
 
@@ -105,7 +103,7 @@ $$\hat{y}^{(i)}=\beta_{0}+\beta_{1}x^{(i)}_{1}+\ldots+\beta_{p}x^{(i)}_{p}$$
 For classification, we prefer probabilities between 0 and 1, so we wrap the right side of the equation into the logistic function.
 This forces the output to assume only values between 0 and 1.
 
-$$\mathbb{P}(Y^{(i)}=1)=\frac{1}{1 + \exp(-(\beta_{0} + \beta_{1} x^{(i)}_{1} + \ldots + \beta_{p} x^{(i)}_{p}))}$$
+$$\mathbb{P}(Y^{(i)}=1)= \text{logistic}(\mathbf{x}^{(i)T} \boldsymbol{\beta}) = \frac{1}{1 + \exp(-(\beta_{0} + \beta_{1} x^{(i)}_{1} + \ldots + \beta_{p} x^{(i)}_{p}))}$$
 
 Let's revisit the tumor size example again.
 But instead of the linear regression model, we use the logistic regression model and get a much better fitting curve, see @fig-logistic-class-threshold.
@@ -143,14 +141,13 @@ p1
 ```
 
 Classification works better with logistic regression, and we can use 0.5 as a threshold in both cases.
-The inclusion of additional points does not really affect the estimated curve.
+The inclusion of additional points doesn't really affect the estimated curve.
 
 ## Interpretation
 
-The interpretation of the weights in logistic regression differs from the interpretation of the weights in linear regression since the outcome in logistic regression is a probability between 0 and 1.
-The weights do not influence the probability linearly any longer.
-The weighted sum is transformed by the logistic function to a probability.
-Therefore, we need to reformulate the equation for the interpretation so that only the linear term is on the right side of the formula.
+The interpretation of the weights in logistic regression differs from the interpretation of the weights in linear regression since the outcome in logistic regression is a value between 0 and 1.
+The weights don't influence the probability linearly any longer.
+To interpret the weights, we need to reformulate the equation for the interpretation so that only the linear term is on the right side of the formula.
 
 $$\ln\left(\frac{\mathbb{P}(Y=1)}{1-\mathbb{P}(Y=1)}\right)=\ln\left(\frac{\mathbb{P}(Y=1)}{\mathbb{P}(Y=0)}\right) = \beta_{0} + \beta_{1} x_{1} + \ldots + \beta_{p} x_{p}$$
 
@@ -158,13 +155,13 @@ We call the term in the ln() function "odds" (probability of event divided by pr
 
 This formula shows that the logistic regression model is a linear model for the log odds.
 Great!
-That does not sound helpful!
+That doesn't sound helpful!
 
 ::: {.callout-warning}
 
 ## Logistic regression is multiplicative
 
-In fact, logistic regression is not at all linear on the level of *probabilities*, but it's a multiplicative model.
+On the level of probabilities, logistic is not linear in the features, but actually a multiplicative model.
 
 :::
 
@@ -187,7 +184,7 @@ And we remove many terms:
 
 $$\frac{\text{odds}_{x_j+1}}{\text{odds}_{x_j}}=\exp\left(\beta_{j}(x_{j}+1)-\beta_{j}x_{j}\right)=\exp\left(\beta_j\right)$$
 
-In the end, we have something as simple as $\exp$ of a feature weight.
+In the end, we have something as simple as $\exp()$ of a feature weight.
 A change in a feature by one unit changes the odds ratio (multiplicative) by a factor of $\exp(\beta_j)$.
 We could also interpret it this way:
 A change in $x^{(i)}_j$ by one unit increases the log odds ratio by the value of the corresponding weight.
@@ -227,7 +224,7 @@ If you want to interpret the outcome on the level of probabilities, then you hav
 ## Example
 
 We use logistic regression to predict [whether a penguin is female](#penguins) for Chinstrap penguins based on body measurements.
-The feature "chonk_level" is a discretization of the feature "body mass": Light penguins (0% to 25% quantile) are categorized as "Smol_Penguin", most penguins are "Regular_Penguin", and those with the highest body mass (75% to 100%) are categorized as "Absolute_Unit".
+The feature `chonkiness` is a discretization of the feature `body_mass_g`: Light penguins (0% to 25% quantile) are categorized as "Smol_Penguin", most penguins are "Regular_Penguin", and those with the highest body mass (75% to 100%) are categorized as "Absolute_Unit".
 Normally, I don't recommend discretizing continuous features because you lose information.
 In this case, I used binarization to illustrate the interpretation of a categorical feature with logistic regression, and I also love the word "chonky" and wanted to use it in a textbook.
 
@@ -277,7 +274,7 @@ Again, given all other features remain the same.
 
 The intercept is a very large value.
 This is because it is to be interpreted as odds of being female when all numerical features are set to zero and all categorical features are set to the reference level.
-This would be a non-chonky penguin with flipper length, bill length, and depth all at zero -- not a meaningful data point.
+This would be a non-chonky penguin with flipper length, bill length, and depth all at zero -- not a realistic penguin.
 You could standardize the features, then the intercept would be more meaningful, but you can also just ignore the intercept.
 
 ## Strengths

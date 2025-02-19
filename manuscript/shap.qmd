@@ -3,7 +3,7 @@
 {{< include _setup.qmd >}}
 
 SHAP (SHapley Additive exPlanations) by @lundberg2017unified is a method to explain individual predictions.
-SHAP is based on the game-theoretically optimal [Shapley values](#shapley).
+SHAP is based on the game-theoretically optimal Shapley values.
 I recommend reading the chapter on [Shapley values](#shapley) first.
 
 
@@ -11,7 +11,7 @@ To understand why SHAP is a thing and not just an extension of the [Shapley valu
 In 1953, Lloyd Shapley introduced the concept of Shapley values for game theory.
 Shapley values for explaining machine learning predictions were suggested for the first time by @strumbelj2011general and @strumbelj2014explaining.
 However, they didn't become so popular.
-A few years later, @lundberg2017unified proposed SHAP, which was basically a new way to estimate Shapley values for interpreting machine learning predictions, along with a theory connecting Shapley values with [LIME](#lime), and a bit of additional theory on Shapley values.
+A few years later, @lundberg2017unified proposed SHAP, which was basically a new way to estimate Shapley values for interpreting machine learning predictions, along with a theory connecting Shapley values with [LIME](#lime) and other post-hoc attribution methods, and a bit of additional theory on Shapley values.
 
 You might say that SHAP is just a rebranding of Shapley values (which is true), but that would miss the fact that SHAP also marks a change in popularity and usage of Shapley values, and introduced new ways of estimating Shapley values and aggregating them in new ways.
 Also, SHAP brought Shapley values to text and image models.
@@ -30,7 +30,7 @@ But first, a bit of theory.
 ## SHAP theory 
 
 The goal of SHAP is to explain the prediction of an instance $\mathbf{x}$ by computing the contribution of each feature to the prediction.
-SHAP computes Shapley values from coalitional game theory, the same as we discussed in @sec-shapley.
+SHAP computes Shapley values from coalitional game theory, the same as we discussed in @shapley.
 The feature values of a data instance act as players in a coalition.
 Shapley values tell us how to fairly distribute the "payout" (= the prediction) among the features.
 A player can be an individual feature value, e.g., for tabular data.
@@ -112,8 +112,8 @@ This section is about three ways to estimate Shapley values for explaining predi
 <!-- The general Idea of linear model -->
 The situation with KernelSHAP is a bit confusing: It has been the entire motivation for SHAP, linked it with [LIME](@sec-lime) and other attribution methods, and was introduced in the original paper @lundberg2017unified.
 Also, many blog posts and so on about SHAP talk about KernelSHAP.
-But KernelSHAP is extremely slow compared to TreeSHAP and the Permutation Method, and that's why the `shap` Python package no longer uses it.
-Even if deprecated, KernelSHAP helps to understand Shapley values and shows how Shapley values and [LIME](#lime) are connected.
+But KernelSHAP is slow compared to TreeSHAP and the Permutation Method, and that's why the `shap` Python package no longer uses it.
+Even if no longer the default, KernelSHAP helps to understand Shapley values and shows how Shapley values and [LIME](#lime) are connected and some implementation still use it.
 
 The KernelSHAP estimation has five steps:
 
@@ -149,7 +149,7 @@ Results can become unreliable.
 Would we sample from the conditional distribution, the value function would change, and therefore the game to which Shapley values are the solution.
 As a result, the Shapley values have a different interpretation: For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
 For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom.
-This conditional sampling version of SHAP exists and was suggested by [@aas2021explaining].
+This conditional sampling version of SHAP exists and was suggested by @aas2021explaining.
 
 ::: {.callout-warning}
 
@@ -177,7 +177,7 @@ We learn most about individual features if we can study their effects in isolati
 If a coalition consists of a single feature, we can learn about this feature's isolated main effect on the prediction.
 If a coalition consists of all but one feature, we can learn about this feature's total effect (main effect plus feature interactions).
 If a coalition consists of half the features, we learn little about an individual feature's contribution, as there are many possible coalitions with half of the features.
-To achieve Shapley compliant weighting, @lundberg2017unified propose the SHAP kernel:
+To achieve Shapley compliant weighting, @lundberg2017unified proposed the SHAP kernel:
 
 $$\pi_{\mathbf{x}}(\mathbf{z}') = \frac{(M-1)}{\binom{M}{|\mathbf{z}'|} |\mathbf{z}'| (M - |\mathbf{z}'|)}$$
 
@@ -242,13 +242,11 @@ The mean of the remaining terminal nodes, weighted by the number of instances pe
 The problem is that we have to apply this procedure for each possible subset S of the feature values.
 -->
 
-Interventional TreeSHAP calculates the usual SHAP values but takes advantage of the tree structure for the computation.
-The following description is for estimating Shapley values for a single tree.
-Anyways, to estimate the Shapley values, the algorithm recursively goes through the tree.
-For a data point $\mathbf{x}$ to explain and, for simplicity, the background dataset contains just one data point $\mathbf{z}$:
+Interventional TreeSHAP calculates the usual SHAP values.
+The following description is for estimating Shapley values for a single tree, for a data point $\mathbf{x}$ to explain and, for simplicity, the background dataset contains just one data point $\mathbf{z}$:
 
 The Shapley value as we know is computed by repeatedly forming coalitions of feature values, which includes present players (feature values from $\mathbf{x}$) and absent players (feature values from $\mathbf{z}$).
-However, for many of these coalitions, adding a feature from $\mathbf{x}$ wouldn't change the prediction, since the tree only has a limited amount of distinct predictions due to the decision structure.
+However, for many of these coalitions, adding a feature from $\mathbf{x}$ wouldn't change the prediction, since a decision tree only has a limited amount of distinct predictions due to the decision structure.
 For example, a binary tree of depth 5 has a maximum of 32 possible predictions.
 So instead of iterating through all coalitions, the Interventional TreeSHAP estimator explores the tree paths to only work with the coalitions that would actually change the predictions.
 The tricky part is to correctly weight and combine these marginal contributions, which makes the interventional TreeSHAP algorithm more difficult to understand.
@@ -273,17 +271,17 @@ $$(x_{\text{cat}}, x_{\text{area}}, x_{\text{park}}, x_{\text{floor}})$$
 
 Based on this permutation, we can compute marginal contributions, by starting to build coalitions from left to right:
 
-- Adding $x_{\text{cat}}$ to $\emptyset$
-- Adding $x_{\text{area}}$ to $\{x_{\text{cat}}\}$
-- Adding $x_{\text{park}}$ to $\{x_{\text{cat}}, x_{\text{area}}\}$
-- Adding $x_{\text{floor}}$ to $\{x_{\text{cat}}, x_{\text{area}}, x_{\text{park}}\}$
+- Add $x_{\text{cat}}$ to $\emptyset$
+- Add $x_{\text{area}}$ to $\{x_{\text{cat}}\}$
+- Add $x_{\text{park}}$ to $\{x_{\text{cat}}, x_{\text{area}}\}$
+- Add $x_{\text{floor}}$ to $\{x_{\text{cat}}, x_{\text{area}}, x_{\text{park}}\}$
 
 And the same we can do backwards:
 
-- Adding $x_{\text{floor}}$ to $\emptyset$
-- Adding $x_{\text{park}}$ to $\{x_{\text{floor}}\}$
-- Adding $x_{\text{area}}$ to $\{x_{\text{park}}, x_{\text{floor}}\}$
-- Adding $x_{\text{cat}}$ to $\{x_{\text{area}}, x_{\text{park}}, x_{\text{floor}}\}$
+- Add $x_{\text{floor}}$ to $\emptyset$
+- Add $x_{\text{park}}$ to $\{x_{\text{floor}}\}$
+- Add $x_{\text{area}}$ to $\{x_{\text{park}}, x_{\text{floor}}\}$
+- Add $x_{\text{cat}}$ to $\{x_{\text{area}}, x_{\text{park}}, x_{\text{floor}}\}$
 
 The permutation changes one feature at a time.
 This reduces the number of model calls since the second term of a marginal contribution (a model prediction) is also needed to compute the next marginal contribution.
@@ -310,7 +308,7 @@ For a rough idea of how many permutations you might need: the `shap` package def
 
 ## Example
 
-I trained a random forest classifier with 100 trees to predict the [penguin species](#penguins).
+I trained a random forest classifier with 100 trees to predict the [penguin sex](#penguins).
 We'll use SHAP to explain individual predictions.
 We can use the fast Interventional TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees.
 But instead of relying on the conditional distribution, this example uses the marginal distribution.
@@ -392,7 +390,7 @@ $$I_j=\frac{1}{n}\sum_{i=1}^n |\phi_j^{(i)}|$$
 
 Next, we sort the features by decreasing importance and plot them.
 @fig-shap-importance shows the SHAP feature importance for the random forest trained before for classifying penguins.
-The bill length was the most important feature, changing the predicted probability for Adelie 33 percentage points (0.33 on the x-axis).
+The body mass was the most important feature, changing the predicted probability for Adelie 25 percentage points (0.25 on the x-axis).
 
 ![SHAP feature importance measured as the mean absolute Shapley values.](./images/shap-importance.jpg){#fig-shap-importance}
 
@@ -414,7 +412,7 @@ The color represents the value of the feature from low to high.
 Overlapping points are jittered in the y-axis direction, so we get a sense of the distribution of the Shapley values per feature.
 The features are ordered according to their importance.
 In the summary plot, @fig-shap-summary-plot, we see first indications of the relationship between the value of a feature and the impact on the prediction.
-A short bill length contributes positively to P(Adelie). The summary plot also shows that bill length has the widest range of effects for the different penguins.
+A higher body mass contributes negatively to P(female). The summary plot also shows that body mass has the widest range of effects for the different penguins.
 
 ![SHAP summary plot. ](images/shap-importance-extended.jpg){#fig-shap-summary-plot}
 
@@ -434,7 +432,7 @@ The heavier the penguin, the less likely it's female.
 
 ![SHAP dependence plot for body mass. The x-axis shows the feature, the y-axis the SHAP values. Each dot represents a data point.](images/shap-dependence.jpg){#fig-shap-dependence}
 
-SHAP dependence plots are an alternative to [partial dependence plots](#pdp) and [accumulated local effects](#ale).
+SHAP dependence plots are an alternative to global feature effect methods like the [partial dependence plots](#pdp) and [accumulated local effects](#ale).
 While PDP and ALE plots show average effects, SHAP dependence also shows the variance on the y-axis.
 Especially in the case of interactions, the SHAP dependence plot will be much more dispersed on the y-axis.
 The dependence plot can be improved by highlighting these feature interactions.
@@ -456,7 +454,7 @@ When we compute SHAP interaction values for all features, we get one matrix per 
 
 How can we use the interaction index?
 For example, to automatically color the SHAP feature dependence plot with the strongest interaction, as in @fig-shap-interaction.
-Here, body mass interacts with bill length.
+Here, body mass interacts with bill depth.
 
 ![SHAP feature dependence plot with interaction visualization. Here we see the dependence plot of bill length in interaction with the body mass. Especially for longer bills, the contribution of the bill length to P(Adelie) differs based on body mass.](images/shap-dependence-interaction.jpg){#fig-shap-interaction}
 
@@ -521,19 +519,18 @@ Also, all global SHAP methods, such as SHAP feature importance, require computin
 Most other permutation-based interpretation methods have this problem.
 By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution.
 However, if features are dependent, e.g., correlated, this leads to putting too much weight on unlikely data points.
-TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.
 
-**TreeSHAP can produce unintuitive feature attributions**.
+**Path-dependent TreeSHAP can produce unintuitive feature attributions**.
 While TreeSHAP solves the problem of extrapolating to unlikely data points, it does so by changing the value function and therefore slightly changes the game.
 TreeSHAP changes the value function by relying on the conditional expected prediction.
 With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.
 
 The disadvantages of Shapley values also apply to SHAP:
-Shapley values **can be misinterpreted**, and access to data is needed to compute them for new data (except for TreeSHAP).
+Shapley values **can be misinterpreted**.
 
 It's **possible to create intentionally misleading interpretations** with SHAP, which can hide biases [@slack2020fooling].
 If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations).
-For the receivers of a SHAP explanation, it is a disadvantage: they cannot be sure about the truthfulness of the explanation.
+For the receivers of a SHAP explanation, it's a disadvantage: they cannot be sure about the truthfulness of the explanation.
 
 
 
@@ -541,7 +538,7 @@ For the receivers of a SHAP explanation, it is a disadvantage: they cannot be su
 
 Lundberg implemented SHAP in the [shap](https://github.com/slundberg/shap) Python package, which is now maintained by a much bigger team.
 
-This implementation works for tree-based models in the [scikit-learn](https://scikit-learn.org/stable/) machine learning library for Python.
+This implementation works  models in the [scikit-learn](https://scikit-learn.org/stable/) machine learning library for Python.
 The shap package was also used for the examples in this chapter.
 SHAP is integrated into the tree boosting frameworks [xgboost](https://github.com/dmlc/xgboost/tree/master/python-package) and [LightGBM](https://github.com/microsoft/LightGBM), and you can find it in [PiML](https://selfexplainml.github.io/PiML-Toolbox/_build/html/index.html), a more general interpretability library.
 In R, there are the [shapper](https://modeloriented.github.io/shapper/) and [fastshap](https://github.com/bgreenwell/fastshap) packages.

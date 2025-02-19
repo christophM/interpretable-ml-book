@@ -50,13 +50,13 @@ To train and retrain the model use the training data, and for measuring the perf
 
 We predict bike rentals based on weather and calendar information using a random forest trained on $\frac{2}{3}$ of the data.
 @fig-lofo-bike shows that temperature and previous number of bike rentals are the most important features according to LOFO.
-Interestingly, the holiday feature has a negative importance, which has implications for feature selection.
+The holiday feature has a negative importance, which has implications for feature selection:
 Because of how LOFO works algorithmically, we now know that removing the holiday feature increases the model's performance.
 
 
 ```{r}
 #| label: fig-lofo-bike
-#| fig-cap: "LOFO feature importances for the bike rental data."
+#| fig-cap: "LOFO feature importances for the bike rental data, where temperature is duplicated, introducing a perfectly correlated feature (`temp_copy`)."
 # Split the data into training and testing sets
 test_prediction <- predict(bike_rf, newdata = bike_test)
 test_mae <- mean(abs(bike_test$cnt - test_prediction))
@@ -143,7 +143,7 @@ Conclusions:
 - When you use LOFO Importance as information for feature selection, beware of the interpretation: LOFO only indicates how the model performance reacts to *individually* removing features. As @fig-lofo-bike-correlated showed, LOFO doesn't give us the information on how the performance changes when removing 2 or more features at once.
 
 With that knowledge, let's try LOFO for a random forest predicting penguin sex from body measurements.
-For this, I've trained a random forest on 2/3 of the data, leaving 1/3 of the data for error estimation.
+For this, I've trained a random forest on $\frac{2}{3}$ of the data, leaving $\frac{1}{3}$ of the data for error estimation.
 @fig-lofo-penguins shows that the bill depth was the most important feature according to LOFO.
 
 ```{r}
@@ -237,7 +237,6 @@ Running hyperparameter optimization for each of the $p$ models is costly, but ma
 **Highly correlated features get low LOFO importance.** This is to be expected simply by how LOFO works, but it's a pitfall and easily forgotten when looking at the importance plots.
 It also means that studying the correlations of your data is a must before you can interpret LOFO importances.
 You can also group highly correlated features and only remove them together so your interpretation becomes more marginal than conditional.
-A "fix" to this would be to group highly correlated features and only compute a shared importance for them.
 
 ## Software and alternatives
 
@@ -250,7 +249,7 @@ This has the advantage of comparing two models with the same number of features,
 
 The feature selection method "backward sequential feature selection" is basically LOFO + feature removal applied sequentially.
 
-[^loco]: The first formal description of LOFO I'm aware of is by @lei2018distributionfree. They call it Leave One Covariate Out (LOCO), and the paper is mostly about distribution-free testing. However, due to the approach's simplicity and use in feature selection, it doesn't make sense to attribute it to a single publication.
+[^loco]: The first formal description of LOFO I'm aware of is by @lei2018distributionfree. They call it Leave One Covariate Out (LOCO), and the paper is mostly about distribution-free testing. 
 
 [^learner-ability]: We need to assume here that the learner is able to compensate for the removal of a feature by relying more on the other features. But I don't know of any machine learning algorithm that isn't capable of that.
 

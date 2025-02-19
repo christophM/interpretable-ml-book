@@ -2,12 +2,12 @@
 
 <!-- short summary -->
 Pixel attribution methods highlight the pixels that were relevant for a certain image classification by a neural network.
-@fig-vanilla is an example of an explanation:
+@fig-vanilla is an example of an explanation.
 
 ![A saliency map in which pixels are colored by their contribution to the classification.](./images/vanilla.jpg){#fig-vanilla}
 
 <!-- Other names -->
-You'll see later in this chapter what is going on in this particular image.
+You'll see later in this chapter what's going on in this particular image.
 Pixel attribution methods can be found under various names: sensitivity map, saliency map, pixel attribution map, gradient-based attribution methods, feature relevance, feature attribution, and feature contribution.
 
 <!-- General idea and distinction -->
@@ -17,9 +17,9 @@ The features can be input pixels, tabular data, or words.
 [SHAP](#shap), [Shapley values](#shapley), and [LIME](#lime) are examples of general feature attribution methods.
 
 We consider neural networks that output as prediction a vector of length $C$, which includes regression where $C=1$.
-The output of the neural network for image I is called $S(I)=[S_1(I),\ldots,S_C(I)]$.
-All these methods take as input $x\in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) with p features and output as explanation a relevance score for each of the p input features: $R^c=[R_1^c,\ldots,R_p^c]$.
-The c indicates the relevance for the c-th output $S_C(I)$.
+The output of the neural network for image I is called $S(\mathbf{x})=[S_1(\mathbf{x}),\ldots,S_C(\mathbf{x})]$.
+All these methods take as input $\mathbf{x} \in\mathbb{R}^p$ (can be image pixels, tabular data, words, ...) with p features and output as explanation a relevance score for each of the p input features: $\mathbf{R}^c=[R_1^c,\ldots,R_p^c]$.
+The c indicates the relevance for the c-th output $S_C(\mathbf{x})$.
 
 <!-- Distinction -->
 There's a confusing amount of pixel attribution approaches.
@@ -63,7 +63,7 @@ It would certainly assert dominance among the other project members.
 At this point, I would normally give an intuitive explanation about how these methods work, but I think it's best if we just start with the Vanilla Gradient method, because it shows very nicely the general recipe that many other methods follow.
 
 
-## Vanilla Gradient (Saliency Maps)
+## Vanilla Gradient
 
 The idea of Vanilla Gradient, introduced by @simonyan2014deep as one of the first pixel attribution approaches, is quite simple if you already know backpropagation.
 (They called their approach "Image-Specific Class Saliency," but I like Vanilla Gradient better.)
@@ -94,9 +94,9 @@ Using my incredible ASCII art skill, the ReLU function looks like this: _/ and i
 This means that when the activation of a neuron is zero, we do not know which value to backpropagate.
 In the case of Vanilla Gradient, the ambiguity is resolved as follows:
 
-$$\frac{\delta f}{\delta \mathbf{x}_l} = \frac{\delta f}{\delta \mathbf{x}_{l+1}} \cdot \mathbf{I}(\mathbf{x}_l > 0)$$
+$$\frac{\delta f}{\delta \mathbf{x}_l} = \frac{\delta f}{\delta \mathbf{x}_{l+1}} \cdot I(\mathbf{x}_l > 0)$$
 
-Here, $\mathbf{I}$ is the element-wise indicator function, which is zero where the activation at the lower layer was negative, and one where it's positive or zero.
+Here, $I$ is the element-wise indicator function, which is zero where the activation at the lower layer was negative, and one where it's positive or zero.
 Vanilla Gradient takes the gradient we have backpropagated so far up to layer $l+1$, and then simply sets the gradients to zero where the activation at the layer below is negative.
 
 Let's look at an example where we have layers $\mathbf{x}_l$ and $\mathbf{x}_{l+1} = \text{ReLU}(\mathbf{x}_{l})$.
@@ -145,9 +145,9 @@ If you take a look into the paper, it looks very different from Vanilla Gradient
 Vanilla Gradient can be seen as a generalization of DeconvNet.
 DeconvNet makes a different choice for backpropagating the gradient through ReLU:
 
-$$R_n = R_{n+1} \mathbb{I}(R_{n+1} > 0),$$
+$$R_n = R_{n+1} I(R_{n+1} > 0),$$
 
-where $R_n$ and $R_{n+1}$ are the layer reconstructions, and $\mathbb{I}$ is the indicator function.
+where $R_n$ and $R_{n+1}$ are the layer reconstructions, and $I$ is the indicator function.
 When backpassing from layer $n$ to layer $n-1$, DeconvNet "remembers" which of the activations in layer $n$ were set to zero in the forward pass and sets them to zero in layer $n-1$.
 Activations with a negative value in layer $n$ are set to zero in layer $n-1$.
 The gradient $\mathbf{X}_n$ for the example from earlier becomes:
@@ -196,16 +196,16 @@ We then scale the Grad-CAM map to the interval $[0,1]$ for visualization purpose
 Let's look at the recipe for Grad-CAM.
 Our goal is to find the localization map, which is defined as:
 
-$$L^c_{\text{Grad-CAM}} \in \mathbb{R}^{u\times v} = \underbrace{\text{ReLU}}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
+$$L^c_{\text{Grad-CAM}} \in \mathbb{R}^{U \times V} = \underbrace{\text{ReLU}}_{\text{Pick positive values}}\left(\sum_{k} \alpha_k^c A^k\right)$$
 
-Here, $u$ is the width, $v$ the height of the explanation, and $c$ the class of interest.
+Here, $U$ is the width, $V$ the height of the explanation, and $c$ the class of interest.
 
 1. Forward-propagate the input image through the convolutional neural network.
 1. Obtain the raw score for the class of interest, meaning the activation of the neuron before the softmax layer.
 1. Set all other class activations to zero.
 1. Back-propagate the gradient of the class of interest to the last convolutional layer before the fully connected layers: $\frac{\delta y^c}{\delta A^k}$.
-1. Weight each feature map "pixel" by the gradient for the class. Indices $i$ and $j$ refer to the width and height dimensions:
-   $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{i}\sum_{j}}^{\text{global average pooling}} \underbrace{\frac{\delta y^c}{\delta A_{ij}^k}}_{\text{gradients via backprop}}$$
+1. Weight each feature map "pixel" by the gradient for the class. Indices $u$ and $v$ refer to the width and height dimensions:
+   $$\alpha_k^c = \overbrace{\frac{1}{Z}\sum_{u}\sum_{v}}^{\text{global average pooling}} \underbrace{\frac{\delta y^c}{\delta A_{uv}^k}}_{\text{gradients via backprop}}$$
 This means that the gradients are globally pooled.
 1. Calculate an average of the feature maps, weighted per pixel by the gradient.
 1. Apply ReLU to the averaged feature map.
@@ -265,7 +265,7 @@ The image on the left with the honorable dog guarding the Interpretable Machine 
 The image in the middle shows a bowl of yummy ramen soup and is correctly classified as "Soup Bowl" with a probability of 50%.
 The third image shows an octopus on the ocean floor, which is incorrectly classified as "Eel" with a high probability of 70%.
 
-Figure @fig-smoothgrad shows the pixel attributions that aim to explain the classification.
+@fig-smoothgrad shows the pixel attributions that aim to explain the classification.
 
 ![Pixel attributions or saliency maps for the Vanilla Gradient method, SmoothGrad and Grad-CAM.](./images/smoothgrad.jpg){#fig-smoothgrad}
 

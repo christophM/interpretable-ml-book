@@ -9,8 +9,6 @@ The values for a line (and one instance) can be computed by keeping all other fe
 The result is a set of points for an instance with the feature value from the grid and the respective predictions.
 In other words, ICE plots are all the [ceteris paribus curves](#ceteris-paribus) for a dataset in one plot.
 
-A more formal definition: In ICE plots, for each instance in $\{(x_{S}^{(i)},\mathbf{x}_{C}^{(i)})\}_{i=1}^{n}$, the curve $\hat{f}_{S}^{(i)}$ is plotted against $x^{(i)}_{S}$, while $x^{(i)}_{C}$ remains fixed.
-
 ## Examples
 
 @fig-ice-bike shows ICE plots for the [bike rental prediction](#bike-data).
@@ -20,13 +18,13 @@ But we can also explore possible interactions by modifying the ICE plot.
 
 ```{r}
 #| label: fig-ice-bike
-#| fig-cap: "ICE plots of predicted bicycle rentals by temperature, humidity, and windspeed."
+#| fig-cap: "ICE plots of predicted bike rentals by temperature, humidity, and windspeed."
 #| fig-asp: 0.4
 pred.bike = Predictor$new(bike_rf, bike_test)
 
 p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() +
   scale_x_continuous("Temperature") +
-  scale_y_continuous("Predicted bicycle rentals")
+  scale_y_continuous("Predicted bike rentals")
 
 p2 = FeatureEffect$new(pred.bike, "hum", method = "ice")$plot() +
   scale_x_continuous("Humidity") +
@@ -56,11 +54,10 @@ By coloring the lines based on another feature's value, you can study interactio
 @fig-ice-bike-colored shows again the ICE plot for humidity, with the difference that the lines are now colored by the season.
 This shows a couple of things:
 First -- and that's not surprising -- different seasons have different "intercepts".
-Meaning that, for example, winter days have an in general lower prediction and summer the highest ones, and that's independent of the humidity.
+Meaning that, for example, winter days have a lower prediction and summer the highest ones, independent of the humidity.
 But @fig-ice-bike-colored also shows that the effect of the humidity differs for the seasons:
 In winter, an increase in humidity only slightly reduces the predicted number of bike rentals.
-And the effect is rather linear.
-For summer, the predicted bike rentals stay more or less flat between 20% and 60% relative humidity and above that drop by quite a chunk.
+For summer, the predicted bike rentals stay more or less flat between 20% and 60% relative humidity and above 60% they drop by quite a bit.
 Humidity effects for spring and fall seem to be a mix of the "winter flatness" and the "summer jump".
 However, as indicated by the boxplots in @fig-ice-bike-colored, we shouldn't over-interpret very low humidity effects for summer and fall.
 
@@ -73,8 +70,8 @@ bike2$.id = 1:nrow(bike_test)
 
 dat = merge(bike2[c(".id", "season")], dat, by = ".id")
 iceplot = ggplot(dat) +
-  geom_line(aes(group=.id, x=hum, y=.value, color=season), alpha=0.5) +
-  scale_y_continuous("Predicted bicycle rentals", limits=c(0, NA)) +
+  geom_line(aes(group=.id, x=hum, y=.value, color=season), alpha=0.3) +
+  scale_y_continuous("Predicted bike rentals", limits=c(0, NA)) +
   scale_color_viridis(discrete=TRUE) +
   scale_x_continuous("Humidity")
 
@@ -104,7 +101,7 @@ Let's go back to the [penguin classification task](#penguins) and see how the pr
 We'll analyze a random forest that predicts the probability of a penguin being female given body measurements.
 @fig-ice-penguins is a rather ugly ICE plot.
 But sometimes that's the reality.
-The reason is that the model is rather sure for most penguins and quickly changes between 0 and 1.
+The reason is that the model is rather sure for most penguins and jumps between 0 and 1.
 
 ```{r}
 #| label: fig-ice-penguins
@@ -130,17 +127,18 @@ If that doesn't help, you may be better off with a [partial dependence plot](#pd
 ## Centered ICE plot
 
 There's a problem with ICE plots:
-Sometimes it can be hard to tell whether the ICE curves differ between individuals because they start at different predictions.
+Sometimes it can be hard to tell whether the ICE curves differ between data points because they start at different predictions.
 A simple solution is to center the curves at a certain point in the feature and display only the difference in the prediction to this point.
 The resulting plot is called centered ICE plot (c-ICE).
 Anchoring the curves at the lower end of the feature is a good choice.
-The new curves are defined as:
+Each curve is defined as:
 
-$$\hat{f}_{cent}^{(i)}=\hat{f}^{(i)}-\mathbf{1}\hat{f}(x^{a},x^{(i)}_{C})$$
+$$ICE^{(i)}_j(x_j) = \hat{f}(x_j, \mathbf{x}^{(i)}_{-j}) - \hat{f}(a, \mathbf{x}_{-j}^{(i)})$$
 
-where $\mathbf{1}$ is a vector of 1's with the appropriate number of dimensions (usually one or two), $\hat{f}$ is the fitted model, and $x^{a}$ is the anchor point.
 
-Let's have a look at a centered ICE plot for temperature for the bicycle rental prediction:
+where $\hat{f}$ is the fitted model, and $a$ is the anchor point.
+
+Let's have a look at a centered ICE plot for temperature for the bike rental prediction:
 
 ```{r}
 #| label: ice-bike-centered
@@ -168,14 +166,14 @@ This can be useful if we do not want to see the absolute change of a predicted v
 Another way to make it visually easier to spot heterogeneity is to look at the individual derivatives of the prediction function with respect to a feature.
 The resulting plot is called the derivative ICE plot (d-ICE).
 The derivatives of a function (or curve) tell you whether changes occur, and in which direction they occur.
-With the derivative ICE plot, it is easy to spot ranges of feature values where the black box predictions change for (at least some) instances.
-If there is no interaction between the analyzed feature $X_S$ and the other features $X_C$, then the prediction function can be expressed as:
+With the derivative ICE plot, it's easy to spot ranges of feature values where the black box predictions change for (at least some) instances.
+If there is no interaction between the analyzed feature $X_j$ and the other features $X_{-j}$, then the prediction function can be expressed as:
 
-$$\hat{f}(\mathbf{x}) = \hat{f}(\mathbf{x}_S, \mathbf{x}_C) = g(\mathbf{x}_S) + h(\mathbf{x}_C), \quad\text{with}\quad\frac{\partial \hat{f}(\mathbf{x})}{\partial x \mathbf{x}_S} = g'(\mathbf{x}_S)$$
+$$\hat{f}(\mathbf{x}) = \hat{f}(x_j, \mathbf{x}_C) = g(x_j) + h(\mathbf{x}_{-j}), \quad\text{with}\quad\frac{\partial \hat{f}(\mathbf{x})}{\partial x_j} = g'(x_j)$$
 
 Without interactions, the individual partial derivatives should be the same for all instances.
-If they differ, it is due to interactions, and it becomes visible in the d-ICE plot.
-In addition to displaying the individual curves for the derivative of the prediction function with respect to the feature in $S$, showing the standard deviation of the derivative helps to highlight regions in feature $S$ with heterogeneity in the estimated derivatives.
+If they differ, it's due to interactions, and it becomes visible in the d-ICE plot.
+In addition to displaying the individual curves for the derivative of the prediction function with respect to the feature in $j$, showing the standard deviation of the derivative helps to highlight regions in feature $j$ with heterogeneity in the estimated derivatives.
 The derivative ICE plot takes a long time to compute and is rather impractical.
 
 

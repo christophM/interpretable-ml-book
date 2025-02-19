@@ -63,10 +63,9 @@ The interpretation of the surrogate model is still valid because it makes statem
 But of course, the interpretation of the surrogate model becomes irrelevant if the black box model is bad because then the black box model itself is irrelevant.
 
 <!-- More ideas-->
-We could also build a surrogate model based on a subset of the original data or reweight the instances.
+We could also build a surrogate model based on a subset of the original data or re-weight the instances.
 In this way, we change the distribution of the surrogate model's input, which changes the focus of the interpretation (then it is no longer really global).
 If we weight the data locally by a specific instance of the data (the closer the instances to the selected instance, the higher their weight), we get a local surrogate model that can explain the individual prediction of the instance.
-Read more about local models in the [following chapter](#lime).
 
 ## Example
 
@@ -86,27 +85,34 @@ First, we train a support vector machine to predict the [daily number of rented 
 The support vector machine is not very interpretable, so we train a surrogate with a CART decision tree as an interpretable model using the original training data to approximate the behavior of the support vector machine.
 The surrogate model shown in @fig-surrogate-bike has an R-squared (variance explained) of `r rsq` on the test data, which means it approximates the underlying black box behavior quite well, but not perfectly.
 If the fit were perfect, we could throw away the support vector machine and use the tree instead.
-The distributions in the nodes show that the surrogate tree predicts a higher number of rented bikes when the temperature is above 13 degrees Celsius and when the day was later in the 2-year period (cut point at 435 days).
+The distributions in the nodes show that the surrogate tree predicts a higher number of rented bikes when the temperature is above 13 degrees Celsius and when count two days before was higher. 
+
 ```{r}
 #| label: fig-surrogate-bike
 #| fig-cap: The terminal nodes of a surrogate tree that approximates the predictions of a support vector machine trained on the bike rental dataset.
 plot(tree)
 ```
-In our second example, we classify [penguin species](#penguins) with a random forest, again training a decision tree on the original dataset, but with the prediction of the random forest as the outcome, instead of the real classes (male/female) from the data.
+
+
+```{r}
+#| label: fig-surrogate-penguins-prepare
+pred.penguins = Predictor$new(pengu_rf, data = penguins_train, type = "prob")
+tree.penguins = TreeSurrogate$new(pred.penguins, maxdepth = 2) 
+pred.tree.penguins = predict(tree.penguins, penguins_test, type="prob")
+pred.penguins= predict(pengu_rf, penguins_test, type="prob")
+rsq = round(cor(pred.tree.penguins[,"female"], pred.penguins[,"female"])^2, 2)
+```
+
+
+
+In our second example, we classify whether a [penguin is female or male](#penguins) with a random forest, again training a decision tree on the original dataset, but with the prediction of the random forest as the outcome, instead of the real classes (male/female) from the data.
 The surrogate model shown in @fig-surrogate-penguins has an R-squared (variance explained) of `r rsq`, which means it does approximate the random forest somewhat, but not perfectly.
 
 ```{r}
 #| label: fig-surrogate-penguins
-#| echo: false
 #| fig-cap: "The terminal nodes of a surrogate tree that approximates the predictions of a random forest trained on the penguins dataset. The counts in the nodes show the frequency of the black box models classifications in the nodes."
-pred.penguins = Predictor$new(pengu_rf, data = penguins_train, type = "prob")
-tree.penguins = TreeSurrogate$new(pred.penguins, maxdepth = 2) 
 plot(tree.penguins) + 
 	theme(strip.text.x = element_text(size = 8))
-pred.tree.penguins = predict(tree.penguins, penguins_test, type="prob")
-pred.penguins= predict(pengu_rf, penguins_test, type="prob")
-
-rsq = round(cor(pred.tree.penguins[,"female"], pred.penguins[,"female"])^2, 2)
 ```
 
 

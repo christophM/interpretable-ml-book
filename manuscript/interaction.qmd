@@ -81,12 +81,12 @@ This can happen when the variance of the 2-way interaction is larger than the va
 
 Mathematically, the H-statistic proposed by Friedman and Popescu for the interaction between feature $j$ and $k$ is:
 
-$$H^2_{jk} = \frac{\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)}) - PD_k(x_{k}^{(i)})\right]^2}{\sum_{i=1}^n{PD}^2_{jk}(x_j^{(i)},x_k^{(i)})}$$
+$$H^2_{jk} = \frac{\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)}) - PD_k(x_{k}^{(i)})\right]^2}{\sum_{i=1}^n\left({PD}_{jk}(x_j^{(i)},x_k^{(i)})\right)^2}$$
 
 
 The same applies to measuring whether a feature j interacts with any other feature:
 
-$$H^2_{j} = \frac{\sum_{i=1}^n\left[\hat{f}(\mathbf{x}^{(i)}) - PD_j(x^{(i)}_j) - PD_{-j}(\mathbf{x}_{-j}^{(i)})\right]^2}{\sum_{i=1}^n \hat{f}^2(\mathbf{x}^{(i)})}$$
+$$H^2_{j} = \frac{\sum_{i=1}^n\left[\hat{f}(\mathbf{x}^{(i)}) - PD_j(x^{(i)}_j) - PD_{-j}(\mathbf{x}_{-j}^{(i)})\right]^2}{\sum_{i=1}^n \left(\hat{f}(\mathbf{x}^{(i)})\right)^2}$$
 
 The H-statistic is expensive to evaluate because it iterates over all data points, and at each point the partial dependence has to be evaluated, which in turn is done with all n data points.
 In the worst case, we need $2n^2$ calls to the machine learning model's predict function to compute the two-way H-statistic (j vs. k) and $3n^2$ for the total H-statistic (j vs. all).
@@ -107,11 +107,11 @@ The interaction strength statistic can also be applied in a classification setti
 Let's see what feature interactions look like in practice!
 We measure the interaction strength of features in a support vector machine that predicts the number of [rented bikes](#bike-data) based on weather and calendrical features.
 @fig-interaction-bike shows the feature interaction H-statistic.
-Overall, the interaction effects between the features are very weak (below 10% of variance explained per feature).
+Overall, the interaction effects between the features are weak (below 12% of variance explained per feature).
 
 ```{r}
 #| label: fig-interaction-bike
-#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a support vector machine predicting bicycle rentals.
+#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a support vector machine predicting bike rentals.
 pred.bike = Predictor$new(bike_svm, data = bike_test)
 ia = Interaction$new(pred.bike, grid.size = 50) 
 plot(ia) +
@@ -126,7 +126,7 @@ The body mass has the highest interaction strength.
 ```{r}
 #| label: fig-interaction-penguins
 #| eval: true 
-#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a random forest by species predicting P(female). 
+#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a random forest predicting P(female). 
 
 # Due to long running time and timeouts on TravisCI, this has to be run locally. 
 # And image has to be added to git repo manually.
@@ -165,6 +165,7 @@ ggplot(ia_data) +
 
 After looking at the feature interactions of each feature with all other features, we can select one of the features and dive deeper into all the 2-way interactions between the selected feature and the other features.
 Body mass has the strongest interaction, so let's take a deeper look in @fig-interaction2-penguins.
+Body mass interacts mostly with bill depth and species.
 
 ```{r}
 #| label: fig-interaction2-penguins
@@ -193,7 +194,7 @@ With the H-statistic, it's also possible to analyze arbitrary **higher-order int
 ## Limitations
 
 The first thing you will notice:
-The interaction H-statistic takes a long time to compute because it is **computationally expensive**.
+The interaction H-statistic takes a long time to compute because it's **computationally expensive**.
 
 The computation involves estimating marginal distributions.
 These **estimates also have a certain variance** if we do not use all data points.
@@ -205,22 +206,19 @@ We would need to conduct a statistical test, but this **test is not (yet) availa
 
 Concerning the test problem, it is difficult to say when the H-statistic is large enough for us to consider an interaction "strong."
 
-Also, the H-statistic can be larger than 1, which makes the interpretation difficult.
+Also, the **H-statistic can be larger than 1**, which makes the interpretation difficult.
 
 When the total effect of two features is weak but mostly consists of interactions, then the H-statistic will be very large.
 These spurious interactions require a small denominator of the H-statistic and are made worse when features are correlated.
-A spurious interaction can be easily overinterpreted as a strong interaction effect when, in reality, both features play a minor role in the model.
+**A spurious interaction can be over-interpreted** as a strong interaction effect when, in reality, both features play a minor role in the model.
 A possible remedy is to visualize the unnormalized version of the H-statistic, which is the square root of the numerator of the H-statistic [@inglis2022visualizing].
 This scales the H-statistic to the same level as the response, at least for regression, and puts less emphasis on spurious interactions.
 
 $$H^{*}_{jk} = \sqrt{\sum_{i=1}^n\left[PD_{jk}(x_{j}^{(i)},x_k^{(i)})-PD_j(x_j^{(i)}) - PD_k(x_{k}^{(i)})\right]^2}$$
 
-The H-statistic tells us the strength of interactions, but it does not tell us how the interactions look.
+The H-statistic tells us the strength of interactions, **but it does not tell us how the interactions look like**.
 That's what [partial dependence plots](#pdp) are for.
 A meaningful workflow is to measure the interaction strengths and then create 2D-partial dependence plots for the interactions you are interested in.
-
-The H-statistic cannot be used meaningfully if the inputs are pixels.
-So the technique is not useful for image classifiers.
 
 The interaction statistic works under the assumption that we can shuffle features independently.
 If the features correlate strongly, the assumption is violated and **we integrate over feature combinations that are very unlikely in reality**.
@@ -246,7 +244,7 @@ Unfortunately, no software is available yet.
 
 Partial dependence-based feature interaction by @greenwell2018simple measures the interaction between two features.
 This approach measures the feature importance (defined as the variance of the partial dependence function) of one feature conditional on different, fixed points of the other feature.
-If the variance is high, then the features interact with each other; if it is zero, they do not interact.
+If the variance is high, then the features interact with each other; if it's zero, they do not interact.
 The corresponding R package `vip` is available on [GitHub](https://github.com/koalaverse/vip).
 The package also covers partial dependence plots and feature importance.
 

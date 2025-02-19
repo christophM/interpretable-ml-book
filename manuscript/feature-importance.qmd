@@ -5,7 +5,6 @@
 Permutation feature importance (PFI) measures the increase in the prediction error of the model after we permute the values of the feature, which breaks the relationship between the feature and the true outcome.
 
 The concept is really straightforward:
-We measure the importance of a feature by calculating the increase in the model's prediction error after permuting the feature.
 A feature is "important" if shuffling its values increases the model error, because in this case, the model relied on the feature for the prediction.
 A feature is "unimportant" if shuffling its values leaves the model error unchanged, because in this case, the model ignored the feature for the prediction.
 
@@ -20,11 +19,11 @@ Their paper is worth reading.
 
 Input: Trained model $\hat{f}$, feature matrix $\mathbf{X}$, target vector $\mathbf{y}$, error measure $L$.
 
-1. Estimate the original model error $e_{orig} = L(\mathbf{y}, \hat{f}(\mathbf{X}))$ (e.g. mean squared error).
+1. Estimate the original model error $e_{orig} = \frac{1}{n_{test}} \sum_{i=1}^{n_{test}} L(y^{(i)}, \hat{f}(\mathbf{x}^{(i)}))$ (e.g. mean squared error).
 2. For each feature $j \in \{1,...,p\}$ do:
-    - Generate feature matrix $X_{perm}$ by permuting feature j in the data X. This breaks the association between feature j and true outcome y.
-    - Estimate error $e_{perm} = L(Y,\hat{f}(X_{perm}))$ based on the predictions of the permuted data.
-    - Calculate permutation feature importance as quotient $FI_j= e_{perm}/e_{orig}$ or difference $FI_j = e_{perm}- e_{orig}$
+    - Generate feature matrix $\mathbf{X}_{perm,j}$ by permuting feature j in the data $\mathbf{X}$. This breaks the association between feature j and true outcome y.
+    - Estimate error $e_{perm,j} = \frac{1}{n_{test}} \sum_{i=1}^{n_{test}} L(y^{(i)},\hat{f}(\mathbf{x}_{perm,j}))$ based on the predictions of the permuted data.
+    - Calculate permutation feature importance as quotient $FI_j= e_{perm}/e_{orig}$ or difference $FI_j = e_{perm,j}- e_{orig}$
 3. Sort features by descending FI.
 
 
@@ -49,7 +48,7 @@ I can only recommend using the `n(n-1)`-method if you are serious about getting 
 Use test data for PFI to avoid overly optimistic results, especially with overfitting models.
 PFI on training data can falsely highlight irrelevant features as important due to model overfitting.
 
-To understand what the model actually used, consider alternatives like [SHAP importance](#shap) or [PDP importance](#pdp), which don't rely on error measures.
+To understand which features the model **actually** used, consider alternatives like [SHAP importance](#shap) or [PDP importance](#pdp), which don't rely on error measures.
 
 :::
 
@@ -72,7 +71,7 @@ The most important feature was `r imp.dat$feature[best]`, and the least importan
 
 ```{r}
 #| label: fig-importance-bike
-#| fig.cap: "The feature importance for each of the features in predicting bike counts with a support vector machine. The dot shows the average importance across multiple permutations, and the line the 5% and 95% quantile range."
+#| fig.cap: "The feature importance for each of the features in predicting bike counts with a support vector machine. The dot shows the average importance across multiple permutations, and the line the 5% and 95% quantile range derived through repeated permutation."
 plot(importance) +
    scale_y_discrete("") +
    scale_x_continuous(limits = c(1, NA))
@@ -104,10 +103,9 @@ The importance of each of the features for predicting penguin sex with the logis
 The most important feature was ``r most_imp``.
 Permuting ``r most_imp`` resulted in an increase in classification error by a factor of `r round(max(imp.dat$importance),1)`.
 But wait, how can `species` be an important feature as well, when I actually trained 3 models separately?
-The deal is that I treat the 3 models as one black box model here.
-To this overall function, `species` appears as just another feature, and internally this feature splits the data, and then we have the three logistic regression models.
-That's why we will look next into conditional feature importance.
-
+I treated the 3 models as one black box model here.
+To this overall function, `species` appears as just another feature.
+Internally this feature splits the data, dispatches it to the three logistic regression models.
 
 
 ## Conditional feature importance
@@ -121,7 +119,7 @@ By conditional sampling, we sample more realistic data points.
 
 However, sampling from the conditional distribution is difficult.
 It's an even more difficult task than our original machine learning task.
-But it can be simplified by making assumptions such as assuming a feature is only linearly correlated with other features:
+But it can be simplified by making assumptions such as assuming a feature is only linearly correlated with other features.
 Here are some options for conditional sampling:
 
 - Compute PFI in subgroups of the data and aggregate them. Subgroups are based on splitting in correlated features [@molnar2023modelagnostic].
@@ -148,13 +146,13 @@ Strongly dependent features usually have very low conditional importance, even w
 ## Group-wise PFI example
 
 Let's go back to the penguins.
-Since PFI of, e.g., body mass, is computed by permuting across all data, we mix weights from different penguin species.
+Since PFI of, e.g., body mass, is computed by permuting across all data, we mix body masses from different penguin species.
 But we can simply adapt PFI by splitting our data by species, and permuting for each subset separately, so that we get one PFI per feature AND species.
 @fig-cor-by-species shows that we can reduce the correlation by subsetting by species.
 
 ```{r}
 #| label: fig-cor-by-species
-#| fig-cap: Correlation between body mass and flipper length by species subsets (and all together). Subsetting by species reduces the correlation.
+#| fig-cap: Correlation between body mass and flipper length by species subsets (and all together). Subsetting by species reduces the Pearson correlation (r).
 penguins_by_species <- penguins %>%
   mutate(subset = "all") %>%
   bind_rows(penguins %>% mutate(subset = species))
@@ -175,7 +173,7 @@ ggplot(penguins_by_species) +
 ```
 
 So we compute the permutation feature importance again, by species.
-Meaning the data are permuted by species, so that, for example, it couldn't happen that the body mass of a heavy Gentoo was assigned to a more lightweight Adelie.
+Meaning we permute features by species, so that, for example, it can't happen that the body mass of a heavy Gentoo is assigned to a lightweight Adelie.
 While grouping reduces the correlation problem, it isn't solved, as we can see in @fig-cor-by-species.
 For example, it can still happen that a Gentoo penguin with a body mass of 4000 grams gets "assigned" a flipper length of 230 mm, which produces an unrealistic data point.
 So still the interpretation comes with caveats.
@@ -184,11 +182,11 @@ A different picture emerges:
 Body mass is highly important for sex classification for Gentoo, less so for Adelie, and way less important for Chinstrap.
 Note that for the three logistic regression models it's natural to see it as three prediction models for which we can compute separate PFIs.
 However, since PFI is model-agnostic, we could do the same for a random forest which simply uses species as a feature.
-Or we could split into subgroups by any other feature, in theory even using variables that weren't used by the model.
+Or we could split into subgroups by any other variable, in theory even by variables that weren't used by the model.
 
 ```{r}
 #| label: fig-importance-penguins-by-species 
-#| fig-cap: PFI by species for each logistic regression. The results are quite similar to overal PFI and don't differ much by species.
+#| fig-cap: PFI by species for each logistic regression. The results are quite similar to overall PFI and don't differ much by species.
 dat = lapply(c("Adelie", "Chinstrap", "Gentoo"), function(species_) {
   penguins_sub = penguins_test %>% dplyr::filter(species == species_) 
   pred.penguins = Predictor$new(pengu_logreg, y = penguins_sub$sex == "female", data = penguins_sub%>% select(-sex), class="female")
@@ -201,7 +199,8 @@ dat = do.call(rbind, dat)
 
 ggplot(dat) + 
   geom_point(aes(x = importance, y = feature, shape = species, color = species), 
-             size = 3, position = position_jitter(width = 0, height = 0.2))
+             size = 3, position = position_jitter(width = 0, height = 0.2)) +
+  scale_x_continuous("Feature importance (ratio of logloss)")
 ```
 
 
@@ -211,6 +210,11 @@ ggplot(dat) +
 **Nice interpretation**: Feature importance is the increase in model error when the feature's information is destroyed.
 
 Feature importance provides a **highly compressed, global insight** into the model's behavior.
+
+**PFI is useful for data insights.**
+If your goal is learning about the data, and the model is just a means to learn about the data, then PFI is great, since it relies on predictive performance (via the loss).
+If a feature is irrelevant for predicting the data, yet your model still uses it, then PFI will still show, in expectation, around zero importance for that feature.
+Other importance measures that are not based on prediction errors, like SHAP importance, will show an effect for features that are used for overfitting.
 
 A positive aspect of using the error ratio instead of the error difference is that the feature importance measurements are **comparable across different problems**.
 
@@ -224,18 +228,6 @@ Only if there is no interaction between the features, as in a linear model, do t
 Permutation feature importance **does not require retraining the model**.
 Some other methods suggest deleting a feature, retraining the model, and then comparing the model error.
 Since the retraining of a machine learning model can take a long time, "only" permuting a feature can save a lot of time.
-Importance methods that retrain the model with a subset of features appear intuitive at first glance, but the model with the reduced data is meaningless for the feature importance.
-We are interested in the feature importance of a fixed model.
-Retraining with a reduced dataset creates a different model than the one we are interested in.
-Suppose you train a sparse linear model (with Lasso) with a fixed number of features with a non-zero weight.
-The dataset has $p = 100$ features; you set the number of non-zero weights to $5$.
-You analyze the importance of one of the features that have a non-zero weight.
-You remove the feature and retrain the model.
-The model performance remains the same because another equally good feature gets a non-zero weight and your conclusion would be that the feature was not important.
-Another example:
-The model is a decision tree and we analyze the importance of the feature that was chosen as the first split.
-You remove the feature and retrain the model.
-Since another feature is chosen as the first split, the whole tree can be very different, which means that we compare the error rates of (potentially) completely different trees to decide how important that feature is for one of the trees.
 
 ## Limitations
 
