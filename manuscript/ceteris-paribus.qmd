@@ -26,22 +26,22 @@ The following algorithm is for numerical features:
 
 Input: Data point $\mathbf{x}^{(i)}$ to explain and feature $j$
 
-1. Create an equidistant value grid: $z_1, \ldots, z_k$, where typically $z_1 = \min_{i\in \{1,\ldots,n\}}(x^{(i)}_j)$ and $z_k = \max_{i\in \{1,\ldots,n\}}(x^{(i)}_j)$.
-1. For each grid value $z_l \in \{z_1, \ldots, z_k\}$:
-   1. Create new data point $\mathbf{x}^{(i)}_{x_j := z_l}$
-   1. Get prediction $\hat{f}(\mathbf{x}^{(i)}_{x_j := z_l})$
+1. Create an equidistant value grid: $z_1, \ldots, z_K$, where typically $z_1 = \min(\mathbf{x}_j)$ and $z_K = \max(\mathbf{x}_j)$.
+1. For each grid value $z_k \in \{z_1, \ldots, z_K\}$:
+   1. Create new data point $\mathbf{x}^{(i)}_{x_j := z_k}$
+   1. Get prediction $\hat{f}(\mathbf{x}^{(i)}_{x_j := z_k})$
 1. Visualize the CP curves:
-     - Plot line for data points $\left\{z_l, \hat{f}(\mathbf{x}^{(i)}_{x_j := z_l})\right\}_{l=1}^k$
-     - Plot dot for original data point $\left(\mathbf{x}_j^{(i)}, \hat{f}(\mathbf{x}^{(i)})\right)$
+     - Plot line for data points $\left\{z_l, \hat{f}(\mathbf{x}^{(i)}_{x_j := z_k})\right\}_{k=1}^K$
+     - Plot dot for original data point $\left(\mathbf{x}_k^{(i)}, \hat{f}(\mathbf{x}^{(i)})\right)$
 
 
 The more grid values, the more fine-grained the CP curve, but the more calls you have to make to the predict function of the model.
 And for a categorical feature:
 
-1. Create list of unique categories $z_1, \ldots, z_k$
-1. For each category $z_l \in \{z_1, \ldots, z_k\}$:
-   1. Create new data point $\mathbf{x}^{(i)}_{x_j := z_l}$
-   1. Get prediction $\hat{f}(\mathbf{x}^{(i)}_{x_j := z_l})$
+1. Create list of unique categories $z_1, \ldots, z_K$
+1. For each category $z_k \in \{z_1, \ldots, z_K\}$:
+   1. Create new data point $\mathbf{x}^{(i)}_{x_j := z_k}$
+   1. Get prediction $\hat{f}(\mathbf{x}^{(i)}_{x_j := z_k})$
 1. Create bar plot or dot plot with categories on x-axis and predictions on y-axis.
 
 But that sounded more complex than necessary.
@@ -56,7 +56,7 @@ data_point_y = penguins_test[1,]$sex
 ```
 
 For our first example, we look at the random forest predicting the probability of a penguin being female.
-We look at the first penguin in the test dataset, a `r as.character(data_point_y)` `r as.character(data_point$species)` penguin with a bill depth of `r data_point["bill_depth_mm"]` millimeters.
+We look at the first penguin in the test dataset, a  `r as.character(data_point$species)` penguin with a bill depth of `r data_point["bill_depth_mm"]` millimeters (ground truth `r as.character(data_point_y)`).
 @fig-ceteris-penguins shows that decreasing the bill depth of this penguin first slightly increases the predicted P(female), but then greatly decreases P(female).
 
 ```{r}
@@ -79,13 +79,16 @@ plot(cp_rf,  selected_variables="bill_depth_mm") +
 
 Since it's a binary classification task, visualizing $\mathbb{P}(Y = \text{male})$ is redundant -- it would just be the inverted $\mathbb{P}(Y = \text{female})$ plot.
 But if we had more than two classes, we could plot the ceteris paribus curves for all the classes in one plot.
+
 ```{r}
 explainer <- DALEX::explain(bike_svm, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
 observation = bike_test[1,]
 ```
 
-Again, we have to keep in mind when making changes to the features that they might break the dependence with the other data.
+Again, we have to keep in mind that changing a feature can break the dependence with other features.
 Looking at correlation and other dependence measures can be helpful.
+Bill depth is correlated with body mass and flipper length.
+So when looking at @fig-ceteris-penguins, we should keep in mind not to over-interpret strong reductions in bill depth in this ceteris paribus plot.
 
 ::: {.callout-warning}
 
@@ -141,7 +144,7 @@ p1 + p2
 
 ## Minimal version with sparklines
 
-I love that CP plots can be packaged into sparklines, a minimalistic line-plot popularized by @tufte1983visual.
+CP plots can be packaged into sparklines, a minimalistic line-plot popularized by @tufte1983visual.
 
 ```{r}
 #| out-width: 100%
@@ -180,7 +183,7 @@ In @fig-cp-bike-models, we compare the ceteris paribus plots for different model
 
 ```{r}
 #| label: fig-cp-bike-models 
-#| fig-cap: "Ceteris paribus plots for the bike prediction task for different models: linear model, random forest, SVM, and decision tree."
+#| fig-cap: "Ceteris paribus curves for the bike prediction task for different models: linear model, random forest, SVM, and decision tree."
 explainer_rf <- DALEX::explain(bike_rf, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
 explainer_cart <- DALEX::explain(bike_tree, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE, label="tree")
 explainer_lm <- DALEX::explain(bike_lm, data = bike_test[colnames(bike) != "cnt"], y = bike_test$cnt, verbose=FALSE)
