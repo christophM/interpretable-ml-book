@@ -3,7 +3,6 @@
 {{< include _setup.qmd >}}
 
 Individual Conditional Expectation (ICE) plots display one line per instance that shows how the instance's prediction changes when a feature changes.
-
 An ICE plot [@goldstein2015peeking] visualizes the dependence of the prediction on a feature for *each* instance separately, resulting in one line per instance of a dataset.
 The values for a line (and one instance) can be computed by keeping all other features the same, creating variants of this instance by replacing the feature's value with values from a grid, and making predictions with the black box model for these newly created instances.
 The result is a set of points for an instance with the feature value from the grid and the respective predictions.
@@ -14,12 +13,14 @@ In other words, ICE plots are all the [ceteris paribus curves](#ceteris-paribus)
 @fig-ice-bike shows ICE plots for the [bike rental prediction](#bike-data).
 The underlying prediction model is a random forest.
 All curves seem to follow the same course, so there are no obvious interactions.
-But we can also explore possible interactions by modifying the ICE plot.
+
+::: {layout-ncol=1}
 
 ```{r}
 #| label: fig-ice-bike
 #| fig-cap: "ICE plots of predicted bike rentals by temperature, humidity, and windspeed."
 #| fig-asp: 0.4
+#| out-width: 95%
 pred.bike = Predictor$new(bike_rf, bike_test)
 
 p1 = FeatureEffect$new(pred.bike, "temp", method = "ice")$plot() +
@@ -40,29 +41,12 @@ p3 = FeatureEffect$new(pred.bike, "windspeed", method = "ice")$plot() +
 
 # Combine plots with reduced spacing
 (p1 | p2 | p3) + plot_layout(guides = "collect", widths = c(1, 1, 1))
+
+
 ```
 
-
-::: {.callout-tip}
-
-# Use color
-
-By coloring the lines based on another feature's value, you can study interactions.
-
-:::
-
-@fig-ice-bike-colored shows again the ICE plot for humidity, with the difference that the lines are now colored by the season.
-This shows a couple of things:
-First -- and that's not surprising -- different seasons have different "intercepts".
-Meaning that, for example, winter days have a lower prediction and summer the highest ones, independent of the humidity.
-But @fig-ice-bike-colored also shows that the effect of the humidity differs for the seasons:
-In winter, an increase in humidity only slightly reduces the predicted number of bike rentals.
-For summer, the predicted bike rentals stay more or less flat between 20% and 60% relative humidity and above 60% they drop by quite a bit.
-Humidity effects for spring and fall seem to be a mix of the "winter flatness" and the "summer jump".
-However, as indicated by the boxplots in @fig-ice-bike-colored, we shouldn't over-interpret very low humidity effects for summer and fall.
-
 ```{r}
-#| label: fig-ice-bike-colored
+#| label: fig-ice-bike-colored-combi
 #| fig-cap: ICE curves for the random forest predicting bike rentals. Lines are colored by the season. Above the ICE plots are boxplots showing the distributions of humidity per season.
 dat = FeatureEffect$new(pred.bike, "hum", method = "ice")$results
 bike2 = bike_test
@@ -95,6 +79,30 @@ boxplots <- ggplot(bike) +
 
 ```
 
+:::
+
+
+But we can also explore possible interactions by modifying the ICE plot.
+@fig-ice-bike-colored shows again the ICE plot for humidity, with the difference that the lines are now colored by the season.
+This shows a couple of things:
+First -- and that's not surprising -- different seasons have different "intercepts".
+Meaning that, for example, winter days have a lower prediction and summer the highest ones, independent of the humidity.
+But @fig-ice-bike-colored also shows that the effect of the humidity differs for the seasons:
+In winter, an increase in humidity only slightly reduces the predicted number of bike rentals.
+For summer, the predicted bike rentals stay more or less flat between 20% and 60% relative humidity and above 60% they drop by quite a bit.
+Humidity effects for spring and fall seem to be a mix of the "winter flatness" and the "summer jump".
+However, as indicated by the boxplots in @fig-ice-bike-colored, we shouldn't over-interpret very low humidity effects for summer and fall.
+
+::: {.callout-tip}
+
+# Use transparency and color
+
+If lines overlap heavily in a boxplot you can try to make them slightly transparent.
+If that doesn't help, you may be better off with a [partial dependence plot](#pdp).
+By coloring the lines based on another feature's value, you can study interactions.
+
+:::
+
 
 
 Let's go back to the [penguin classification task](#penguins) and see how the prediction of each instance is related to the feature `bill_length_mm`.
@@ -114,15 +122,6 @@ ice = FeatureEffect$new(pred.penguins, "bill_length_mm", method = "ice")$plot() 
 ice
 ```
 
-
-::: {.callout-tip}
-
-# Use transparency
-
-If lines overlap heavily in a boxplot you can try to make them slightly transparent.
-If that doesn't help, you may be better off with a [partial dependence plot](#pdp).
-
-:::
 
 ## Centered ICE plot
 
