@@ -17,7 +17,7 @@ class PartialDependence:
         X: pd.DataFrame,
         var_names: list[str],
         pred_type: Literal["regression", "classification"],
-    ):
+    ) -> None:
         """
         Initializes the PartialDependence object.
 
@@ -32,7 +32,7 @@ class PartialDependence:
         self.var_names = var_names
         self.pred_type = pred_type
 
-    def partial_dependence(self, var_name: str, n_grid: int = 50):
+    def partial_dependence(self, var_name: str, n_grid: int = 50) -> pd.DataFrame:
         """
         Calculates the partial dependence for given variables.
 
@@ -62,7 +62,7 @@ class PartialDependence:
         grid_points_df["avg_pred"] = average_predictions
         return grid_points_df
 
-    def _counterfactual_prediction(self, grid_point_series: dict[str:float]):
+    def _counterfactual_prediction(self, grid_point_series: dict[str:float]) -> np.ndarray:
         """Makes counterfactual predictions."""
 
         X_counterfactual = self.X.copy()
@@ -119,18 +119,6 @@ class IndividualConditionalExpectation(PartialDependence):
             lambda row: row["ice"] - min_ice_dict[row["instance"]], axis=1
         )
 
-        if self.pred_type == "regression":
-            prediction = self.model.predict(self.X.iloc[ids_to_compute])
-        else:
-            prediction = self.model.predict_proba(self.X.iloc[ids_to_compute])[:, 1]
-        self.df_instance = (
-            pd.DataFrame(data=self.X.iloc[ids_to_compute], columns=self.var_names)
-            .assign(
-                instance=ids_to_compute,
-                prediction=prediction,
-            )
-            .loc[:, ["instance", "prediction"] + self.var_names]
-        )
 
     def plot_ice(
         self,
@@ -202,7 +190,7 @@ class IndividualConditionalExpectation(PartialDependence):
 class AccumulatedLocalEffects:
     """Accumulated Local Effects"""
 
-    def __init__(self, model: Any, X: pd.DataFrame):
+    def __init__(self, model: Any, X: pd.DataFrame) -> None:
         """
         Initializes the AccumulatedLocalEffects object.
 
@@ -261,7 +249,7 @@ class AccumulatedLocalEffects:
 
     def plot_ale(
         self, var_name: str, df_ale: pd.DataFrame, ylim: Union[List[float], None] = None
-    ):
+    )  -> None:
         """
         Plots the Accumulated Local Effects (ALE).
 
@@ -288,7 +276,7 @@ class PermutationFeatureImportance:
         y: pd.DataFrame,
         metric: Any,
         pred_type: Literal["regression", "classification"],
-    ):
+    ) -> None:
         """
         Initializes the PermutationFeatureImportance object.
 
