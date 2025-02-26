@@ -172,7 +172,7 @@ In the following example, we will use these simple influence measures.
 
 **Deletion diagnostics example**
 
-In the following example, we train a random forest to predict whether a [penguin's sex](#penguin) given body measurements and measure which training instances were most influential overall and for a particular prediction.
+In the following example, we train a random forest to predict whether a [penguin's sex](#penguins) given body measurements and measure which training instances were most influential overall and for a particular prediction.
 Since this is a classification problem, we measure the influence as the difference in predicted probability for female.
 An instance is influential if the predicted probability strongly increases or decreases on average in the dataset when the instance is removed from model training.
 Measuring influence for all `r nrow(penguins_train)` training instances requires training the model once on all data and retraining it `r nrow(penguins_train)` times (= size of training data) with one of the instances removed each time.
@@ -233,7 +233,7 @@ All methods that return instances as output only make sense if we have a good wa
 But we can better understand what kind of instances are influential when we ask:
 What distinguishes an influential instance from a non-influential instance?
 We can turn this question into a regression problem and model the influence of an instance as a function of its feature values.
-We are free to choose any model from the chapter on [Interpretable Machine Learning Models](#simple).
+We are free to choose any interpretable model.
 For this example, I chose a decision tree (@fig-cooks) that shows that data from penguins with deep bills were the most influential for the support vector machine.
 
 ```{r}
@@ -424,11 +424,33 @@ We do not actually need to calculate the new parameters, but we can use the infl
 How do the *predictions* change when we upweight training instance $\mathbf{z}$?
 We can either calculate the new parameters and then make predictions using the newly parameterized model, or we can also calculate the influence of instance $\mathbf{z}$ on the predictions directly, since we can calculate the influence by using the chain rule:
 
+::: {.content-hidden when-format="epub"}
+
 \begin{align*}
 I_{up,loss}(\mathbf{z}, \mathbf{z}_{test}) & = \left.\frac{d L(\mathbf{z}_{test},\hat{\boldsymbol{\theta}}_{\epsilon, \mathbf{z}})}{d\epsilon}\right|_{\epsilon=0} \\
 & = \left.\nabla_{\boldsymbol{\theta}}L(\mathbf{z}_{test},\hat{\boldsymbol{\theta}})^T \frac{d\hat{\boldsymbol{\theta}}_{\epsilon,\mathbf{z}}}{d \epsilon}\right|_{\epsilon=0} \\
 & = -\nabla_{\boldsymbol{\theta}}L(\mathbf{z}_{test}, \hat{\boldsymbol{\theta}})^T H^{-1}_{\boldsymbol{\theta}} \nabla_{\boldsymbol{\theta}} L(\mathbf{z},\hat{\boldsymbol{\theta}})
 \end{align*}
+
+:::
+
+::: {.content-visible when-format="epub"}
+
+$$
+I_{up,loss}(\mathbf{z}, \mathbf{z}_{test}) = \left.\frac{d L(\mathbf{z}_{test}, \hat{\boldsymbol{\theta}}_{\epsilon, \mathbf{z}})}{d\epsilon}\right|_{\epsilon=0}
+$$
+
+$$
+= \left.\nabla_{\boldsymbol{\theta}} L(\mathbf{z}_{test}, \hat{\boldsymbol{\theta}})^T \frac{d\hat{\boldsymbol{\theta}}_{\epsilon,\mathbf{z}}}{d \epsilon}\right|_{\epsilon=0}
+$$
+
+$$
+= -\nabla_{\boldsymbol{\theta}} L(\mathbf{z}_{test}, \hat{\boldsymbol{\theta}})^T H^{-1}_{\boldsymbol{\theta}} \nabla_{\boldsymbol{\theta}} L(\mathbf{z}, \hat{\boldsymbol{\theta}})
+$$
+
+:::
+
+
 
 The first line of this equation means that we measure the influence of a training instance on a certain prediction $\mathbf{z}_{test}$ as a change in loss of the test instance when we upweight the instance $\mathbf{z}$ and get new parameters $\hat{\theta}_{\epsilon,z}$.
 For the second line of the equation, we have applied the chain rule of derivatives and get the derivative of the loss of the test instance with respect to the parameters times the influence of z on the parameters.
