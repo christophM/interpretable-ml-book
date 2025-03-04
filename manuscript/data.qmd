@@ -4,32 +4,21 @@
 
 
 ```{r}
-#| label: define custom_correlation_plot
-custom_correlation_plot <- function(dat){
+#| label: define custom_correlation_table
+custom_correlation_table <- function(dat) {
+  # Remove non-numeric columns and missing values
   dat_clean <- na.omit(dat[, sapply(dat, is.numeric)])
+  
+  # Compute correlation matrix and convert to long format
   cor_matrix <- cor(dat_clean)
   cor_melt <- melt(cor_matrix)
   cor_melt <- cor_melt[which(as.numeric(cor_melt$Var1) < as.numeric(cor_melt$Var2)), ]
-
-  # Drop levels of unused factor variables
-  cor_melt$Var1 <- factor(cor_melt$Var1, levels = unique(cor_melt$Var1))
-  cor_melt$Var2 <- factor(cor_melt$Var2, levels = unique(cor_melt$Var2))
-
-  ggplot(cor_melt, aes(Var1, Var2, fill = value)) +
-    geom_tile(color = "white") +
-    geom_label(aes(label = round(value, 2)), color = "black", fill="white") +
-    scale_fill_viridis_c(
-      option = "viridis", # Choose a Viridis option (e.g., "viridis", "magma", "plasma")
-      limits = c(-1, 1)   # Set limits for correlation values
-    ) +
-    my_theme() +
-    labs(
-      x = "",
-      y = "",
-      fill = "Correlation"
-    ) +
-    scale_y_discrete(limits = rev(levels(cor_melt$Var2)))  +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  # Format correlation values
+  cor_melt$value <- round(cor_melt$value, 2)
+  
+  # Generate a markdown table without row numbers
+  kable(cor_melt, col.names = c("Variable 1", "Variable 2", "Correlation"), format = "markdown", row.names = FALSE)
 }
 ```
 
@@ -160,7 +149,7 @@ kable(results, row.names=FALSE)
 
 For many interpretation methods, it's important to understand how the features are correlated.
 Therefore, let's have a look at the Pearson correlation for the numerical features.
-@fig-bike-correlations shows that the only larger correlation is between count 2 days before and the temperature.
+@tbl-bike-correlations shows that the only larger correlation is between count 2 days before and the temperature.
 But what about the categorical features?
 And what about non-linear correlation?
 
@@ -170,11 +159,10 @@ To understand the non-linear dependencies, we will do two things:
 - Compute the normalized mutual information (NMI) between two features. 
 
 ```{r}
-#| label: fig-bike-correlations
-#| fig-cap: Pairwise Pearson correlation between the numerical bike rental features.
-custom_correlation_plot(bike %>% select(-cnt))
+#| label: tbl-bike-correlations
+#| tbl-cap: Pairwise Pearson correlation between the numerical bike rental features.
+custom_correlation_table(bike %>% select(-cnt))
 ```
-
 
 
 The normalized mutual information is a number between 0 and 1.
@@ -223,7 +211,7 @@ Now let's have a look at the raw dependence data and the normalized mutual infor
 ```{r}
 #| label: fig-bike-mi
 #| fig-cap: Normalized mutual information and pair plots for the features in the bike sharing data. I left out holiday and workday to make the plots easier to read.
-#| fig-asp: 1
+#| fig-asp: 0.8
 mi_pair_plot(bike_train[fsubset])
 ```
 
@@ -315,12 +303,12 @@ kable(results, row.names=FALSE)
 Let's have a look at how the penguin body measurements are correlated (Pearson correlation).
 
 ```{r}
-#| label: fig-penguins-correlations
-#| fig.cap: Pearson correlation between the penguin features.
-custom_correlation_plot(penguins %>% dplyr::select(-sex))
+#| label: tbl-penguins-correlations
+#| tbl-cap: Pearson correlation between the penguin features.
+custom_correlation_table(penguins %>% dplyr::select(-sex))
 ```
 
-@fig-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
+@tbl-penguins-correlations shows that especially the body mass and the flipper length are strongly correlated.
 But also other features are correlated, like flipper length and bill length, or flipper length and bill depth.
 However, Pearson correlation only tells half of the story, since it only measures linear dependence.
 Let's have a look at the pair plots of the features, along with the normalized mutual information.
@@ -328,7 +316,7 @@ Let's have a look at the pair plots of the features, along with the normalized m
 ```{r}
 #| label: fig-penguins-nmi
 #| fig-cap: Pairwise Pearson correlation between the numerical penguin features.
-#| fig-asp: 1
+#| fig-asp: 0.8
 penguins_temp = penguins
 colnames(penguins_temp) <- gsub("_mm|_g", "", colnames(penguins_temp))
 mi_pair_plot(penguins_temp %>% dplyr::select(-sex))
@@ -339,16 +327,10 @@ For example, the normalized mutual information between body mass and bill depth 
 But the correlation between body mass and bill depth is much lower.
 The reason is that linear correlation isn't capturing the dynamics, at least not when bundling all the penguins together.
 The reason why linear correlation doesn't work well here is Simpson's paradox.
-Mutual information captures this much better.
-
-::: {.callout-note}
-
-## Simpson's Paradox
-
-Phenomenon that a trend appears in several groups of the data, but disappears or even flips when combining all data.
-Combining all penguin data results in a negative correlation between bill depth and body mass.
-For each species, however, the correlation is positive, as shown in @fig-simpsons.
+In the Simpson's paradox a trend appears in several groups of the data, but disappears or flips when combining all data.
+Combining all penguin data turns a positive correlation between bill depth and body mass into a negative one, as shown in @fig-simpsons.
 The reason is that Gentoo penguins are heavier and have deeper bills.
+Mutual information overcomes this problem.
 
 ```{r}
 #| label: fig-simpsons
@@ -372,10 +354,10 @@ ggplot(data = penguins, aes(x = bill_depth_mm, y = body_mass_g, color = species)
 
 ```
 
-:::
-
 
 A note on modeling all penguins together: Throughout the book, I'll treat the penguins as one dataset by default, using species as a feature.
 Arguably, it might be better to always model and analyze the penguins by species.
 However, this is a very common tension in machine learning: Often, data instances belong to a cluster or entity -- think of forecasting sales for different stores or classifying lab samples from the same batches -- and we have to decide whether to use separate models or using the entity id as a feature.
+
+
 

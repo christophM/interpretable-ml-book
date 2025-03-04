@@ -106,44 +106,37 @@ The interaction strength statistic can also be applied in a classification setti
 ## Examples
 
 Let's see what feature interactions look like in practice!
-We measure the interaction strength of features in a support vector machine that predicts the number of [rented bikes](#bike-data) based on weather and calendrical features.
-@fig-interaction-bike shows the feature interaction H-statistic.
-Overall, the interaction effects between the features are weak (below 12% of variance explained per feature).
-
-```{r}
-#| label: fig-interaction-bike
-#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a support vector machine predicting bike rentals.
-pred.bike = Predictor$new(bike_svm, data = bike_test)
-ia = Interaction$new(pred.bike, grid.size = 50) 
-plot(ia) +
- scale_y_discrete("")
-```
-
-In the next example, we calculate the interaction statistic for a classification problem.
-We analyze the interactions between features in a random forest trained to predict [penguin sex](#penguins), given body measurements; see @fig-interaction-penguins.
+We analyze the interactions between features in a random forest trained to predict [penguin sex](#penguins), given body measurements; see @fig-interaction-penguins on the top.
 The body mass has the highest interaction strength.
-
+After looking at the feature interactions of each feature with all other features, we can select one of the features and dive deeper into all the 2-way interactions between the selected feature and the other features.
+Body mass has the strongest interaction, so let's take a deeper look in @fig-interaction-penguins on the bottom.
+The plot shows that body mass interacts mostly with bill depth and species.
 
 ```{r}
 #| label: fig-interaction-penguins
 #| eval: true 
-#| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a random forest predicting P(female). 
+#| fig-cap: "Top: The interaction strength (H-statistic) for each feature with all other features for a random forest predicting P(female). Bottom: The 2-way interaction strengths (H-statistic) between body mass and all other features."
+#| out-width: 100%
 
 # Due to long running time and timeouts on TravisCI, this has to be run locally. 
 # And image has to be added to git repo manually.
 pred.penguins = Predictor$new(pengu_rf, data = penguins, class = "female")
 ia1 = Interaction$new(pred.penguins, grid.size = 30) 
-plot(ia1) +
+p1 = plot(ia1) +
  scale_y_discrete("")
+ia2 = Interaction$new(pred.penguins, grid.size = 50, feature = "body_mass_g")
+p2 = plot(ia2)
+p1 / p2
 ```
 
-We are interested in how this behaves by species, which I visualize in @fig-interaction-penguins-by-species.
+Bonus: We are interested in all interaction by species, which I visualize in @fig-interaction-penguins-by-species.
 Especially for body mass, the interaction strengths differ between species.
 
 ```{r}
 #| label: fig-interaction-penguins-by-species
 #| eval: true 
 #| fig-cap: The interaction strength (H-statistic) for each feature with all other features for a random forest by species predicting P(female). 
+#| fig-asp: 0.5
 
 # Due to long running time and timeouts on TravisCI, this has to be run locally. 
 # And image has to be added to git repo manually.
@@ -163,21 +156,6 @@ ggplot(ia_data) +
   scale_y_discrete("")
 ```
 
-
-After looking at the feature interactions of each feature with all other features, we can select one of the features and dive deeper into all the 2-way interactions between the selected feature and the other features.
-Body mass has the strongest interaction, so let's take a deeper look in @fig-interaction2-penguins.
-Body mass interacts mostly with bill depth and species.
-
-```{r}
-#| label: fig-interaction2-penguins
-#| eval: true 
-#| fig-cap: The 2-way interaction strengths (H-statistic) between body mass and all other features. 
-
-# Due to long running time and timeouts on TravisCI, this has to be run locally. 
-# And image has to be added to git repo manually.
-ia2 = Interaction$new(pred.penguins, grid.size = 50, feature = "body_mass_g")
-plot(ia2)
-```
 
 ## Strengths
 
