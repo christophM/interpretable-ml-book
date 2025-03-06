@@ -21,6 +21,35 @@ In an ideal future, machines will be able to explain their decisions and make a 
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+# Citing this Book {#cite}
+
+If you found this book useful for your blog post, research article or product, I would be grateful if you would cite this book.
+You can cite the book like this:
+
+
+```
+Molnar, Christoph. *Interpretable Machine Learning: A Guide for Making Black Box Models Explainable*. 3rd ed., 2025. ISBN: 978-3-911578-03-5. Available at: \url{https://christophm.github.io/interpretable-ml-book}.
+```
+
+Or use the following bibtex entry:
+
+```
+@book{molnar2025,
+  title={Interpretable Machine Learning},
+  subtitle={A Guide for Making Black Box Models Explainable},
+  author={Christoph Molnar},
+  year={2025},
+  edition={3},
+  isbn={978-3-911578-03-5}
+  url={https://christophm.github.io/interpretable-ml-book}
+}
+```
+
+I'm always curious about where and how interpretation methods are used in industry and research.
+If you use the book as a reference, it would be great if you wrote me a line and told me what for.
+This is, of course, optional and only serves to satisfy my own curiosity and to stimulate interesting exchanges.
+My email is chris@christophmolnar.com
+
 
 ## Contributing
 
