@@ -2,9 +2,6 @@
 
 bookname = iml
 
-
-
-
 all :  kindle print ebook pdf html
 kindle : output/kindle-$(bookname).epub
 print: output/print-$(bookname).pdf
