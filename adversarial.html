@@ -1,755 +1,1347 @@
 <!DOCTYPE html>
-<html lang="" xml:lang="">
-<head>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>10.4 Adversarial Examples | Interpretable Machine Learning</title>
-  <meta name="description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
-  <meta name="generator" content="bookdown 0.40 and GitBook 2.6.7" />
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
 
-  <meta property="og:title" content="10.4 Adversarial Examples | Interpretable Machine Learning" />
-  <meta property="og:type" content="book" />
-  
-  <meta property="og:description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
-  
-
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="10.4 Adversarial Examples | Interpretable Machine Learning" />
-  
-  <meta name="twitter:description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
-  
-
-<meta name="author" content="Christoph Molnar" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<meta name="date" content="2024-07-31" />
-
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  
-  
-<link rel="prev" href="detecting-concepts.html"/>
-<link rel="next" href="influential.html"/>
-<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
-<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
-
-
-
-
-
-
-
-
-<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
-<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
-<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
-<script src="libs/kePrint-0.0.1/kePrint.js"></script>
-<link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-V7RTNZBGE2"></script>
-<script>
-    window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-V7RTNZBGE2');
-</script>
-
-<link rel="stylesheet" type="text/css" href="css/cookieconsent.min.css" />
-<script src="javascript/cookieconsent.min.js"></script>
-<script>
-window.addEventListener("load", function(){
-window.cookieconsent.initialise({
-  "palette": {
-    "popup": {
-      "background": "#000"
-    },
-    "button": {
-      "background": "#f1d600"
-    }
-  },
-  "position": "bottom-right",
-  "content": {
-    "message": "This website uses cookies for Google Analytics so that I know how many people are reading the book and which chapters are the most popular. The book website doesn't collect any personal data."
-  }
-})});
-</script>
-
+<title>30&nbsp; Adversarial Examples – Interpretable Machine Learning</title>
 <style>
-
-#cta-button-desktop:hover, #cta-button-device:hover {
-  background-color:   #ffc266; 
-  border-color:   #ffc266; 
-  box-shadow: none;
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
 }
-#cta-button-desktop, #cta-button-device{
-  color: white;
-  background-color:  #ffa31a;
-  text-shadow:1px 1px 0 #444;
-  text-decoration: none;
-  border: 2px solid  #ffa31a;
-  border-radius: 10px;
-  position: fixed;
-  padding: 5px 10px;
-  z-index: 10;
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./influential.html" rel="next">
+<link href="./detecting-concepts.html" rel="prev">
+<link href="./images/favicon.jpg" rel="icon" type="image/jpeg">
+<script src="site_libs/cookie-consent/cookie-consent.js"></script>
+<link href="site_libs/cookie-consent/cookie-consent.css" rel="stylesheet">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-5e169a3c071d6ad0320cbd7522dabfb3.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
+}</script>
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-YMSX1DV6TJ"></script>
 
-#cta-button-device {
-  box-shadow: 0px 10px 10px -5px rgba(194,180,190,1);
-  display:none;
-  right: 20px;
-  bottom: 20px;
-  font-size: 20px;
- }
+<script type="text/plain" cookie-consent="tracking">
 
-#cta-button-desktop {
-  box-shadow: 0px 20px 20px -10px rgba(194,180,190,1);
-  display:display;
-  padding: 8px 16px;
-  right: 40px;
-  bottom: 40px;
-  font-size: 25px;
-}
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-YMSX1DV6TJ', { 'anonymize_ip': true});
+</script>
 
-@media (max-width : 450px) {
-  #cta-button-device {display:block;}
-  #cta-button-desktop {display:none;}
-}
-
-
-</style>
-
-
-
-
-
-<style type="text/css">
+<script type="text/javascript" charset="UTF-8">
+document.addEventListener('DOMContentLoaded', function () {
+cookieconsent.run({
+  "notice_banner_type":"simple",
+  "consent_type":"implied",
+  "palette":"light",
+  "language":"en",
+  "page_load_consent_levels":["strictly-necessary","functionality","tracking","targeting"],
+  "notice_banner_reject_button_hide":false,
+  "preferences_center_close_button_hide":false,
+  "website_name":""
+  ,
+"language":"en"
+  });
+});
+</script> 
   
-  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+<style>html{ scroll-behavior: smooth; }</style>
+<!-- Add this to your header.html -->
+<style>
+.book-purchase-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: double 1px transparent;
+    background-image: linear-gradient(to bottom right, #ffffff, #f8f9fa),
+                     linear-gradient(to bottom right, #3b82f6, #60a5fa);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+}
+
+.purchase-header {
+    text-align: center;
+    margin-bottom: -1rem;
+    margin-top: -1rem;
+    color: #2b3442;
+}
+
+.purchase-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.purchase-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.book-cover {
+    width: 80%;
+    height: auto;
+    border-radius: 8px;
+    margin: 0 auto 1rem auto;
+    transition: transform 0.3s ease;
+}
+
+.book-cover:hover {
+    transform: scale(1.1);
+}
+
+.purchase-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    color: #2b3442;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    border: 1px solid #e9ecef;
+    font-weight: 500;
+}
+
+.purchase-link:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+}
+
+.purchase-link.primary {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+}
+
+.purchase-link.primary:hover {
+    background-color: #0052a3;
+}
+
+.purchase-link svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.price-tag {
+    margin-left: auto;
+    font-weight: 600;
+    color: inherit;
+}
+
+.social-proof {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.limited-offer {
+    background: #fff3cd;
+    color: #856404;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .book-purchase-links {
+        padding: 1rem;
+    }
+    
+    .book-cover {
+        width: 60%;
+    }
+}
 </style>
 
-<link rel="stylesheet" href="css/style.css" type="text/css" />
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const purchaseLinksContainer = document.getElementById('book-purchase-links');
+    if (!purchaseLinksContainer) return;
+
+    const purchaseOptions = [
+        {
+            type: 'Paperback',
+            primary: true,
+            url: 'https://bookgoodies.com/a/3911578032',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>'
+        },
+        {
+            type: 'E-Book & PDF',
+            url: 'https://leanpub.com/interpretable-machine-learning',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><path d="M12 6v8"></path><path d="M8 10h8"></path></svg>'
+        }
+    ];
+
+    // Create header section
+    const header = document.createElement('div');
+    header.className = 'purchase-header';
+    header.innerHTML = `
+        <h3>Buy Book</h3>
+    `;
+    purchaseLinksContainer.appendChild(header);
+
+    // Create limited time offer banner
+    // const limitedOffer = document.createElement('div');
+    // limitedOffer.className = 'limited-offer';
+    // limitedOffer.textContent = '🎉 Special Launch Price - Limited Time Only!';
+    // purchaseLinksContainer.appendChild(limitedOffer);
+
+    // Create and append book cover
+    const bookCover = document.createElement('img');
+    //bookCover.src = 'images/mockup-floating.png';
+    bookCover.src = './images/cover-sidepanel.jpg';
+    bookCover.alt = 'Book Cover';
+    bookCover.className = 'book-cover';
+    purchaseLinksContainer.appendChild(bookCover);
+
+    // Create and append purchase links
+    purchaseOptions.forEach(option => {
+        const link = document.createElement('a');
+        link.href = option.url;
+        link.className = `purchase-link ${option.primary ? 'primary' : ''}`;
+        link.innerHTML = `
+            ${option.icon}
+            ${option.type}
+        `;
+        purchaseLinksContainer.appendChild(link);
+    });
+
+    // Add social proof
+    // const socialProof = document.createElement('div');
+    // socialProof.className = 'social-proof';
+    // socialProof.textContent = '👥 Join thousands of satisfied readers!';
+    // purchaseLinksContainer.appendChild(socialProof);
+});
+</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
 </head>
 
-<body>
+<body class="nav-sidebar floating">
 
-
-
-  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
-
-    <div class="book-summary">
-      <nav role="navigation">
-
-<ul class="summary">
-<li><a href="./">Interpretable machine learning</a></li>
-
-<li class="divider"></li>
-<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Summary</a></li>
-<li class="chapter" data-level="1" data-path="preface-by-the-author.html"><a href="preface-by-the-author.html"><i class="fa fa-check"></i><b>1</b> Preface by the Author</a></li>
-<li class="chapter" data-level="2" data-path="intro.html"><a href="intro.html"><i class="fa fa-check"></i><b>2</b> Introduction</a>
-<ul>
-<li class="chapter" data-level="2.1" data-path="storytime.html"><a href="storytime.html"><i class="fa fa-check"></i><b>2.1</b> Story Time</a>
-<ul>
-<li class="chapter" data-level="" data-path="storytime.html"><a href="storytime.html#lightning-never-strikes-twice"><i class="fa fa-check"></i>Lightning Never Strikes Twice</a></li>
-<li class="chapter" data-level="" data-path="storytime.html"><a href="storytime.html#trust-fall"><i class="fa fa-check"></i>Trust Fall</a></li>
-<li class="chapter" data-level="" data-path="storytime.html"><a href="storytime.html#fermis-paperclips"><i class="fa fa-check"></i>Fermi’s Paperclips</a></li>
-</ul></li>
-<li class="chapter" data-level="2.2" data-path="what-is-machine-learning.html"><a href="what-is-machine-learning.html"><i class="fa fa-check"></i><b>2.2</b> What Is Machine Learning?</a></li>
-<li class="chapter" data-level="2.3" data-path="terminology.html"><a href="terminology.html"><i class="fa fa-check"></i><b>2.3</b> Terminology</a></li>
-</ul></li>
-<li class="chapter" data-level="3" data-path="interpretability.html"><a href="interpretability.html"><i class="fa fa-check"></i><b>3</b> Interpretability</a>
-<ul>
-<li class="chapter" data-level="3.1" data-path="interpretability-importance.html"><a href="interpretability-importance.html"><i class="fa fa-check"></i><b>3.1</b> Importance of Interpretability</a></li>
-<li class="chapter" data-level="3.2" data-path="taxonomy-of-interpretability-methods.html"><a href="taxonomy-of-interpretability-methods.html"><i class="fa fa-check"></i><b>3.2</b> Taxonomy of Interpretability Methods</a></li>
-<li class="chapter" data-level="3.3" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html"><i class="fa fa-check"></i><b>3.3</b> Scope of Interpretability</a>
-<ul>
-<li class="chapter" data-level="3.3.1" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#algorithm-transparency"><i class="fa fa-check"></i><b>3.3.1</b> Algorithm Transparency</a></li>
-<li class="chapter" data-level="3.3.2" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#global-holistic-model-interpretability"><i class="fa fa-check"></i><b>3.3.2</b> Global, Holistic Model Interpretability</a></li>
-<li class="chapter" data-level="3.3.3" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#global-model-interpretability-on-a-modular-level"><i class="fa fa-check"></i><b>3.3.3</b> Global Model Interpretability on a Modular Level</a></li>
-<li class="chapter" data-level="3.3.4" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#local-interpretability-for-a-single-prediction"><i class="fa fa-check"></i><b>3.3.4</b> Local Interpretability for a Single Prediction</a></li>
-<li class="chapter" data-level="3.3.5" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#local-interpretability-for-a-group-of-predictions"><i class="fa fa-check"></i><b>3.3.5</b> Local Interpretability for a Group of Predictions</a></li>
-</ul></li>
-<li class="chapter" data-level="3.4" data-path="evaluation-of-interpretability.html"><a href="evaluation-of-interpretability.html"><i class="fa fa-check"></i><b>3.4</b> Evaluation of Interpretability</a></li>
-<li class="chapter" data-level="3.5" data-path="properties.html"><a href="properties.html"><i class="fa fa-check"></i><b>3.5</b> Properties of Explanations</a></li>
-<li class="chapter" data-level="3.6" data-path="explanation.html"><a href="explanation.html"><i class="fa fa-check"></i><b>3.6</b> Human-friendly Explanations</a>
-<ul>
-<li class="chapter" data-level="3.6.1" data-path="explanation.html"><a href="explanation.html#what-is-an-explanation"><i class="fa fa-check"></i><b>3.6.1</b> What Is an Explanation?</a></li>
-<li class="chapter" data-level="3.6.2" data-path="explanation.html"><a href="explanation.html#good-explanation"><i class="fa fa-check"></i><b>3.6.2</b> What Is a Good Explanation?</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="4" data-path="data.html"><a href="data.html"><i class="fa fa-check"></i><b>4</b> Datasets</a>
-<ul>
-<li class="chapter" data-level="4.1" data-path="bike-data.html"><a href="bike-data.html"><i class="fa fa-check"></i><b>4.1</b> Bike Rentals (Regression)</a></li>
-<li class="chapter" data-level="4.2" data-path="spam-data.html"><a href="spam-data.html"><i class="fa fa-check"></i><b>4.2</b> YouTube Spam Comments (Text Classification)</a></li>
-<li class="chapter" data-level="4.3" data-path="cervical.html"><a href="cervical.html"><i class="fa fa-check"></i><b>4.3</b> Risk Factors for Cervical Cancer (Classification)</a></li>
-</ul></li>
-<li class="chapter" data-level="5" data-path="simple.html"><a href="simple.html"><i class="fa fa-check"></i><b>5</b> Interpretable Models</a>
-<ul>
-<li class="chapter" data-level="5.1" data-path="limo.html"><a href="limo.html"><i class="fa fa-check"></i><b>5.1</b> Linear Regression</a>
-<ul>
-<li class="chapter" data-level="5.1.1" data-path="limo.html"><a href="limo.html#interpretation"><i class="fa fa-check"></i><b>5.1.1</b> Interpretation</a></li>
-<li class="chapter" data-level="5.1.2" data-path="limo.html"><a href="limo.html#example"><i class="fa fa-check"></i><b>5.1.2</b> Example</a></li>
-<li class="chapter" data-level="5.1.3" data-path="limo.html"><a href="limo.html#visual-interpretation"><i class="fa fa-check"></i><b>5.1.3</b> Visual Interpretation</a></li>
-<li class="chapter" data-level="5.1.4" data-path="limo.html"><a href="limo.html#explain-individual-predictions"><i class="fa fa-check"></i><b>5.1.4</b> Explain Individual Predictions</a></li>
-<li class="chapter" data-level="5.1.5" data-path="limo.html"><a href="limo.html#cat-code"><i class="fa fa-check"></i><b>5.1.5</b> Encoding of Categorical Features</a></li>
-<li class="chapter" data-level="5.1.6" data-path="limo.html"><a href="limo.html#do-linear-models-create-good-explanations"><i class="fa fa-check"></i><b>5.1.6</b> Do Linear Models Create Good Explanations?</a></li>
-<li class="chapter" data-level="5.1.7" data-path="limo.html"><a href="limo.html#sparse-linear"><i class="fa fa-check"></i><b>5.1.7</b> Sparse Linear Models</a></li>
-<li class="chapter" data-level="5.1.8" data-path="limo.html"><a href="limo.html#advantages"><i class="fa fa-check"></i><b>5.1.8</b> Advantages</a></li>
-<li class="chapter" data-level="5.1.9" data-path="limo.html"><a href="limo.html#disadvantages"><i class="fa fa-check"></i><b>5.1.9</b> Disadvantages</a></li>
-</ul></li>
-<li class="chapter" data-level="5.2" data-path="logistic.html"><a href="logistic.html"><i class="fa fa-check"></i><b>5.2</b> Logistic Regression</a>
-<ul>
-<li class="chapter" data-level="5.2.1" data-path="logistic.html"><a href="logistic.html#what-is-wrong-with-linear-regression-for-classification"><i class="fa fa-check"></i><b>5.2.1</b> What is Wrong with Linear Regression for Classification?</a></li>
-<li class="chapter" data-level="5.2.2" data-path="logistic.html"><a href="logistic.html#theory"><i class="fa fa-check"></i><b>5.2.2</b> Theory</a></li>
-<li class="chapter" data-level="5.2.3" data-path="logistic.html"><a href="logistic.html#interpretation-1"><i class="fa fa-check"></i><b>5.2.3</b> Interpretation</a></li>
-<li class="chapter" data-level="5.2.4" data-path="logistic.html"><a href="logistic.html#example-1"><i class="fa fa-check"></i><b>5.2.4</b> Example</a></li>
-<li class="chapter" data-level="5.2.5" data-path="logistic.html"><a href="logistic.html#advantages-and-disadvantages"><i class="fa fa-check"></i><b>5.2.5</b> Advantages and Disadvantages</a></li>
-<li class="chapter" data-level="5.2.6" data-path="logistic.html"><a href="logistic.html#software"><i class="fa fa-check"></i><b>5.2.6</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="5.3" data-path="extend-lm.html"><a href="extend-lm.html"><i class="fa fa-check"></i><b>5.3</b> GLM, GAM and more</a>
-<ul>
-<li class="chapter" data-level="5.3.1" data-path="extend-lm.html"><a href="extend-lm.html#glm"><i class="fa fa-check"></i><b>5.3.1</b> Non-Gaussian Outcomes - GLMs</a></li>
-<li class="chapter" data-level="5.3.2" data-path="extend-lm.html"><a href="extend-lm.html#lm-interact"><i class="fa fa-check"></i><b>5.3.2</b> Interactions</a></li>
-<li class="chapter" data-level="5.3.3" data-path="extend-lm.html"><a href="extend-lm.html#gam"><i class="fa fa-check"></i><b>5.3.3</b> Nonlinear Effects - GAMs</a></li>
-<li class="chapter" data-level="5.3.4" data-path="extend-lm.html"><a href="extend-lm.html#advantages-1"><i class="fa fa-check"></i><b>5.3.4</b> Advantages</a></li>
-<li class="chapter" data-level="5.3.5" data-path="extend-lm.html"><a href="extend-lm.html#disadvantages-1"><i class="fa fa-check"></i><b>5.3.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.3.6" data-path="extend-lm.html"><a href="extend-lm.html#software-1"><i class="fa fa-check"></i><b>5.3.6</b> Software</a></li>
-<li class="chapter" data-level="5.3.7" data-path="extend-lm.html"><a href="extend-lm.html#more-lm-extension"><i class="fa fa-check"></i><b>5.3.7</b> Further Extensions</a></li>
-</ul></li>
-<li class="chapter" data-level="5.4" data-path="tree.html"><a href="tree.html"><i class="fa fa-check"></i><b>5.4</b> Decision Tree</a>
-<ul>
-<li class="chapter" data-level="5.4.1" data-path="tree.html"><a href="tree.html#interpretation-2"><i class="fa fa-check"></i><b>5.4.1</b> Interpretation</a></li>
-<li class="chapter" data-level="5.4.2" data-path="tree.html"><a href="tree.html#example-2"><i class="fa fa-check"></i><b>5.4.2</b> Example</a></li>
-<li class="chapter" data-level="5.4.3" data-path="tree.html"><a href="tree.html#advantages-2"><i class="fa fa-check"></i><b>5.4.3</b> Advantages</a></li>
-<li class="chapter" data-level="5.4.4" data-path="tree.html"><a href="tree.html#disadvantages-2"><i class="fa fa-check"></i><b>5.4.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.4.5" data-path="tree.html"><a href="tree.html#software-2"><i class="fa fa-check"></i><b>5.4.5</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="5.5" data-path="rules.html"><a href="rules.html"><i class="fa fa-check"></i><b>5.5</b> Decision Rules</a>
-<ul>
-<li class="chapter" data-level="5.5.1" data-path="rules.html"><a href="rules.html#learn-rules-from-a-single-feature-oner"><i class="fa fa-check"></i><b>5.5.1</b> Learn Rules from a Single Feature (OneR)</a></li>
-<li class="chapter" data-level="5.5.2" data-path="rules.html"><a href="rules.html#sequential-covering"><i class="fa fa-check"></i><b>5.5.2</b> Sequential Covering</a></li>
-<li class="chapter" data-level="5.5.3" data-path="rules.html"><a href="rules.html#bayesian-rule-lists"><i class="fa fa-check"></i><b>5.5.3</b> Bayesian Rule Lists</a></li>
-<li class="chapter" data-level="5.5.4" data-path="rules.html"><a href="rules.html#advantages-3"><i class="fa fa-check"></i><b>5.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="5.5.5" data-path="rules.html"><a href="rules.html#disadvantages-3"><i class="fa fa-check"></i><b>5.5.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.5.6" data-path="rules.html"><a href="rules.html#software-and-alternatives"><i class="fa fa-check"></i><b>5.5.6</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="5.6" data-path="rulefit.html"><a href="rulefit.html"><i class="fa fa-check"></i><b>5.6</b> RuleFit</a>
-<ul>
-<li class="chapter" data-level="5.6.1" data-path="rulefit.html"><a href="rulefit.html#interpretation-and-example"><i class="fa fa-check"></i><b>5.6.1</b> Interpretation and Example</a></li>
-<li class="chapter" data-level="5.6.2" data-path="rulefit.html"><a href="rulefit.html#theory-1"><i class="fa fa-check"></i><b>5.6.2</b> Theory</a></li>
-<li class="chapter" data-level="5.6.3" data-path="rulefit.html"><a href="rulefit.html#advantages-4"><i class="fa fa-check"></i><b>5.6.3</b> Advantages</a></li>
-<li class="chapter" data-level="5.6.4" data-path="rulefit.html"><a href="rulefit.html#disadvantages-4"><i class="fa fa-check"></i><b>5.6.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.6.5" data-path="rulefit.html"><a href="rulefit.html#software-and-alternative"><i class="fa fa-check"></i><b>5.6.5</b> Software and Alternative</a></li>
-</ul></li>
-<li class="chapter" data-level="5.7" data-path="other-interpretable.html"><a href="other-interpretable.html"><i class="fa fa-check"></i><b>5.7</b> Other Interpretable Models</a>
-<ul>
-<li class="chapter" data-level="5.7.1" data-path="other-interpretable.html"><a href="other-interpretable.html#naive-bayes-classifier"><i class="fa fa-check"></i><b>5.7.1</b> Naive Bayes Classifier</a></li>
-<li class="chapter" data-level="5.7.2" data-path="other-interpretable.html"><a href="other-interpretable.html#k-nearest-neighbors"><i class="fa fa-check"></i><b>5.7.2</b> K-Nearest Neighbors</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="6" data-path="agnostic.html"><a href="agnostic.html"><i class="fa fa-check"></i><b>6</b> Model-Agnostic Methods</a></li>
-<li class="chapter" data-level="7" data-path="example-based.html"><a href="example-based.html"><i class="fa fa-check"></i><b>7</b> Example-Based Explanations</a></li>
-<li class="chapter" data-level="8" data-path="global-methods.html"><a href="global-methods.html"><i class="fa fa-check"></i><b>8</b> Global Model-Agnostic Methods</a>
-<ul>
-<li class="chapter" data-level="8.1" data-path="pdp.html"><a href="pdp.html"><i class="fa fa-check"></i><b>8.1</b> Partial Dependence Plot (PDP)</a>
-<ul>
-<li class="chapter" data-level="8.1.1" data-path="pdp.html"><a href="pdp.html#pdp-based-feature-importance"><i class="fa fa-check"></i><b>8.1.1</b> PDP-based Feature Importance</a></li>
-<li class="chapter" data-level="8.1.2" data-path="pdp.html"><a href="pdp.html#examples"><i class="fa fa-check"></i><b>8.1.2</b> Examples</a></li>
-<li class="chapter" data-level="8.1.3" data-path="pdp.html"><a href="pdp.html#advantages-5"><i class="fa fa-check"></i><b>8.1.3</b> Advantages</a></li>
-<li class="chapter" data-level="8.1.4" data-path="pdp.html"><a href="pdp.html#disadvantages-5"><i class="fa fa-check"></i><b>8.1.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.1.5" data-path="pdp.html"><a href="pdp.html#software-and-alternatives-1"><i class="fa fa-check"></i><b>8.1.5</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="8.2" data-path="ale.html"><a href="ale.html"><i class="fa fa-check"></i><b>8.2</b> Accumulated Local Effects (ALE) Plot</a>
-<ul>
-<li class="chapter" data-level="8.2.1" data-path="ale.html"><a href="ale.html#motivation-and-intuition"><i class="fa fa-check"></i><b>8.2.1</b> Motivation and Intuition</a></li>
-<li class="chapter" data-level="8.2.2" data-path="ale.html"><a href="ale.html#theory-2"><i class="fa fa-check"></i><b>8.2.2</b> Theory</a></li>
-<li class="chapter" data-level="8.2.3" data-path="ale.html"><a href="ale.html#estimation"><i class="fa fa-check"></i><b>8.2.3</b> Estimation</a></li>
-<li class="chapter" data-level="8.2.4" data-path="ale.html"><a href="ale.html#examples-1"><i class="fa fa-check"></i><b>8.2.4</b> Examples</a></li>
-<li class="chapter" data-level="8.2.5" data-path="ale.html"><a href="ale.html#advantages-6"><i class="fa fa-check"></i><b>8.2.5</b> Advantages</a></li>
-<li class="chapter" data-level="8.2.6" data-path="ale.html"><a href="ale.html#disadvantages-6"><i class="fa fa-check"></i><b>8.2.6</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.2.7" data-path="ale.html"><a href="ale.html#implementation-and-alternatives"><i class="fa fa-check"></i><b>8.2.7</b> Implementation and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="8.3" data-path="interaction.html"><a href="interaction.html"><i class="fa fa-check"></i><b>8.3</b> Feature Interaction</a>
-<ul>
-<li class="chapter" data-level="8.3.1" data-path="interaction.html"><a href="interaction.html#feature-interaction"><i class="fa fa-check"></i><b>8.3.1</b> Feature Interaction?</a></li>
-<li class="chapter" data-level="8.3.2" data-path="interaction.html"><a href="interaction.html#theory-friedmans-h-statistic"><i class="fa fa-check"></i><b>8.3.2</b> Theory: Friedman’s H-statistic</a></li>
-<li class="chapter" data-level="8.3.3" data-path="interaction.html"><a href="interaction.html#examples-2"><i class="fa fa-check"></i><b>8.3.3</b> Examples</a></li>
-<li class="chapter" data-level="8.3.4" data-path="interaction.html"><a href="interaction.html#advantages-7"><i class="fa fa-check"></i><b>8.3.4</b> Advantages</a></li>
-<li class="chapter" data-level="8.3.5" data-path="interaction.html"><a href="interaction.html#disadvantages-7"><i class="fa fa-check"></i><b>8.3.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.3.6" data-path="interaction.html"><a href="interaction.html#implementations"><i class="fa fa-check"></i><b>8.3.6</b> Implementations</a></li>
-<li class="chapter" data-level="8.3.7" data-path="interaction.html"><a href="interaction.html#alternatives"><i class="fa fa-check"></i><b>8.3.7</b> Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="8.4" data-path="decomposition.html"><a href="decomposition.html"><i class="fa fa-check"></i><b>8.4</b> Functional Decomposition</a>
-<ul>
-<li class="chapter" data-level="8.4.1" data-path="decomposition.html"><a href="decomposition.html#how-not-to-compute-the-components-i"><i class="fa fa-check"></i><b>8.4.1</b> How not to Compute the Components I</a></li>
-<li class="chapter" data-level="8.4.2" data-path="decomposition.html"><a href="decomposition.html#functional-decomposition"><i class="fa fa-check"></i><b>8.4.2</b> Functional Decomposition</a></li>
-<li class="chapter" data-level="8.4.3" data-path="decomposition.html"><a href="decomposition.html#how-not-to-compute-the-components-ii"><i class="fa fa-check"></i><b>8.4.3</b> How not to Compute the Components II</a></li>
-<li class="chapter" data-level="8.4.4" data-path="decomposition.html"><a href="decomposition.html#functional-anova"><i class="fa fa-check"></i><b>8.4.4</b> Functional ANOVA</a></li>
-<li class="chapter" data-level="8.4.5" data-path="decomposition.html"><a href="decomposition.html#generalized-functional-anova-for-dependent-features"><i class="fa fa-check"></i><b>8.4.5</b> Generalized Functional ANOVA for Dependent Features</a></li>
-<li class="chapter" data-level="8.4.6" data-path="decomposition.html"><a href="decomposition.html#accumulated-local-effect-plots"><i class="fa fa-check"></i><b>8.4.6</b> Accumulated Local Effect Plots</a></li>
-<li class="chapter" data-level="8.4.7" data-path="decomposition.html"><a href="decomposition.html#statistical-regression-models"><i class="fa fa-check"></i><b>8.4.7</b> Statistical Regression Models</a></li>
-<li class="chapter" data-level="8.4.8" data-path="decomposition.html"><a href="decomposition.html#bonus-partial-dependence-plot"><i class="fa fa-check"></i><b>8.4.8</b> Bonus: Partial Dependence Plot</a></li>
-<li class="chapter" data-level="8.4.9" data-path="decomposition.html"><a href="decomposition.html#advantages-8"><i class="fa fa-check"></i><b>8.4.9</b> Advantages</a></li>
-<li class="chapter" data-level="8.4.10" data-path="decomposition.html"><a href="decomposition.html#disadvantages-8"><i class="fa fa-check"></i><b>8.4.10</b> Disadvantages</a></li>
-</ul></li>
-<li class="chapter" data-level="8.5" data-path="feature-importance.html"><a href="feature-importance.html"><i class="fa fa-check"></i><b>8.5</b> Permutation Feature Importance</a>
-<ul>
-<li class="chapter" data-level="8.5.1" data-path="feature-importance.html"><a href="feature-importance.html#theory-3"><i class="fa fa-check"></i><b>8.5.1</b> Theory</a></li>
-<li class="chapter" data-level="8.5.2" data-path="feature-importance.html"><a href="feature-importance.html#feature-importance-data"><i class="fa fa-check"></i><b>8.5.2</b> Should I Compute Importance on Training or Test Data?</a></li>
-<li class="chapter" data-level="8.5.3" data-path="feature-importance.html"><a href="feature-importance.html#example-and-interpretation"><i class="fa fa-check"></i><b>8.5.3</b> Example and Interpretation</a></li>
-<li class="chapter" data-level="8.5.4" data-path="feature-importance.html"><a href="feature-importance.html#advantages-9"><i class="fa fa-check"></i><b>8.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="8.5.5" data-path="feature-importance.html"><a href="feature-importance.html#disadvantages-9"><i class="fa fa-check"></i><b>8.5.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.5.6" data-path="feature-importance.html"><a href="feature-importance.html#alternatives-1"><i class="fa fa-check"></i><b>8.5.6</b> Alternatives</a></li>
-<li class="chapter" data-level="8.5.7" data-path="feature-importance.html"><a href="feature-importance.html#software-3"><i class="fa fa-check"></i><b>8.5.7</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="8.6" data-path="global.html"><a href="global.html"><i class="fa fa-check"></i><b>8.6</b> Global Surrogate</a>
-<ul>
-<li class="chapter" data-level="8.6.1" data-path="global.html"><a href="global.html#theory-4"><i class="fa fa-check"></i><b>8.6.1</b> Theory</a></li>
-<li class="chapter" data-level="8.6.2" data-path="global.html"><a href="global.html#example-3"><i class="fa fa-check"></i><b>8.6.2</b> Example</a></li>
-<li class="chapter" data-level="8.6.3" data-path="global.html"><a href="global.html#advantages-10"><i class="fa fa-check"></i><b>8.6.3</b> Advantages</a></li>
-<li class="chapter" data-level="8.6.4" data-path="global.html"><a href="global.html#disadvantages-10"><i class="fa fa-check"></i><b>8.6.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.6.5" data-path="global.html"><a href="global.html#software-4"><i class="fa fa-check"></i><b>8.6.5</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="8.7" data-path="proto.html"><a href="proto.html"><i class="fa fa-check"></i><b>8.7</b> Prototypes and Criticisms</a>
-<ul>
-<li class="chapter" data-level="8.7.1" data-path="proto.html"><a href="proto.html#theory-5"><i class="fa fa-check"></i><b>8.7.1</b> Theory</a></li>
-<li class="chapter" data-level="8.7.2" data-path="proto.html"><a href="proto.html#examples-3"><i class="fa fa-check"></i><b>8.7.2</b> Examples</a></li>
-<li class="chapter" data-level="8.7.3" data-path="proto.html"><a href="proto.html#advantages-11"><i class="fa fa-check"></i><b>8.7.3</b> Advantages</a></li>
-<li class="chapter" data-level="8.7.4" data-path="proto.html"><a href="proto.html#disadvantages-11"><i class="fa fa-check"></i><b>8.7.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.7.5" data-path="proto.html"><a href="proto.html#code-and-alternatives"><i class="fa fa-check"></i><b>8.7.5</b> Code and Alternatives</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="9" data-path="local-methods.html"><a href="local-methods.html"><i class="fa fa-check"></i><b>9</b> Local Model-Agnostic Methods</a>
-<ul>
-<li class="chapter" data-level="9.1" data-path="ice.html"><a href="ice.html"><i class="fa fa-check"></i><b>9.1</b> Individual Conditional Expectation (ICE)</a>
-<ul>
-<li class="chapter" data-level="9.1.1" data-path="ice.html"><a href="ice.html#examples-4"><i class="fa fa-check"></i><b>9.1.1</b> Examples</a></li>
-<li class="chapter" data-level="9.1.2" data-path="ice.html"><a href="ice.html#advantages-12"><i class="fa fa-check"></i><b>9.1.2</b> Advantages</a></li>
-<li class="chapter" data-level="9.1.3" data-path="ice.html"><a href="ice.html#disadvantages-12"><i class="fa fa-check"></i><b>9.1.3</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.1.4" data-path="ice.html"><a href="ice.html#software-and-alternatives-2"><i class="fa fa-check"></i><b>9.1.4</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.2" data-path="lime.html"><a href="lime.html"><i class="fa fa-check"></i><b>9.2</b> Local Surrogate (LIME)</a>
-<ul>
-<li class="chapter" data-level="9.2.1" data-path="lime.html"><a href="lime.html#lime-for-tabular-data"><i class="fa fa-check"></i><b>9.2.1</b> LIME for Tabular Data</a></li>
-<li class="chapter" data-level="9.2.2" data-path="lime.html"><a href="lime.html#lime-for-text"><i class="fa fa-check"></i><b>9.2.2</b> LIME for Text</a></li>
-<li class="chapter" data-level="9.2.3" data-path="lime.html"><a href="lime.html#images-lime"><i class="fa fa-check"></i><b>9.2.3</b> LIME for Images</a></li>
-<li class="chapter" data-level="9.2.4" data-path="lime.html"><a href="lime.html#advantages-13"><i class="fa fa-check"></i><b>9.2.4</b> Advantages</a></li>
-<li class="chapter" data-level="9.2.5" data-path="lime.html"><a href="lime.html#disadvantages-13"><i class="fa fa-check"></i><b>9.2.5</b> Disadvantages</a></li>
-</ul></li>
-<li class="chapter" data-level="9.3" data-path="counterfactual.html"><a href="counterfactual.html"><i class="fa fa-check"></i><b>9.3</b> Counterfactual Explanations</a>
-<ul>
-<li class="chapter" data-level="9.3.1" data-path="counterfactual.html"><a href="counterfactual.html#generating-counterfactual-explanations"><i class="fa fa-check"></i><b>9.3.1</b> Generating Counterfactual Explanations</a></li>
-<li class="chapter" data-level="9.3.2" data-path="counterfactual.html"><a href="counterfactual.html#example-8"><i class="fa fa-check"></i><b>9.3.2</b> Example</a></li>
-<li class="chapter" data-level="9.3.3" data-path="counterfactual.html"><a href="counterfactual.html#advantages-14"><i class="fa fa-check"></i><b>9.3.3</b> Advantages</a></li>
-<li class="chapter" data-level="9.3.4" data-path="counterfactual.html"><a href="counterfactual.html#disadvantages-14"><i class="fa fa-check"></i><b>9.3.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.3.5" data-path="counterfactual.html"><a href="counterfactual.html#example-software"><i class="fa fa-check"></i><b>9.3.5</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.4" data-path="anchors.html"><a href="anchors.html"><i class="fa fa-check"></i><b>9.4</b> Scoped Rules (Anchors)</a>
-<ul>
-<li class="chapter" data-level="9.4.1" data-path="anchors.html"><a href="anchors.html#finding-anchors"><i class="fa fa-check"></i><b>9.4.1</b> Finding Anchors</a></li>
-<li class="chapter" data-level="9.4.2" data-path="anchors.html"><a href="anchors.html#complexity-and-runtime"><i class="fa fa-check"></i><b>9.4.2</b> Complexity and Runtime</a></li>
-<li class="chapter" data-level="9.4.3" data-path="anchors.html"><a href="anchors.html#tabular-data-example"><i class="fa fa-check"></i><b>9.4.3</b> Tabular Data Example</a></li>
-<li class="chapter" data-level="9.4.4" data-path="anchors.html"><a href="anchors.html#advantages-15"><i class="fa fa-check"></i><b>9.4.4</b> Advantages</a></li>
-<li class="chapter" data-level="9.4.5" data-path="anchors.html"><a href="anchors.html#disadvantages-15"><i class="fa fa-check"></i><b>9.4.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.4.6" data-path="anchors.html"><a href="anchors.html#software-and-alternatives-3"><i class="fa fa-check"></i><b>9.4.6</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.5" data-path="shapley.html"><a href="shapley.html"><i class="fa fa-check"></i><b>9.5</b> Shapley Values</a>
-<ul>
-<li class="chapter" data-level="9.5.1" data-path="shapley.html"><a href="shapley.html#general-idea"><i class="fa fa-check"></i><b>9.5.1</b> General Idea</a></li>
-<li class="chapter" data-level="9.5.2" data-path="shapley.html"><a href="shapley.html#examples-and-interpretation"><i class="fa fa-check"></i><b>9.5.2</b> Examples and Interpretation</a></li>
-<li class="chapter" data-level="9.5.3" data-path="shapley.html"><a href="shapley.html#the-shapley-value-in-detail"><i class="fa fa-check"></i><b>9.5.3</b> The Shapley Value in Detail</a></li>
-<li class="chapter" data-level="9.5.4" data-path="shapley.html"><a href="shapley.html#advantages-16"><i class="fa fa-check"></i><b>9.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="9.5.5" data-path="shapley.html"><a href="shapley.html#disadvantages-16"><i class="fa fa-check"></i><b>9.5.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.5.6" data-path="shapley.html"><a href="shapley.html#software-and-alternatives-4"><i class="fa fa-check"></i><b>9.5.6</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.6" data-path="shap.html"><a href="shap.html"><i class="fa fa-check"></i><b>9.6</b> SHAP (SHapley Additive exPlanations)</a>
-<ul>
-<li class="chapter" data-level="9.6.1" data-path="shap.html"><a href="shap.html#definition"><i class="fa fa-check"></i><b>9.6.1</b> Definition</a></li>
-<li class="chapter" data-level="9.6.2" data-path="shap.html"><a href="shap.html#kernelshap"><i class="fa fa-check"></i><b>9.6.2</b> KernelSHAP</a></li>
-<li class="chapter" data-level="9.6.3" data-path="shap.html"><a href="shap.html#treeshap"><i class="fa fa-check"></i><b>9.6.3</b> TreeSHAP</a></li>
-<li class="chapter" data-level="9.6.4" data-path="shap.html"><a href="shap.html#examples-5"><i class="fa fa-check"></i><b>9.6.4</b> Examples</a></li>
-<li class="chapter" data-level="9.6.5" data-path="shap.html"><a href="shap.html#shap-feature-importance"><i class="fa fa-check"></i><b>9.6.5</b> SHAP Feature Importance</a></li>
-<li class="chapter" data-level="9.6.6" data-path="shap.html"><a href="shap.html#shap-summary-plot"><i class="fa fa-check"></i><b>9.6.6</b> SHAP Summary Plot</a></li>
-<li class="chapter" data-level="9.6.7" data-path="shap.html"><a href="shap.html#shap-dependence-plot"><i class="fa fa-check"></i><b>9.6.7</b> SHAP Dependence Plot</a></li>
-<li class="chapter" data-level="9.6.8" data-path="shap.html"><a href="shap.html#shap-interaction-values"><i class="fa fa-check"></i><b>9.6.8</b> SHAP Interaction Values</a></li>
-<li class="chapter" data-level="9.6.9" data-path="shap.html"><a href="shap.html#clustering-shapley-values"><i class="fa fa-check"></i><b>9.6.9</b> Clustering Shapley Values</a></li>
-<li class="chapter" data-level="9.6.10" data-path="shap.html"><a href="shap.html#advantages-17"><i class="fa fa-check"></i><b>9.6.10</b> Advantages</a></li>
-<li class="chapter" data-level="9.6.11" data-path="shap.html"><a href="shap.html#disadvantages-17"><i class="fa fa-check"></i><b>9.6.11</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.6.12" data-path="shap.html"><a href="shap.html#software-5"><i class="fa fa-check"></i><b>9.6.12</b> Software</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="10" data-path="neural-networks.html"><a href="neural-networks.html"><i class="fa fa-check"></i><b>10</b> Neural Network Interpretation</a>
-<ul>
-<li class="chapter" data-level="10.1" data-path="cnn-features.html"><a href="cnn-features.html"><i class="fa fa-check"></i><b>10.1</b> Learned Features</a>
-<ul>
-<li class="chapter" data-level="10.1.1" data-path="cnn-features.html"><a href="cnn-features.html#feature-visualization"><i class="fa fa-check"></i><b>10.1.1</b> Feature Visualization</a></li>
-<li class="chapter" data-level="10.1.2" data-path="cnn-features.html"><a href="cnn-features.html#network-dissection"><i class="fa fa-check"></i><b>10.1.2</b> Network Dissection</a></li>
-<li class="chapter" data-level="10.1.3" data-path="cnn-features.html"><a href="cnn-features.html#advantages-18"><i class="fa fa-check"></i><b>10.1.3</b> Advantages</a></li>
-<li class="chapter" data-level="10.1.4" data-path="cnn-features.html"><a href="cnn-features.html#disadvantages-18"><i class="fa fa-check"></i><b>10.1.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="10.1.5" data-path="cnn-features.html"><a href="cnn-features.html#software-and-further-material"><i class="fa fa-check"></i><b>10.1.5</b> Software and Further Material</a></li>
-</ul></li>
-<li class="chapter" data-level="10.2" data-path="pixel-attribution.html"><a href="pixel-attribution.html"><i class="fa fa-check"></i><b>10.2</b> Pixel Attribution (Saliency Maps)</a>
-<ul>
-<li class="chapter" data-level="10.2.1" data-path="pixel-attribution.html"><a href="pixel-attribution.html#vanilla-gradient-saliency-maps"><i class="fa fa-check"></i><b>10.2.1</b> Vanilla Gradient (Saliency Maps)</a></li>
-<li class="chapter" data-level="10.2.2" data-path="pixel-attribution.html"><a href="pixel-attribution.html#deconvnet"><i class="fa fa-check"></i><b>10.2.2</b> DeconvNet</a></li>
-<li class="chapter" data-level="10.2.3" data-path="pixel-attribution.html"><a href="pixel-attribution.html#grad-cam"><i class="fa fa-check"></i><b>10.2.3</b> Grad-CAM</a></li>
-<li class="chapter" data-level="10.2.4" data-path="pixel-attribution.html"><a href="pixel-attribution.html#guided-grad-cam"><i class="fa fa-check"></i><b>10.2.4</b> Guided Grad-CAM</a></li>
-<li class="chapter" data-level="10.2.5" data-path="pixel-attribution.html"><a href="pixel-attribution.html#smoothgrad"><i class="fa fa-check"></i><b>10.2.5</b> SmoothGrad</a></li>
-<li class="chapter" data-level="10.2.6" data-path="pixel-attribution.html"><a href="pixel-attribution.html#examples-6"><i class="fa fa-check"></i><b>10.2.6</b> Examples</a></li>
-<li class="chapter" data-level="10.2.7" data-path="pixel-attribution.html"><a href="pixel-attribution.html#advantages-19"><i class="fa fa-check"></i><b>10.2.7</b> Advantages</a></li>
-<li class="chapter" data-level="10.2.8" data-path="pixel-attribution.html"><a href="pixel-attribution.html#disadvantages-19"><i class="fa fa-check"></i><b>10.2.8</b> Disadvantages</a></li>
-<li class="chapter" data-level="10.2.9" data-path="pixel-attribution.html"><a href="pixel-attribution.html#software-6"><i class="fa fa-check"></i><b>10.2.9</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="10.3" data-path="detecting-concepts.html"><a href="detecting-concepts.html"><i class="fa fa-check"></i><b>10.3</b> Detecting Concepts</a>
-<ul>
-<li class="chapter" data-level="10.3.1" data-path="detecting-concepts.html"><a href="detecting-concepts.html#tcav-testing-with-concept-activation-vectors"><i class="fa fa-check"></i><b>10.3.1</b> TCAV: Testing with Concept Activation Vectors</a></li>
-<li class="chapter" data-level="10.3.2" data-path="detecting-concepts.html"><a href="detecting-concepts.html#example-9"><i class="fa fa-check"></i><b>10.3.2</b> Example</a></li>
-<li class="chapter" data-level="10.3.3" data-path="detecting-concepts.html"><a href="detecting-concepts.html#advantages-20"><i class="fa fa-check"></i><b>10.3.3</b> Advantages</a></li>
-<li class="chapter" data-level="10.3.4" data-path="detecting-concepts.html"><a href="detecting-concepts.html#disadvantages-20"><i class="fa fa-check"></i><b>10.3.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="10.3.5" data-path="detecting-concepts.html"><a href="detecting-concepts.html#bonus-other-concept-based-approaches"><i class="fa fa-check"></i><b>10.3.5</b> Bonus: Other Concept-based Approaches</a></li>
-<li class="chapter" data-level="10.3.6" data-path="detecting-concepts.html"><a href="detecting-concepts.html#software-7"><i class="fa fa-check"></i><b>10.3.6</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="10.4" data-path="adversarial.html"><a href="adversarial.html"><i class="fa fa-check"></i><b>10.4</b> Adversarial Examples</a>
-<ul>
-<li class="chapter" data-level="10.4.1" data-path="adversarial.html"><a href="adversarial.html#methods-and-examples"><i class="fa fa-check"></i><b>10.4.1</b> Methods and Examples</a></li>
-<li class="chapter" data-level="10.4.2" data-path="adversarial.html"><a href="adversarial.html#the-cybersecurity-perspective"><i class="fa fa-check"></i><b>10.4.2</b> The Cybersecurity Perspective</a></li>
-</ul></li>
-<li class="chapter" data-level="10.5" data-path="influential.html"><a href="influential.html"><i class="fa fa-check"></i><b>10.5</b> Influential Instances</a>
-<ul>
-<li class="chapter" data-level="10.5.1" data-path="influential.html"><a href="influential.html#deletion-diagnostics"><i class="fa fa-check"></i><b>10.5.1</b> Deletion Diagnostics</a></li>
-<li class="chapter" data-level="10.5.2" data-path="influential.html"><a href="influential.html#influence-functions"><i class="fa fa-check"></i><b>10.5.2</b> Influence Functions</a></li>
-<li class="chapter" data-level="10.5.3" data-path="influential.html"><a href="influential.html#advantages-of-identifying-influential-instances"><i class="fa fa-check"></i><b>10.5.3</b> Advantages of Identifying Influential Instances</a></li>
-<li class="chapter" data-level="10.5.4" data-path="influential.html"><a href="influential.html#disadvantages-of-identifying-influential-instances"><i class="fa fa-check"></i><b>10.5.4</b> Disadvantages of Identifying Influential Instances</a></li>
-<li class="chapter" data-level="10.5.5" data-path="influential.html"><a href="influential.html#software-and-alternatives-5"><i class="fa fa-check"></i><b>10.5.5</b> Software and Alternatives</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="11" data-path="future.html"><a href="future.html"><i class="fa fa-check"></i><b>11</b> A Look into the Crystal Ball</a>
-<ul>
-<li class="chapter" data-level="11.1" data-path="the-future-of-machine-learning.html"><a href="the-future-of-machine-learning.html"><i class="fa fa-check"></i><b>11.1</b> The Future of Machine Learning</a></li>
-<li class="chapter" data-level="11.2" data-path="the-future-of-interpretability.html"><a href="the-future-of-interpretability.html"><i class="fa fa-check"></i><b>11.2</b> The Future of Interpretability</a></li>
-</ul></li>
-<li class="chapter" data-level="12" data-path="contribute.html"><a href="contribute.html"><i class="fa fa-check"></i><b>12</b> Contribute to the Book</a></li>
-<li class="chapter" data-level="13" data-path="cite.html"><a href="cite.html"><i class="fa fa-check"></i><b>13</b> Citing this Book</a></li>
-<li class="chapter" data-level="14" data-path="translations.html"><a href="translations.html"><i class="fa fa-check"></i><b>14</b> Translations</a></li>
-<li class="chapter" data-level="15" data-path="acknowledgements.html"><a href="acknowledgements.html"><i class="fa fa-check"></i><b>15</b> Acknowledgements</a></li>
-<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a>
-<ul>
-<li class="chapter" data-level="" data-path="r-packages-used.html"><a href="r-packages-used.html"><i class="fa fa-check"></i>R Packages Used</a></li>
-</ul></li>
-<li class="divider"></li>
-<li><a href="https://bookdown.org" target="_blank">Published with bookdown</a></li> 
-<li><a href="https://christophmolnar.com/impressum/" target="_blank">Impressum</a></li>
-
-</ul>
-
-      </nav>
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cnn-features.html">Neural Network Interpretation</a></li><li class="breadcrumb-item"><a href="./adversarial.html"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Adversarial Examples</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
     </div>
-
-    <div class="book-body">
-      <div class="body-inner">
-        <div class="book-header" role="navigation">
-          <h1>
-            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Interpretable Machine Learning</a>
-          </h1>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Interpretable Machine Learning</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/christophM/interpretable-ml-book" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
         </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">About the Book</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./intro.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Interpretability</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./goals.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Goals of Interpretability</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Methods Overview</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data and Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Interpretable Models</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./limo.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./logistic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Logistic Regression</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./extend-lm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">GLM, GAM and more</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tree.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Decision Tree</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./rules.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Decision Rules</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./rulefit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">RuleFit</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Local Modal-Agnostic Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ceteris-paribus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Ceteris Paribus Plots</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ice.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Individual Conditional Expectation (ICE)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./lime.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">LIME</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./counterfactual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Counterfactual Explanations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./anchors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Scoped Rules (Anchors)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./shapley.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Shapley Values</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./shap.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">SHAP</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Global Model-Agnostic Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./pdp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Partial Dependence Plot (PDP)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ale.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Accumulated Local Effects (ALE)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interaction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Feature Interaction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./decomposition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Functional Decomposition</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./feature-importance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Permutation Feature Importance</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./lofo.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Leave One Feature Out (LOFO) Importance</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./global.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Surrogate Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./proto.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Prototypes and Criticisms</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Neural Network Interpretation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cnn-features.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Learned Features</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./pixel-attribution.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Saliency Maps</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./detecting-concepts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Detecting Concepts</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./adversarial.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Adversarial Examples</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./influential.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Influential Instances</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Beyond the Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Evaluation of Interpretability Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./storytime.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Story Time</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./future.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">34</span>&nbsp; <span class="chapter-title">The Future of Interpretability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./translations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">35</span>&nbsp; <span class="chapter-title">Translations</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cite.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">36</span>&nbsp; <span class="chapter-title">Citing this Book</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./acknowledgements.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">37</span>&nbsp; <span class="chapter-title">Acknowledgments</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./what-is-machine-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Machine Learning Terms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./math-terms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Math Terms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">R packages used</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">References</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#methods-and-examples" id="toc-methods-and-examples" class="nav-link active" data-scroll-target="#methods-and-examples">Methods and examples</a></li>
+  <li><a href="#the-cybersecurity-perspective" id="toc-the-cybersecurity-perspective" class="nav-link" data-scroll-target="#the-cybersecurity-perspective">The cybersecurity perspective</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/christophM/interpretable-ml-book/blob/main/adversarial.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/christophM/interpretable-ml-book/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    <div class="quarto-margin-footer"><div class="margin-footer-item">
+<div id="book-purchase-links" class="book-purchase-links">
 
-        <div class="page-wrapper" tabindex="-1" role="main">
-          <div class="page-inner">
+</div>
+</div></div></div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
 
-            <section class="normal" id="section-">
-<a id="cta-button-desktop" href="https://bit.ly/3K3AV1y" rel="noopener noreferrer" target="blank"> Buy Book </a>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./cnn-features.html">Neural Network Interpretation</a></li><li class="breadcrumb-item"><a href="./adversarial.html"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Adversarial Examples</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span id="adversarial" class="quarto-section-identifier"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Adversarial Examples</span></span></h1>
+</div>
 
-<a id="cta-button-device" href="https://leanpub.com/interpretable-machine-learning" rel="noopener noreferrer" target="blank">Buy</a>
 
-<div id="adversarial" class="section level2 hasAnchor" number="10.4">
-<h2><span class="header-section-number">10.4</span> Adversarial Examples<a href="adversarial.html#adversarial" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<p>An adversarial example is an instance with small, intentional feature perturbations that cause a machine learning model to make a false prediction.
-I recommend reading the chapter about <a href="counterfactual.html#counterfactual">Counterfactual Explanations</a> first, as the concepts are very similar.
-Adversarial examples are counterfactual examples with the aim to deceive the model, not interpret it.</p>
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>An adversarial example is an instance with small, intentional feature perturbations that cause a machine learning model to make a false prediction. I recommend reading the chapter about <a href="counterfactual.html">Counterfactual Explanations</a> first, as the concepts are very similar. Adversarial examples are counterfactual examples with the aim to deceive the model, not interpret it.</p>
 <!-- *Keywords: adversarial examples, adversarial machine learning, counterfactuals, evasion attacks, machine learning security* -->
-<p>Why are we interested in adversarial examples?
-Are they not just curious by-products of machine learning models without practical relevance?
-The answer is a clear “no”.
-Adversarial examples make machine learning models vulnerable to attacks, as in the following scenarios.</p>
-<p>A self-driving car crashes into another car because it ignores a stop sign.
-Someone had placed a picture over the sign, which looks like a stop sign with a little dirt for humans, but was designed to look like a parking prohibition sign for the sign recognition software of the car.</p>
-<p>A spam detector fails to classify an email as spam.
-The spam mail has been designed to resemble a normal email, but with the intention of cheating the recipient.</p>
-<p>A machine-learning powered scanner scans suitcases for weapons at the airport.
-A knife was developed to avoid detection by making the system think it is an umbrella.</p>
-<p>Let us take a look at some ways to create adversarial examples.</p>
-<div id="methods-and-examples" class="section level3 hasAnchor" number="10.4.1">
-<h3><span class="header-section-number">10.4.1</span> Methods and Examples<a href="adversarial.html#methods-and-examples" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>There are many techniques to create adversarial examples.
-Most approaches suggest minimizing the distance between the adversarial example and the instance to be manipulated, while shifting the prediction to the desired (adversarial) outcome.
-Some methods require access to the gradients of the model, which of course only works with gradient based models such as neural networks, other methods only require access to the prediction function, which makes these methods model-agnostic.
-The methods in this section focus on image classifiers with deep neural networks, as a lot of research is done in this area and the visualization of adversarial images is very educational.
-Adversarial examples for images are images with intentionally perturbed pixels with the aim to deceive the model during application time.
-The examples impressively demonstrate how easily deep neural networks for object recognition can be deceived by images that appear harmless to humans.
-If you have not yet seen these examples, you might be surprised, because the changes in predictions are incomprehensible for a human observer.
-Adversarial examples are like optical illusions but for machines.</p>
+<p>Why are we interested in adversarial examples? Are they not just curious by-products of machine learning models without practical relevance? The answer is a clear “no”. Adversarial examples make machine learning models vulnerable to attacks, as in the following scenarios.</p>
+<p>A self-driving car crashes into another car because it ignores a stop sign. Someone had placed a picture over the sign, which looks like a stop sign with a little dirt for humans, but was designed to look like a parking prohibition sign for the sign recognition software of the car.</p>
+<p>A spam detector fails to classify an email as spam. The spam mail has been designed to resemble a normal email, but with the intention of cheating the recipient.</p>
+<p>A machine-learning powered scanner scans suitcases for weapons at the airport. A knife was developed to avoid detection by making the system think it is an umbrella.</p>
+<p>Let’s take a look at some ways to create adversarial examples.</p>
+<section id="methods-and-examples" class="level2">
+<h2 class="anchored" data-anchor-id="methods-and-examples">Methods and examples</h2>
+<p>There are many techniques to create adversarial examples. Most approaches suggest minimizing the distance between the adversarial example and the instance to be manipulated, while shifting the prediction to the desired (adversarial) outcome. Some methods require access to the gradients of the model, which of course only works with gradient-based models such as neural networks, while other methods only require access to the prediction function, which makes these methods model-agnostic. The methods in this section focus on image classifiers with deep neural networks, as a lot of research is done in this area and the visualization of adversarial images is very educational. Adversarial examples for images are images with intentionally perturbed pixels with the aim to deceive the model during application time. The examples impressively demonstrate how easily deep neural networks for object recognition can be deceived by images that appear harmless to humans. If you have not yet seen these examples, you might be surprised because the changes in predictions are incomprehensible for a human observer. Adversarial examples are like optical illusions, but for machines.</p>
 <p><strong>Something is Wrong With My Dog</strong></p>
-<p>Szegedy et al. (2013)<a href="#fn96" class="footnote-ref" id="fnref96"><sup>96</sup></a> used a gradient based optimization approach in their work “Intriguing Properties of Neural Networks” to find adversarial examples for deep neural networks.</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:adversarial-ostrich"></span>
-<img src="images/adversarial-ostrich.jpg" alt="Adversarial examples for AlexNet by Szegedy et al. (2013). All images in the left column are correctly classified. The middle column shows the (magnified) error added to the images to produce the images in the right column all categorized (incorrectly) as &quot;Ostrich&quot;. &quot;Intriguing properties of neural networks&quot;, Figure 5 by Szegedy et al. CC-BY 3.0." width="\textwidth" />
-<p class="caption">
-FIGURE 10.12: Adversarial examples for AlexNet by Szegedy et al. (2013). All images in the left column are correctly classified. The middle column shows the (magnified) error added to the images to produce the images in the right column all categorized (incorrectly) as “Ostrich”. “Intriguing properties of neural networks”, Figure 5 by Szegedy et al. CC-BY 3.0.
-</p>
+<p><span class="citation" data-cites="szegedy2014intriguing">Szegedy et al. (<a href="references.html#ref-szegedy2014intriguing" role="doc-biblioref">2014</a>)</span> used a gradient-based optimization approach in their work “Intriguing Properties of Neural Networks” to find adversarial examples for deep neural networks. One result can be seen in <a href="#fig-ostrich" class="quarto-xref">Figure&nbsp;<span>30.1</span></a>.</p>
+<div id="fig-ostrich" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-ostrich-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="./images/adversarial-ostrich.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Figure&nbsp;30.1: Adversarial examples for AlexNet by Szegedy et al.&nbsp;(2013). All images in the left column are correctly classified. The middle column shows the (magnified) error added to the images to produce the images in the right column all categorized (incorrectly) as “Ostrich”. “Intriguing properties of neural networks”, Figure 5 by Szegedy et al.&nbsp;CC-BY 3.0."><img src="./images/adversarial-ostrich.jpg" class="img-fluid figure-img"></a>
 </div>
-<p>These adversarial examples were generated by minimizing the following function with respect to r:</p>
-<p><span class="math display">\[loss(\hat{f}(x+r),l)+c\cdot|r|\]</span></p>
-<p>In this formula, x is an image (represented as a vector of pixels), r is the changes to the pixels to create an adversarial image (x+r produces a new image), l is the desired outcome class, and the parameter c is used to balance the distance between images and the distance between predictions.
-The first term is the distance between the predicted outcome of the adversarial example and the desired class l, the second term measures the distance between the adversarial example and the original image.
-This formulation is almost identical to the loss function to generate <a href="counterfactual.html#counterfactual">counterfactual explanations</a>.
-There are additional constraints for r so that the pixel values remain between 0 and 1.
-The authors suggest to solve this optimization problem with a box-constrained L-BFGS, an optimization algorithm that works with gradients.</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-ostrich-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;30.1: Adversarial examples for AlexNet by Szegedy et al.&nbsp;(2013). All images in the left column are correctly classified. The middle column shows the (magnified) error added to the images to produce the images in the right column all categorized (incorrectly) as “Ostrich”. “Intriguing properties of neural networks”, Figure 5 by Szegedy et al.&nbsp;CC-BY 3.0.
+</figcaption>
+</figure>
+</div>
+<p>These adversarial examples were generated by minimizing the following function with respect to <span class="math inline">\(\mathbf{r}\)</span>:</p>
+<p><span class="math display">\[\text{loss}(\hat{f}(\mathbf{x}+\mathbf{r}), l) + c \cdot |\mathbf{r}|\]</span></p>
+<p>In this formula, <span class="math inline">\(\mathbf{x}\)</span> is an image (represented as a vector of pixels), <span class="math inline">\(\mathbf{r}\)</span> is the change to the pixels to create an adversarial image (<span class="math inline">\(\mathbf{x} + \mathbf{r}\)</span> produces a new image), <span class="math inline">\(l\)</span> is the desired outcome class, and the parameter <span class="math inline">\(c\)</span> is used to balance the distance between images and the distance between predictions. The first term is the distance between the predicted outcome of the adversarial example and the desired class <span class="math inline">\(l\)</span>; the second term measures the distance between the adversarial example and the original image. This formulation is almost identical to the loss function to generate <a href="counterfactual.html">counterfactual explanations</a>. There are additional constraints for <span class="math inline">\(\mathbf{r}\)</span> so that the pixel values remain between 0 and 1. The authors suggest solving this optimization problem with a box-constrained L-BFGS, an optimization algorithm that works with gradients.</p>
 <p><strong>Disturbed panda: Fast gradient sign method</strong></p>
-<p>Goodfellow et al. (2014)<a href="#fn97" class="footnote-ref" id="fnref97"><sup>97</sup></a> invented the fast gradient sign method for generating adversarial images.
-The gradient sign method uses the gradient of the underlying model to find adversarial examples.
-The original image x is manipulated by adding or subtracting a small error <span class="math inline">\(\epsilon\)</span> to each pixel.
-Whether we add or subtract <span class="math inline">\(\epsilon\)</span> depends on whether the sign of the gradient for a pixel is positive or negative.
-Adding errors in the direction of the gradient means that the image is intentionally altered so that the model classification fails.</p>
+<p><span class="citation" data-cites="goodfellow2015explaining">Goodfellow, Shlens, and Szegedy (<a href="references.html#ref-goodfellow2015explaining" role="doc-biblioref">2015</a>)</span> invented the fast gradient sign method for generating adversarial images. The gradient sign method uses the gradient of the underlying model to find adversarial examples. The original image <span class="math inline">\(\mathbf{x}\)</span> is manipulated by adding or subtracting a small error <span class="math inline">\(\epsilon\)</span> to each pixel. Whether we add or subtract <span class="math inline">\(\epsilon\)</span> depends on whether the sign of the gradient for a pixel is positive or negative. Adding errors in the direction of the gradient means that the image is intentionally altered so that the model classification fails.</p>
 <p>The following formula describes the core of the fast gradient sign method:</p>
-<p><span class="math display">\[x^\prime=x+\epsilon\cdot{}sign(\bigtriangledown_x{}J(\theta,x,y))\]</span></p>
-<p>where <span class="math inline">\(\bigtriangledown_x{}J\)</span> is the gradient of the models loss function with respect to the original input pixel vector x, y is the true label vector for x and <span class="math inline">\(\theta\)</span> is the model parameter vector.
-From the gradient vector (which is as long as the vector of the input pixels) we only need the sign:
-The sign of the gradient is positive (+1) if an increase in pixel intensity increases the loss (the error the model makes) and negative (-1) if a decrease in pixel intensity increases the loss.
-This vulnerability occurs when a neural network treats a relationship between an input pixel intensity and the class score linearly.
-In particular, neural network architectures that favor linearity, such as LSTMs, maxout networks, networks with ReLU activation units or other linear machine learning algorithms such as logistic regression are vulnerable to the gradient sign method.
-The attack is carried out by extrapolation.
-The linearity between the input pixel intensity and the class scores leads to vulnerability to outliers, i.e. the model can be deceived by moving pixel values into areas outside the data distribution.
-I expected these adversarial examples to be quite specific to a given neural network architecture.
-But it turns out that you can reuse adversarial examples to deceive networks with a different architecture trained on the same task.</p>
-<p>Goodfellow et al. (2014) suggested adding adversarial examples to the training data to learn robust models.</p>
+<p><span class="math display">\[\mathbf{x}^\prime = \mathbf{x} + \epsilon \cdot \text{sign}\left(\nabla_{\mathbf{x}} J(\boldsymbol{\theta}, \mathbf{x}, y)\right)\]</span></p>
+<p>where <span class="math inline">\(\nabla_{\mathbf{x}} J\)</span> is the gradient of the model’s loss function with respect to the original input pixel vector <span class="math inline">\(\mathbf{x}\)</span>, <span class="math inline">\(y\)</span> is the true label for <span class="math inline">\(\mathbf{x}\)</span>, and <span class="math inline">\(\boldsymbol{\theta}\)</span> is the model parameter vector. From the gradient vector (which is as long as the vector of the input pixels), we only need the sign: The sign of the gradient is positive (+1) if an increase in pixel intensity increases the loss (the error the model makes) and negative (-1) if a decrease in pixel intensity increases the loss. This vulnerability occurs when a neural network treats a relationship between an input pixel intensity and the class score linearly. In particular, neural network architectures that favor linearity, such as LSTMs, maxout networks, networks with ReLU activation units, or other linear machine learning algorithms such as logistic regression, are vulnerable to the gradient sign method. The attack is carried out by extrapolation. The linearity between the input pixel intensity and the class scores leads to vulnerability to outliers, i.e., the model can be deceived by moving pixel values into areas outside the data distribution. I expected these adversarial examples to be quite specific to a given neural network architecture. But it turns out that you can reuse adversarial examples to deceive networks with a different architecture trained on the same task.</p>
+<p><span class="citation" data-cites="goodfellow2015explaining">Goodfellow, Shlens, and Szegedy (<a href="references.html#ref-goodfellow2015explaining" role="doc-biblioref">2015</a>)</span> suggested adding adversarial examples to the training data to learn robust models.</p>
 <p><strong>A jellyfish … No, wait. A bathtub: 1-pixel attacks</strong></p>
-<p>The approach presented by Goodfellow and colleagues (2014) requires many pixels to be changed, if only by a little.
-But what if you can only change a single pixel?
-Would you be able to deceive a machine learning model?
-Su et al. (2019) <a href="#fn98" class="footnote-ref" id="fnref98"><sup>98</sup></a> showed that it is actually possible to deceive image classifiers by changing a single pixel.</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:adversarial-1pixel"></span>
-<img src="images/adversarial-1pixel.png" alt="By intentionally changing a single pixel a neural network trained on ImageNet can be deceived to predict the wrong class instead of the original class." width="\textwidth" />
-<p class="caption">
-FIGURE 10.13: By intentionally changing a single pixel a neural network trained on ImageNet can be deceived to predict the wrong class instead of the original class.
-</p>
+<p>The approach presented by Goodfellow and colleagues (2014) requires many pixels to be changed, if only by a little. But what if you can only change a single pixel? Would you be able to deceive a machine learning model? <span class="citation" data-cites="su2019one">Su, Vargas, and Sakurai (<a href="references.html#ref-su2019one" role="doc-biblioref">2019</a>)</span> showed that it is actually possible to deceive image classifiers by changing a single pixel, as illustrated in <a href="#fig-1pixel" class="quarto-xref">Figure&nbsp;<span>30.2</span></a>.</p>
+<div id="fig-1pixel" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-1pixel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="./images/adversarial-1pixel.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Figure&nbsp;30.2: By intentionally changing a single pixel a neural network trained on ImageNet can be deceived to predict the wrong class instead of the original class."><img src="./images/adversarial-1pixel.jpg" class="img-fluid figure-img"></a>
 </div>
-<p>Similar to counterfactuals, the 1-pixel attack looks for a modified example x’ which comes close to the original image x, but changes the prediction to an adversarial outcome.
-However, the definition of closeness differs: Only a single pixel may change.
-The 1-pixel attack uses differential evolution to find out which pixel is to be changed and how.
-Differential evolution is loosely inspired by biological evolution of species.
-A population of individuals called candidate solutions recombines generation by generation until a solution is found.
-Each candidate solution encodes a pixel modification and is represented by a vector of five elements: the x- and y-coordinates and the red, green and blue (RGB) values.
-The search starts with, for example, 400 candidate solutions (= pixel modification suggestions) and creates a new generation of candidate solutions (children) from the parent generation using the following formula:</p>
-<p><span class="math display">\[x_{i}(g+1)=x_{r1}(g)+F\cdot(x_{r2}(g)-x_{r3}(g))\]</span></p>
-<p>where each <span class="math inline">\(x_i\)</span> is an element of a candidate solution (either x-coordinate, y-coordinate, red, green or blue), g is the current generation, F is a scaling parameter (set to 0.5) and r1, r2 and r3 are different random numbers.
-Each new child candidate solution is in turn a pixel with the five attributes for location and color and each of those attributes is a mixture of three random parent pixels.</p>
-<p>The creation of children is stopped if one of the candidate solutions is an adversarial example, meaning it is classified as an incorrect class, or if the number of maximum iterations specified by the user is reached.</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-1pixel-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;30.2: By intentionally changing a single pixel a neural network trained on ImageNet can be deceived to predict the wrong class instead of the original class.
+</figcaption>
+</figure>
+</div>
+<p>Similar to counterfactuals, the 1-pixel attack looks for a modified example <span class="math inline">\(\mathbf{x}^\prime\)</span> that comes close to the original image <span class="math inline">\(\mathbf{x}\)</span>, but changes the prediction to an adversarial outcome. However, the definition of closeness differs: Only a single pixel may change. The 1-pixel attack uses differential evolution to find out which pixel is to be changed and how. Differential evolution is loosely inspired by the biological evolution of species. A population of individuals called candidate solutions recombines generation by generation until a solution is found. Each candidate solution encodes a pixel modification and is represented by a vector of five elements: the <span class="math inline">\(x\)</span>- and <span class="math inline">\(y\)</span>-coordinates and the red, green, and blue (RGB) values. The search starts with, for example, 400 candidate solutions (= pixel modification suggestions) and creates a new generation of candidate solutions (children) from the parent generation using the following formula:</p>
+<p><span class="math display">\[\mathbf{x}_{g+1}^{(i)} = \mathbf{x}_g^{(r1)} + F \cdot (\mathbf{x}_g^{(r2)}- \mathbf{x}_g^{(r3)})\]</span></p>
+<p>where each <span class="math inline">\(x^{(i)}\)</span> is an element of a candidate solution (either <span class="math inline">\(x\)</span>-coordinate, <span class="math inline">\(y\)</span>-coordinate, red, green, or blue), <span class="math inline">\(g\)</span> is the current generation, <span class="math inline">\(F\)</span> is a scaling parameter (set to 0.5), and <span class="math inline">\(r1\)</span>, <span class="math inline">\(r2\)</span>, and <span class="math inline">\(r3\)</span> are different random numbers. Each new child candidate solution is in turn a pixel with the five attributes for location and color, and each of those attributes is a mixture of three random parent pixels.</p>
+<p>The creation of children is stopped if one of the candidate solutions is an adversarial example, meaning it is classified as an incorrect class, or if the maximum number of iterations specified by the user is reached.</p>
 <p><strong>Everything is a toaster: Adversarial patch</strong></p>
-<p>One of my favorite methods brings adversarial examples into physical reality.
-Brown et al. (2017)<a href="#fn99" class="footnote-ref" id="fnref99"><sup>99</sup></a> designed a printable label that can be stuck next to objects to make them look like toasters for an image classifier.
-Brilliant work!</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:adversarial-toaster"></span>
-<img src="images/adversarial-toaster.png" alt="A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et al. (2017)." width="0.5\textwidth" />
-<p class="caption">
-FIGURE 10.14: A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et al. (2017).
-</p>
+<p>One of my favorite methods brings adversarial examples into physical reality. <span class="citation" data-cites="brown2018adversarial">Brown et al. (<a href="references.html#ref-brown2018adversarial" role="doc-biblioref">2018</a>)</span> designed a printable label that can be stuck next to objects to make them look like toasters for an image classifier, see <a href="#fig-adversarial-toaster" class="quarto-xref">Figure&nbsp;<span>30.3</span></a>. Brilliant work!</p>
+<div id="fig-adversarial-toaster" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-adversarial-toaster-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="images/adversarial-toaster.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-3" title="Figure&nbsp;30.3: A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et al.&nbsp;(2017)."><img src="images/adversarial-toaster.jpg" class="img-fluid figure-img" style="width:50.0%"></a>
 </div>
-<p>This method differs from the methods presented so far for adversarial examples, since the restriction that the adversarial image must be very close to the original image is removed.
-Instead, the method completely replaces a part of the image with a patch that can take on any shape.
-The image of the patch is optimized over different background images, with different positions of the patch on the images, sometimes moved, sometimes larger or smaller and rotated, so that the patch works in many situations.
-In the end, this optimized image can be printed and used to deceive image classifiers in the wild.</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-adversarial-toaster-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;30.3: A sticker that makes a VGG16 classifier trained on ImageNet categorize an image of a banana as a toaster. Work by Brown et al.&nbsp;(2017).
+</figcaption>
+</figure>
+</div>
+<p>This method differs from the methods presented so far for adversarial examples since the restriction that the adversarial image must be very close to the original image is removed. Instead, the method completely replaces a part of the image with a patch that can take on any shape. The image of the patch is optimized over different background images, with different positions of the patch on the images, sometimes moved, sometimes larger or smaller, and rotated, so that the patch works in many situations. In the end, this optimized image can be printed and used to deceive image classifiers in the wild.</p>
 <p><strong>Never bring a 3D-printed turtle to a gunfight – even if your computer thinks it is a good idea: Robust adversarial examples</strong></p>
-<p>The next method is literally adding another dimension to the toaster:
-Athalye et al. (2017)<a href="#fn100" class="footnote-ref" id="fnref100"><sup>100</sup></a> 3D-printed a turtle that was designed to look like a rifle to a deep neural network from almost all possible angles.
-Yeah, you read that right.
-A physical object that looks like a turtle to humans looks like a rifle to the computer!</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:adversarial-turtle"></span>
-<img src="images/adversarial-turtle.png" alt="Athalye et al. (2017) created a 3D-printed that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier." width="\textwidth" />
-<p class="caption">
-FIGURE 10.15: Athalye et al. (2017) created a 3D-printed that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier.
-</p>
+<p>The next method is literally adding another dimension to the toaster: <span class="citation" data-cites="athalye2018synthesizing">Athalye et al. (<a href="references.html#ref-athalye2018synthesizing" role="doc-biblioref">2018</a>)</span> 3D-printed a turtle that was designed to look like a rifle to a deep neural network from almost all possible angles, as illustrated in <a href="#fig-adversarial-turtle" class="quarto-xref">Figure&nbsp;<span>30.4</span></a>. Yeah, you read that right. A physical object that looks like a turtle to humans looks like a rifle to the computer!</p>
+<div id="fig-adversarial-turtle" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-adversarial-turtle-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="images/adversarial-turtle.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-4" title="Figure&nbsp;30.4: Athalye et al.&nbsp;(2017) created a 3D-printed object that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier."><img src="images/adversarial-turtle.jpg" class="img-fluid figure-img"></a>
 </div>
-<p>The authors have found a way to create an adversarial example in 3D for a 2D classifier that is adversarial over transformations, such as all possibilities to rotate the turtle, zoom in and so on.
-Other approaches such as the fast gradient method no longer work when the image is rotated or viewing angle changes.
-Athalye et al. (2017) propose the Expectation Over Transformation (EOT) algorithm, which is a method for generating adversarial examples that even work when the image is transformed.
-The main idea behind EOT is to optimize adversarial examples across many possible transformations.
-Instead of minimizing the distance between the adversarial example and the original image, EOT keeps the expected distance between the two below a certain threshold, given a selected distribution of possible transformations.
-The expected distance under transformation can be written as:</p>
-<p><span class="math display">\[\mathbb{E}_{t\sim{}T}[d(t(x^\prime),t(x))]\]</span></p>
-<p>where x is the original image, t(x) the transformed image (e.g. rotated), x’ the adversarial example and t(x’) its transformed version.
-Apart from working with a distribution of transformations, the EOT method follows the familiar pattern of framing the search for adversarial examples as an optimization problem.
-We try to find an adversarial example x’ that maximizes the probability for the selected class <span class="math inline">\(y_t\)</span> (e.g. “rifle”) across the distribution of possible transformations T:</p>
-<p><span class="math display">\[\arg\max_{x^\prime}\mathbb{E}_{t\sim{}T}[log{}P(y_t|t(x^\prime))]\]</span></p>
-<p>With the constraint that the expected distance over all possible transformations between adversarial example x’ and original image x remains below a certain threshold:</p>
-<p><span class="math display">\[\mathbb{E}_{t\sim{}T}[d(t(x^\prime),t(x))]&lt;\epsilon\quad\text{and}\quad{}x\in[0,1]^d\]</span></p>
-<p>I think we should be concerned about the possibilities this method enables.
-The other methods are based on the manipulation of digital images.
-However, these 3D-printed, robust adversarial examples can be inserted into any real scene and deceive a computer to wrongly classify an object.
-Let us turn it around: What if someone creates a rifle which looks like a turtle?</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-adversarial-turtle-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;30.4: Athalye et al.&nbsp;(2017) created a 3D-printed object that is recognized as a rifle by TensorFlow’s standard pre-trained InceptionV3 classifier.
+</figcaption>
+</figure>
+</div>
+<p>The authors have found a way to create an adversarial example in 3D for a 2D classifier that is adversarial over transformations, such as all possibilities to rotate the turtle, zoom in, and so on. Other approaches, such as the fast gradient method, no longer work when the image is rotated or the viewing angle changes. Athalye et al.&nbsp;(2017) propose the Expectation Over Transformation (EOT) algorithm, which is a method for generating adversarial examples that even work when the image is transformed. The main idea behind EOT is to optimize adversarial examples across many possible transformations. Instead of minimizing the distance between the adversarial example and the original image, EOT keeps the expected distance between the two below a certain threshold, given a selected distribution of possible transformations. The expected distance under transformation can be written as:</p>
+<p><span class="math display">\[\mathbb{E}_{t \sim T}[d(t(\mathbf{x}^\prime), t(\mathbf{x}))]\]</span></p>
+<p>where <span class="math inline">\(\mathbf{x}\)</span> is the original image, <span class="math inline">\(t(\mathbf{x})\)</span> the transformed image (e.g., rotated), <span class="math inline">\(\mathbf{x}^\prime\)</span> the adversarial example, and <span class="math inline">\(t(\mathbf{x}^\prime)\)</span> its transformed version. Apart from working with a distribution of transformations, the EOT method follows the familiar pattern of framing the search for adversarial examples as an optimization problem. We try to find an adversarial example <span class="math inline">\(\mathbf{x}^\prime\)</span> that maximizes the probability for the selected class <span class="math inline">\(y_t\)</span> (e.g., “rifle”) across the distribution of possible transformations <span class="math inline">\(T\)</span>:</p>
+<p><span class="math display">\[\arg\max_{\mathbf{x}^\prime} \mathbb{E}_{t \sim T}[\log \mathbb{P}(y_t | t(\mathbf{x}^\prime))]\]</span></p>
+<p>With the constraint that the expected distance over all possible transformations between adversarial example <span class="math inline">\(\mathbf{x}^\prime\)</span> and original image <span class="math inline">\(\mathbf{x}\)</span> remains below a certain threshold:</p>
+<p><span class="math display">\[\mathbb{E}_{t \sim T}[d(t(\mathbf{x}^\prime), t(\mathbf{x}))] &lt; \epsilon \quad \text{and} \quad \mathbf{x} \in [0,1]^d\]</span></p>
+<p>I think we should be concerned about the possibilities this method enables. The other methods are based on the manipulation of digital images. However, these 3D-printed, robust adversarial examples can be inserted into any real scene and deceive a computer to wrongly classify an object. Let’s turn it around: What if someone creates a rifle that looks like a turtle?</p>
 <p><strong>The blindfolded adversary: Black box attack</strong></p>
-<p>Imagine the following scenario:
-I give you access to my great image classifier via Web API.
-You can get predictions from the model, but you do not have access to the model parameters.
-From the convenience of your couch, you can send data and my service answers with the corresponding classifications.
-Most adversarial attacks are not designed to work in this scenario because they require access to the gradient of the underlying deep neural network to find adversarial examples.
-Papernot and colleagues (2017)<a href="#fn101" class="footnote-ref" id="fnref101"><sup>101</sup></a> showed that it is possible to create adversarial examples without internal model information and without access to the training data.
-This type of (almost) zero-knowledge attack is called black box attack.</p>
+<p>Imagine the following scenario: I give you access to my great image classifier via Web API. You can get predictions from the model, but you do not have access to the model parameters. From the convenience of your couch, you can send data, and my service answers with the corresponding classifications. Most adversarial attacks are not designed to work in this scenario because they require access to the gradient of the underlying deep neural network to find adversarial examples. <span class="citation" data-cites="papernot2017practical">Papernot et al. (<a href="references.html#ref-papernot2017practical" role="doc-biblioref">2017</a>)</span> showed that it is possible to create adversarial examples without internal model information and without access to the training data. This type of (almost) zero-knowledge attack is called a black box attack.</p>
 <p>How it works:</p>
-<ol style="list-style-type: decimal">
-<li>Start with a few images that come from the same domain as the training data, e.g. if the classifier to be attacked is a digit classifier, use images of digits. The knowledge of the domain is required, but not the access to the training data.</li>
+<ol type="1">
+<li>Start with a few images that come from the same domain as the training data, e.g., if the classifier to be attacked is a digit classifier, use images of digits. The knowledge of the domain is required, but not the access to the training data.</li>
 <li>Get predictions for the current set of images from the black box.</li>
-<li>Train a surrogate model on the current set of images (for example a neural network).</li>
+<li>Train a surrogate model on the current set of images (for example, a neural network).</li>
 <li>Create a new set of synthetic images using a heuristic that examines for the current set of images in which direction to manipulate the pixels to make the model output have more variance.</li>
 <li>Repeat steps 2 to 4 for a predefined number of epochs.</li>
 <li>Create adversarial examples for the surrogate model using the fast gradient method (or similar).</li>
 <li>Attack the original model with adversarial examples.</li>
 </ol>
 <p>The aim of the surrogate model is to approximate the decision boundaries of the black box model, but not necessarily to achieve the same accuracy.</p>
-<p>The authors tested this approach by attacking image classifiers trained on various cloud machine learning services.
-These services train image classifiers on user uploaded images and labels.
-The software trains the model automatically – sometimes with an algorithm unknown to the user – and deploys it.
-The classifier then gives predictions for uploaded images, but the model itself cannot be inspected or downloaded.
-The authors were able to find adversarial examples for various providers, with up to 84% of the adversarial examples being misclassified.</p>
-<p>The method even works if the black box model to be deceived is not a neural network.
-This includes machine learning models without gradients such as a decision trees.</p>
-</div>
-<div id="the-cybersecurity-perspective" class="section level3 hasAnchor" number="10.4.2">
-<h3><span class="header-section-number">10.4.2</span> The Cybersecurity Perspective<a href="adversarial.html#the-cybersecurity-perspective" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>Machine learning deals with known unknowns: predicting unknown data points from a known distribution.
-The defense against attacks deals with unknown unknowns: robustly predicting unknown data points from an unknown distribution of adversarial inputs.
-As machine learning is integrated into more and more systems, such as autonomous vehicles or medical devices, they are also becoming entry points for attacks.
-Even if the predictions of a machine learning model on a test dataset are 100% correct, adversarial examples can be found to deceive the model.
-The defense of machine learning models against cyber attacks is a new part of the field of cybersecurity.</p>
-<p>Biggio et al. (2018)<a href="#fn102" class="footnote-ref" id="fnref102"><sup>102</sup></a> give a nice review of ten years of research on adversarial machine learning, on which this section is based.
-Cybersecurity is an arms-race in which attackers and defenders outwit each other time and again.</p>
-<p><strong>There are three golden rules in cybersecurity: 1) know your adversary 2) be proactive and 3) protect yourself.</strong></p>
-<p>Different applications have different adversaries.
-People who try to defraud other people via email for their money are adversary agents of users and providers of email services.
-The providers want to protect their users, so that they can continue using their mail program, the attackers want to get people to give them money.
-Knowing your adversaries means knowing their goals.
-Assuming you do not know that these spammers exist and the only abuse of the email service is sending pirated copies of music, then the defense would be different (e.g. scanning the attachments for copyrighted material instead of analyzing the text for spam indicators).</p>
-<p>Being proactive means actively testing and identifying weak points of the system.
-You are proactive when you actively try to deceive the model with adversarial examples and then defend against them.
-Using interpretation methods to understand which features are important and how features affect the prediction is also a proactive step in understanding the weaknesses of a machine learning model.
-As the data scientist, do you trust your model in this dangerous world without ever having looked beyond the predictive power on a test dataset?
-Have you analyzed how the model behaves in different scenarios, identified the most important inputs, checked the prediction explanations for some examples?
-Have you tried to find adversarial inputs?
-The interpretability of machine learning models plays a major role in cybersecurity.
-Being reactive, the opposite of proactive, means waiting until the system has been attacked and only then understanding the problem and installing some defensive measures.</p>
-<p>How can we protect our machine learning systems against adversarial examples?
-A proactive approach is the iterative retraining of the classifier with adversarial examples, also called adversarial training.
-Other approaches are based on game theory, such as learning invariant transformations of the features or robust optimization (regularization).
-Another proposed method is to use multiple classifiers instead of just one and have them vote the prediction (ensemble), but that has no guarantee to work, since they could all suffer from similar adversarial examples.
-Another approach that does not work well either is gradient masking, which constructs a model without useful gradients by using a nearest neighbor classifier instead of the original model.</p>
-<p>We can distinguish types of attacks by how much an attacker knows about the system.
-The attackers may have perfect knowledge (white box attack), meaning they know everything about the model like the type of model, the parameters and the training data;
-the attackers may have partial knowledge (gray box attack), meaning they might only know the feature representation and the type of model that was used, but have no access to the training data or the parameters;
-the attackers may have zero knowledge (black box attack), meaning they can only query the model in a black box manner but have no access to the training data or information about the model parameters.
-Depending on the level of information, the attackers can use different techniques to attack the model.
-As we have seen in the examples, even in the black box case adversarial examples can be created, so that hiding information about data and model is not sufficient to protect against attacks.</p>
-<p>Given the nature of the cat-and-mouse game between attackers and defenders, we will see a lot of development and innovation in this area.
-Just think of the many different types of spam emails that are constantly evolving.
-New methods of attacks against machine learning models are invented and new defensive measures are proposed against these new attacks.
-More powerful attacks are developed to evade the latest defenses and so on, ad infinitum.
-With this chapter I hope to sensitize you to the problem of adversarial examples and that only by proactively studying the machine learning models are we able to discover and remedy weaknesses.</p>
+<p>The authors tested this approach by attacking image classifiers trained on various cloud machine learning services. These services train image classifiers on user-uploaded images and labels. The software trains the model automatically – sometimes with an algorithm unknown to the user – and deploys it. The classifier then gives predictions for uploaded images, but the model itself cannot be inspected or downloaded. The authors were able to find adversarial examples for various providers, with up to 84% of the adversarial examples being misclassified.</p>
+<p>The method even works if the black box model to be deceived is not a neural network. This includes machine learning models without gradients, such as decision trees.</p>
+</section>
+<section id="the-cybersecurity-perspective" class="level2">
+<h2 class="anchored" data-anchor-id="the-cybersecurity-perspective">The cybersecurity perspective</h2>
+<p>Machine learning deals with known unknowns: predicting unknown data points from a known distribution. The defense against attacks deals with unknown unknowns: robustly predicting unknown data points from an unknown distribution of adversarial inputs. As machine learning is integrated into more and more systems, such as autonomous vehicles or medical devices, they are also becoming entry points for attacks. Even if the predictions of a machine learning model on a test dataset are 100% correct, adversarial examples can be found to deceive the model. The defense of machine learning models against cyber attacks is a new part of the field of cybersecurity.</p>
+<p><span class="citation" data-cites="biggio2018wild">Biggio and Roli (<a href="references.html#ref-biggio2018wild" role="doc-biblioref">2018</a>)</span> give a nice review of ten years of research on adversarial machine learning, on which this section is based. Cybersecurity is an arms race in which attackers and defenders outwit each other time and again.</p>
+<p><strong>There are three golden rules in cybersecurity: 1) know your adversary, 2) be proactive, and 3) protect yourself.</strong></p>
+<p>Different applications have different adversaries. People who try to defraud other people via email for their money are adversary agents of users and providers of email services. The providers want to protect their users so that they can continue using their mail program; the attackers want to get people to give them money. Knowing your adversaries means knowing their goals. Assuming you do not know that these spammers exist and the only abuse of the email service is sending pirated copies of music, then the defense would be different (e.g., scanning the attachments for copyrighted material instead of analyzing the text for spam indicators).</p>
+<p>Being proactive means actively testing and identifying weak points of the system. You’re proactive when you actively try to deceive the model with adversarial examples and then defend against them. Using interpretation methods to understand which features are important and how features affect the prediction is also a proactive step in understanding the weaknesses of a machine learning model. As the data scientist, do you trust your model in this dangerous world without ever having looked beyond the predictive power on a test dataset? Have you analyzed how the model behaves in different scenarios, identified the most important inputs, and checked the prediction explanations for some examples? Have you tried to find adversarial inputs? The interpretability of machine learning models plays a major role in cybersecurity. Being reactive, the opposite of proactive, means waiting until the system has been attacked and only then understanding the problem and installing some defensive measures.</p>
+<p>How can we protect our machine learning systems against adversarial examples? A proactive approach is the iterative retraining of the classifier with adversarial examples, also called adversarial training. Other approaches are based on game theory, such as learning invariant transformations of the features or robust optimization (regularization). Another proposed method is to use multiple classifiers instead of just one and have them vote on the prediction (ensemble), but that has no guarantee to work, since they could all suffer from similar adversarial examples. Another approach that does not work well either is gradient masking, which can be achieved by constructing a model without useful gradients by using a nearest neighbor classifier instead of the original model.</p>
+<p>We can distinguish types of attacks by how much an attacker knows about the system. The attackers may have perfect knowledge (white box attack), meaning they know everything about the model like the type of model, the parameters, and the training data; the attackers may have partial knowledge (gray box attack), meaning they might only know the feature representation and the type of model that was used, but have no access to the training data or the parameters; the attackers may have zero knowledge (black box attack), meaning they can only query the model in a black box manner but have no access to the training data or information about the model parameters. Depending on the level of information, the attackers can use different techniques to attack the model. As we have seen in the examples, even in the black box case adversarial examples can be created, so that hiding information about data and the model is not sufficient to protect against attacks.</p>
+<p>Given the nature of the cat-and-mouse game between attackers and defenders, we will see a lot of development and innovation in this area. Just think of the many different types of spam emails that are constantly evolving. New methods of attacks against machine learning models are invented, and new defensive measures are proposed against these new attacks. More powerful attacks are developed to evade the latest defenses and so on, ad infinitum. With this chapter, I hope to sensitize you to the problem of adversarial examples and that only by proactively studying the machine learning models are we able to discover and remedy weaknesses.</p>
 
-<div style="page-break-after: always;"></div>
-</div>
-</div>
-<div class="footnotes">
-<hr />
-<ol start="96">
-<li id="fn96"><p>Szegedy, Christian, Wojciech Zaremba, Ilya Sutskever, Joan Bruna, Dumitru Erhan, Ian Goodfellow, and Rob Fergus. “Intriguing properties of neural networks.” arXiv preprint arXiv:1312.6199 (2013).<a href="adversarial.html#fnref96" class="footnote-back">↩︎</a></p></li>
-<li id="fn97"><p>Goodfellow, Ian J., Jonathon Shlens, and Christian Szegedy. “Explaining and harnessing adversarial examples.” arXiv preprint arXiv:1412.6572 (2014).<a href="adversarial.html#fnref97" class="footnote-back">↩︎</a></p></li>
-<li id="fn98"><p>Su, Jiawei, Danilo Vasconcellos Vargas, and Kouichi Sakurai. “One pixel attack for fooling deep neural networks.” IEEE Transactions on Evolutionary Computation (2019).<a href="adversarial.html#fnref98" class="footnote-back">↩︎</a></p></li>
-<li id="fn99"><p>Brown, Tom B., Dandelion Mané, Aurko Roy, Martín Abadi, and Justin Gilmer. “Adversarial patch.” arXiv preprint arXiv:1712.09665 (2017).<a href="adversarial.html#fnref99" class="footnote-back">↩︎</a></p></li>
-<li id="fn100"><p>Athalye, Anish, and Ilya Sutskever. “Synthesizing robust adversarial examples.” arXiv preprint arXiv:1707.07397 (2017).<a href="adversarial.html#fnref100" class="footnote-back">↩︎</a></p></li>
-<li id="fn101"><p>Papernot, Nicolas, et al. “Practical black-box attacks against machine learning.” Proceedings of the 2017 ACM on Asia Conference on Computer and Communications Security. ACM (2017).<a href="adversarial.html#fnref101" class="footnote-back">↩︎</a></p></li>
-<li id="fn102"><p>Biggio, Battista, and Fabio Roli. “Wild Patterns: Ten years after the rise of adversarial machine learning.” Pattern Recognition 84 (2018): 317-331.<a href="adversarial.html#fnref102" class="footnote-back">↩︎</a></p></li>
-</ol>
-</div>
-            </section>
 
-          </div>
-        </div>
-      </div>
-<a href="detecting-concepts.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="influential.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list" style="display: none">
+<div id="ref-athalye2018synthesizing" class="csl-entry" role="listitem">
+Athalye, Anish, Logan Engstrom, Andrew Ilyas, and Kevin Kwok. 2018. <span>“Synthesizing Robust Adversarial Examples.”</span> In <em>International Conference on Machine Learning</em>, 284–93. PMLR.
+</div>
+<div id="ref-biggio2018wild" class="csl-entry" role="listitem">
+Biggio, Battista, and Fabio Roli. 2018. <span>“Wild Patterns: <span>Ten</span> Years After the Rise of Adversarial Machine Learning.”</span> <em>Pattern Recognition</em> 84 (December): 317–31. <a href="https://doi.org/10.1016/j.patcog.2018.07.023">https://doi.org/10.1016/j.patcog.2018.07.023</a>.
+</div>
+<div id="ref-brown2018adversarial" class="csl-entry" role="listitem">
+Brown, Tom B., Dandelion Mané, Aurko Roy, Martín Abadi, and Justin Gilmer. 2018. <span>“Adversarial <span>Patch</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.1712.09665">https://doi.org/10.48550/arXiv.1712.09665</a>.
+</div>
+<div id="ref-goodfellow2015explaining" class="csl-entry" role="listitem">
+Goodfellow, Ian J., Jonathon Shlens, and Christian Szegedy. 2015. <span>“Explaining and <span>Harnessing Adversarial Examples</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.1412.6572">https://doi.org/10.48550/arXiv.1412.6572</a>.
+</div>
+<div id="ref-papernot2017practical" class="csl-entry" role="listitem">
+Papernot, Nicolas, Patrick McDaniel, Ian Goodfellow, Somesh Jha, Z. Berkay Celik, and Ananthram Swami. 2017. <span>“Practical <span>Black-Box Attacks</span> Against <span>Machine Learning</span>.”</span> In <em>Proceedings of the 2017 <span>ACM</span> on <span>Asia Conference</span> on <span>Computer</span> and <span>Communications Security</span></em>, 506–19. <span>ASIA CCS</span> ’17. New York, NY, USA: Association for Computing Machinery. <a href="https://doi.org/10.1145/3052973.3053009">https://doi.org/10.1145/3052973.3053009</a>.
+</div>
+<div id="ref-su2019one" class="csl-entry" role="listitem">
+Su, Jiawei, Danilo Vasconcellos Vargas, and Kouichi Sakurai. 2019. <span>“One <span>Pixel Attack</span> for <span>Fooling Deep Neural Networks</span>.”</span> <em>IEEE Transactions on Evolutionary Computation</em> 23 (5): 828–41. <a href="https://doi.org/10.1109/TEVC.2019.2890858">https://doi.org/10.1109/TEVC.2019.2890858</a>.
+</div>
+<div id="ref-szegedy2014intriguing" class="csl-entry" role="listitem">
+Szegedy, Christian, Wojciech Zaremba, Ilya Sutskever, Joan Bruna, Dumitru Erhan, Ian Goodfellow, and Rob Fergus. 2014. <span>“Intriguing Properties of Neural Networks.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.1312.6199">https://doi.org/10.48550/arXiv.1312.6199</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./detecting-concepts.html" class="pagination-link" aria-label="Detecting Concepts">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Detecting Concepts</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./influential.html" class="pagination-link" aria-label="Influential Instances">
+        <span class="nav-page-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Influential Instances</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p><a href="privacy-policy.html" target="_blank" style="font-size:11px;"> Privacy Policy </a> | <a href="https://christophmolnar.com/impressum" target="_blank" style="font-size:11px"> Impressum </a></p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/christophM/interpretable-ml-book/blob/main/adversarial.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/christophM/interpretable-ml-book/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div><div class="cookie-consent-footer"><a href="#" id="open_preferences_center">Cookie Preferences</a></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
     </div>
   </div>
-<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
-<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
-<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
-<script>
-gitbook.require(["gitbook"], function(gitbook) {
-gitbook.start({
-"sharing": {
-"github": true,
-"facebook": false,
-"twitter": true,
-"linkedin": true,
-"weibo": false,
-"instapaper": false,
-"vk": false,
-"whatsapp": false,
-"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
-},
-"fontsettings": {
-"theme": "white",
-"family": "sans",
-"size": 2
-},
-"edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/manuscript/06.2-example-based-adversarial.Rmd",
-"text": "Edit"
-},
-"history": {
-"link": null,
-"text": null
-},
-"view": {
-"link": null,
-"text": null
-},
-"download": null,
-"search": {
-"engine": "fuse",
-"options": null
-},
-"toc": {
-"collapse": "subsection"
-}
-});
-});
-</script>
+</footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
-<!-- dynamically load mathjax for compatibility with self-contained -->
-<script>
-  (function () {
-    var script = document.createElement("script");
-    script.type = "text/javascript";
-    var src = "true";
-    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
-    if (location.protocol !== "file:")
-      if (/^https?:/.test(src))
-        src = src.replace(/^https?:/, '');
-    script.src = src;
-    document.getElementsByTagName("head")[0].appendChild(script);
-  })();
-</script>
-</body>
 
-</html>
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

@@ -1,932 +1,1602 @@
 <!DOCTYPE html>
-<html lang="" xml:lang="">
-<head>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>9.6 SHAP (SHapley Additive exPlanations) | Interpretable Machine Learning</title>
-  <meta name="description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
-  <meta name="generator" content="bookdown 0.40 and GitBook 2.6.7" />
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
 
-  <meta property="og:title" content="9.6 SHAP (SHapley Additive exPlanations) | Interpretable Machine Learning" />
-  <meta property="og:type" content="book" />
-  
-  <meta property="og:description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
-  
-
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="9.6 SHAP (SHapley Additive exPlanations) | Interpretable Machine Learning" />
-  
-  <meta name="twitter:description" content="Machine learning algorithms usually operate as black boxes and it is unclear how they derived a certain decision. This book is a guide for practitioners to make machine learning decisions interpretable." />
-  
-
-<meta name="author" content="Christoph Molnar" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<meta name="date" content="2024-07-31" />
-
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-  
-  
-<link rel="prev" href="shapley.html"/>
-<link rel="next" href="neural-networks.html"/>
-<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
-<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
-<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
-
-
-
-
-
-
-
-
-<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
-<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
-<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
-<script src="libs/kePrint-0.0.1/kePrint.js"></script>
-<link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-V7RTNZBGE2"></script>
-<script>
-    window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-
-      gtag('config', 'G-V7RTNZBGE2');
-</script>
-
-<link rel="stylesheet" type="text/css" href="css/cookieconsent.min.css" />
-<script src="javascript/cookieconsent.min.js"></script>
-<script>
-window.addEventListener("load", function(){
-window.cookieconsent.initialise({
-  "palette": {
-    "popup": {
-      "background": "#000"
-    },
-    "button": {
-      "background": "#f1d600"
-    }
-  },
-  "position": "bottom-right",
-  "content": {
-    "message": "This website uses cookies for Google Analytics so that I know how many people are reading the book and which chapters are the most popular. The book website doesn't collect any personal data."
-  }
-})});
-</script>
-
+<title>18&nbsp; SHAP – Interpretable Machine Learning</title>
 <style>
-
-#cta-button-desktop:hover, #cta-button-device:hover {
-  background-color:   #ffc266; 
-  border-color:   #ffc266; 
-  box-shadow: none;
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
 }
-#cta-button-desktop, #cta-button-device{
-  color: white;
-  background-color:  #ffa31a;
-  text-shadow:1px 1px 0 #444;
-  text-decoration: none;
-  border: 2px solid  #ffa31a;
-  border-radius: 10px;
-  position: fixed;
-  padding: 5px 10px;
-  z-index: 10;
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./pdp.html" rel="next">
+<link href="./shapley.html" rel="prev">
+<link href="./images/favicon.jpg" rel="icon" type="image/jpeg">
+<script src="site_libs/cookie-consent/cookie-consent.js"></script>
+<link href="site_libs/cookie-consent/cookie-consent.css" rel="stylesheet">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-5e169a3c071d6ad0320cbd7522dabfb3.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
+}</script>
+<script async="" src="https://www.googletagmanager.com/gtag/js?id=G-YMSX1DV6TJ"></script>
 
-#cta-button-device {
-  box-shadow: 0px 10px 10px -5px rgba(194,180,190,1);
-  display:none;
-  right: 20px;
-  bottom: 20px;
-  font-size: 20px;
- }
+<script type="text/plain" cookie-consent="tracking">
 
-#cta-button-desktop {
-  box-shadow: 0px 20px 20px -10px rgba(194,180,190,1);
-  display:display;
-  padding: 8px 16px;
-  right: 40px;
-  bottom: 40px;
-  font-size: 25px;
-}
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', 'G-YMSX1DV6TJ', { 'anonymize_ip': true});
+</script>
 
-@media (max-width : 450px) {
-  #cta-button-device {display:block;}
-  #cta-button-desktop {display:none;}
-}
-
-
-</style>
-
-
-
-
-
-<style type="text/css">
+<script type="text/javascript" charset="UTF-8">
+document.addEventListener('DOMContentLoaded', function () {
+cookieconsent.run({
+  "notice_banner_type":"simple",
+  "consent_type":"implied",
+  "palette":"light",
+  "language":"en",
+  "page_load_consent_levels":["strictly-necessary","functionality","tracking","targeting"],
+  "notice_banner_reject_button_hide":false,
+  "preferences_center_close_button_hide":false,
+  "website_name":""
+  ,
+"language":"en"
+  });
+});
+</script> 
   
-  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+<style>html{ scroll-behavior: smooth; }</style>
+<!-- Add this to your header.html -->
+<style>
+.book-purchase-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+    border-radius: 12px;
+    margin: 1.5rem 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: double 1px transparent;
+    background-image: linear-gradient(to bottom right, #ffffff, #f8f9fa),
+                     linear-gradient(to bottom right, #3b82f6, #60a5fa);
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+}
+
+.purchase-header {
+    text-align: center;
+    margin-bottom: -1rem;
+    margin-top: -1rem;
+    color: #2b3442;
+}
+
+.purchase-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.purchase-header p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.book-cover {
+    width: 80%;
+    height: auto;
+    border-radius: 8px;
+    margin: 0 auto 1rem auto;
+    transition: transform 0.3s ease;
+}
+
+.book-cover:hover {
+    transform: scale(1.1);
+}
+
+.purchase-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    color: #2b3442;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    background: white;
+    border: 1px solid #e9ecef;
+    font-weight: 500;
+}
+
+.purchase-link:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+}
+
+.purchase-link.primary {
+    background-color: #0066cc;
+    color: white;
+    border: none;
+}
+
+.purchase-link.primary:hover {
+    background-color: #0052a3;
+}
+
+.purchase-link svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.price-tag {
+    margin-left: auto;
+    font-weight: 600;
+    color: inherit;
+}
+
+.social-proof {
+    text-align: center;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.limited-offer {
+    background: #fff3cd;
+    color: #856404;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .book-purchase-links {
+        padding: 1rem;
+    }
+    
+    .book-cover {
+        width: 60%;
+    }
+}
 </style>
 
-<link rel="stylesheet" href="css/style.css" type="text/css" />
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const purchaseLinksContainer = document.getElementById('book-purchase-links');
+    if (!purchaseLinksContainer) return;
+
+    const purchaseOptions = [
+        {
+            type: 'Paperback',
+            primary: true,
+            url: 'https://bookgoodies.com/a/3911578032',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>'
+        },
+        {
+            type: 'E-Book & PDF',
+            url: 'https://leanpub.com/interpretable-machine-learning',
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path><path d="M12 6v8"></path><path d="M8 10h8"></path></svg>'
+        }
+    ];
+
+    // Create header section
+    const header = document.createElement('div');
+    header.className = 'purchase-header';
+    header.innerHTML = `
+        <h3>Buy Book</h3>
+    `;
+    purchaseLinksContainer.appendChild(header);
+
+    // Create limited time offer banner
+    // const limitedOffer = document.createElement('div');
+    // limitedOffer.className = 'limited-offer';
+    // limitedOffer.textContent = '🎉 Special Launch Price - Limited Time Only!';
+    // purchaseLinksContainer.appendChild(limitedOffer);
+
+    // Create and append book cover
+    const bookCover = document.createElement('img');
+    //bookCover.src = 'images/mockup-floating.png';
+    bookCover.src = './images/cover-sidepanel.jpg';
+    bookCover.alt = 'Book Cover';
+    bookCover.className = 'book-cover';
+    purchaseLinksContainer.appendChild(bookCover);
+
+    // Create and append purchase links
+    purchaseOptions.forEach(option => {
+        const link = document.createElement('a');
+        link.href = option.url;
+        link.className = `purchase-link ${option.primary ? 'primary' : ''}`;
+        link.innerHTML = `
+            ${option.icon}
+            ${option.type}
+        `;
+        purchaseLinksContainer.appendChild(link);
+    });
+
+    // Add social proof
+    // const socialProof = document.createElement('div');
+    // socialProof.className = 'social-proof';
+    // socialProof.textContent = '👥 Join thousands of satisfied readers!';
+    // purchaseLinksContainer.appendChild(socialProof);
+});
+</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
 </head>
 
-<body>
+<body class="nav-sidebar floating">
 
-
-
-  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
-
-    <div class="book-summary">
-      <nav role="navigation">
-
-<ul class="summary">
-<li><a href="./">Interpretable machine learning</a></li>
-
-<li class="divider"></li>
-<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Summary</a></li>
-<li class="chapter" data-level="1" data-path="preface-by-the-author.html"><a href="preface-by-the-author.html"><i class="fa fa-check"></i><b>1</b> Preface by the Author</a></li>
-<li class="chapter" data-level="2" data-path="intro.html"><a href="intro.html"><i class="fa fa-check"></i><b>2</b> Introduction</a>
-<ul>
-<li class="chapter" data-level="2.1" data-path="storytime.html"><a href="storytime.html"><i class="fa fa-check"></i><b>2.1</b> Story Time</a>
-<ul>
-<li class="chapter" data-level="" data-path="storytime.html"><a href="storytime.html#lightning-never-strikes-twice"><i class="fa fa-check"></i>Lightning Never Strikes Twice</a></li>
-<li class="chapter" data-level="" data-path="storytime.html"><a href="storytime.html#trust-fall"><i class="fa fa-check"></i>Trust Fall</a></li>
-<li class="chapter" data-level="" data-path="storytime.html"><a href="storytime.html#fermis-paperclips"><i class="fa fa-check"></i>Fermi’s Paperclips</a></li>
-</ul></li>
-<li class="chapter" data-level="2.2" data-path="what-is-machine-learning.html"><a href="what-is-machine-learning.html"><i class="fa fa-check"></i><b>2.2</b> What Is Machine Learning?</a></li>
-<li class="chapter" data-level="2.3" data-path="terminology.html"><a href="terminology.html"><i class="fa fa-check"></i><b>2.3</b> Terminology</a></li>
-</ul></li>
-<li class="chapter" data-level="3" data-path="interpretability.html"><a href="interpretability.html"><i class="fa fa-check"></i><b>3</b> Interpretability</a>
-<ul>
-<li class="chapter" data-level="3.1" data-path="interpretability-importance.html"><a href="interpretability-importance.html"><i class="fa fa-check"></i><b>3.1</b> Importance of Interpretability</a></li>
-<li class="chapter" data-level="3.2" data-path="taxonomy-of-interpretability-methods.html"><a href="taxonomy-of-interpretability-methods.html"><i class="fa fa-check"></i><b>3.2</b> Taxonomy of Interpretability Methods</a></li>
-<li class="chapter" data-level="3.3" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html"><i class="fa fa-check"></i><b>3.3</b> Scope of Interpretability</a>
-<ul>
-<li class="chapter" data-level="3.3.1" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#algorithm-transparency"><i class="fa fa-check"></i><b>3.3.1</b> Algorithm Transparency</a></li>
-<li class="chapter" data-level="3.3.2" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#global-holistic-model-interpretability"><i class="fa fa-check"></i><b>3.3.2</b> Global, Holistic Model Interpretability</a></li>
-<li class="chapter" data-level="3.3.3" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#global-model-interpretability-on-a-modular-level"><i class="fa fa-check"></i><b>3.3.3</b> Global Model Interpretability on a Modular Level</a></li>
-<li class="chapter" data-level="3.3.4" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#local-interpretability-for-a-single-prediction"><i class="fa fa-check"></i><b>3.3.4</b> Local Interpretability for a Single Prediction</a></li>
-<li class="chapter" data-level="3.3.5" data-path="scope-of-interpretability.html"><a href="scope-of-interpretability.html#local-interpretability-for-a-group-of-predictions"><i class="fa fa-check"></i><b>3.3.5</b> Local Interpretability for a Group of Predictions</a></li>
-</ul></li>
-<li class="chapter" data-level="3.4" data-path="evaluation-of-interpretability.html"><a href="evaluation-of-interpretability.html"><i class="fa fa-check"></i><b>3.4</b> Evaluation of Interpretability</a></li>
-<li class="chapter" data-level="3.5" data-path="properties.html"><a href="properties.html"><i class="fa fa-check"></i><b>3.5</b> Properties of Explanations</a></li>
-<li class="chapter" data-level="3.6" data-path="explanation.html"><a href="explanation.html"><i class="fa fa-check"></i><b>3.6</b> Human-friendly Explanations</a>
-<ul>
-<li class="chapter" data-level="3.6.1" data-path="explanation.html"><a href="explanation.html#what-is-an-explanation"><i class="fa fa-check"></i><b>3.6.1</b> What Is an Explanation?</a></li>
-<li class="chapter" data-level="3.6.2" data-path="explanation.html"><a href="explanation.html#good-explanation"><i class="fa fa-check"></i><b>3.6.2</b> What Is a Good Explanation?</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="4" data-path="data.html"><a href="data.html"><i class="fa fa-check"></i><b>4</b> Datasets</a>
-<ul>
-<li class="chapter" data-level="4.1" data-path="bike-data.html"><a href="bike-data.html"><i class="fa fa-check"></i><b>4.1</b> Bike Rentals (Regression)</a></li>
-<li class="chapter" data-level="4.2" data-path="spam-data.html"><a href="spam-data.html"><i class="fa fa-check"></i><b>4.2</b> YouTube Spam Comments (Text Classification)</a></li>
-<li class="chapter" data-level="4.3" data-path="cervical.html"><a href="cervical.html"><i class="fa fa-check"></i><b>4.3</b> Risk Factors for Cervical Cancer (Classification)</a></li>
-</ul></li>
-<li class="chapter" data-level="5" data-path="simple.html"><a href="simple.html"><i class="fa fa-check"></i><b>5</b> Interpretable Models</a>
-<ul>
-<li class="chapter" data-level="5.1" data-path="limo.html"><a href="limo.html"><i class="fa fa-check"></i><b>5.1</b> Linear Regression</a>
-<ul>
-<li class="chapter" data-level="5.1.1" data-path="limo.html"><a href="limo.html#interpretation"><i class="fa fa-check"></i><b>5.1.1</b> Interpretation</a></li>
-<li class="chapter" data-level="5.1.2" data-path="limo.html"><a href="limo.html#example"><i class="fa fa-check"></i><b>5.1.2</b> Example</a></li>
-<li class="chapter" data-level="5.1.3" data-path="limo.html"><a href="limo.html#visual-interpretation"><i class="fa fa-check"></i><b>5.1.3</b> Visual Interpretation</a></li>
-<li class="chapter" data-level="5.1.4" data-path="limo.html"><a href="limo.html#explain-individual-predictions"><i class="fa fa-check"></i><b>5.1.4</b> Explain Individual Predictions</a></li>
-<li class="chapter" data-level="5.1.5" data-path="limo.html"><a href="limo.html#cat-code"><i class="fa fa-check"></i><b>5.1.5</b> Encoding of Categorical Features</a></li>
-<li class="chapter" data-level="5.1.6" data-path="limo.html"><a href="limo.html#do-linear-models-create-good-explanations"><i class="fa fa-check"></i><b>5.1.6</b> Do Linear Models Create Good Explanations?</a></li>
-<li class="chapter" data-level="5.1.7" data-path="limo.html"><a href="limo.html#sparse-linear"><i class="fa fa-check"></i><b>5.1.7</b> Sparse Linear Models</a></li>
-<li class="chapter" data-level="5.1.8" data-path="limo.html"><a href="limo.html#advantages"><i class="fa fa-check"></i><b>5.1.8</b> Advantages</a></li>
-<li class="chapter" data-level="5.1.9" data-path="limo.html"><a href="limo.html#disadvantages"><i class="fa fa-check"></i><b>5.1.9</b> Disadvantages</a></li>
-</ul></li>
-<li class="chapter" data-level="5.2" data-path="logistic.html"><a href="logistic.html"><i class="fa fa-check"></i><b>5.2</b> Logistic Regression</a>
-<ul>
-<li class="chapter" data-level="5.2.1" data-path="logistic.html"><a href="logistic.html#what-is-wrong-with-linear-regression-for-classification"><i class="fa fa-check"></i><b>5.2.1</b> What is Wrong with Linear Regression for Classification?</a></li>
-<li class="chapter" data-level="5.2.2" data-path="logistic.html"><a href="logistic.html#theory"><i class="fa fa-check"></i><b>5.2.2</b> Theory</a></li>
-<li class="chapter" data-level="5.2.3" data-path="logistic.html"><a href="logistic.html#interpretation-1"><i class="fa fa-check"></i><b>5.2.3</b> Interpretation</a></li>
-<li class="chapter" data-level="5.2.4" data-path="logistic.html"><a href="logistic.html#example-1"><i class="fa fa-check"></i><b>5.2.4</b> Example</a></li>
-<li class="chapter" data-level="5.2.5" data-path="logistic.html"><a href="logistic.html#advantages-and-disadvantages"><i class="fa fa-check"></i><b>5.2.5</b> Advantages and Disadvantages</a></li>
-<li class="chapter" data-level="5.2.6" data-path="logistic.html"><a href="logistic.html#software"><i class="fa fa-check"></i><b>5.2.6</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="5.3" data-path="extend-lm.html"><a href="extend-lm.html"><i class="fa fa-check"></i><b>5.3</b> GLM, GAM and more</a>
-<ul>
-<li class="chapter" data-level="5.3.1" data-path="extend-lm.html"><a href="extend-lm.html#glm"><i class="fa fa-check"></i><b>5.3.1</b> Non-Gaussian Outcomes - GLMs</a></li>
-<li class="chapter" data-level="5.3.2" data-path="extend-lm.html"><a href="extend-lm.html#lm-interact"><i class="fa fa-check"></i><b>5.3.2</b> Interactions</a></li>
-<li class="chapter" data-level="5.3.3" data-path="extend-lm.html"><a href="extend-lm.html#gam"><i class="fa fa-check"></i><b>5.3.3</b> Nonlinear Effects - GAMs</a></li>
-<li class="chapter" data-level="5.3.4" data-path="extend-lm.html"><a href="extend-lm.html#advantages-1"><i class="fa fa-check"></i><b>5.3.4</b> Advantages</a></li>
-<li class="chapter" data-level="5.3.5" data-path="extend-lm.html"><a href="extend-lm.html#disadvantages-1"><i class="fa fa-check"></i><b>5.3.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.3.6" data-path="extend-lm.html"><a href="extend-lm.html#software-1"><i class="fa fa-check"></i><b>5.3.6</b> Software</a></li>
-<li class="chapter" data-level="5.3.7" data-path="extend-lm.html"><a href="extend-lm.html#more-lm-extension"><i class="fa fa-check"></i><b>5.3.7</b> Further Extensions</a></li>
-</ul></li>
-<li class="chapter" data-level="5.4" data-path="tree.html"><a href="tree.html"><i class="fa fa-check"></i><b>5.4</b> Decision Tree</a>
-<ul>
-<li class="chapter" data-level="5.4.1" data-path="tree.html"><a href="tree.html#interpretation-2"><i class="fa fa-check"></i><b>5.4.1</b> Interpretation</a></li>
-<li class="chapter" data-level="5.4.2" data-path="tree.html"><a href="tree.html#example-2"><i class="fa fa-check"></i><b>5.4.2</b> Example</a></li>
-<li class="chapter" data-level="5.4.3" data-path="tree.html"><a href="tree.html#advantages-2"><i class="fa fa-check"></i><b>5.4.3</b> Advantages</a></li>
-<li class="chapter" data-level="5.4.4" data-path="tree.html"><a href="tree.html#disadvantages-2"><i class="fa fa-check"></i><b>5.4.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.4.5" data-path="tree.html"><a href="tree.html#software-2"><i class="fa fa-check"></i><b>5.4.5</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="5.5" data-path="rules.html"><a href="rules.html"><i class="fa fa-check"></i><b>5.5</b> Decision Rules</a>
-<ul>
-<li class="chapter" data-level="5.5.1" data-path="rules.html"><a href="rules.html#learn-rules-from-a-single-feature-oner"><i class="fa fa-check"></i><b>5.5.1</b> Learn Rules from a Single Feature (OneR)</a></li>
-<li class="chapter" data-level="5.5.2" data-path="rules.html"><a href="rules.html#sequential-covering"><i class="fa fa-check"></i><b>5.5.2</b> Sequential Covering</a></li>
-<li class="chapter" data-level="5.5.3" data-path="rules.html"><a href="rules.html#bayesian-rule-lists"><i class="fa fa-check"></i><b>5.5.3</b> Bayesian Rule Lists</a></li>
-<li class="chapter" data-level="5.5.4" data-path="rules.html"><a href="rules.html#advantages-3"><i class="fa fa-check"></i><b>5.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="5.5.5" data-path="rules.html"><a href="rules.html#disadvantages-3"><i class="fa fa-check"></i><b>5.5.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.5.6" data-path="rules.html"><a href="rules.html#software-and-alternatives"><i class="fa fa-check"></i><b>5.5.6</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="5.6" data-path="rulefit.html"><a href="rulefit.html"><i class="fa fa-check"></i><b>5.6</b> RuleFit</a>
-<ul>
-<li class="chapter" data-level="5.6.1" data-path="rulefit.html"><a href="rulefit.html#interpretation-and-example"><i class="fa fa-check"></i><b>5.6.1</b> Interpretation and Example</a></li>
-<li class="chapter" data-level="5.6.2" data-path="rulefit.html"><a href="rulefit.html#theory-1"><i class="fa fa-check"></i><b>5.6.2</b> Theory</a></li>
-<li class="chapter" data-level="5.6.3" data-path="rulefit.html"><a href="rulefit.html#advantages-4"><i class="fa fa-check"></i><b>5.6.3</b> Advantages</a></li>
-<li class="chapter" data-level="5.6.4" data-path="rulefit.html"><a href="rulefit.html#disadvantages-4"><i class="fa fa-check"></i><b>5.6.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="5.6.5" data-path="rulefit.html"><a href="rulefit.html#software-and-alternative"><i class="fa fa-check"></i><b>5.6.5</b> Software and Alternative</a></li>
-</ul></li>
-<li class="chapter" data-level="5.7" data-path="other-interpretable.html"><a href="other-interpretable.html"><i class="fa fa-check"></i><b>5.7</b> Other Interpretable Models</a>
-<ul>
-<li class="chapter" data-level="5.7.1" data-path="other-interpretable.html"><a href="other-interpretable.html#naive-bayes-classifier"><i class="fa fa-check"></i><b>5.7.1</b> Naive Bayes Classifier</a></li>
-<li class="chapter" data-level="5.7.2" data-path="other-interpretable.html"><a href="other-interpretable.html#k-nearest-neighbors"><i class="fa fa-check"></i><b>5.7.2</b> K-Nearest Neighbors</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="6" data-path="agnostic.html"><a href="agnostic.html"><i class="fa fa-check"></i><b>6</b> Model-Agnostic Methods</a></li>
-<li class="chapter" data-level="7" data-path="example-based.html"><a href="example-based.html"><i class="fa fa-check"></i><b>7</b> Example-Based Explanations</a></li>
-<li class="chapter" data-level="8" data-path="global-methods.html"><a href="global-methods.html"><i class="fa fa-check"></i><b>8</b> Global Model-Agnostic Methods</a>
-<ul>
-<li class="chapter" data-level="8.1" data-path="pdp.html"><a href="pdp.html"><i class="fa fa-check"></i><b>8.1</b> Partial Dependence Plot (PDP)</a>
-<ul>
-<li class="chapter" data-level="8.1.1" data-path="pdp.html"><a href="pdp.html#pdp-based-feature-importance"><i class="fa fa-check"></i><b>8.1.1</b> PDP-based Feature Importance</a></li>
-<li class="chapter" data-level="8.1.2" data-path="pdp.html"><a href="pdp.html#examples"><i class="fa fa-check"></i><b>8.1.2</b> Examples</a></li>
-<li class="chapter" data-level="8.1.3" data-path="pdp.html"><a href="pdp.html#advantages-5"><i class="fa fa-check"></i><b>8.1.3</b> Advantages</a></li>
-<li class="chapter" data-level="8.1.4" data-path="pdp.html"><a href="pdp.html#disadvantages-5"><i class="fa fa-check"></i><b>8.1.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.1.5" data-path="pdp.html"><a href="pdp.html#software-and-alternatives-1"><i class="fa fa-check"></i><b>8.1.5</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="8.2" data-path="ale.html"><a href="ale.html"><i class="fa fa-check"></i><b>8.2</b> Accumulated Local Effects (ALE) Plot</a>
-<ul>
-<li class="chapter" data-level="8.2.1" data-path="ale.html"><a href="ale.html#motivation-and-intuition"><i class="fa fa-check"></i><b>8.2.1</b> Motivation and Intuition</a></li>
-<li class="chapter" data-level="8.2.2" data-path="ale.html"><a href="ale.html#theory-2"><i class="fa fa-check"></i><b>8.2.2</b> Theory</a></li>
-<li class="chapter" data-level="8.2.3" data-path="ale.html"><a href="ale.html#estimation"><i class="fa fa-check"></i><b>8.2.3</b> Estimation</a></li>
-<li class="chapter" data-level="8.2.4" data-path="ale.html"><a href="ale.html#examples-1"><i class="fa fa-check"></i><b>8.2.4</b> Examples</a></li>
-<li class="chapter" data-level="8.2.5" data-path="ale.html"><a href="ale.html#advantages-6"><i class="fa fa-check"></i><b>8.2.5</b> Advantages</a></li>
-<li class="chapter" data-level="8.2.6" data-path="ale.html"><a href="ale.html#disadvantages-6"><i class="fa fa-check"></i><b>8.2.6</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.2.7" data-path="ale.html"><a href="ale.html#implementation-and-alternatives"><i class="fa fa-check"></i><b>8.2.7</b> Implementation and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="8.3" data-path="interaction.html"><a href="interaction.html"><i class="fa fa-check"></i><b>8.3</b> Feature Interaction</a>
-<ul>
-<li class="chapter" data-level="8.3.1" data-path="interaction.html"><a href="interaction.html#feature-interaction"><i class="fa fa-check"></i><b>8.3.1</b> Feature Interaction?</a></li>
-<li class="chapter" data-level="8.3.2" data-path="interaction.html"><a href="interaction.html#theory-friedmans-h-statistic"><i class="fa fa-check"></i><b>8.3.2</b> Theory: Friedman’s H-statistic</a></li>
-<li class="chapter" data-level="8.3.3" data-path="interaction.html"><a href="interaction.html#examples-2"><i class="fa fa-check"></i><b>8.3.3</b> Examples</a></li>
-<li class="chapter" data-level="8.3.4" data-path="interaction.html"><a href="interaction.html#advantages-7"><i class="fa fa-check"></i><b>8.3.4</b> Advantages</a></li>
-<li class="chapter" data-level="8.3.5" data-path="interaction.html"><a href="interaction.html#disadvantages-7"><i class="fa fa-check"></i><b>8.3.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.3.6" data-path="interaction.html"><a href="interaction.html#implementations"><i class="fa fa-check"></i><b>8.3.6</b> Implementations</a></li>
-<li class="chapter" data-level="8.3.7" data-path="interaction.html"><a href="interaction.html#alternatives"><i class="fa fa-check"></i><b>8.3.7</b> Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="8.4" data-path="decomposition.html"><a href="decomposition.html"><i class="fa fa-check"></i><b>8.4</b> Functional Decomposition</a>
-<ul>
-<li class="chapter" data-level="8.4.1" data-path="decomposition.html"><a href="decomposition.html#how-not-to-compute-the-components-i"><i class="fa fa-check"></i><b>8.4.1</b> How not to Compute the Components I</a></li>
-<li class="chapter" data-level="8.4.2" data-path="decomposition.html"><a href="decomposition.html#functional-decomposition"><i class="fa fa-check"></i><b>8.4.2</b> Functional Decomposition</a></li>
-<li class="chapter" data-level="8.4.3" data-path="decomposition.html"><a href="decomposition.html#how-not-to-compute-the-components-ii"><i class="fa fa-check"></i><b>8.4.3</b> How not to Compute the Components II</a></li>
-<li class="chapter" data-level="8.4.4" data-path="decomposition.html"><a href="decomposition.html#functional-anova"><i class="fa fa-check"></i><b>8.4.4</b> Functional ANOVA</a></li>
-<li class="chapter" data-level="8.4.5" data-path="decomposition.html"><a href="decomposition.html#generalized-functional-anova-for-dependent-features"><i class="fa fa-check"></i><b>8.4.5</b> Generalized Functional ANOVA for Dependent Features</a></li>
-<li class="chapter" data-level="8.4.6" data-path="decomposition.html"><a href="decomposition.html#accumulated-local-effect-plots"><i class="fa fa-check"></i><b>8.4.6</b> Accumulated Local Effect Plots</a></li>
-<li class="chapter" data-level="8.4.7" data-path="decomposition.html"><a href="decomposition.html#statistical-regression-models"><i class="fa fa-check"></i><b>8.4.7</b> Statistical Regression Models</a></li>
-<li class="chapter" data-level="8.4.8" data-path="decomposition.html"><a href="decomposition.html#bonus-partial-dependence-plot"><i class="fa fa-check"></i><b>8.4.8</b> Bonus: Partial Dependence Plot</a></li>
-<li class="chapter" data-level="8.4.9" data-path="decomposition.html"><a href="decomposition.html#advantages-8"><i class="fa fa-check"></i><b>8.4.9</b> Advantages</a></li>
-<li class="chapter" data-level="8.4.10" data-path="decomposition.html"><a href="decomposition.html#disadvantages-8"><i class="fa fa-check"></i><b>8.4.10</b> Disadvantages</a></li>
-</ul></li>
-<li class="chapter" data-level="8.5" data-path="feature-importance.html"><a href="feature-importance.html"><i class="fa fa-check"></i><b>8.5</b> Permutation Feature Importance</a>
-<ul>
-<li class="chapter" data-level="8.5.1" data-path="feature-importance.html"><a href="feature-importance.html#theory-3"><i class="fa fa-check"></i><b>8.5.1</b> Theory</a></li>
-<li class="chapter" data-level="8.5.2" data-path="feature-importance.html"><a href="feature-importance.html#feature-importance-data"><i class="fa fa-check"></i><b>8.5.2</b> Should I Compute Importance on Training or Test Data?</a></li>
-<li class="chapter" data-level="8.5.3" data-path="feature-importance.html"><a href="feature-importance.html#example-and-interpretation"><i class="fa fa-check"></i><b>8.5.3</b> Example and Interpretation</a></li>
-<li class="chapter" data-level="8.5.4" data-path="feature-importance.html"><a href="feature-importance.html#advantages-9"><i class="fa fa-check"></i><b>8.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="8.5.5" data-path="feature-importance.html"><a href="feature-importance.html#disadvantages-9"><i class="fa fa-check"></i><b>8.5.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.5.6" data-path="feature-importance.html"><a href="feature-importance.html#alternatives-1"><i class="fa fa-check"></i><b>8.5.6</b> Alternatives</a></li>
-<li class="chapter" data-level="8.5.7" data-path="feature-importance.html"><a href="feature-importance.html#software-3"><i class="fa fa-check"></i><b>8.5.7</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="8.6" data-path="global.html"><a href="global.html"><i class="fa fa-check"></i><b>8.6</b> Global Surrogate</a>
-<ul>
-<li class="chapter" data-level="8.6.1" data-path="global.html"><a href="global.html#theory-4"><i class="fa fa-check"></i><b>8.6.1</b> Theory</a></li>
-<li class="chapter" data-level="8.6.2" data-path="global.html"><a href="global.html#example-3"><i class="fa fa-check"></i><b>8.6.2</b> Example</a></li>
-<li class="chapter" data-level="8.6.3" data-path="global.html"><a href="global.html#advantages-10"><i class="fa fa-check"></i><b>8.6.3</b> Advantages</a></li>
-<li class="chapter" data-level="8.6.4" data-path="global.html"><a href="global.html#disadvantages-10"><i class="fa fa-check"></i><b>8.6.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.6.5" data-path="global.html"><a href="global.html#software-4"><i class="fa fa-check"></i><b>8.6.5</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="8.7" data-path="proto.html"><a href="proto.html"><i class="fa fa-check"></i><b>8.7</b> Prototypes and Criticisms</a>
-<ul>
-<li class="chapter" data-level="8.7.1" data-path="proto.html"><a href="proto.html#theory-5"><i class="fa fa-check"></i><b>8.7.1</b> Theory</a></li>
-<li class="chapter" data-level="8.7.2" data-path="proto.html"><a href="proto.html#examples-3"><i class="fa fa-check"></i><b>8.7.2</b> Examples</a></li>
-<li class="chapter" data-level="8.7.3" data-path="proto.html"><a href="proto.html#advantages-11"><i class="fa fa-check"></i><b>8.7.3</b> Advantages</a></li>
-<li class="chapter" data-level="8.7.4" data-path="proto.html"><a href="proto.html#disadvantages-11"><i class="fa fa-check"></i><b>8.7.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="8.7.5" data-path="proto.html"><a href="proto.html#code-and-alternatives"><i class="fa fa-check"></i><b>8.7.5</b> Code and Alternatives</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="9" data-path="local-methods.html"><a href="local-methods.html"><i class="fa fa-check"></i><b>9</b> Local Model-Agnostic Methods</a>
-<ul>
-<li class="chapter" data-level="9.1" data-path="ice.html"><a href="ice.html"><i class="fa fa-check"></i><b>9.1</b> Individual Conditional Expectation (ICE)</a>
-<ul>
-<li class="chapter" data-level="9.1.1" data-path="ice.html"><a href="ice.html#examples-4"><i class="fa fa-check"></i><b>9.1.1</b> Examples</a></li>
-<li class="chapter" data-level="9.1.2" data-path="ice.html"><a href="ice.html#advantages-12"><i class="fa fa-check"></i><b>9.1.2</b> Advantages</a></li>
-<li class="chapter" data-level="9.1.3" data-path="ice.html"><a href="ice.html#disadvantages-12"><i class="fa fa-check"></i><b>9.1.3</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.1.4" data-path="ice.html"><a href="ice.html#software-and-alternatives-2"><i class="fa fa-check"></i><b>9.1.4</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.2" data-path="lime.html"><a href="lime.html"><i class="fa fa-check"></i><b>9.2</b> Local Surrogate (LIME)</a>
-<ul>
-<li class="chapter" data-level="9.2.1" data-path="lime.html"><a href="lime.html#lime-for-tabular-data"><i class="fa fa-check"></i><b>9.2.1</b> LIME for Tabular Data</a></li>
-<li class="chapter" data-level="9.2.2" data-path="lime.html"><a href="lime.html#lime-for-text"><i class="fa fa-check"></i><b>9.2.2</b> LIME for Text</a></li>
-<li class="chapter" data-level="9.2.3" data-path="lime.html"><a href="lime.html#images-lime"><i class="fa fa-check"></i><b>9.2.3</b> LIME for Images</a></li>
-<li class="chapter" data-level="9.2.4" data-path="lime.html"><a href="lime.html#advantages-13"><i class="fa fa-check"></i><b>9.2.4</b> Advantages</a></li>
-<li class="chapter" data-level="9.2.5" data-path="lime.html"><a href="lime.html#disadvantages-13"><i class="fa fa-check"></i><b>9.2.5</b> Disadvantages</a></li>
-</ul></li>
-<li class="chapter" data-level="9.3" data-path="counterfactual.html"><a href="counterfactual.html"><i class="fa fa-check"></i><b>9.3</b> Counterfactual Explanations</a>
-<ul>
-<li class="chapter" data-level="9.3.1" data-path="counterfactual.html"><a href="counterfactual.html#generating-counterfactual-explanations"><i class="fa fa-check"></i><b>9.3.1</b> Generating Counterfactual Explanations</a></li>
-<li class="chapter" data-level="9.3.2" data-path="counterfactual.html"><a href="counterfactual.html#example-8"><i class="fa fa-check"></i><b>9.3.2</b> Example</a></li>
-<li class="chapter" data-level="9.3.3" data-path="counterfactual.html"><a href="counterfactual.html#advantages-14"><i class="fa fa-check"></i><b>9.3.3</b> Advantages</a></li>
-<li class="chapter" data-level="9.3.4" data-path="counterfactual.html"><a href="counterfactual.html#disadvantages-14"><i class="fa fa-check"></i><b>9.3.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.3.5" data-path="counterfactual.html"><a href="counterfactual.html#example-software"><i class="fa fa-check"></i><b>9.3.5</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.4" data-path="anchors.html"><a href="anchors.html"><i class="fa fa-check"></i><b>9.4</b> Scoped Rules (Anchors)</a>
-<ul>
-<li class="chapter" data-level="9.4.1" data-path="anchors.html"><a href="anchors.html#finding-anchors"><i class="fa fa-check"></i><b>9.4.1</b> Finding Anchors</a></li>
-<li class="chapter" data-level="9.4.2" data-path="anchors.html"><a href="anchors.html#complexity-and-runtime"><i class="fa fa-check"></i><b>9.4.2</b> Complexity and Runtime</a></li>
-<li class="chapter" data-level="9.4.3" data-path="anchors.html"><a href="anchors.html#tabular-data-example"><i class="fa fa-check"></i><b>9.4.3</b> Tabular Data Example</a></li>
-<li class="chapter" data-level="9.4.4" data-path="anchors.html"><a href="anchors.html#advantages-15"><i class="fa fa-check"></i><b>9.4.4</b> Advantages</a></li>
-<li class="chapter" data-level="9.4.5" data-path="anchors.html"><a href="anchors.html#disadvantages-15"><i class="fa fa-check"></i><b>9.4.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.4.6" data-path="anchors.html"><a href="anchors.html#software-and-alternatives-3"><i class="fa fa-check"></i><b>9.4.6</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.5" data-path="shapley.html"><a href="shapley.html"><i class="fa fa-check"></i><b>9.5</b> Shapley Values</a>
-<ul>
-<li class="chapter" data-level="9.5.1" data-path="shapley.html"><a href="shapley.html#general-idea"><i class="fa fa-check"></i><b>9.5.1</b> General Idea</a></li>
-<li class="chapter" data-level="9.5.2" data-path="shapley.html"><a href="shapley.html#examples-and-interpretation"><i class="fa fa-check"></i><b>9.5.2</b> Examples and Interpretation</a></li>
-<li class="chapter" data-level="9.5.3" data-path="shapley.html"><a href="shapley.html#the-shapley-value-in-detail"><i class="fa fa-check"></i><b>9.5.3</b> The Shapley Value in Detail</a></li>
-<li class="chapter" data-level="9.5.4" data-path="shapley.html"><a href="shapley.html#advantages-16"><i class="fa fa-check"></i><b>9.5.4</b> Advantages</a></li>
-<li class="chapter" data-level="9.5.5" data-path="shapley.html"><a href="shapley.html#disadvantages-16"><i class="fa fa-check"></i><b>9.5.5</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.5.6" data-path="shapley.html"><a href="shapley.html#software-and-alternatives-4"><i class="fa fa-check"></i><b>9.5.6</b> Software and Alternatives</a></li>
-</ul></li>
-<li class="chapter" data-level="9.6" data-path="shap.html"><a href="shap.html"><i class="fa fa-check"></i><b>9.6</b> SHAP (SHapley Additive exPlanations)</a>
-<ul>
-<li class="chapter" data-level="9.6.1" data-path="shap.html"><a href="shap.html#definition"><i class="fa fa-check"></i><b>9.6.1</b> Definition</a></li>
-<li class="chapter" data-level="9.6.2" data-path="shap.html"><a href="shap.html#kernelshap"><i class="fa fa-check"></i><b>9.6.2</b> KernelSHAP</a></li>
-<li class="chapter" data-level="9.6.3" data-path="shap.html"><a href="shap.html#treeshap"><i class="fa fa-check"></i><b>9.6.3</b> TreeSHAP</a></li>
-<li class="chapter" data-level="9.6.4" data-path="shap.html"><a href="shap.html#examples-5"><i class="fa fa-check"></i><b>9.6.4</b> Examples</a></li>
-<li class="chapter" data-level="9.6.5" data-path="shap.html"><a href="shap.html#shap-feature-importance"><i class="fa fa-check"></i><b>9.6.5</b> SHAP Feature Importance</a></li>
-<li class="chapter" data-level="9.6.6" data-path="shap.html"><a href="shap.html#shap-summary-plot"><i class="fa fa-check"></i><b>9.6.6</b> SHAP Summary Plot</a></li>
-<li class="chapter" data-level="9.6.7" data-path="shap.html"><a href="shap.html#shap-dependence-plot"><i class="fa fa-check"></i><b>9.6.7</b> SHAP Dependence Plot</a></li>
-<li class="chapter" data-level="9.6.8" data-path="shap.html"><a href="shap.html#shap-interaction-values"><i class="fa fa-check"></i><b>9.6.8</b> SHAP Interaction Values</a></li>
-<li class="chapter" data-level="9.6.9" data-path="shap.html"><a href="shap.html#clustering-shapley-values"><i class="fa fa-check"></i><b>9.6.9</b> Clustering Shapley Values</a></li>
-<li class="chapter" data-level="9.6.10" data-path="shap.html"><a href="shap.html#advantages-17"><i class="fa fa-check"></i><b>9.6.10</b> Advantages</a></li>
-<li class="chapter" data-level="9.6.11" data-path="shap.html"><a href="shap.html#disadvantages-17"><i class="fa fa-check"></i><b>9.6.11</b> Disadvantages</a></li>
-<li class="chapter" data-level="9.6.12" data-path="shap.html"><a href="shap.html#software-5"><i class="fa fa-check"></i><b>9.6.12</b> Software</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="10" data-path="neural-networks.html"><a href="neural-networks.html"><i class="fa fa-check"></i><b>10</b> Neural Network Interpretation</a>
-<ul>
-<li class="chapter" data-level="10.1" data-path="cnn-features.html"><a href="cnn-features.html"><i class="fa fa-check"></i><b>10.1</b> Learned Features</a>
-<ul>
-<li class="chapter" data-level="10.1.1" data-path="cnn-features.html"><a href="cnn-features.html#feature-visualization"><i class="fa fa-check"></i><b>10.1.1</b> Feature Visualization</a></li>
-<li class="chapter" data-level="10.1.2" data-path="cnn-features.html"><a href="cnn-features.html#network-dissection"><i class="fa fa-check"></i><b>10.1.2</b> Network Dissection</a></li>
-<li class="chapter" data-level="10.1.3" data-path="cnn-features.html"><a href="cnn-features.html#advantages-18"><i class="fa fa-check"></i><b>10.1.3</b> Advantages</a></li>
-<li class="chapter" data-level="10.1.4" data-path="cnn-features.html"><a href="cnn-features.html#disadvantages-18"><i class="fa fa-check"></i><b>10.1.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="10.1.5" data-path="cnn-features.html"><a href="cnn-features.html#software-and-further-material"><i class="fa fa-check"></i><b>10.1.5</b> Software and Further Material</a></li>
-</ul></li>
-<li class="chapter" data-level="10.2" data-path="pixel-attribution.html"><a href="pixel-attribution.html"><i class="fa fa-check"></i><b>10.2</b> Pixel Attribution (Saliency Maps)</a>
-<ul>
-<li class="chapter" data-level="10.2.1" data-path="pixel-attribution.html"><a href="pixel-attribution.html#vanilla-gradient-saliency-maps"><i class="fa fa-check"></i><b>10.2.1</b> Vanilla Gradient (Saliency Maps)</a></li>
-<li class="chapter" data-level="10.2.2" data-path="pixel-attribution.html"><a href="pixel-attribution.html#deconvnet"><i class="fa fa-check"></i><b>10.2.2</b> DeconvNet</a></li>
-<li class="chapter" data-level="10.2.3" data-path="pixel-attribution.html"><a href="pixel-attribution.html#grad-cam"><i class="fa fa-check"></i><b>10.2.3</b> Grad-CAM</a></li>
-<li class="chapter" data-level="10.2.4" data-path="pixel-attribution.html"><a href="pixel-attribution.html#guided-grad-cam"><i class="fa fa-check"></i><b>10.2.4</b> Guided Grad-CAM</a></li>
-<li class="chapter" data-level="10.2.5" data-path="pixel-attribution.html"><a href="pixel-attribution.html#smoothgrad"><i class="fa fa-check"></i><b>10.2.5</b> SmoothGrad</a></li>
-<li class="chapter" data-level="10.2.6" data-path="pixel-attribution.html"><a href="pixel-attribution.html#examples-6"><i class="fa fa-check"></i><b>10.2.6</b> Examples</a></li>
-<li class="chapter" data-level="10.2.7" data-path="pixel-attribution.html"><a href="pixel-attribution.html#advantages-19"><i class="fa fa-check"></i><b>10.2.7</b> Advantages</a></li>
-<li class="chapter" data-level="10.2.8" data-path="pixel-attribution.html"><a href="pixel-attribution.html#disadvantages-19"><i class="fa fa-check"></i><b>10.2.8</b> Disadvantages</a></li>
-<li class="chapter" data-level="10.2.9" data-path="pixel-attribution.html"><a href="pixel-attribution.html#software-6"><i class="fa fa-check"></i><b>10.2.9</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="10.3" data-path="detecting-concepts.html"><a href="detecting-concepts.html"><i class="fa fa-check"></i><b>10.3</b> Detecting Concepts</a>
-<ul>
-<li class="chapter" data-level="10.3.1" data-path="detecting-concepts.html"><a href="detecting-concepts.html#tcav-testing-with-concept-activation-vectors"><i class="fa fa-check"></i><b>10.3.1</b> TCAV: Testing with Concept Activation Vectors</a></li>
-<li class="chapter" data-level="10.3.2" data-path="detecting-concepts.html"><a href="detecting-concepts.html#example-9"><i class="fa fa-check"></i><b>10.3.2</b> Example</a></li>
-<li class="chapter" data-level="10.3.3" data-path="detecting-concepts.html"><a href="detecting-concepts.html#advantages-20"><i class="fa fa-check"></i><b>10.3.3</b> Advantages</a></li>
-<li class="chapter" data-level="10.3.4" data-path="detecting-concepts.html"><a href="detecting-concepts.html#disadvantages-20"><i class="fa fa-check"></i><b>10.3.4</b> Disadvantages</a></li>
-<li class="chapter" data-level="10.3.5" data-path="detecting-concepts.html"><a href="detecting-concepts.html#bonus-other-concept-based-approaches"><i class="fa fa-check"></i><b>10.3.5</b> Bonus: Other Concept-based Approaches</a></li>
-<li class="chapter" data-level="10.3.6" data-path="detecting-concepts.html"><a href="detecting-concepts.html#software-7"><i class="fa fa-check"></i><b>10.3.6</b> Software</a></li>
-</ul></li>
-<li class="chapter" data-level="10.4" data-path="adversarial.html"><a href="adversarial.html"><i class="fa fa-check"></i><b>10.4</b> Adversarial Examples</a>
-<ul>
-<li class="chapter" data-level="10.4.1" data-path="adversarial.html"><a href="adversarial.html#methods-and-examples"><i class="fa fa-check"></i><b>10.4.1</b> Methods and Examples</a></li>
-<li class="chapter" data-level="10.4.2" data-path="adversarial.html"><a href="adversarial.html#the-cybersecurity-perspective"><i class="fa fa-check"></i><b>10.4.2</b> The Cybersecurity Perspective</a></li>
-</ul></li>
-<li class="chapter" data-level="10.5" data-path="influential.html"><a href="influential.html"><i class="fa fa-check"></i><b>10.5</b> Influential Instances</a>
-<ul>
-<li class="chapter" data-level="10.5.1" data-path="influential.html"><a href="influential.html#deletion-diagnostics"><i class="fa fa-check"></i><b>10.5.1</b> Deletion Diagnostics</a></li>
-<li class="chapter" data-level="10.5.2" data-path="influential.html"><a href="influential.html#influence-functions"><i class="fa fa-check"></i><b>10.5.2</b> Influence Functions</a></li>
-<li class="chapter" data-level="10.5.3" data-path="influential.html"><a href="influential.html#advantages-of-identifying-influential-instances"><i class="fa fa-check"></i><b>10.5.3</b> Advantages of Identifying Influential Instances</a></li>
-<li class="chapter" data-level="10.5.4" data-path="influential.html"><a href="influential.html#disadvantages-of-identifying-influential-instances"><i class="fa fa-check"></i><b>10.5.4</b> Disadvantages of Identifying Influential Instances</a></li>
-<li class="chapter" data-level="10.5.5" data-path="influential.html"><a href="influential.html#software-and-alternatives-5"><i class="fa fa-check"></i><b>10.5.5</b> Software and Alternatives</a></li>
-</ul></li>
-</ul></li>
-<li class="chapter" data-level="11" data-path="future.html"><a href="future.html"><i class="fa fa-check"></i><b>11</b> A Look into the Crystal Ball</a>
-<ul>
-<li class="chapter" data-level="11.1" data-path="the-future-of-machine-learning.html"><a href="the-future-of-machine-learning.html"><i class="fa fa-check"></i><b>11.1</b> The Future of Machine Learning</a></li>
-<li class="chapter" data-level="11.2" data-path="the-future-of-interpretability.html"><a href="the-future-of-interpretability.html"><i class="fa fa-check"></i><b>11.2</b> The Future of Interpretability</a></li>
-</ul></li>
-<li class="chapter" data-level="12" data-path="contribute.html"><a href="contribute.html"><i class="fa fa-check"></i><b>12</b> Contribute to the Book</a></li>
-<li class="chapter" data-level="13" data-path="cite.html"><a href="cite.html"><i class="fa fa-check"></i><b>13</b> Citing this Book</a></li>
-<li class="chapter" data-level="14" data-path="translations.html"><a href="translations.html"><i class="fa fa-check"></i><b>14</b> Translations</a></li>
-<li class="chapter" data-level="15" data-path="acknowledgements.html"><a href="acknowledgements.html"><i class="fa fa-check"></i><b>15</b> Acknowledgements</a></li>
-<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a>
-<ul>
-<li class="chapter" data-level="" data-path="r-packages-used.html"><a href="r-packages-used.html"><i class="fa fa-check"></i>R Packages Used</a></li>
-</ul></li>
-<li class="divider"></li>
-<li><a href="https://bookdown.org" target="_blank">Published with bookdown</a></li> 
-<li><a href="https://christophmolnar.com/impressum/" target="_blank">Impressum</a></li>
-
-</ul>
-
-      </nav>
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ceteris-paribus.html">Local Modal-Agnostic Methods</a></li><li class="breadcrumb-item"><a href="./shap.html"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">SHAP</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
     </div>
-
-    <div class="book-body">
-      <div class="body-inner">
-        <div class="book-header" role="navigation">
-          <h1>
-            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Interpretable Machine Learning</a>
-          </h1>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Interpretable Machine Learning</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/christophM/interpretable-ml-book" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
         </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">About the Book</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./intro.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Interpretability</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./goals.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Goals of Interpretability</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Methods Overview</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Data and Models</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Interpretable Models</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./limo.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./logistic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Logistic Regression</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./extend-lm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">GLM, GAM and more</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./tree.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Decision Tree</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./rules.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Decision Rules</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./rulefit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">RuleFit</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Local Modal-Agnostic Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ceteris-paribus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Ceteris Paribus Plots</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ice.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Individual Conditional Expectation (ICE)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./lime.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">LIME</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./counterfactual.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Counterfactual Explanations</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./anchors.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Scoped Rules (Anchors)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./shapley.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Shapley Values</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./shap.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">SHAP</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Global Model-Agnostic Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./pdp.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Partial Dependence Plot (PDP)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./ale.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Accumulated Local Effects (ALE)</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./interaction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Feature Interaction</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./decomposition.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Functional Decomposition</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./feature-importance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Permutation Feature Importance</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./lofo.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Leave One Feature Out (LOFO) Importance</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./global.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">Surrogate Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./proto.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Prototypes and Criticisms</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Neural Network Interpretation</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cnn-features.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Learned Features</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./pixel-attribution.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Saliency Maps</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./detecting-concepts.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Detecting Concepts</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./adversarial.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Adversarial Examples</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./influential.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">31</span>&nbsp; <span class="chapter-title">Influential Instances</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Beyond the Methods</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./evaluation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">32</span>&nbsp; <span class="chapter-title">Evaluation of Interpretability Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./storytime.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">33</span>&nbsp; <span class="chapter-title">Story Time</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./future.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">34</span>&nbsp; <span class="chapter-title">The Future of Interpretability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./translations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">35</span>&nbsp; <span class="chapter-title">Translations</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./cite.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">36</span>&nbsp; <span class="chapter-title">Citing this Book</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./acknowledgements.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">37</span>&nbsp; <span class="chapter-title">Acknowledgments</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./what-is-machine-learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Machine Learning Terms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./math-terms.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Math Terms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-packages.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">R packages used</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">References</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#shap-theory" id="toc-shap-theory" class="nav-link active" data-scroll-target="#shap-theory">SHAP theory</a></li>
+  <li><a href="#shap-estimation" id="toc-shap-estimation" class="nav-link" data-scroll-target="#shap-estimation">SHAP estimation</a>
+  <ul class="collapse">
+  <li><a href="#kernelshap" id="toc-kernelshap" class="nav-link" data-scroll-target="#kernelshap">KernelSHAP</a></li>
+  <li><a href="#treeshap" id="toc-treeshap" class="nav-link" data-scroll-target="#treeshap">TreeSHAP</a></li>
+  <li><a href="#permutation-method" id="toc-permutation-method" class="nav-link" data-scroll-target="#permutation-method">Permutation Method</a></li>
+  </ul></li>
+  <li><a href="#example" id="toc-example" class="nav-link" data-scroll-target="#example">Example</a></li>
+  <li><a href="#shap-aggregation-plots" id="toc-shap-aggregation-plots" class="nav-link" data-scroll-target="#shap-aggregation-plots">SHAP aggregation plots</a>
+  <ul class="collapse">
+  <li><a href="#shap-feature-importance" id="toc-shap-feature-importance" class="nav-link" data-scroll-target="#shap-feature-importance">SHAP Feature Importance</a></li>
+  <li><a href="#shap-summary-plot" id="toc-shap-summary-plot" class="nav-link" data-scroll-target="#shap-summary-plot">SHAP Summary Plot</a></li>
+  <li><a href="#shap-dependence-plot" id="toc-shap-dependence-plot" class="nav-link" data-scroll-target="#shap-dependence-plot">SHAP Dependence Plot</a></li>
+  <li><a href="#shap-interaction-values" id="toc-shap-interaction-values" class="nav-link" data-scroll-target="#shap-interaction-values">SHAP Interaction Values</a></li>
+  <li><a href="#clustering-shapley-values" id="toc-clustering-shapley-values" class="nav-link" data-scroll-target="#clustering-shapley-values">Clustering Shapley Values</a></li>
+  </ul></li>
+  <li><a href="#strengths" id="toc-strengths" class="nav-link" data-scroll-target="#strengths">Strengths</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations">Limitations</a></li>
+  <li><a href="#software" id="toc-software" class="nav-link" data-scroll-target="#software">Software</a></li>
+  </ul>
+<div class="toc-actions"><ul><li><a href="https://github.com/christophM/interpretable-ml-book/blob/main/shap.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/christophM/interpretable-ml-book/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div></nav>
+    <div class="quarto-margin-footer"><div class="margin-footer-item">
+<div id="book-purchase-links" class="book-purchase-links">
 
-        <div class="page-wrapper" tabindex="-1" role="main">
-          <div class="page-inner">
-
-            <section class="normal" id="section-">
-<a id="cta-button-desktop" href="https://bit.ly/3K3AV1y" rel="noopener noreferrer" target="blank"> Buy Book </a>
-
-<a id="cta-button-device" href="https://leanpub.com/interpretable-machine-learning" rel="noopener noreferrer" target="blank">Buy</a>
-
-<div id="shap" class="section level2 hasAnchor" number="9.6">
-<h2><span class="header-section-number">9.6</span> SHAP (SHapley Additive exPlanations)<a href="shap.html#shap" class="anchor-section" aria-label="Anchor link to header"></a></h2>
-<p>SHAP (SHapley Additive exPlanations) by Lundberg and Lee (2017)<a href="#fn69" class="footnote-ref" id="fnref69"><sup>69</sup></a> is a method to explain individual predictions.
-SHAP is based on the game theoretically optimal <a href="shapley.html#shapley">Shapley values</a>.</p>
-
-<div class="rmdnote">
-Looking for an in-depth, hands-on book on SHAP and Shapley values?
-<a href="https://leanpub.com/shap">I got you covered</a>.
 </div>
-<p>There are two reasons why SHAP got its own chapter and is not a subchapter of <a href="shapley.html#shapley">Shapley values</a>.
-First, the SHAP authors proposed KernelSHAP, an alternative, kernel-based estimation approach for Shapley values inspired by <a href="lime.html#lime">local surrogate models</a>.
-And they proposed TreeSHAP, an efficient estimation approach for tree-based models.
-Second, SHAP comes with many global interpretation methods based on aggregations of Shapley values.
-This chapter explains both the new estimation approaches and the global interpretation methods.</p>
-<p>I recommend reading the chapters on <a href="shapley.html#shapley">Shapley values</a> and <a href="lime.html#lime">local models (LIME)</a> first.</p>
-<div id="definition" class="section level3 hasAnchor" number="9.6.1">
-<h3><span class="header-section-number">9.6.1</span> Definition<a href="shap.html#definition" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>The goal of SHAP is to explain the prediction of an instance x by computing the contribution of each feature to the prediction.
-The SHAP explanation method computes Shapley values from coalitional game theory.
-The feature values of a data instance act as players in a coalition.
-Shapley values tell us how to fairly distribute the “payout” (= the prediction) among the features.
-A player can be an individual feature value, e.g. for tabular data.
-A player can also be a group of feature values.
-For example to explain an image, pixels can be grouped to superpixels and the prediction distributed among them.
-One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feature attribution method, a linear model.
-That view connects LIME and Shapley values.
-SHAP specifies the explanation as:</p>
-<p><span class="math display">\[g(z&#39;)=\phi_0+\sum_{j=1}^M\phi_jz_j&#39;\]</span></p>
-<p>where g is the explanation model, <span class="math inline">\(z&#39;\in\{0,1\}^M\)</span> is the coalition vector, M is the maximum coalition size and <span class="math inline">\(\phi_j\in\mathbb{R}\)</span> is the feature attribution for a feature j, the Shapley values.
-What I call “coalition vector” is called “simplified features” in the SHAP paper.
-I think this name was chosen, because for e.g. image data, the images are not represented on the pixel level, but aggregated to superpixels.
-I believe it is helpful to think about the z’s as describing coalitions:
-In the coalition vector, an entry of 1 means that the corresponding feature value is “present” and 0 that it is “absent”.
-This should sound familiar to you if you know about Shapley values.
-To compute Shapley values, we simulate that only some feature values are playing (“present”) and some are not (“absent”).
-The representation as a linear model of coalitions is a trick for the computation of the <span class="math inline">\(\phi\)</span>’s.
-For x, the instance of interest, the coalition vector x’ is a vector of all 1’s, i.e. all feature values are “present”.
-The formula simplifies to:</p>
-<p><span class="math display">\[g(x&#39;)=\phi_0+\sum_{j=1}^M\phi_j\]</span></p>
-<p>You can find this formula in similar notation in the <a href="shapley.html#shapley">Shapley value</a> chapter.
-More about the actual estimation comes later.
-Let us first talk about the properties of the <span class="math inline">\(\phi\)</span>’s before we go into the details of their estimation.</p>
+</div></div></div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./ceteris-paribus.html">Local Modal-Agnostic Methods</a></li><li class="breadcrumb-item"><a href="./shap.html"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">SHAP</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span id="shap" class="quarto-section-identifier"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">SHAP</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>SHAP (SHapley Additive exPlanations) by <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span> is a method to explain individual predictions. SHAP is based on the game-theoretically optimal Shapley values. I recommend reading the chapter on <a href="shapley.html">Shapley values</a> first.</p>
+<p>To understand why SHAP is a thing and not just an extension of the <a href="shapley.html">Shapley values chapter</a>, a bit of history: In 1953, Lloyd Shapley introduced the concept of Shapley values for game theory. Shapley values for explaining machine learning predictions were suggested for the first time by <span class="citation" data-cites="strumbelj2011general">Štrumbelj and Kononenko (<a href="references.html#ref-strumbelj2011general" role="doc-biblioref">2011</a>)</span> and <span class="citation" data-cites="strumbelj2014explaining">Štrumbelj and Kononenko (<a href="references.html#ref-strumbelj2014explaining" role="doc-biblioref">2014</a>)</span>. However, they didn’t become so popular. A few years later, <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span> proposed SHAP, which was basically a new way to estimate Shapley values for interpreting machine learning predictions, along with a theory connecting Shapley values with <a href="lime.html">LIME</a> and other post-hoc attribution methods, and a bit of additional theory on Shapley values.</p>
+<p>You might say that SHAP is just a rebranding of Shapley values (which is true), but that would miss the fact that SHAP also marks a change in popularity and usage of Shapley values, and introduced new ways of estimating Shapley values and aggregating them in new ways. Also, SHAP brought Shapley values to text and image models.</p>
+<p>While this chapter could totally be a subchapter of the <a href="shapley.html">Shapley value chapter</a>, you can also see it as Shapley values 2.0 for interpreting machine learning models. This chapter emphasizes the new ways to estimate Shapley values and the new types of plots. But first, a bit of theory.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[60,40]">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 60.0%;justify-content: flex-start;">
+<p>Looking for a comprehensive, hands-on guide to SHAP and Shapley values? <a href="https://leanpub.com/shap">Interpreting Machine Learning Models with SHAP</a> has you covered. With practical Python examples using the shap package, you’ll learn how to explain models ranging from simple to complex. It dives deep into the mechanics of SHAP, provides interpretation templates, and highlights key limitations, giving you the insights you need to apply SHAP confidently and effectively.</p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 40.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="./images/cover-shap-book.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="./images/cover-shap-book.jpg" class="img-fluid quarto-figure quarto-figure-center figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<section id="shap-theory" class="level2">
+<h2 class="anchored" data-anchor-id="shap-theory">SHAP theory</h2>
+<p>The goal of SHAP is to explain the prediction of an instance <span class="math inline">\(\mathbf{x}\)</span> by computing the contribution of each feature to the prediction. SHAP computes Shapley values from coalitional game theory, the same as we discussed in <a href="shapley.html">the Shapley value chapter</a>. The feature values of a data instance act as players in a coalition. Shapley values tell us how to fairly distribute the “payout” (= the prediction) among the features. A player can be an individual feature value, e.g., for tabular data. A player can also be a group of feature values. For example, to explain an image, pixels can be grouped into superpixels, and the prediction distributed among them. One innovation that SHAP brings to the table is that the Shapley value explanation is represented as an additive feature attribution method, a linear model. That view connects LIME and Shapley values. SHAP specifies the explanation as:</p>
+<p><span class="math display">\[g(\mathbf{z}')=\phi_0+\sum_{j=1}^M\phi_j z_j'\]</span></p>
+<p>where <span class="math inline">\(g\)</span> is the explanation model, <span class="math inline">\(\mathbf{z}' = (z_1', \ldots, z_M')^T \in \{0,1\}^M\)</span> is the coalition vector, <span class="math inline">\(M\)</span> is the maximum coalition size, and <span class="math inline">\(\phi_j \in \mathbb{R}\)</span> is the feature attribution for feature <span class="math inline">\(j\)</span>, the Shapley values. What I call “coalition vector” is called “simplified features” in the SHAP paper. I think this name was chosen because, for e.g., image data, the images are not represented on the pixel level, but aggregated into superpixels. It’s helpful to think about the <span class="math inline">\(\mathbf{z}'\)</span> as describing coalitions: In the coalition vector, an entry of 1 means that the corresponding feature value is “present” and 0 that it is “absent”. But again, a feature here can be different from features the model used, like superpixels instead of pixels. The important part is that we can map between the two representations. To compute Shapley values, we simulate that only some feature values are playing (“present”) and some are not (“absent”). The representation as a linear model of coalitions is a trick for the computation of the <span class="math inline">\(\phi_j\)</span>’s. For <span class="math inline">\(\mathbf{x}\)</span>, the instance of interest, the coalition vector <span class="math inline">\(\mathbf{x}'\)</span> is a vector of all 1’s, i.e.&nbsp;all feature values are “present”. The formula simplifies to:</p>
+<p><span class="math display">\[g(\mathbf{x}')=\phi_0+\sum_{j=1}^M\phi_j\]</span></p>
+<p>You can find this formula in similar notation in the <a href="shapley.html">Shapley value</a> chapter. More about the actual estimation comes later in this chapter. Let’s first talk about the properties of the <span class="math inline">\(\phi\)</span>’s before we go into the details of their estimation.</p>
 <!-- Desirable properties -->
-<p>Shapley values are the only solution that satisfies properties of Efficiency, Symmetry, Dummy and Additivity.
-SHAP also satisfies these, since it computes Shapley values.
-In the SHAP paper, you will find discrepancies between SHAP properties and Shapley properties.
-SHAP describes the following three desirable properties:</p>
+<p>Shapley values are the only solution that satisfies properties of Efficiency, Symmetry, Dummy, and Additivity. SHAP also satisfies these since it computes Shapley values. In the SHAP paper by <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span>, you will find discrepancies between SHAP properties and Shapley properties. SHAP describes the following three desirable properties:</p>
 <p><strong>1) Local accuracy</strong></p>
-<p><span class="math display">\[\hat{f}(x)=g(x&#39;)=\phi_0+\sum_{j=1}^M\phi_jx_j&#39;\]</span></p>
-<p>If you define <span class="math inline">\(\phi_0=E_X(\hat{f}(x))\)</span> and set all <span class="math inline">\(x_j&#39;\)</span> to 1, this is the Shapley efficiency property.
-Only with a different name and using the coalition vector.</p>
-<p><span class="math display">\[\hat{f}(x)=\phi_0+\sum_{j=1}^M\phi_jx_j&#39;=E_X(\hat{f}(X))+\sum_{j=1}^M\phi_j\]</span></p>
+<p><span class="math display">\[\hat{f}(\mathbf{x})=g(\mathbf{x}')=\phi_0+\sum_{j=1}^M\phi_j x_j'\]</span></p>
+<p>If you define <span class="math inline">\(\phi_0=\mathbb{E}[\hat{f}(X)]\)</span> and set all <span class="math inline">\(x_j'\)</span> to 1, this is the Shapley efficiency property. Only with a different name and using the coalition vector.</p>
+<p><span class="math display">\[\hat{f}(\mathbf{x}) = \phi_0 + \sum_{j=1}^M \phi_j x_j' = \mathbb{E}[\hat{f}(X)] + \sum_{j=1}^M\phi_j\]</span></p>
 <p><strong>2) Missingness</strong></p>
-<p><span class="math display">\[x_j&#39;=0\Rightarrow\phi_j=0\]</span></p>
-<p>Missingness says that a missing feature gets an attribution of zero.
-Note that <span class="math inline">\(x_j&#39;\)</span> refers to the coalitions where a value of 0 represents the absence of a feature value.
-In coalition notation, all feature values <span class="math inline">\(x_j&#39;\)</span> of the instance to be explained should be ‘1’.
-The presence of a 0 would mean that the feature value is missing for the instance of interest.
-This property is not among the properties of the “normal” Shapley values.
-So why do we need it for SHAP?
-Lundberg calls it a <a href="https://github.com/slundberg/shap/issues/175#issuecomment-407134438">“minor book-keeping property”</a>.
-A missing feature could – in theory – have an arbitrary Shapley value without hurting the local accuracy property, since it is multiplied with <span class="math inline">\(x_j&#39;=0\)</span>.
-The Missingness property enforces that missing features get a Shapley value of 0.
-In practice, this is only relevant for features that are constant.</p>
+<p><span class="math display">\[x_j'=0 \Rightarrow \phi_j=0\]</span></p>
+<p>Missingness says that a missing feature gets an attribution of zero. Note that <span class="math inline">\(x_j'\)</span> refers to the coalitions where a value of 0 represents the absence of a feature value. In coalition notation, all feature values <span class="math inline">\(x_j'\)</span> of the instance to be explained should be ‘1’. This property is not among the properties of the “normal” Shapley values. So why do we need it for SHAP? Lundberg calls it a <a href="https://github.com/slundberg/shap/issues/175#issuecomment-407134438">“minor book-keeping property”</a>. A missing feature could – in theory – have an arbitrary Shapley value without hurting the local accuracy property, since it is multiplied with <span class="math inline">\(x_j'=0\)</span>. The Missingness property enforces that missing features get a Shapley value of 0. In practice, this is only relevant for features that are constant.</p>
 <p><strong>3) Consistency</strong></p>
-<p>Let <span class="math inline">\(\hat{f}_x(z&#39;)=\hat{f}(h_x(z&#39;))\)</span> and <span class="math inline">\(z_{-j}&#39;\)</span> indicate that <span class="math inline">\(z_j&#39;=0\)</span>.
-For any two models f and f’ that satisfy:</p>
-<p><span class="math display">\[\hat{f}_x&#39;(z&#39;)-\hat{f}_x&#39;(z_{-j}&#39;)\geq{}\hat{f}_x(z&#39;)-\hat{f}_x(z_{-j}&#39;)\]</span></p>
-<p>for all inputs <span class="math inline">\(z&#39;\in\{0,1\}^M\)</span>, then:</p>
-<p><span class="math display">\[\phi_j(\hat{f}&#39;,x)\geq\phi_j(\hat{f},x)\]</span></p>
-<p>The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same.
-From Consistency the Shapley properties Linearity, Dummy and Symmetry follow, as described in the Appendix of Lundberg and Lee.</p>
-</div>
-<div id="kernelshap" class="section level3 hasAnchor" number="9.6.2">
-<h3><span class="header-section-number">9.6.2</span> KernelSHAP<a href="shap.html#kernelshap" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>Let <span class="math inline">\(\hat{f}_\mathbf{x}(\mathbf{z}') = \hat{f}(h_\mathbf{x}(\mathbf{z}'))\)</span> and <span class="math inline">\(\mathbf{z}_{-j}'\)</span> indicate that <span class="math inline">\(z_j'=0\)</span>. For any two models <span class="math inline">\(\hat{f}\)</span> and <span class="math inline">\(\hat{f}'\)</span> that satisfy:</p>
+<p><span class="math display">\[\hat{f}_\mathbf{x}^{\prime}(\mathbf{z}') - \hat{f}_\mathbf{x}'(\mathbf{z}_{-j}') \geq \hat{f}_\mathbf{x}(\mathbf{z}') - \hat{f}_\mathbf{x}(\mathbf{z}_{-j}')\]</span></p>
+<p>for all inputs <span class="math inline">\(\mathbf{z}'\in\{0,1\}^M\)</span>, then:</p>
+<p><span class="math display">\[\phi_j(\hat{f}', \mathbf{x}) \geq \phi_j (\hat{f}, \mathbf{x})\]</span></p>
+<p>The notation <span class="math inline">\(\phi_j(\hat{f}, \mathbf{x})\)</span> emphasizes which model and data point the Shapley values depend on. The consistency property says that if a model changes so that the marginal contribution of a feature value increases or stays the same (regardless of other features), the Shapley value also increases or stays the same. From Consistency, the Shapley properties Linearity, Dummy, and Symmetry follow, as described in the <a href="https://papers.nips.cc/paper_files/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html">Supplemental</a> of <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span>.</p>
+</section>
+<section id="shap-estimation" class="level2">
+<h2 class="anchored" data-anchor-id="shap-estimation">SHAP estimation</h2>
+<p>This section is about three ways to estimate Shapley values for explaining predictions: KernelSHAP, Permutation Method, and TreeSHAP.</p>
+<section id="kernelshap" class="level3">
+<h3 class="anchored" data-anchor-id="kernelshap">KernelSHAP</h3>
 <!-- The general Idea of linear model -->
-<p>KernelSHAP estimates for an instance x the contributions of each feature value to the prediction.
-KernelSHAP consists of five steps:</p>
+<p>The situation with KernelSHAP is a bit confusing: It has been the entire motivation for SHAP, linked it with <a href="lime.html">LIME</a> and other attribution methods, and was introduced in the original paper <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span>. Also, many blog posts and so on about SHAP talk about KernelSHAP. But KernelSHAP is slow compared to TreeSHAP and the Permutation Method, and that’s why the <code>shap</code> Python package no longer uses it. Even if no longer the default, KernelSHAP helps to understand Shapley values and shows how Shapley values and <a href="lime.html">LIME</a> are connected, and some implementations still use it.</p>
+<p>The KernelSHAP estimation has five steps:</p>
 <ul>
-<li>Sample coalitions <span class="math inline">\(z_k&#39;\in\{0,1\}^M,\quad{}k\in\{1,\ldots,K\}\)</span> (1 = feature present in coalition, 0 = feature absent).</li>
-<li>Get prediction for each <span class="math inline">\(z_k&#39;\)</span> by first converting <span class="math inline">\(z_k&#39;\)</span> to the original feature space and then applying model <span class="math inline">\(\hat{f}: \hat{f}(h_x(z_k&#39;))\)</span></li>
-<li>Compute the weight for each <span class="math inline">\(z_k&#39;\)</span> with the SHAP kernel.</li>
+<li>Sample coalition vectors <span class="math inline">\(\mathbf{z}_k' \in \{0,1\}^M, \quad k \in \{1,\ldots,K\}\)</span> (1 = feature present in coalition, 0 = feature absent).</li>
+<li>Get prediction for each <span class="math inline">\(\mathbf{z}_k'\)</span> by first converting <span class="math inline">\(\mathbf{z}_k'\)</span> to the original feature space and then applying model <span class="math inline">\(\hat{f}: \hat{f}(h_{\mathbf{x}}(\mathbf{z}_k'))\)</span>.</li>
+<li>Compute the weight for each coalition <span class="math inline">\(\mathbf{z}_k'\)</span> with the SHAP kernel.</li>
 <li>Fit weighted linear model.</li>
 <li>Return Shapley values <span class="math inline">\(\phi_k\)</span>, the coefficients from the linear model.</li>
 </ul>
-<p>We can create a random coalition by repeated coin flips until we have a chain of 0’s and 1’s.
-For example, the vector of (1,0,1,0) means that we have a coalition of the first and third features.
-The K sampled coalitions become the dataset for the regression model.
-The target for the regression model is the prediction for a coalition.
-(“Hold on!,” you say. “The model has not been trained on these binary coalition data and cannot make predictions for them.”)
-To get from coalitions of feature values to valid data instances, we need a function <span class="math inline">\(h_x(z&#39;)=z\)</span> where <span class="math inline">\(h_x:\{0,1\}^M\rightarrow\mathbb{R}^p\)</span>.
-The function <span class="math inline">\(h_x\)</span> maps 1’s to the corresponding value from the instance x that we want to explain.
-For tabular data, it maps 0’s to the values of another instance that we sample from the data.
-This means that we equate “feature value is absent” with “feature value is replaced by random feature value from data”.
-For tabular data, the following figure visualizes the mapping from coalitions to feature values:</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:shap-simplified-feature"></span>
-<img src="images/shap-simplified-features.jpg" alt="Function $h_x$ maps a coalition to a valid instance. For present features (1), $h_x$ maps to the feature values of x. For absent features (0), $h_x$ maps to the values of a randomly sampled data instance." width="\textwidth" />
-<p class="caption">
-FIGURE 9.22: Function <span class="math inline">\(h_x\)</span> maps a coalition to a valid instance. For present features (1), <span class="math inline">\(h_x\)</span> maps to the feature values of x. For absent features (0), <span class="math inline">\(h_x\)</span> maps to the values of a randomly sampled data instance.
-</p>
+<p>We can create a random coalition by repeated coin flips until we have a chain of 0’s and 1’s. For example, the vector of <span class="math inline">\((1,0,1,0)^T\)</span> means that we have a coalition of the first and third features. The <span class="math inline">\(K\)</span> sampled coalitions become the dataset for the regression model. The target for the regression model is the prediction for a coalition. (“Hold on!,” you say. “The model has not been trained on these binary coalition data and cannot make predictions for them.”) To get from coalitions of feature values to valid data instances, we need a function <span class="math inline">\(h_\mathbf{x}(\mathbf{z}') = \mathbf{z}\)</span> where <span class="math inline">\(h_\mathbf{x}: \{0,1\}^M\rightarrow\mathbb{R}^p\)</span>. The function <span class="math inline">\(h_\mathbf{x}\)</span> maps 1’s to the corresponding value from the instance <span class="math inline">\(\mathbf{x}\)</span> that we want to explain. For tabular data, it maps 0’s to the values of another instance that we sample from the data. This means that we equate “feature value is absent” with “feature value is replaced by random feature value from data”. For tabular data, <a href="#fig-shap-simplified-feature" class="quarto-xref">Figure&nbsp;<span>18.1</span></a> visualizes the mapping from coalitions to feature values.</p>
+<div id="fig-shap-simplified-feature" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-simplified-feature-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="./images/shap-simplified-features.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Figure&nbsp;18.1: Function h_{\mathbf{x}} maps a coalition to a valid instance. For present features (1), h_{\mathbf{x}} maps to the feature values of \mathbf{x}. For absent features (0), h_{\mathbf{x}} maps to the values of a randomly sampled data instance."><img src="./images/shap-simplified-features.jpg" class="img-fluid figure-img" style="width:90.0%"></a>
 </div>
-<p><span class="math inline">\(h_x\)</span> for tabular data treats feature <span class="math inline">\(X_j\)</span> and <span class="math inline">\(X_{-j}\)</span> (the other features) as independent and integrates over the marginal distribution:</p>
-<p><span class="math display">\[\hat{f}(h_x(z&#39;))=E_{X_{-j}}[\hat{f}(x)]\]</span></p>
-<p>Sampling from the marginal distribution means ignoring the dependence structure between present and absent features.
-KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods.
-The estimation puts too much weight on unlikely instances.
-Results can become unreliable.
-But it is necessary to sample from the marginal distribution.
-The solution would be to sample from the conditional distribution, which changes the value function, and therefore the game to which Shapley values are the solution.
-As a result, the Shapley values have a different interpretation:
-For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used.
-For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom.</p>
-<p>For images, the following figure describes a possible mapping function:</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-38"></span>
-<img src="images/shap-superpixel.jpg" alt="Function $h_x$ maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), $h_x$ returns the corresponding part of the original image. For absent features (0), $h_x$ greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option." width="\textwidth" />
-<p class="caption">
-FIGURE 9.23: Function <span class="math inline">\(h_x\)</span> maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), <span class="math inline">\(h_x\)</span> returns the corresponding part of the original image. For absent features (0), <span class="math inline">\(h_x\)</span> greys out the corresponding area. Assigning the average color of surrounding pixels or similar would also be an option.
-</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-simplified-feature-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.1: Function <span class="math inline">\(h_{\mathbf{x}}\)</span> maps a coalition to a valid instance. For present features (1), <span class="math inline">\(h_{\mathbf{x}}\)</span> maps to the feature values of <span class="math inline">\(\mathbf{x}\)</span>. For absent features (0), <span class="math inline">\(h_{\mathbf{x}}\)</span> maps to the values of a randomly sampled data instance.
+</figcaption>
+</figure>
+</div>
+<p><span class="math inline">\(h_{\mathbf{x}}\)</span> for tabular data treats feature <span class="math inline">\(X_j\)</span> and <span class="math inline">\(X_{-j}\)</span> (the other features) as independent and integrates over the marginal distribution:</p>
+<p><span class="math display">\[\hat{f}(h_{\mathbf{x}}(\mathbf{z}')) = \mathbb{E}_{X_{-j}}[\hat{f}(x_j, X_{-j})]\]</span></p>
+<p>Sampling from the marginal distribution means ignoring the dependence structure between present and absent features. KernelSHAP therefore suffers from the same problem as all permutation-based interpretation methods. The estimation potentially puts weight on unlikely instances. Results can become unreliable. Would we sample from the conditional distribution, the value function would change, and therefore the game to which Shapley values are the solution. As a result, the Shapley values have a different interpretation: For example, a feature that might not have been used by the model at all can have a non-zero Shapley value when the conditional sampling is used. For the marginal game, this feature value would always get a Shapley value of 0, because otherwise it would violate the Dummy axiom. This conditional sampling version of SHAP exists and was suggested by <span class="citation" data-cites="aas2021explaining">Aas, Jullum, and Løland (<a href="references.html#ref-aas2021explaining" role="doc-biblioref">2021</a>)</span>.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Conditional Shapley values may give non-zero Shapley values to unused features
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The problem with the conditional expectation is that features that have no influence on the prediction function <span class="math inline">\(\hat{f}\)</span> can get a TreeSHAP estimate different from zero, as shown by <span class="citation" data-cites="sundararajan2020many">Sundararajan and Najmi (<a href="references.html#ref-sundararajan2020many" role="doc-biblioref">2020</a>)</span> and <span class="citation" data-cites="janzing2020feature">Janzing, Minorics, and Blöbaum (<a href="references.html#ref-janzing2020feature" role="doc-biblioref">2020</a>)</span>. The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.</p>
+</div>
+</div>
+<p>For images, <a href="#fig-shap-images" class="quarto-xref">Figure&nbsp;<span>18.2</span></a> describes a possible mapping function. Assigning the average color of surrounding pixels or similar would also be an option.</p>
+<div id="fig-shap-images" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-images-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="./images/shap-superpixel.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-3" title="Figure&nbsp;18.2: Function h_{\mathbf{x}} maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), h_{\mathbf{x}} returns the corresponding part of the original image. For absent features (0), h_{\mathbf{x}} greys out the corresponding area."><img src="./images/shap-superpixel.jpg" class="img-fluid figure-img"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-images-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.2: Function <span class="math inline">\(h_{\mathbf{x}}\)</span> maps coalitions of superpixels (sp) to images. Superpixels are groups of pixels. For present features (1), <span class="math inline">\(h_{\mathbf{x}}\)</span> returns the corresponding part of the original image. For absent features (0), <span class="math inline">\(h_{\mathbf{x}}\)</span> greys out the corresponding area.
+</figcaption>
+</figure>
 </div>
 <!-- Kernel -->
-<p>The big difference to LIME is the weighting of the instances in the regression model.
-LIME weights the instances according to how close they are to the original instance.
-The more 0’s in the coalition vector, the smaller the weight in LIME.
-SHAP weights the sampled instances according to the weight the coalition would get in the Shapley value estimation.
-Small coalitions (few 1’s) and large coalitions (i.e. many 1’s) get the largest weights.
-The intuition behind it is:
-We learn most about individual features if we can study their effects in isolation.
-If a coalition consists of a single feature, we can learn about this feature’s isolated main effect on the prediction.
-If a coalition consists of all but one feature, we can learn about this feature’s total effect (main effect plus feature interactions).
-If a coalition consists of half the features, we learn little about an individual feature’s contribution, as there are many possible coalitions with half of the features.
-To achieve Shapley compliant weighting, Lundberg et al. propose the SHAP kernel:</p>
-<p><span class="math display">\[\pi_{x}(z&#39;)=\frac{(M-1)}{\binom{M}{|z&#39;|}|z&#39;|(M-|z&#39;|)}\]</span></p>
-<p>Here, M is the maximum coalition size and <span class="math inline">\(|z&#39;|\)</span> the number of present features in instance z’.
-Lundberg and Lee show that linear regression with this kernel weight yields Shapley values.
-If you would use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!</p>
+<p>The big difference between SHAP and LIME is the weighting of the instances in the regression model. LIME weights the instances according to how close they are to the original instance. The more 0’s in the coalition vector, the smaller the weight in LIME. SHAP weights the sampled instances according to the weight the coalition would get in the Shapley value estimation. Small coalitions (few 1’s) and large coalitions (i.e.&nbsp;many 1’s) get the largest weights. The intuition behind it is: We learn most about individual features if we can study their effects in isolation. If a coalition consists of a single feature, we can learn about this feature’s isolated main effect on the prediction. If a coalition consists of all but one feature, we can learn about this feature’s total effect (main effect plus feature interactions). If a coalition consists of half the features, we learn little about an individual feature’s contribution, as there are many possible coalitions with half of the features. To achieve Shapley compliant weighting, <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span> proposed the SHAP kernel:</p>
+<p><span class="math display">\[\pi_{\mathbf{x}}(\mathbf{z}') = \frac{(M-1)}{\binom{M}{|\mathbf{z}'|} |\mathbf{z}'| (M - |\mathbf{z}'|)}\]</span></p>
+<p>Here, <span class="math inline">\(M\)</span> is the maximum coalition size and <span class="math inline">\(|\mathbf{z}'|\)</span> the number of present features in instance <span class="math inline">\(\mathbf{z}'\)</span>. <span class="citation" data-cites="lundberg2017unified">Lundberg and Lee (<a href="references.html#ref-lundberg2017unified" role="doc-biblioref">2017</a>)</span> show that linear regression with this kernel weight yields Shapley values. If you were to use the SHAP kernel with LIME on the coalition data, LIME would also estimate Shapley values!</p>
 <!-- Sampling trick -->
-<p>We can be a bit smarter about the sampling of coalitions:
-The smallest and largest coalitions take up most of the weight.
-We get better Shapley value estimates by using some of the sampling budget K to include these high-weight coalitions instead of sampling blindly.
-We start with all possible coalitions with 1 and M-1 features, which makes 2 times M coalitions in total.
-When we have enough budget left (current budget is K - 2M), we can include coalitions with 2 features and with M-2 features and so on.
-From the remaining coalition sizes, we sample with readjusted weights.</p>
+<p>We can be a bit smarter about the sampling of coalitions: The smallest and largest coalitions take up most of the weight. We get better Shapley value estimates by using some of the sampling budget <span class="math inline">\(K\)</span> to include these high-weight coalitions instead of sampling blindly. We start with all possible coalitions with 1 and <span class="math inline">\(M-1\)</span> features, which makes <span class="math inline">\(2M\)</span> coalitions in total. When we have enough budget left (current budget is <span class="math inline">\(K - 2M\)</span>), we can include coalitions with 2 features and with <span class="math inline">\(M-2\)</span> features and so on. From the remaining coalition sizes, we sample with readjusted weights.</p>
 <!-- Linear Model -->
-<p>We have the data, the target and the weights;
-Everything we need to build our weighted linear regression model:</p>
-<p><span class="math display">\[g(z&#39;)=\phi_0+\sum_{j=1}^M\phi_jz_j&#39;\]</span></p>
-<p>We train the linear model g by optimizing the following loss function L:</p>
-<p><span class="math display">\[L(\hat{f},g,\pi_{x})=\sum_{z&#39;\in{}Z}[\hat{f}(h_x(z&#39;))-g(z&#39;)]^2\pi_{x}(z&#39;)\]</span></p>
-<p>where Z is the training data.
-This is the good old boring sum of squared errors that we usually optimize for linear models.
-The estimated coefficients of the model, the <span class="math inline">\(\phi_j\)</span>’s, are the Shapley values.</p>
-<p>Since we are in a linear regression setting, we can also make use of the standard tools for regression.
-For example, we can add regularization terms to make the model sparse.
-If we add an L1 penalty to the loss L, we can create sparse explanations.
-(I am not so sure whether the resulting coefficients would still be valid Shapley values though.)</p>
+<p>We have the data, the target and the weights; Everything we need to build our weighted linear regression model:</p>
+<p><span class="math display">\[g(\mathbf{z}') = \phi_0 + \sum_{j=1}^M \phi_j z_j'\]</span></p>
+<p>We train the linear model <span class="math inline">\(g\)</span> by optimizing the following loss function <span class="math inline">\(L\)</span>:</p>
+<p><span class="math display">\[L(\hat{f}, g, \pi_{\mathbf{x}}) = \sum_{\mathbf{z}' \in \mathbf{Z}} [\hat{f}(h_{\mathbf{x}}(\mathbf{z}')) - g(\mathbf{z}')]^2 \pi_{\mathbf{x}}(\mathbf{z}')\]</span></p>
+<p>where <span class="math inline">\(\mathbf{Z}\)</span> is the training data. This is the good old boring sum of squared errors that we usually optimize for linear models. The estimated coefficients of the model, the <span class="math inline">\(\phi_j\)</span>’s, are the Shapley values.</p>
+<p>Since we are in a linear regression setting, we can also make use of the standard tools for regression. For example, we can add regularization terms to make the model sparse. If we add an L1 penalty to the loss <span class="math inline">\(L\)</span>, we can create sparse explanations. (I’m not so sure whether the resulting coefficients would still be valid Shapley values though.)</p>
+</section>
+<section id="treeshap" class="level3">
+<h3 class="anchored" data-anchor-id="treeshap">TreeSHAP</h3>
+<p><span class="citation" data-cites="lundberg2019consistent">Lundberg, Erion, and Lee (<a href="references.html#ref-lundberg2019consistent" role="doc-biblioref">2019</a>)</span> proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests, and gradient-boosted trees. TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP. How much faster is TreeSHAP? Compared to exact KernelSHAP, it reduces the computational complexity from <span class="math inline">\(O(TL2^M)\)</span> to <span class="math inline">\(O(TLD^2)\)</span>, where T is the number of trees, L is the maximum number of leaves in any tree, and D is the maximal depth of any tree.</p>
+<p>TreeSHAP comes in two versions:</p>
+<ul>
+<li>“Interventional” computes the classic Shapley values.</li>
+<li>“Tree-path dependent” computes something akin to conditional SHAP values.</li>
+</ul>
+<p>The original implementation in the <code>shap</code> Python package used to be the tree-path dependent version, but is now the interventional one.</p>
+<p>The estimation for both interventional and tree-path dependent estimation is rather complex, so I’ll just give you the rough idea (read: I haven’t fully understood the full version myself). Essentially, TreeSHAP leverages the tree structure to compute the Shapley values more efficiently.</p>
+<p>Interventional TreeSHAP calculates the usual SHAP values. The following description is for estimating Shapley values for a single tree, for a data point <span class="math inline">\(\mathbf{x}\)</span> to explain, and, for simplicity, the background dataset contains just one data point <span class="math inline">\(\mathbf{z}\)</span>:</p>
+<p>The Shapley value, as we know, is computed by repeatedly forming coalitions of feature values, which includes present players (feature values from <span class="math inline">\(\mathbf{x}\)</span>) and absent players (feature values from <span class="math inline">\(\mathbf{z}\)</span>). However, for many of these coalitions, adding a feature from <span class="math inline">\(\mathbf{x}\)</span> wouldn’t change the prediction, since a decision tree only has a limited amount of distinct predictions due to the decision structure. For example, a binary tree of depth 5 has a maximum of 32 possible predictions. So instead of iterating through all coalitions, the Interventional TreeSHAP estimator explores the tree paths to only work with the coalitions that would actually change the predictions. The tricky part is to correctly weight and combine these marginal contributions, which makes the interventional TreeSHAP algorithm more difficult to understand. And of course, damn recursion. To get the Shapley values for an ensemble of trees, for example for a random forest, simply combine the Shapley values the same way the ensemble predictions are combined. In the case of a random forest, it would be averaging the values.</p>
+<p>Path-dependent TreeSHAP works in a similar fashion, making use of the tree structure. The basic idea is to push all subsets of coalition S down the tree simultaneously. And in each split, we keep track of the number of instances for the subsets.</p>
+</section>
+<section id="permutation-method" class="level3">
+<h3 class="anchored" data-anchor-id="permutation-method">Permutation Method</h3>
+<p>The most efficient model-agnostic estimator is the Permutation Method. The idea is to sample cleverly from the coalitions by creating permutations of the features.</p>
+<p>Let’s look at an example (taken from the book <a href="https://christophmolnar.com/books/shap/">Interpreting Machine Learning Models with SHAP</a>) with four feature values: <span class="math inline">\(x_{\text{park}}, x_{\text{cat}}, x_{\text{area}}\)</span>, and <span class="math inline">\(x_{\text{floor}}\)</span>. For simplicity, I’ll shorten <span class="math inline">\(x^{(i)}_{\text{park}}\)</span> as <span class="math inline">\(x_{\text{park}}\)</span>.</p>
+<p>A random permutation of these features would be:</p>
+<p><span class="math display">\[(x_{\text{cat}}, x_{\text{area}}, x_{\text{park}}, x_{\text{floor}})\]</span></p>
+<p>Based on this permutation, we can compute marginal contributions by starting to build coalitions from left to right:</p>
+<ul>
+<li>Add <span class="math inline">\(x_{\text{cat}}\)</span> to <span class="math inline">\(\emptyset\)</span></li>
+<li>Add <span class="math inline">\(x_{\text{area}}\)</span> to <span class="math inline">\(\{x_{\text{cat}}\}\)</span></li>
+<li>Add <span class="math inline">\(x_{\text{park}}\)</span> to <span class="math inline">\(\{x_{\text{cat}}, x_{\text{area}}\}\)</span></li>
+<li>Add <span class="math inline">\(x_{\text{floor}}\)</span> to <span class="math inline">\(\{x_{\text{cat}}, x_{\text{area}}, x_{\text{park}}\}\)</span></li>
+</ul>
+<p>And the same we can do backwards:</p>
+<ul>
+<li>Add <span class="math inline">\(x_{\text{floor}}\)</span> to <span class="math inline">\(\emptyset\)</span></li>
+<li>Add <span class="math inline">\(x_{\text{park}}\)</span> to <span class="math inline">\(\{x_{\text{floor}}\}\)</span></li>
+<li>Add <span class="math inline">\(x_{\text{area}}\)</span> to <span class="math inline">\(\{x_{\text{park}}, x_{\text{floor}}\}\)</span></li>
+<li>Add <span class="math inline">\(x_{\text{cat}}\)</span> to <span class="math inline">\(\{x_{\text{area}}, x_{\text{park}}, x_{\text{floor}}\}\)</span></li>
+</ul>
+<p>The permutation changes one feature at a time. This reduces the number of model calls since the second term of a marginal contribution (a model prediction) is also needed to compute the next marginal contribution. For example, the coalition <span class="math inline">\(\{x_{\text{cat}}, x_{\text{area}}\}\)</span> is used to calculate both the marginal contribution of <span class="math inline">\(x_{\text{park}}\)</span> to <span class="math inline">\(\{x_{\text{cat}}, x_{\text{area}}\}\)</span> and of <span class="math inline">\(x_{\text{area}}\)</span> to <span class="math inline">\(\{x_{\text{cat}}\}\)</span>. Each forward and backward permutation gives us two marginal contributions per feature. By doing a couple of permutations like this, we get a pretty good estimate of the Shapley values. To actually compute the Shapley values, we have to define the Shapley values in terms of permutations instead of coalitions: There are <span class="math inline">\(p!\)</span> possible permutations of the features and <span class="math inline">\(o(k)\)</span> the k-th permutation, then the Shapley value for feature <span class="math inline">\(j\)</span> can be computed as:</p>
+<p><span class="math display">\[\hat{\phi}_j^{(i)} = \frac{1}{m} \sum_{k=1}^m \hat{\Delta}_{o(k), j}\]</span></p>
+<p>The term <span class="math inline">\(\hat{\Delta}_{o(k), j}\)</span> is the <span class="math inline">\(k\)</span>-th marginal contribution. This means we can compute the Shapley value as a simple average over all contributions. However, the motivation for permutation estimation was to avoid computing all possible coalitions or permutations. Good thing is we can sample permutations and still take the average. Since we perform forward and backward iterations, we compute the Shapley value as:</p>
+<p><span class="math display">\[\hat{\phi}_j^{(i)} = \frac{1}{2m} \sum_{k=1}^m (\hat{\Delta}_{o(k), j} + \hat{\Delta}_{-o(k), j})\]</span></p>
+<p>Permutation <span class="math inline">\(-o(k)\)</span> is the reverse version of the permutation. The permutation procedure with forward and backward iterations, also known as antithetic sampling, performs quite well compared to other SHAP value sampling estimators <span class="citation" data-cites="mitchell2022sampling">(<a href="references.html#ref-mitchell2022sampling" role="doc-biblioref">Mitchell et al. 2022</a>)</span>. The permutation method additionally ensures that the efficiency axiom is always satisfied, meaning when you add up the SHAP values, they equal prediction minus average prediction. For a rough idea of how many permutations you might need: the <code>shap</code> package defaults to 10.</p>
+</section>
+</section>
+<section id="example" class="level2">
+<h2 class="anchored" data-anchor-id="example">Example</h2>
+<p>I trained a random forest classifier with 100 trees to predict the <a href="data.html#penguins">penguin sex</a>. We’ll use SHAP to explain individual predictions. We can use the fast Interventional TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees. But instead of relying on the conditional distribution, this example uses the marginal distribution. This is described in the package, but not in the original paper. The Python TreeSHAP function is slower with the marginal distribution, but still faster than KernelSHAP, since it scales linearly with the rows in the data.</p>
+<p>Because we use the marginal distribution here, the interpretation is the same as in the <a href="shapley.html">Shapley value chapter</a>. But with the Python <code>shap</code> package comes a different visualization: You can visualize feature attributions such as Shapley values as “forces.” Each feature value is a force that either increases or decreases the prediction. The prediction starts from the baseline. The baseline for Shapley values is the average of all predictions. In the plot, each Shapley value is an arrow that pushes to increase (positive value) or decrease (negative value) the prediction. These forces balance each other out at the actual prediction of the data instance.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
 </div>
-<div id="treeshap" class="section level3 hasAnchor" number="9.6.3">
-<h3><span class="header-section-number">9.6.3</span> TreeSHAP<a href="shap.html#treeshap" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>Lundberg et al. (2018)<a href="#fn70" class="footnote-ref" id="fnref70"><sup>70</sup></a> proposed TreeSHAP, a variant of SHAP for tree-based machine learning models such as decision trees, random forests and gradient boosted trees.
-TreeSHAP was introduced as a fast, model-specific alternative to KernelSHAP, but it turned out that it can produce unintuitive feature attributions.</p>
-<p>TreeSHAP defines the value function using the conditional expectation <span class="math inline">\(E_{X_j|X_{-j}}(\hat{f}(x)|x_j)\)</span> instead of the marginal expectation.
-The problem with the conditional expectation is that features that have no influence on the prediction function f can get a TreeSHAP estimate different from zero as shown by Sundararajan et al. (2019) <a href="#fn71" class="footnote-ref" id="fnref71"><sup>71</sup></a> and Janzing et al. (2019) <a href="#fn72" class="footnote-ref" id="fnref72"><sup>72</sup></a>.
-The non-zero estimate can happen when the feature is correlated with another feature that actually has an influence on the prediction.</p>
-<p>How much faster is TreeSHAP?
-Compared to exact KernelSHAP, it reduces the computational complexity from <span class="math inline">\(O(TL2^M)\)</span> to <span class="math inline">\(O(TLD^2)\)</span>, where T is the number of trees, L is the maximum number of leaves in any tree and D the maximal depth of any tree.</p>
-<!-- To explain an individual prediction with exact Shapley values, we have to estimate  $E(\hat{f}(x)|x_S)$ for all possible feature value subsets S.-->
-<p>TreeSHAP uses the conditional expectation <span class="math inline">\(E_{X_j|X_{-j}}(\hat{f}(x)|x_j)\)</span> to estimate effects.
-I will give you some intuition on how we can compute the expected prediction for a single tree, an instance x and feature subset S.
-If we conditioned on all features – if S was the set of all features – then the prediction from the node in which the instance x falls would be the expected prediction.
-If we would not condition the prediction on any feature – if S was empty – we would use the weighted average of predictions of all terminal nodes.
-If S contains some, but not all, features, we ignore predictions of unreachable nodes.
-Unreachable means that the decision path that leads to this node contradicts values in <span class="math inline">\(x_S\)</span>.
-From the remaining terminal nodes, we average the predictions weighted by node sizes (i.e. number of training samples in that node).
-The mean of the remaining terminal nodes, weighted by the number of instances per node, is the expected prediction for x given S.
-The problem is that we have to apply this procedure for each possible subset S of the feature values.
-<!--
-This means $\sum_{i=1}{p}\frac{(p-i)!i!}{i!}$ times.
-Here, each summand is the set of all possible subsets S with the same cardinality (e.g. all possible subsets with 2 features).
--->
-TreeSHAP computes in polynomial time instead of exponential.
-The basic idea is to push all possible subsets S down the tree at the same time.
-For each decision node we have to keep track of the number of subsets.
-This depends on the subsets in the parent node and the split feature.
-For example, when the first split in a tree is on feature x3, then all the subsets that contain feature x3 will go to one node (the one where x goes).
-Subsets that do not contain feature x3 go to both nodes with reduced weight.
-Unfortunately, subsets of different sizes have different weights.
-The algorithm has to keep track of the overall weight of the subsets in each node.
-This complicates the algorithm.
-I refer to the original paper for details of TreeSHAP.
-The computation can be expanded to more trees:
-Thanks to the Additivity property of Shapley values, the Shapley values of a tree ensemble is the (weighted) average of the Shapley values of the individual trees.</p>
-<p>Next, we will look at SHAP explanations in action.</p>
+<div class="callout-title-container flex-fill">
+Tip
 </div>
-<div id="examples-5" class="section level3 hasAnchor" number="9.6.4">
-<h3><span class="header-section-number">9.6.4</span> Examples<a href="shap.html#examples-5" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>I trained a random forest classifier with 100 trees to predict the <a href="cervical.html#cervical">risk for cervical cancer</a>.
-We will use SHAP to explain individual predictions.
-We can use the fast TreeSHAP estimation method instead of the slower KernelSHAP method, since a random forest is an ensemble of trees.
-But instead of relying on the conditional distribution, this example uses the marginal distribution.
-This is described in the package, but not in the original paper.
-The Python TreeSHAP function is slower with the marginal distribution, but still faster than KernelSHAP, since it scales linearly with the rows in the data.</p>
-<p>Because we use the marginal distribution here, the interpretation is the same as in the <a href="shapley.html#shapley">Shapley value chapter</a>.
-But with the Python shap package comes a different visualization:
-You can visualize feature attributions such as Shapley values as “forces”.
-Each feature value is a force that either increases or decreases the prediction.
-The prediction starts from the baseline.
-The baseline for Shapley values is the average of all predictions.
-In the plot, each Shapley value is an arrow that pushes to increase (positive value) or decrease (negative value) the prediction.
-These forces balance each other out at the actual prediction of the data instance.</p>
-<p>The following figure shows SHAP explanation force plots for two women from the cervical cancer dataset:</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-39"></span>
-<img src="images/unnamed-chunk-39-1.jpeg" alt="SHAP values to explain the predicted cancer probabilities of two individuals. The baseline -- the average predicted probability -- is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are offset by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase her predicted cancer risk." width="\textwidth" />
-<p class="caption">
-FIGURE 9.24: SHAP values to explain the predicted cancer probabilities of two individuals. The baseline – the average predicted probability – is 0.066. The first woman has a low predicted risk of 0.06. Risk increasing effects such as STDs are offset by decreasing effects such as age. The second woman has a high predicted risk of 0.71. Age of 51 and 34 years of smoking increase her predicted cancer risk.
-</p>
 </div>
-<p>These were explanations for individual predictions.</p>
-<p>Shapley values can be combined into global explanations.
-If we run SHAP for every instance, we get a matrix of Shapley values.
-This matrix has one row per data instance and one column per feature.
-We can interpret the entire model by analyzing the Shapley values in this matrix.</p>
+<div class="callout-body-container callout-body">
+<div>
+
+</div>
+<div class="quarto-layout-panel" data-layout="[60,40]">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 60.0%;justify-content: flex-start;">
+<p>The <code>shap</code> Python package comes with a lot of different visualizations, which can be confusing. That’s why I summarized them in this <a href="https://christophmolnar.gumroad.com/l/shap-plots-for-tabular-data">SHAP Plots Cheatsheet</a>, along with how to interpret the plots.</p>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 40.0%;justify-content: center;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="./images/cheatsheet-shap.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/cheatsheet-shap.jpg" class="img-fluid quarto-figure quarto-figure-center figure-img"></a></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><a href="#fig-force-plots" class="quarto-xref">Figure&nbsp;<span>18.3</span></a> shows SHAP explanation force plots for two penguins from the Palmer penguins dataset: The first penguin has a high probability of being an Adelie penguin due to its small bill length. The second penguin is unlikely to be Adelie due to its large bill length and flipper length.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-force-plots" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-force-plots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="shap_files/figure-html/fig-force-plots-1.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5" title="Figure&nbsp;18.3: SHAP values for two penguins. The baseline – the average predicted probability – is 0.47. Each feature can be seen as a force that pushes the prediction either up or down from the baseline."><img src="shap_files/figure-html/fig-force-plots-1.png" class="img-fluid figure-img" width="672"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-force-plots-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.3: SHAP values for two penguins. The baseline – the average predicted probability – is 0.47. Each feature can be seen as a force that pushes the prediction either up or down from the baseline.
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="shap-aggregation-plots" class="level2">
+<h2 class="anchored" data-anchor-id="shap-aggregation-plots">SHAP aggregation plots</h2>
+<p>The section before showed explanations for individual predictions.</p>
+<p>Shapley values can be combined into global explanations. If we run SHAP for every instance, we get a matrix of Shapley values. This matrix has one row per data instance and one column per feature. We can interpret the entire model by analyzing the Shapley values in this matrix.</p>
 <p>We start with SHAP feature importance.</p>
+<section id="shap-feature-importance" class="level3">
+<h3 class="anchored" data-anchor-id="shap-feature-importance">SHAP Feature Importance</h3>
+<p>The idea behind SHAP feature importance is simple: Features with large absolute Shapley values are important. Since we want the global importance, we average the <strong>absolute</strong> Shapley values per feature across the data:</p>
+<p><span class="math display">\[I_j=\frac{1}{n}\sum_{i=1}^n |\phi_j^{(i)}|\]</span></p>
+<p>Next, we sort the features by decreasing importance and plot them. <a href="#fig-shap-importance" class="quarto-xref">Figure&nbsp;<span>18.4</span></a> shows the SHAP feature importance for the random forest trained before for classifying penguins. The body mass was the most important feature, changing the predicted probability for Adelie 25 percentage points (0.25 on the x-axis).</p>
+<div id="fig-shap-importance" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-importance-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="./images/shap-importance.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-6" title="Figure&nbsp;18.4: SHAP feature importance measured as the mean absolute Shapley values."><img src="./images/shap-importance.jpg" class="img-fluid figure-img"></a>
 </div>
-<div id="shap-feature-importance" class="section level3 hasAnchor" number="9.6.5">
-<h3><span class="header-section-number">9.6.5</span> SHAP Feature Importance<a href="shap.html#shap-feature-importance" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>The idea behind SHAP feature importance is simple:
-Features with large absolute Shapley values are important.
-Since we want the global importance, we average the <strong>absolute</strong> Shapley values per feature across the data:</p>
-<p><span class="math display">\[I_j=\frac{1}{n}\sum_{i=1}^n{}|\phi_j^{(i)}|\]</span></p>
-<p>Next, we sort the features by decreasing importance and plot them.
-The following figure shows the SHAP feature importance for the random forest trained before for predicting cervical cancer.</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-40"></span>
-<img src="images/shap-importance.png" alt="SHAP feature importance measured as the mean absolute Shapley values. The number of years with hormonal contraceptives was the most important feature, changing the predicted absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis)." width="\textwidth" />
-<p class="caption">
-FIGURE 9.25: SHAP feature importance measured as the mean absolute Shapley values. The number of years with hormonal contraceptives was the most important feature, changing the predicted absolute cancer probability on average by 2.4 percentage points (0.024 on x-axis).
-</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-importance-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.4: SHAP feature importance measured as the mean absolute Shapley values.
+</figcaption>
+</figure>
 </div>
-<p>SHAP feature importance is an alternative to <a href="feature-importance.html#feature-importance">permutation feature importance</a>.
-There is a big difference between both importance measures:
-Permutation feature importance is based on the decrease in model performance.
-SHAP is based on magnitude of feature attributions.</p>
-<p>The feature importance plot is useful, but contains no information beyond the importances.
-For a more informative plot, we will next look at the summary plot.</p>
+<p>SHAP feature importance is an alternative to <a href="feature-importance.html">permutation feature importance</a>. There’s a big difference between both importance measures: Permutation feature importance is based on the decrease in model performance. SHAP is based on the magnitude of feature attributions.</p>
+<p>The feature importance plot is useful, but contains no information beyond the importances. For a more informative plot, we will next look at the summary plot.</p>
+</section>
+<section id="shap-summary-plot" class="level3">
+<h3 class="anchored" data-anchor-id="shap-summary-plot">SHAP Summary Plot</h3>
+<p>The summary plot combines feature importance with feature effects. Each point on the summary plot is a Shapley value for a feature and an instance. The position on the y-axis is determined by the feature and on the x-axis by the Shapley value. The color represents the value of the feature from low to high. Overlapping points are jittered in the y-axis direction, so we get a sense of the distribution of the Shapley values per feature. The features are ordered according to their importance. In the summary plot, <a href="#fig-shap-summary-plot" class="quarto-xref">Figure&nbsp;<span>18.5</span></a>, we see first indications of the relationship between the value of a feature and the impact on the prediction. A higher body mass contributes negatively to P(female). The summary plot also shows that body mass has the widest range of effects for the different penguins.</p>
+<div id="fig-shap-summary-plot" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-summary-plot-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="images/shap-importance-extended.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-7" title="Figure&nbsp;18.5: SHAP summary plot."><img src="images/shap-importance-extended.jpg" class="img-fluid figure-img"></a>
 </div>
-<div id="shap-summary-plot" class="section level3 hasAnchor" number="9.6.6">
-<h3><span class="header-section-number">9.6.6</span> SHAP Summary Plot<a href="shap.html#shap-summary-plot" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>The summary plot combines feature importance with feature effects.
-Each point on the summary plot is a Shapley value for a feature and an instance.
-The position on the y-axis is determined by the feature and on the x-axis by the Shapley value.
-The color represents the value of the feature from low to high.
-Overlapping points are jittered in y-axis direction, so we get a sense of the distribution of the Shapley values per feature.
-The features are ordered according to their importance.</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-41"></span>
-<img src="images/shap-importance-extended.png" alt="SHAP summary plot. Low number of years on hormonal contraceptives reduce the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model and are not necessarily causal in the real world." width="\textwidth" />
-<p class="caption">
-FIGURE 9.26: SHAP summary plot. Low number of years on hormonal contraceptives reduce the predicted cancer risk, a large number of years increases the risk. Your regular reminder: All effects describe the behavior of the model and are not necessarily causal in the real world.
-</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-summary-plot-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.5: SHAP summary plot.
+</figcaption>
+</figure>
 </div>
-<p>In the summary plot, we see first indications of the relationship between the value of a feature and the impact on the prediction.
-But to see the exact form of the relationship, we have to look at SHAP dependence plots.</p>
+<p>But to see the exact form of the relationship, we have to look at SHAP dependence plots.</p>
+</section>
+<section id="shap-dependence-plot" class="level3">
+<h3 class="anchored" data-anchor-id="shap-dependence-plot">SHAP Dependence Plot</h3>
+<p>SHAP feature dependence might be the simplest global interpretation plot: 1) Pick a feature. 2) For each data instance, plot a point with the feature value on the x-axis and the corresponding Shapley value on the y-axis. 3) Done.</p>
+<p>Mathematically, the plot contains the following points: <span class="math inline">\(\{(x_j^{(i)}, \phi_j^{(i)})\}_{i=1}^n\)</span></p>
+<p><a href="#fig-shap-dependence" class="quarto-xref">Figure&nbsp;<span>18.6</span></a> shows the SHAP feature dependence for the body mass. The heavier the penguin, the less likely it’s female.</p>
+<div id="fig-shap-dependence" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-dependence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="images/shap-dependence.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-8" title="Figure&nbsp;18.6: SHAP dependence plot for body mass. The x-axis shows the feature, the y-axis the SHAP values. Each dot represents a data point."><img src="images/shap-dependence.jpg" class="img-fluid figure-img" style="width:75.0%"></a>
 </div>
-<div id="shap-dependence-plot" class="section level3 hasAnchor" number="9.6.7">
-<h3><span class="header-section-number">9.6.7</span> SHAP Dependence Plot<a href="shap.html#shap-dependence-plot" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>SHAP feature dependence might be the simplest global interpretation plot:
-1) Pick a feature.
-2) For each data instance, plot a point with the feature value on the x-axis and the corresponding Shapley value on the y-axis.
-3) Done.</p>
-<p>Mathematically, the plot contains the following points: <span class="math inline">\(\{(x_j^{(i)},\phi_j^{(i)})\}_{i=1}^n\)</span></p>
-<p>The following figure shows the SHAP feature dependence for years on hormonal contraceptives:</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-42"></span>
-<img src="images/shap-dependence.png" alt="SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increases the predicted cancer probability." width="\textwidth" />
-<p class="caption">
-FIGURE 9.27: SHAP dependence plot for years on hormonal contraceptives. Compared to 0 years, a few years lower the predicted probability and a high number of years increases the predicted cancer probability.
-</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-dependence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.6: SHAP dependence plot for body mass. The x-axis shows the feature, the y-axis the SHAP values. Each dot represents a data point.
+</figcaption>
+</figure>
 </div>
-<p>SHAP dependence plots are an alternative to <a href="pdp.html#pdp">partial dependence plots</a> and <a href="ale.html#ale">accumulated local effects</a>.
-While PDP and ALE plot show average effects, SHAP dependence also shows the variance on the y-axis.
-Especially in case of interactions, the SHAP dependence plot will be much more dispersed in the y-axis.
-The dependence plot can be improved by highlighting these feature interactions.</p>
-</div>
-<div id="shap-interaction-values" class="section level3 hasAnchor" number="9.6.8">
-<h3><span class="header-section-number">9.6.8</span> SHAP Interaction Values<a href="shap.html#shap-interaction-values" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>The interaction effect is the additional combined feature effect after accounting for the individual feature effects.
-The Shapley interaction index from game theory is defined as:</p>
+<p>SHAP dependence plots are an alternative to global feature effect methods like the <a href="pdp.html">partial dependence plots</a> and <a href="ale.html">accumulated local effects</a>. While PDP and ALE plots show average effects, SHAP dependence also shows the variance on the y-axis. Especially in the case of interactions, the SHAP dependence plot will be much more dispersed on the y-axis. The dependence plot can be improved by highlighting these feature interactions.</p>
+</section>
+<section id="shap-interaction-values" class="level3">
+<h3 class="anchored" data-anchor-id="shap-interaction-values">SHAP Interaction Values</h3>
+<p>The interaction effect is the additional combined feature effect after accounting for the individual feature effects. The Shapley interaction index from game theory is defined as:</p>
 <p><span class="math display">\[\phi_{i,j}=\sum_{S\subseteq\backslash\{i,j\}}\frac{|S|!(M-|S|-2)!}{2(M-1)!}\delta_{ij}(S)\]</span></p>
-<p>when <span class="math inline">\(i\neq{}j\)</span> and:</p>
-<p><span class="math display">\[\delta_{ij}(S)=\hat{f}_x(S\cup\{i,j\})-\hat{f}_x(S\cup\{i\})-\hat{f}_x(S\cup\{j\})+\hat{f}_x(S)\]</span></p>
-<p>This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects.
-We average the values over all possible feature coalitions S, as in the Shapley value computation.
-When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions M x M, where M is the number of features.</p>
-<p>How can we use the interaction index?
-For example, to automatically color the SHAP feature dependence plot with the strongest interaction:</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-43"></span>
-<img src="images/shap-dependence-interaction.png" alt="SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of a STD increases the predicted cancer risk. For more years on contraceptives, the occurence of a STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits)." width="\textwidth" />
-<p class="caption">
-FIGURE 9.28: SHAP feature dependence plot with interaction visualization. Years on hormonal contraceptives interacts with STDs. In cases close to 0 years, the occurence of a STD increases the predicted cancer risk. For more years on contraceptives, the occurence of a STD reduces the predicted risk. Again, this is not a causal model. Effects might be due to confounding (e.g. STDs and lower cancer risk could be correlated with more doctor visits).
-</p>
+<p>when <span class="math inline">\(i\neq{}j\)</span> and <span class="math inline">\(\delta_{ij}(S)=\hat{f}_{\mathbf{x}}(S\cup\{i,j\})-\hat{f}_{\mathbf{x}}(S\cup\{i\})-\hat{f}_{\mathbf{x}}(S\cup\{j\})+\hat{f}_{\mathbf{x}}(S)\)</span>.</p>
+<p>This formula subtracts the main effect of the features so that we get the pure interaction effect after accounting for the individual effects. We average the values over all possible feature coalitions <span class="math inline">\(S\)</span>, as in the Shapley value computation. When we compute SHAP interaction values for all features, we get one matrix per instance with dimensions <span class="math inline">\(M \times M\)</span>, where <span class="math inline">\(M\)</span> is the number of features. How can we use the interaction index? For example, to automatically color the SHAP feature dependence plot with the strongest interaction, as in <a href="#fig-shap-interaction" class="quarto-xref">Figure&nbsp;<span>18.7</span></a>. Here, body mass interacts with bill depth.</p>
+<div id="fig-shap-interaction" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-interaction-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="images/shap-dependence-interaction.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-9" title="Figure&nbsp;18.7: SHAP feature dependence plot with interaction visualization. Here we see the dependence plot of bill length in interaction with the body mass. Especially for longer bills, the contribution of the bill length to P(Adelie) differs based on body mass."><img src="images/shap-dependence-interaction.jpg" class="img-fluid figure-img" style="width:85.0%"></a>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-interaction-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.7: SHAP feature dependence plot with interaction visualization. Here we see the dependence plot of bill length in interaction with the body mass. Especially for longer bills, the contribution of the bill length to P(Adelie) differs based on body mass.
+</figcaption>
+</figure>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Analyze interactions in depth
 </div>
 </div>
-<div id="clustering-shapley-values" class="section level3 hasAnchor" number="9.6.9">
-<h3><span class="header-section-number">9.6.9</span> Clustering Shapley Values<a href="shap.html#clustering-shapley-values" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>You can cluster your data with the help of Shapley values.
-The goal of clustering is to find groups of similar instances.
-Normally, clustering is based on features.
-Features are often on different scales.
-For example, height might be measured in meters, color intensity from 0 to 100 and some sensor output between -1 and 1.
-The difficulty is to compute distances between instances with such different, non-comparable features.</p>
-<p>SHAP clustering works by clustering the Shapley values of each instance.
-This means that you cluster instances by explanation similarity.
-All SHAP values have the same unit – the unit of the prediction space.
-You can use any clustering method.
-The following example uses hierarchical agglomerative clustering to order the instances.</p>
-<p>The plot consists of many force plots, each of which explains the prediction of an instance.
-We rotate the force plots vertically and place them side by side according to their clustering similarity.</p>
-<div class="figure" style="text-align: center"><span style="display:block;" id="fig:unnamed-chunk-44"></span>
-<img src="images/shap-clustering.png" alt="Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. One cluster stands out: On the right is a group with a high predicted cancer risk." width="\textwidth" />
-<p class="caption">
-FIGURE 9.29: Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it. One cluster stands out: On the right is a group with a high predicted cancer risk.
-</p>
+<div class="callout-body-container callout-body">
+<p>The topic of SHAP and interactions goes a lot deeper. If you require more sophisticated analysis of SHAP interactions, I recommend looking into the <a href="https://github.com/mmschlk/shapiq">shapiq package</a> <span class="citation" data-cites="muschalik2024shapiq">(<a href="references.html#ref-muschalik2024shapiq" role="doc-biblioref">Muschalik et al. 2024</a>)</span>.</p>
 </div>
 </div>
-<div id="advantages-17" class="section level3 hasAnchor" number="9.6.10">
-<h3><span class="header-section-number">9.6.10</span> Advantages<a href="shap.html#advantages-17" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>Since SHAP computes Shapley values, all the advantages of Shapley values apply:
-SHAP has a <strong>solid theoretical foundation</strong> in game theory.
-The prediction is <strong>fairly distributed</strong> among the feature values.
-We get <strong>contrastive explanations</strong> that compare the prediction with the average prediction.</p>
-<p>SHAP <strong>connects LIME and Shapley values</strong>.
-This is very useful to better understand both methods.
-It also helps to unify the field of interpretable machine learning.</p>
-<p>SHAP has a <strong>fast implementation for tree-based models</strong>.
-I believe this was key to the popularity of SHAP, because the biggest barrier for adoption of Shapley values is the slow computation.</p>
-<p>The fast computation makes it possible to compute the many Shapley values needed for the <strong>global model interpretations</strong>.
-The global interpretation methods include feature importance, feature dependence, interactions, clustering and summary plots.
-With SHAP, global interpretations are consistent with the local explanations, since the Shapley values are the “atomic unit” of the global interpretations.
-If you use LIME for local explanations and partial dependence plots plus permutation feature importance for global explanations, you lack a common foundation.</p>
+</section>
+<section id="clustering-shapley-values" class="level3">
+<h3 class="anchored" data-anchor-id="clustering-shapley-values">Clustering Shapley Values</h3>
+<p>You can cluster your data with the help of Shapley values. The goal of clustering is to find groups of similar instances. Normally, clustering is based on features. Features are often on different scales. For example, height might be measured in meters, color intensity from 0 to 100, and some sensor output between -1 and 1. The difficulty is to compute distances between instances with such different, non-comparable features.</p>
+<p>SHAP clustering works by clustering the Shapley values of each instance. This means that you cluster instances by explanation similarity. All SHAP values have the same unit – the unit of the prediction space. You can use any clustering method.</p>
+<p><a href="#fig-shap-clustering" class="quarto-xref">Figure&nbsp;<span>18.8</span></a> uses hierarchical agglomerative clustering to order the instances. The plot consists of many force plots, each of which explains the prediction of an instance. We rotate the force plots vertically and place them side by side according to their clustering similarity.</p>
+<div id="fig-shap-clustering" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-shap-clustering-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<a href="./images/shap-clustering.jpg" class="lightbox" data-gallery="quarto-lightbox-gallery-10" title="Figure&nbsp;18.8: Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it."><img src="./images/shap-clustering.jpg" class="img-fluid figure-img"></a>
 </div>
-<div id="disadvantages-17" class="section level3 hasAnchor" number="9.6.11">
-<h3><span class="header-section-number">9.6.11</span> Disadvantages<a href="shap.html#disadvantages-17" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p><strong>KernelSHAP is slow</strong>.
-This makes KernelSHAP impractical to use when you want to compute Shapley values for many instances.
-Also all global SHAP methods such as SHAP feature importance require computing Shapley values for a lot of instances.</p>
-<p><strong>KernelSHAP ignores feature dependence</strong>.
-Most other permutation based interpretation methods have this problem.
-By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution.
-However, if features are dependent, e.g. correlated, this leads to putting too much weight on unlikely data points.
-TreeSHAP solves this problem by explicitly modeling the conditional expected prediction.</p>
-<p><strong>TreeSHAP can produce unintuitive feature attributions</strong>.
-While TreeSHAP solves the problem of extrapolating to unlikely data points, it does so by changing the value function and therefore slightly changes the game.
-TreeSHAP changes the value function by relying on the conditional expected prediction.
-With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.</p>
-<p>The disadvantages of Shapley values also apply to SHAP:
-Shapley values <strong>can be misinterpreted</strong> and access to data is needed to compute them for new data (except for TreeSHAP).</p>
-<p>It is <strong>possible to create intentionally misleading interpretations</strong> with SHAP, which can hide biases <a href="#fn73" class="footnote-ref" id="fnref73"><sup>73</sup></a>.
-If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations).
-For the receivers of a SHAP explanation, it is a disadvantage: they cannot be sure about the truthfulness of the explanation.</p>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-shap-clustering-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;18.8: Stacked SHAP explanations clustered by explanation similarity. Each position on the x-axis is an instance of the data. Red SHAP values increase the prediction, blue values decrease it.
+</figcaption>
+</figure>
 </div>
-<div id="software-5" class="section level3 hasAnchor" number="9.6.12">
-<h3><span class="header-section-number">9.6.12</span> Software<a href="shap.html#software-5" class="anchor-section" aria-label="Anchor link to header"></a></h3>
-<p>The authors implemented SHAP in the <a href="https://github.com/slundberg/shap">shap</a> Python package.</p>
+</section>
+</section>
+<section id="strengths" class="level2">
+<h2 class="anchored" data-anchor-id="strengths">Strengths</h2>
+<p>Since SHAP computes Shapley values, all the advantages of Shapley values apply: SHAP has a <strong>solid theoretical foundation</strong> in game theory. The prediction is <strong>fairly distributed</strong> among the feature values. We get <strong>contrastive explanations</strong> that compare the prediction with the average prediction.</p>
+<p>SHAP <strong>connects LIME and Shapley values</strong>. This is very useful to better understand both methods. It also helps to unify the field of interpretable machine learning.</p>
+<p>SHAP has a <strong>fast implementation for tree-based models</strong>. I believe this was key to the popularity of SHAP because the biggest barrier for adoption of Shapley values is the slow computation.</p>
+<p>The fast computation makes it possible to compute the many Shapley values needed for the <strong>global model interpretations</strong>. The global interpretation methods include feature importance, feature dependence, interactions, clustering, and summary plots. With SHAP, global interpretations are consistent with the local explanations, since the Shapley values are the “atomic unit” of the global interpretations. If you use LIME for local explanations and partial dependence plots plus permutation feature importance for global explanations, you lack a common foundation.</p>
+</section>
+<section id="limitations" class="level2">
+<h2 class="anchored" data-anchor-id="limitations">Limitations</h2>
+<p><strong>KernelSHAP is slow</strong>. This makes KernelSHAP impractical to use when you want to compute Shapley values for many instances. Also, all global SHAP methods, such as SHAP feature importance, require computing Shapley values for a lot of instances.</p>
+<p><strong>KernelSHAP ignores feature dependence</strong>. Most other permutation-based interpretation methods have this problem. By replacing feature values with values from random instances, it is usually easier to randomly sample from the marginal distribution. However, if features are dependent, e.g., correlated, this leads to putting too much weight on unlikely data points.</p>
+<p><strong>Path-dependent TreeSHAP can produce unintuitive feature attributions</strong>. While TreeSHAP solves the problem of extrapolating to unlikely data points, it does so by changing the value function and therefore slightly changes the game. TreeSHAP changes the value function by relying on the conditional expected prediction. With the change in the value function, features that have no influence on the prediction can get a TreeSHAP value different from zero.</p>
+<p>The disadvantages of Shapley values also apply to SHAP: Shapley values <strong>can be misinterpreted</strong>.</p>
+<p>It’s <strong>possible to create intentionally misleading interpretations</strong> with SHAP, which can hide biases <span class="citation" data-cites="slack2020fooling">(<a href="references.html#ref-slack2020fooling" role="doc-biblioref">Slack et al. 2020</a>)</span>. If you are the data scientist creating the explanations, this is not an actual problem (it would even be an advantage if you are the evil data scientist who wants to create misleading explanations). For the receivers of a SHAP explanation, it’s a disadvantage: they cannot be sure about the truthfulness of the explanation.</p>
+</section>
+<section id="software" class="level2">
+<h2 class="anchored" data-anchor-id="software">Software</h2>
+<p>Lundberg implemented SHAP in the <a href="https://github.com/slundberg/shap">shap</a> Python package, which is now maintained by a much bigger team.</p>
+<p>This implementation works for models trained with the <a href="https://scikit-learn.org/stable/">scikit-learn</a> machine learning library for Python. The shap package was also used for the examples in this chapter. SHAP is integrated into the tree boosting frameworks <a href="https://github.com/dmlc/xgboost/tree/master/python-package">xgboost</a> and <a href="https://github.com/microsoft/LightGBM">LightGBM</a>, and you can find it in <a href="https://selfexplainml.github.io/PiML-Toolbox/_build/html/index.html">PiML</a>, a more general interpretability library. In R, there are the <a href="https://modeloriented.github.io/shapper/">shapper</a> and <a href="https://github.com/bgreenwell/fastshap">fastshap</a> packages. SHAP is also included in the R <a href="https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html">xgboost</a> package. Specifically for SHAP interactions, there is the Python <a href="https://github.com/mmschlk/shapiq">shapiq</a> package.</p>
 
-<div class="rmdnote">
-The book <a href="https://leanpub.com/shap">Interpreting Machine Learning Models with SHAP</a> covers the application of SHAP with the <code>shap</code> package in depth.
-</div>
-<p>This implementation works for tree-based models in the <a href="https://scikit-learn.org/stable/">scikit-learn</a> machine learning library for Python.
-The shap package was also used for the examples in this chapter.
-SHAP is integrated into the tree boosting frameworks <a href="https://github.com/dmlc/xgboost/tree/master/python-package">xgboost</a> and <a href="https://github.com/microsoft/LightGBM">LightGBM</a>.
-In R, there are the <a href="https://modeloriented.github.io/shapper/">shapper</a> and <a href="https://github.com/bgreenwell/fastshap">fastshap</a> packages.
-SHAP is also included in the R <a href="https://rdrr.io/cran/xgboost/man/xgb.plot.shap.html">xgboost</a> package.</p>
 
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list" style="display: none">
+<div id="ref-aas2021explaining" class="csl-entry" role="listitem">
+Aas, Kjersti, Martin Jullum, and Anders Løland. 2021. <span>“Explaining Individual Predictions When Features Are Dependent: More Accurate Approximations to Shapley Values.”</span> <em>Artificial Intelligence</em> 298: 103502. https://doi.org/<a href="https://doi.org/10.1016/j.artint.2021.103502">https://doi.org/10.1016/j.artint.2021.103502</a>.
+</div>
+<div id="ref-janzing2020feature" class="csl-entry" role="listitem">
+Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. 2020. <span>“Feature Relevance Quantification in Explainable AI: A Causal Problem.”</span> In <em>International Conference on Artificial Intelligence and Statistics</em>, 2907–16. PMLR.
+</div>
+<div id="ref-lundberg2019consistent" class="csl-entry" role="listitem">
+Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. 2019. <span>“Consistent <span>Individualized Feature Attribution</span> for <span>Tree Ensembles</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.1802.03888">https://doi.org/10.48550/arXiv.1802.03888</a>.
+</div>
+<div id="ref-lundberg2017unified" class="csl-entry" role="listitem">
+Lundberg, Scott M., and Su-In Lee. 2017. <span>“A Unified Approach to Interpreting Model Predictions.”</span> In <em>Proceedings of the 31st <span>International Conference</span> on <span>Neural Information Processing Systems</span></em>, 4768–77. <span>NIPS</span>’17. Red Hook, NY, USA: Curran Associates Inc.
+</div>
+<div id="ref-mitchell2022sampling" class="csl-entry" role="listitem">
+Mitchell, Rory, Joshua Cooper, Eibe Frank, and Geoffrey Holmes. 2022. <span>“Sampling <span>Permutations</span> for <span>Shapley Value Estimation</span>.”</span> <em>Journal of Machine Learning Research</em> 23 (43): 1–46. <a href="http://jmlr.org/papers/v23/21-0439.html">http://jmlr.org/papers/v23/21-0439.html</a>.
+</div>
+<div id="ref-muschalik2024shapiq" class="csl-entry" role="listitem">
+Muschalik, Maximilian, Hubert Baniecki, Fabian Fumagalli, Patrick Kolpaczki, Barbara Hammer, and Eyke Hüllermeier. 2024. <span>“Shapiq: <span>Shapley Interactions</span> for <span>Machine Learning</span>.”</span> arXiv. <a href="https://doi.org/10.48550/arXiv.2410.01649">https://doi.org/10.48550/arXiv.2410.01649</a>.
+</div>
+<div id="ref-slack2020fooling" class="csl-entry" role="listitem">
+Slack, Dylan, Sophie Hilgard, Emily Jia, Sameer Singh, and Himabindu Lakkaraju. 2020. <span>“Fooling <span>LIME</span> and <span>SHAP</span>: <span>Adversarial Attacks</span> on <span>Post</span> Hoc <span>Explanation Methods</span>.”</span> In <em>Proceedings of the <span>AAAI</span>/<span>ACM Conference</span> on <span>AI</span>, <span>Ethics</span>, and <span>Society</span></em>, 180–86. <span>AIES</span> ’20. New York, NY, USA: Association for Computing Machinery. <a href="https://doi.org/10.1145/3375627.3375830">https://doi.org/10.1145/3375627.3375830</a>.
+</div>
+<div id="ref-strumbelj2011general" class="csl-entry" role="listitem">
+Štrumbelj, Erik, and Igor Kononenko. 2011. <span>“A <span>General</span> <span>Method</span> for <span>Visualizing</span> and <span>Explaining</span> <span>Black</span>-<span>Box</span> <span>Regression</span> <span>Models</span>.”</span> In <em>Adaptive and <span>Natural</span> <span>Computing</span> <span>Algorithms</span></em>, edited by Andrej Dobnikar, Uroš Lotrič, and Branko Šter, 21–30. Berlin, Heidelberg: Springer. <a href="https://doi.org/10.1007/978-3-642-20267-4_3">https://doi.org/10.1007/978-3-642-20267-4_3</a>.
+</div>
+<div id="ref-strumbelj2014explaining" class="csl-entry" role="listitem">
+———. 2014. <span>“Explaining Prediction Models and Individual Predictions with Feature Contributions.”</span> <em>Knowledge and Information Systems</em> 41 (3): 647–65. <a href="https://doi.org/10.1007/s10115-013-0679-x">https://doi.org/10.1007/s10115-013-0679-x</a>.
+</div>
+<div id="ref-sundararajan2020many" class="csl-entry" role="listitem">
+Sundararajan, Mukund, and Amir Najmi. 2020. <span>“The <span>Many Shapley Values</span> for <span>Model Explanation</span>.”</span> In <em>Proceedings of the 37th <span>International Conference</span> on <span>Machine Learning</span></em>, 9269–78. PMLR. <a href="https://proceedings.mlr.press/v119/sundararajan20b.html">https://proceedings.mlr.press/v119/sundararajan20b.html</a>.
 </div>
 </div>
-<!-- </div> -->
-<div class="footnotes">
-<hr />
-<ol start="69">
-<li id="fn69"><p>Lundberg, Scott M., and Su-In Lee. “A unified approach to interpreting model predictions.” Advances in Neural Information Processing Systems (2017).<a href="shap.html#fnref69" class="footnote-back">↩︎</a></p></li>
-<li id="fn70"><p>Lundberg, Scott M., Gabriel G. Erion, and Su-In Lee. “Consistent individualized feature attribution for tree ensembles.” arXiv preprint arXiv:1802.03888 (2018).<a href="shap.html#fnref70" class="footnote-back">↩︎</a></p></li>
-<li id="fn71"><p>Sundararajan, Mukund, and Amir Najmi. “The many Shapley values for model explanation.” arXiv preprint arXiv:1908.08474 (2019).<a href="shap.html#fnref71" class="footnote-back">↩︎</a></p></li>
-<li id="fn72"><p>Janzing, Dominik, Lenon Minorics, and Patrick Blöbaum. “Feature relevance quantification in explainable AI: A causal problem.” International Conference on Artificial Intelligence and Statistics. PMLR (2020).<a href="shap.html#fnref72" class="footnote-back">↩︎</a></p></li>
-<li id="fn73"><p>Slack, Dylan, Sophie Hilgard, Emily Jia, Sameer Singh, and Himabindu Lakkaraju. “Fooling lime and shap: Adversarial attacks on post hoc explanation methods.” In Proceedings of the AAAI/ACM Conference on AI, Ethics, and Society, pp. 180-186 (2020).<a href="shap.html#fnref73" class="footnote-back">↩︎</a></p></li>
-</ol>
-</div>
-            </section>
+</section>
 
-          </div>
-        </div>
-      </div>
-<a href="shapley.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="neural-networks.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./shapley.html" class="pagination-link" aria-label="Shapley Values">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Shapley Values</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./pdp.html" class="pagination-link" aria-label="Partial Dependence Plot (PDP)">
+        <span class="nav-page-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Partial Dependence Plot (PDP)</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+<footer class="footer">
+  <div class="nav-footer">
+    <div class="nav-footer-left">
+      &nbsp;
+    </div>   
+    <div class="nav-footer-center">
+<p><a href="privacy-policy.html" target="_blank" style="font-size:11px;"> Privacy Policy </a> | <a href="https://christophmolnar.com/impressum" target="_blank" style="font-size:11px"> Impressum </a></p>
+<div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/christophM/interpretable-ml-book/blob/main/shap.qmd" class="toc-action"><i class="bi bi-github"></i>View source</a></li><li><a href="https://github.com/christophM/interpretable-ml-book/issues/new" class="toc-action"><i class="bi empty"></i>Report an issue</a></li></ul></div><div class="cookie-consent-footer"><a href="#" id="open_preferences_center">Cookie Preferences</a></div></div>
+    <div class="nav-footer-right">
+      &nbsp;
     </div>
   </div>
-<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
-<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
-<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
-<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
-<script>
-gitbook.require(["gitbook"], function(gitbook) {
-gitbook.start({
-"sharing": {
-"github": true,
-"facebook": false,
-"twitter": true,
-"linkedin": true,
-"weibo": false,
-"instapaper": false,
-"vk": false,
-"whatsapp": false,
-"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
-},
-"fontsettings": {
-"theme": "white",
-"family": "sans",
-"size": 2
-},
-"edit": {
-"link": "https://github.com/christophM/interpretable-ml-book/edit/master/manuscript/05.9b-agnostic-shap.Rmd",
-"text": "Edit"
-},
-"history": {
-"link": null,
-"text": null
-},
-"view": {
-"link": null,
-"text": null
-},
-"download": null,
-"search": {
-"engine": "fuse",
-"options": null
-},
-"toc": {
-"collapse": "subsection"
-}
-});
-});
-</script>
+</footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
-<!-- dynamically load mathjax for compatibility with self-contained -->
-<script>
-  (function () {
-    var script = document.createElement("script");
-    script.type = "text/javascript";
-    var src = "true";
-    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
-    if (location.protocol !== "file:")
-      if (/^https?:/.test(src))
-        src = src.replace(/^https?:/, '');
-    script.src = src;
-    document.getElementsByTagName("head")[0].appendChild(script);
-  })();
-</script>
-</body>
 
-</html>
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
