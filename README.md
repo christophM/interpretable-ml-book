@@ -8,7 +8,7 @@ You can read the book in the following ways:
 
 - [Online, for free](https://christophm.github.io/interpretable-ml-book/)
 - [Buy the ebook](https://leanpub.com/interpretable-machine-learning/)
-- [But the paperback]()
+- [But the paperback](https://bookgoodies.com/a/3911578032)
 
 ## Summary
 
