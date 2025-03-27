@@ -40,7 +40,7 @@ Or use the following bibtex entry:
   author={Christoph Molnar},
   year={2025},
   edition={3},
-  isbn={978-3-911578-03-5}
+  isbn={978-3-911578-03-5},
   url={https://christophm.github.io/interpretable-ml-book}
 }
 ```
